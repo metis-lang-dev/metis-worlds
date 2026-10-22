@@ -120,4 +120,10 @@ Gemma E2B (local, 0 USD) acting from the card through metis-agent's domain agent
 - **The door is never touched.** 0 of 30 door variants were won, and no OPEN, KICK or APPLY was typed in any of them. Behind the wall the stairs are out of sight, so the reading never motivates the door: `never_opens_the_door`.
 - **Monsters kill a searching agent.** All 8 episodes the world ended were deaths: SEARCH typed while a newt, rat or jackal bit (hp falling). It's a rule about attack or flight to extract.
 - **The wins are the easy rooms:** no door, the stairs in sight, 2 to 4 moves.
-- This is the baseline step 2b's extracted rules are measured against, on the held-out split (step 3).
+- **Where these sit in the loop's policy** (metis-agentic-loop docs/POLICY.md):
+  - The deaths (searching while bitten) are the **exploitation phase's surprise kind**: a world change the program's
+    beliefs don't predict.
+  - `never_opens_the_door` is the one the **held-out door+key family** will measure. Discovery has no locked door,
+    so it tests a new skill built from known parts (the architect's N1 ruling).
+- This table is **the baseline the loop must beat**: step 2b's extracted rules are measured against it, on the
+  held-out split (step 3).
