@@ -281,3 +281,28 @@ def test_semantic_map_text_mode():
     trial = os.path.join(families.data_root(), fix["game"])
     if os.path.isdir(trial):
         assert semantic_map.text_map(trial, fix["tileset"]["index"][0]) == fix, "web/fixtures/ is stale: rerun semantic_map.py"
+
+
+def test_the_recorded_turns():
+    """alf-demo step 3b: web/fixtures/*.run.jsonl, the world page's recorded turns. The fridge
+    (a disengagement, short) is what record_run.py writes now; the win's frames hold the turn:
+    every director beat with one attention, the specialists in their order, the end."""
+    import tempfile
+    ref = os.path.join(ROOT, "..", "web", "fixtures")
+    win = [json.loads(x) for x in open(os.path.join(ref, "alfworld_tomato_microwave_13.run.jsonl"))]
+    beats = [f for f in win if f["ev"] == "world/hierarchy"]
+    assert beats and all(sum(a.startswith("attention(") for a in f["state"]) == 1 for f in beats)
+    woke = [f["rec"]["domain"] for f in win if f["ev"] == "journal" and f["rec"]["kind"] == "dlg-domain" and f["rec"]["verb"] == "activate"]
+    assert woke == ["nav", "access", "grasp", "nav", "access", "place"]
+    assert beats[-1]["effects"] == ["ask(done)", "ended(done)"] and win[1]["rec"]["person"] == "put a tomato in the microwave"
+    fix = os.path.join(ref, "alfworld_tomato_microwave_13_fridge.run.jsonl")
+    sem = os.path.join(ref, "alfworld_tomato_microwave_13.json")
+    trial = os.path.join(families.data_root(), json.load(open(sem))["game"])
+    if os.path.isdir(trial):
+        out = os.path.join(tempfile.mkdtemp(), "fridge.run.jsonl")
+        r = subprocess.run([sys.executable, os.path.join(ROOT, "experiments", "record_run.py"), trial, sem, out,
+                            "put the tomato in the fridge", "fetch(tomato1,fridge1)"], capture_output=True, text=True, timeout=900)
+        assert r.returncode == 0, r.stderr[-400:]
+        got = [json.loads(x) for x in open(out)]
+        got[0]["url"] = json.loads(open(fix).readline())["url"]          # relative to where it was written
+        assert got == [json.loads(x) for x in open(fix)], "web/fixtures/ is stale: rerun record_run.py"

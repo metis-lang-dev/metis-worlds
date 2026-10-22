@@ -1,0 +1,427 @@
+% ui_domain — voice navigation over a widget tree, the LIFTED base (console-nav
+% s-b923ebfe, the architect, 2026-10-21; design: docs/voice-ui-research.md, "Design
+% principles for a lifted linear-logic navigation model").
+%
+% What this program is. A page is a tree of widgets, each with one role; exactly one
+% widget has the focus, the root when nothing else does. The person moves the focus
+% by voice (into a child, to a widget by its name, out to the parent, home, back) and
+% with the mouse or the keyboard; a focused list takes picks, by name or by the
+% numbers the page shows on demand; a dock is shown or hidden; a modal dialog holds
+% the focus until it closes; the input is in command or dictation mode. This file
+% holds the RULES only. An application INCLUDES it and supplies the facts: its widget
+% type, the tree (child/2), the roles (role/2), a composite's entry child (entry/2),
+% and the start (#init). It adds no rules (MARIA's refinement table: facts, not
+% control).
+%
+% The input port (principle 2). Widgets that know their own activation report it:
+% every focus the person makes — mouse or keyboard, the model cannot tell and must
+% not — arrives as one `enter(W)` (the browser's focusin, coalesced: one per focus
+% change), and a focus that left every widget as `blur`. A dialog's rise and fall
+% arrive as `opened(D)` / `closed(D)`; a dock the page shows or hides itself as
+% `shown(W)` / `hidden(W)` world lines, and whether it has a widget at all now as
+% `present(W)` / `absent(W)` (v6.5, console-nav step 2 F3: the loop console's editor
+% exists only while a catalog is open). The page is the host: a fired rule's event is
+% the frame the page carries out (focus, show, hide, numbers, pick), and the page's
+% real focus is what the host's observe() reads back — so a focus change the port
+% missed (the standards' silent cases: a removed element, aria-activedescendant, the
+% viewport) is a surprise record.
+%
+% The stage pipeline (principles 2, 3, 7). One pass per beat: `clear` drops the
+% transient tokens a manual focus move invalidates (the numbers shown, a pending
+% choice); `sync` applies the port to the focus; `local` gives the focused widget its
+% own commands; `global` moves around the tree; `post` turns every command no earlier
+% stage consumed into a refusal with its reason (Martens' PostCheck: no negation
+% needed to say "nothing applied"). A command is consumed exactly once, by the first
+% stage whose rule applies — most local wins by construction, not by rule order.
+%
+% Finite by design: widgets and roles are types; what a pick names (an entry of a
+% list) is not — the name rides in the command's payload to the page, which answers
+% `picked`, `nothing_picked` or `ambiguous` (then `awaiting_choice`, and a number
+% resolves it, as Windows Voice Access and the VoWP study have it).
+catalog ui_domain 1.
+provenance text "voice navigation over any widget tree: focus as one token, the browser's focus events as the input port, widget-local before global commands, modal dialogs, picks by name or number, command and dictation modes, refusals with reasons" "2026-10-21".
+layers (dyn).
+stages (clear sync local global post).
+
+% the roles a widget can have (one each; the application's facts)
+type role {container composite list editable button dock dialog item}.
+% the acts the person's intents name (the card's dictionary)
+type act {go exit home back pick numbers jump show close cancel dictate command hold release help unknown}.
+type letter {a b c d e f g h i j k l m n o p q r s t u v w x y z}.
+type mode {command dictation held}.
+type num {n1 n2 n3 n4 n5 n6 n7 n8 n9}.
+
+namespace ui produce (dyn).
+
+% ── the application's facts (declared here, given by the instance) ──
+bwd child(widget, widget).       % child(Parent, Child): the accessibility tree
+bwd role(widget, role).          % one role per widget
+bwd entry(widget, widget).       % a composite's or dialog's entry child (where focus lands on open)
+
+% ── the base's own tables over the fixed role type (LL has no negation) ──
+bwd notlist(role).
+notlist(container). notlist(composite). notlist(editable). notlist(button). notlist(dock). notlist(dialog). notlist(item).
+bwd notdock(role).
+notdock(container). notdock(composite). notdock(list). notdock(editable). notdock(button). notdock(dialog). notdock(item).
+bwd noneditable(role).
+noneditable(container). noneditable(composite). noneditable(list). noneditable(button). noneditable(dock). noneditable(dialog). noneditable(item).
+% inside(W, D): W is a descendant of D (Horn, over the instance's tree)
+bwd inside(widget, widget).
+inside(W, D) :- child(D, W).
+inside(W, D) :- child(P, W), inside(P, D).
+
+% ── the focus and the page's state ──
+pred focused(widget) : ui.       % exactly one
+pred prev(widget) : ui.          % where the focus was before the last voice move (one-level back)
+pred free : ui.                  % no modal dialog
+pred modal(widget) : ui.         % the dialog that holds the focus
+pred invoker(widget, widget) : ui.   % invoker(Dialog, the widget to restore)
+pred shown(widget) : ui.         % a widget's visibility, a pair the instance starts and the page keeps
+pred hidden(widget) : ui.
+pred present(widget) : ui.       % the page has the widget now (a pair the instance starts present and the page keeps: v6.5)
+pred absent(widget) : ui.
+pred mode(mode) : ui.            % exactly one
+pred was(mode) : ui.             % the mode before a push-to-talk hold (exactly one while held)
+
+% ── transients a manual focus move invalidates ──
+pred numbers_shown : ui.         % the page numbers the focused list's entries
+pred numbers_hidden : ui.
+pred awaiting_choice : ui.       % a pick by name was ambiguous: the next number resolves it
+pred no_choice : ui.
+pred ready : ui.                 % no pick in flight
+pred picking : ui.
+pred idle_jump : ui.             % no jump in flight
+pred jumping : ui.               % the page labels the reachable widgets (page-wide hint mode, Vimium's f / Emacs avy): a number picks
+pred resolving : ui.             % a label was said; the page answers jumped(W) or nothing_picked
+
+% ── the input port: what the page reports ──
+pred enter(widget) : ui.         % focusin on a widget (mouse or keyboard alike), coalesced
+pred blur : ui.                  % the focus left every widget (the viewport)
+pred opened(widget) : ui.        % a dialog rose
+pred closed(widget) : ui.        % a dialog fell
+pred picked : ui.                % the page resolved a pick
+pred nothing_picked : ui.
+pred ambiguous : ui.             % more than one entry matched the name
+pred page_refused : ui.          % the page declines the pick (its own reason: the navigator's own domain, an inactive domain's atom, a tab the domain lacks)
+pred jumped(widget) : ui.        % the page resolved a jump label to a widget
+
+% ── the commands, one token per typed intent ──
+pred cmd_go(widget) : ui.
+pred cmd_exit : ui.
+pred cmd_home : ui.
+pred cmd_back : ui.
+pred cmd_pick : ui.              % by name: the name rides in the payload
+pred cmd_pick_n(num) : ui.       % by the number shown, or the number of a pending choice
+pred cmd_numbers : ui.
+pred cmd_jump : ui.              % label every reachable widget on the page
+pred cmd_jump_to(letter) : ui.   % label only the widgets whose name starts with the letter (Emacs: first char, then the label)
+pred cmd_show(widget) : ui.
+pred cmd_close : ui.
+pred cmd_cancel : ui.
+pred cmd_dictate : ui.
+pred cmd_command : ui.
+pred cmd_hold : ui.              % push-to-talk pressed (the page's held key): the voice goes to the page's own channel while held
+pred cmd_release : ui.           % push-to-talk released
+pred cmd_help : ui.
+pred cmd_unknown : ui.
+
+% ── the outcomes, by act ──
+pred done(act) : ui.
+pred refused(act) : ui.
+pred progress(act) : ui.
+
+% ═══ clear: a manual focus move drops what a voice turn left pending ═══
+stage clear {
+  %% The numbers go away: you moved the focus yourself.
+  clear_numbers [dyn] : $enter(N) * numbers_shown -o numbers_hidden.
+  %% The choice is dropped: you moved the focus yourself.
+  clear_choice [dyn] : $enter(N) * awaiting_choice -o no_choice.
+  %% The numbers go away: the focus left the page.
+  blur_numbers [dyn] : $blur * numbers_shown -o numbers_hidden.
+  %% The choice is dropped: the focus left the page.
+  blur_choice [dyn] : $blur * awaiting_choice -o no_choice.
+  %% The numbers go away: a dialog is up.
+  open_numbers [dyn] : $opened(D) * numbers_shown -o numbers_hidden.
+  %% The choice is dropped: a dialog is up.
+  open_choice [dyn] : $opened(D) * awaiting_choice -o no_choice.
+  %% The labels go away: a dialog is up.
+  open_jump [dyn] : $opened(D) * jumping -o idle_jump.
+  %% The labels go away: you moved the focus yourself.
+  clear_jump [dyn] : $enter(N) * jumping -o idle_jump.
+  %% The labels go away: the focus left the page.
+  blur_jump [dyn] : $blur * jumping -o idle_jump.
+  %% The numbers go away: the labels take their place.
+  jump_numbers [dyn] : $cmd_jump * numbers_shown -o numbers_hidden.
+  %% The numbers go away: the labels take their place.
+  jump_to_numbers [dyn] : $cmd_jump_to(L) * numbers_shown -o numbers_hidden.
+  %% The choice is dropped: the labels take its place.
+  jump_choice [dyn] : $cmd_jump * awaiting_choice -o no_choice.
+  %% The choice is dropped: the labels take its place.
+  jump_to_choice [dyn] : $cmd_jump_to(L) * awaiting_choice -o no_choice.
+  %% The labels go away: you are moving on.
+  go_jump [dyn] : $cmd_go(W) * jumping -o idle_jump.
+  %% The labels go away: you are moving on.
+  exit_jump [dyn] : $cmd_exit * jumping -o idle_jump.
+  %% The labels go away: you are moving on.
+  home_jump [dyn] : $cmd_home * jumping -o idle_jump.
+  %% The labels go away: you are moving on.
+  back_jump [dyn] : $cmd_back * jumping -o idle_jump.
+  %% The numbers go away: you are moving on.
+  go_numbers [dyn] : $cmd_go(W) * numbers_shown -o numbers_hidden.
+  %% The choice is dropped: you are moving on.
+  go_choice [dyn] : $cmd_go(W) * awaiting_choice -o no_choice.
+  %% The numbers go away: you are moving on.
+  exit_numbers [dyn] : $cmd_exit * numbers_shown -o numbers_hidden.
+  %% The choice is dropped: you are moving on.
+  exit_choice [dyn] : $cmd_exit * awaiting_choice -o no_choice.
+  %% The numbers go away: you are moving on.
+  home_numbers [dyn] : $cmd_home * numbers_shown -o numbers_hidden.
+  %% The choice is dropped: you are moving on.
+  home_choice [dyn] : $cmd_home * awaiting_choice -o no_choice.
+  %% The numbers go away: you are moving on.
+  back_numbers [dyn] : $cmd_back * numbers_shown -o numbers_hidden.
+  %% The choice is dropped: you are moving on.
+  back_choice [dyn] : $cmd_back * awaiting_choice -o no_choice.
+}
+%% The port is cleared; the focus follows it.
+qui cs [dyn] : clear -o sync.
+
+% ═══ sync: the port moves the focus; dialogs rise and fall ═══
+stage sync {
+  %% You moved to {N} yourself.
+  move [dyn] : enter(N) * focused(O) * N <> O * $free -o focused(N).
+  %% You moved to {N} yourself, inside the dialog.
+  move_in_dialog [dyn] : enter(N) * focused(O) * N <> O * $modal(D) * inside(N, D) -o focused(N).
+  %% You are where you were.
+  stay [dyn] : enter(N) * $focused(N) -o ().
+  %% The focus left the page: it is at the root.
+  blur_root [dyn] : blur * focused(O) -o focused(root).
+  %% The {D} dialog is up: it holds the focus until it is done.
+  dialog_open [dyn] : opened(D) * focused(W) * free * hidden(D) * $role(D, dialog) * entry(D, E) -o modal(D) * invoker(D, W) * focused(E) * shown(D).
+  %% The {D} dialog is down: the focus returns to where it was.
+  dialog_close [dyn] : closed(D) * modal(D) * invoker(D, W) * focused(F) * shown(D) -o free * focused(W) * hidden(D).
+  %% Leaving the text field ends dictation: back to commands.
+  mode_back [dyn] : mode(dictation) * $focused(N) * $role(N, R) * noneditable(R) -o mode(command).
+  %% The page says {W} is shown: it was.
+  shown_twice [dyn] : shown(W) * shown(W) -o shown(W).
+  %% The page says {W} is hidden: it was.
+  hidden_twice [dyn] : hidden(W) * hidden(W) -o hidden(W).
+  %% The page says it has {W}: it had.
+  present_twice [dyn] : present(W) * present(W) -o present(W).
+  %% The page says it has no {W}: it had none.
+  absent_twice [dyn] : absent(W) * absent(W) -o absent(W).
+}
+%% The focus is current; the focused widget takes its own commands first.
+qui sl [dyn] : sync -o local.
+
+% ═══ local: the focused widget's own commands ═══
+stage local {
+  %% I pick that in {W}.
+  pick [dyn] : cmd_pick * ready * $idle_jump * $no_choice * $focused(W) * $role(W, list) -o picking * progress(pick).
+  %% I drop the pending choice and pick that in {W}.
+  pick_replace [dyn] : cmd_pick * ready * $idle_jump * awaiting_choice * $focused(W) * $role(W, list) -o no_choice * picking * progress(pick).
+  %% I pick number {N} in {W}.
+  pick_n [dyn] : cmd_pick_n(N) * ready * $idle_jump * $no_choice * $numbers_shown * $focused(W) * $role(W, list) -o picking * progress(pick).
+  %% Number {N} it is.
+  pick_choice [dyn] : cmd_pick_n(N) * awaiting_choice * ready * $idle_jump -o no_choice * picking * progress(pick).
+  %% I picked it.
+  pick_ok [dyn] : picking * picked -o ready * done(pick).
+  %% There is nothing by that name here.
+  pick_none [dyn] : picking * nothing_picked -o ready * refused(pick).
+  %% More than one matches: the page numbers them; say the number.
+  pick_ambiguous [dyn] : picking * ambiguous * no_choice -o ready * awaiting_choice * progress(pick).
+  %% The page declines that pick.
+  pick_declined [dyn] : picking * page_refused -o ready * refused(pick).
+  %% I number the entries of {W}.
+  numbers [dyn] : cmd_numbers * numbers_hidden * $idle_jump * $focused(W) * $role(W, list) -o numbers_shown * done(numbers).
+  %% I hide {W} and step out to {P}.
+  close [dyn] : cmd_close * focused(W) * shown(W) * $role(W, dock) * child(P, W) * $free -o focused(P) * hidden(W) * done(close).
+  %% Dictation: what you say goes into {W}.
+  dictate [dyn] : cmd_dictate * mode(command) * $focused(W) * $role(W, editable) -o mode(dictation) * done(dictate).
+  %% Commands again.
+  command [dyn] : cmd_command * mode(dictation) -o mode(command) * done(command).
+  %% Held: what you say goes to the page's own channel until you let go.
+  hold_command [dyn] : cmd_hold * mode(command) -o mode(held) * was(command) * done(hold).
+  %% Held: what you say goes to the page's own channel until you let go.
+  hold_dictation [dyn] : cmd_hold * mode(dictation) -o mode(held) * was(dictation) * done(hold).
+  %% Released: back to where you were.
+  release [dyn] : cmd_release * mode(held) * was(M) -o mode(M) * done(release).
+}
+%% The focused widget is served; the rest is navigation.
+qui lg [dyn] : local -o global.
+
+% ═══ global: moving around the tree ═══
+stage global {
+  %% I move into {W}.
+  go_child [dyn] : cmd_go(W) * focused(F) * prev(Q) * child(F, W) * shown(W) * $free -o focused(W) * prev(F) * shown(W) * done(go).
+  %% I move to {W}.
+  go_named [dyn] : cmd_go(W) * focused(F) * prev(Q) * W <> F * child(P, W) * P <> F * shown(W) * $free -o focused(W) * prev(F) * shown(W) * done(go).
+  %% I show {W} first, then move into it.
+  go_hidden [dyn] : cmd_go(W) * focused(F) * prev(Q) * W <> F * hidden(W) * $role(W, dock) * $present(W) * $free -o focused(W) * prev(F) * shown(W) * done(go).
+  %% I move into {W}, inside the dialog.
+  go_in_dialog [dyn] : cmd_go(W) * focused(F) * prev(Q) * W <> F * $modal(D) * inside(W, D) -o focused(W) * prev(F) * done(go).
+  %% You are in {W} already.
+  go_here [dyn] : cmd_go(W) * $focused(W) -o refused(go).
+  %% I step out to {P}.
+  exit [dyn] : cmd_exit * focused(F) * prev(Q) * child(P, F) * $free -o focused(P) * prev(F) * done(exit).
+  %% I step out to {P}, inside the dialog.
+  exit_in_dialog [dyn] : cmd_exit * focused(F) * prev(Q) * child(P, F) * $modal(D) * inside(F, D) * inside(P, D) -o focused(P) * prev(F) * done(exit).
+  %% I step out to the {D} dialog itself.
+  exit_to_dialog [dyn] : cmd_exit * focused(F) * prev(Q) * child(D, F) * $modal(D) -o focused(D) * prev(F) * done(exit).
+  %% I go home to the root.
+  home [dyn] : cmd_home * focused(F) * prev(Q) * child(P, F) * $free -o focused(root) * prev(F) * done(home).
+  %% Back to {P}.
+  back [dyn] : cmd_back * focused(F) * prev(P) * F <> P * $free -o focused(P) * prev(F) * done(back).
+  %% I label every widget you can reach: say its number.
+  jump [dyn] : cmd_jump * idle_jump * $ready -o jumping * progress(jump).
+  %% I label the widgets starting with {L}: say its number.
+  jump_to [dyn] : cmd_jump_to(L) * idle_jump * $ready -o jumping * progress(jump).
+  %% Number {N}.
+  jump_pick [dyn] : cmd_pick_n(N) * jumping -o resolving * progress(jump).
+  %% I jump to {W}.
+  jump_ok [dyn] : resolving * jumped(W) * focused(F) * prev(Q) * shown(W) * $free -o idle_jump * focused(W) * prev(F) * shown(W) * done(jump).
+  %% I show {W} and jump to it.
+  jump_ok_hidden [dyn] : resolving * jumped(W) * focused(F) * prev(Q) * hidden(W) * $role(W, dock) * $present(W) * $free -o idle_jump * focused(W) * prev(F) * shown(W) * done(jump).
+  %% I jump to {W}, inside the dialog.
+  jump_ok_dialog [dyn] : resolving * jumped(W) * focused(F) * prev(Q) * $modal(D) * inside(W, D) -o idle_jump * focused(W) * prev(F) * done(jump).
+  %% No label by that number.
+  jump_none [dyn] : resolving * nothing_picked -o idle_jump * refused(jump).
+  %% The labels are gone.
+  cancel_jump [dyn] : cmd_cancel * jumping * $ready * $no_choice * $numbers_hidden -o idle_jump * done(cancel).
+  %% The jump is dropped.
+  cancel_resolving [dyn] : cmd_cancel * resolving * $ready * $no_choice * $numbers_hidden -o idle_jump * done(cancel).
+  %% I show {W}.
+  show [dyn] : cmd_show(W) * hidden(W) * $role(W, dock) * $present(W) * $free -o shown(W) * done(show).
+  %% The pick is dropped and the numbers are gone.
+  cancel_pick_numbers [dyn] : cmd_cancel * picking * numbers_shown -o ready * numbers_hidden * done(cancel).
+  %% The pick is dropped.
+  cancel_pick [dyn] : cmd_cancel * picking * $numbers_hidden -o ready * done(cancel).
+  %% The choice is dropped and the numbers are gone.
+  cancel_choice_numbers [dyn] : cmd_cancel * awaiting_choice * numbers_shown * $ready -o no_choice * numbers_hidden * done(cancel).
+  %% The choice is dropped.
+  cancel_choice [dyn] : cmd_cancel * awaiting_choice * $numbers_hidden * $ready -o no_choice * done(cancel).
+  %% The numbers are gone.
+  cancel_numbers [dyn] : cmd_cancel * numbers_shown * $ready * $no_choice -o numbers_hidden * done(cancel).
+  %% You are in {W}. From here you can say: go to <widget>, exit, home, back, jump (then a number), pick <name>, numbers, show <dock>, close, cancel, dictate, help.
+  help [dyn] : cmd_help * $focused(W) -o done(help).
+}
+%% Navigation is served; what is left is refused with its reason.
+qui gp [dyn] : global -o post.
+
+% ═══ post: every command no stage took, refused with its reason ═══
+stage post {
+  %% I can't go to {W}: the {D} dialog holds the focus until it is done.
+  p_go_modal [dyn] : cmd_go(W) * $present(W) * $modal(D) -o refused(go).
+  %% I can't reach {W} from here: say "exit", "home", or the name of a widget next to you.
+  p_go [dyn] : cmd_go(W) * $present(W) * $free -o refused(go).
+  %% {W} is not on the page now.
+  p_go_absent [dyn] : cmd_go(W) * $absent(W) -o refused(go).
+  %% I can't step out: the {D} dialog holds the focus until it is done.
+  p_exit_modal [dyn] : cmd_exit * $modal(D) -o refused(exit).
+  %% I am at the root: there is nothing to step out to.
+  p_exit [dyn] : cmd_exit * $free -o refused(exit).
+  %% I can't go home: the {D} dialog holds the focus until it is done.
+  p_home_modal [dyn] : cmd_home * $modal(D) -o refused(home).
+  %% I am home already.
+  p_home [dyn] : cmd_home * $free -o refused(home).
+  %% I can't go back: the {D} dialog holds the focus until it is done.
+  p_back_modal [dyn] : cmd_back * $modal(D) -o refused(back).
+  %% There is nowhere to go back to.
+  p_back [dyn] : cmd_back * $free -o refused(back).
+  %% I am still picking the last one: a moment.
+  p_pick_busy [dyn] : cmd_pick * $picking * $idle_jump -o refused(pick).
+  %% I can't pick here: {W} is not a list. Go to a list first.
+  p_pick [dyn] : cmd_pick * $ready * $idle_jump * $focused(W) * $role(W, R) * notlist(R) -o refused(pick).
+  %% I am still picking the last one: a moment.
+  p_pick_n_busy [dyn] : cmd_pick_n(N) * $picking * $idle_jump -o refused(pick).
+  %% There are no numbers to pick from: say "numbers" first.
+  p_pick_n [dyn] : cmd_pick_n(N) * $ready * $idle_jump * $numbers_hidden * $no_choice -o refused(pick).
+  %% I am still looking for that label: a moment.
+  p_jump_resolving [dyn] : cmd_jump * $resolving -o refused(jump).
+  %% I am still looking for that label: a moment.
+  p_jump_to_resolving [dyn] : cmd_jump_to(L) * $resolving -o refused(jump).
+  %% I am still looking for that label: a moment.
+  p_pick_n_resolving [dyn] : cmd_pick_n(N) * $resolving -o refused(pick).
+  %% I am still looking for that label: a moment.
+  p_pick_resolving [dyn] : cmd_pick * $resolving -o refused(pick).
+  %% I am still looking for that label: a moment.
+  p_numbers_resolving [dyn] : cmd_numbers * $resolving -o refused(numbers).
+  %% The labels are up: say a label's number, or "cancel" the jump.
+  p_pick_jumping [dyn] : cmd_pick * $jumping -o refused(pick).
+  %% A late answer to a jump that was dropped.
+  p_jumped_late [dyn] : jumped(W) * $idle_jump -o ().
+  %% A late answer to a jump that was dropped.
+  p_jumped_jumping [dyn] : jumped(W) * $jumping -o ().
+  %% A late answer to a pick or jump that was dropped.
+  p_nothing_picked_late [dyn] : nothing_picked * $ready * $idle_jump -o ().
+  %% A late answer to a pick that was dropped: the labels are up now.
+  p_nothing_picked_jumping [dyn] : nothing_picked * $jumping -o ().
+  %% A late answer to a pick that was dropped.
+  p_picked_late [dyn] : picked * $ready -o ().
+  %% A late answer to a pick that was dropped.
+  p_page_refused_late [dyn] : page_refused * $ready -o ().
+  %% A late answer to a pick that was dropped.
+  p_ambiguous_late [dyn] : ambiguous * $ready -o ().
+  %% The labels are up already: say a number, or "cancel".
+  p_jump_busy [dyn] : cmd_jump * $jumping -o refused(jump).
+  %% The labels are up already: say a number, or "cancel".
+  p_jump_to_busy [dyn] : cmd_jump_to(L) * $jumping -o refused(jump).
+  %% I am still picking the last one: a moment.
+  p_jump_picking [dyn] : cmd_jump * $idle_jump * $picking -o refused(jump).
+  %% I am still picking the last one: a moment.
+  p_jump_to_picking [dyn] : cmd_jump_to(L) * $idle_jump * $picking -o refused(jump).
+  %% I can't jump to {W}: the {D} dialog holds the focus until it is done.
+  p_jumped_modal [dyn] : resolving * jumped(W) * $modal(D) -o idle_jump * refused(jump).
+  %% {W} is not on the page now.
+  p_jumped_absent [dyn] : resolving * jumped(W) * $absent(W) * $free -o idle_jump * refused(jump).
+  %% The numbers are off while the labels are up: say a number, or "cancel".
+  p_numbers_jumping [dyn] : cmd_numbers * $jumping -o refused(numbers).
+  %% The numbers are up already.
+  p_numbers_shown [dyn] : cmd_numbers * $numbers_shown * $idle_jump -o refused(numbers).
+  %% I can't number {W}: it is not a list.
+  p_numbers [dyn] : cmd_numbers * $numbers_hidden * $idle_jump * $focused(W) * $role(W, R) * notlist(R) -o refused(numbers).
+  %% {W} is shown already.
+  p_show_shown [dyn] : cmd_show(W) * $shown(W) * $role(W, dock) -o refused(show).
+  %% I can't show {W}: it is not a dock.
+  p_show [dyn] : cmd_show(W) * $role(W, R) * notdock(R) -o refused(show).
+  %% I can't show {W}: the {D} dialog holds the focus until it is done.
+  p_show_modal [dyn] : cmd_show(W) * $hidden(W) * $role(W, dock) * $present(W) * $modal(D) -o refused(show).
+  %% {W} is not on the page now.
+  p_show_absent [dyn] : cmd_show(W) * $absent(W) * $hidden(W) * $role(W, dock) -o refused(show).
+  %% I can't close here: {W} is not a dock.
+  p_close [dyn] : cmd_close * $focused(W) * $role(W, R) * notdock(R) -o refused(close).
+  %% {W} is hidden already.
+  p_close_hidden [dyn] : cmd_close * $focused(W) * $hidden(W) * $role(W, dock) -o refused(close).
+  %% I can't close {W}: the {D} dialog holds the focus until it is done.
+  p_close_modal [dyn] : cmd_close * $focused(W) * $shown(W) * $role(W, dock) * $modal(D) -o refused(close).
+  %% Nothing to cancel.
+  p_cancel [dyn] : cmd_cancel -o done(cancel).
+  %% I can't take dictation here: {W} is not a text field.
+  p_dictate [dyn] : cmd_dictate * $mode(command) * $focused(W) * $role(W, R) * noneditable(R) -o refused(dictate).
+  %% Let go of the key first.
+  p_dictate_held [dyn] : cmd_dictate * $mode(held) -o refused(dictate).
+  %% Let go of the key first.
+  p_command_held [dyn] : cmd_command * $mode(held) -o refused(command).
+  %% Already held.
+  p_hold [dyn] : cmd_hold * $mode(held) -o refused(hold).
+  %% Nothing is held.
+  p_release_command [dyn] : cmd_release * $mode(command) -o refused(release).
+  %% Nothing is held.
+  p_release_dictation [dyn] : cmd_release * $mode(dictation) -o refused(release).
+  %% Dictation is on already.
+  p_dictate_on [dyn] : cmd_dictate * $mode(dictation) -o refused(dictate).
+  %% Commands are on already.
+  p_command [dyn] : cmd_command * $mode(command) -o refused(command).
+  %% I can't do that here: it is not a way to move around this page.
+  p_unknown [dyn] : cmd_unknown -o refused(unknown).
+  %% A focus outside the {D} dialog while it is up: the page let it through; the rules did not follow, and observe() will say so.
+  p_enter_modal [dyn] : enter(N) * $modal(D) -o ().
+  %% A stray enter: the port named a widget the focus could not take.
+  p_enter [dyn] : enter(N) * $free -o ().
+  %% A stray dialog report: no dialog of that name was up or free to rise.
+  p_opened [dyn] : opened(D) -o ().
+  %% A stray dialog report.
+  p_closed [dyn] : closed(D) -o ().
+}
+%% The pass is done; the next beat starts with the port.
+qui pc [dyn] : post -o clear.

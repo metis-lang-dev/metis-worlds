@@ -1,0 +1,46 @@
+% case world_ui_jump_absent: "jump", "two", the page answers jumped(journal) while the journal is absent: refused, nothing shown
+catalog world_ui_jump_absent 1.
+include "../world_ui.llp".
+#init focused(root) 1
+#init prev(root) 1
+#init free 1
+#init mode(command) 1
+#init ready 1
+#init numbers_hidden 1
+#init no_choice 1
+#init idle_jump 1
+#init shown(root) 1
+#init shown(band) 1
+#init shown(ctrl) 1
+#init shown(play) 1
+#init shown(step) 1
+#init shown(map) 1
+#init shown(talk) 1
+#init shown(hierarchy) 1
+#init shown(hlist) 1
+#init hidden(journal) 1
+#init hidden(jlog) 1
+#init hidden(card) 1
+#init hidden(cardclose) 1
+#init present(root) 1
+#init present(band) 1
+#init present(ctrl) 1
+#init present(play) 1
+#init present(step) 1
+#init present(map) 1
+#init present(card) 1
+#init present(cardclose) 1
+#init present(talk) 1
+#init present(hierarchy) 1
+#init present(hlist) 1
+#init absent(journal) 1
+#init present(jlog) 1
+#init cmd_jump 1
+#init cmd_pick_n(n2) 1
+#init jumped(journal) 1
+#steps 20
+#seeds 1
+#query refused(jump)
+#query focused(root)
+#query hidden(journal)
+#query idle_jump

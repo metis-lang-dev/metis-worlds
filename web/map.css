@@ -31,7 +31,11 @@
   color: var(--wm-fg); border-radius: 3px; padding: 0 2px; }
 .wm-ent:focus-visible, .wm-ent:hover { outline: 2px solid var(--wm-focus); outline-offset: -2px; z-index: 2; }
 .wm-hot { box-shadow: inset 0 0 0 2px var(--wm-hot); }
+.wm-cornered { box-shadow: inset 0 0 0 3px #e03a3a; background: rgba(224, 58, 58, .25); }
 .wm-agent { z-index: 3; }
+.wm-name { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.wm-ent[data-n]::before { content: attr(data-n); position: absolute; left: 0; top: 0; z-index: 4; min-width: 12px;
+  font: bold 10px/12px system-ui; text-align: center; color: #000; background: #6ee7f0; border-radius: 3px; }
 .wm-agent .wm-ch { color: #ffe066; }
 .wm-attn { flex: 1 1 220px; min-width: 200px; max-width: 360px; min-height: 120px; padding: 10px 12px;
   background: var(--wm-card); border: 1px solid var(--wm-line); border-radius: 6px;

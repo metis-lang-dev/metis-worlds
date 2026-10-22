@@ -3,18 +3,18 @@
     .worlds/mh/bin/python tools/tiles_export.py [EDITOR_DIR]
 
 1. MiniHack's tiles.pkl (the NetHack 3.6 tileset: 1082 tiles × 16×16 RGB) → a sprite sheet
-   web/assets/nethack/glyphs.png (40 tiles a row) and web/assets/nethack/glyphs.json
+   web/tiles/nethack/glyphs.png (40 tiles a row) and web/tiles/nethack/glyphs.json
    {size, cols, count, glyph2tile}: an NLE glyph id (the `glyphs` observation) → its tile, so
    the page draws a level from `glyphs` with no other mapping.
 2. EDITOR_DIR, a checkout of minihack-editor/minihack-editor.github.io: its 664 named icons
-   (public/tilesets/nethack/{dungeon,items,monsters}) copied to web/assets/editor/, and
-   web/assets/index.json {name: {image, glyph, color, source}} from its indexes
+   (public/tilesets/nethack/{dungeon,items,monsters}) copied to web/tiles/editor/, and
+   web/tiles/index.json {name: {image, glyph, color, source}} from its indexes
    (src/tilesets/nethack/*.json). A name is lower case with `_` for anything else
    ("Staircase (down)" → staircase_down, "skeleton key" → skeleton_key, as MiniHack's atoms
    spell them); the first entry of a name wins.
 
 Both are NetHack's art (the NetHack General Public License; NetHackWiki's images, some CC
-BY-SA 3.0): they live under web/assets/ with its own NOTICE, never in the Apache sources.
+BY-SA 3.0): they live under web/tiles/ with its own NOTICE, never in the Apache sources.
 The PNG is written with zlib (no PIL in the world's venv).
 """
 import json
@@ -27,7 +27,7 @@ import sys
 import zlib
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-ASSETS = os.path.join(os.path.dirname(HERE), "web", "assets")
+ASSETS = os.path.join(os.path.dirname(HERE), "web", "tiles")
 COLS = 40
 
 

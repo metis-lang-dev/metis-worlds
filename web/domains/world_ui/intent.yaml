@@ -1,0 +1,185 @@
+# The world page's navigation intents (alf-demo step 3b, nina, 2026-10-22): the ui card's verbs
+# and mapper (metis-loop domains/ui/intent.yaml, the synth's) over world_ui.llp's widgets. The
+# intent pass's grammar and prompts are GENERATED from this file:
+#   python -m metis.intents gen world_ui      (from web/: intent/*)
+# The outcomes are the base's %% lines; the page (web/world.html) is the host.
+#
+# Two brains, never confused: this card is the NAVIGATION agent's (metis-agent, Gemma E2B,
+# local). What the person wants done in the world (fetch, put, open) is the task card's,
+# not this one's.
+
+persona: |
+  You are the navigator of the world page: a map of a world, a task card, a dialog band, the
+  hierarchy of the domains at work and their journal. The person tells you where to go, what
+  to pick, and whether what they say is a command or dictation. Map what they say to exactly
+  one intent JSON per utterance. Respond with only the JSON.
+
+  You never act in the world: fetching, taking, putting, opening and going to a place in the
+  world are the task's (another card). You only move the focus between the page's widgets,
+  pick an entry of the focused list by its name or by a number, show the numbers, show or
+  hide a dock, cancel what is pending, and switch between command and dictation.
+
+verbs:
+  - {verb: GO, meaning: "move the focus into a widget of the page: a child of the current one, or any widget by its name"}
+  - {verb: EXIT, meaning: "step out of the current widget to its parent"}
+  - {verb: HOME, meaning: "go to the root of the page"}
+  - {verb: BACK, meaning: "go back to where the focus was before the last move"}
+  - {verb: PICK, meaning: "pick an entry of the focused list: a thing on the map, a domain in the hierarchy; by name or by the number shown"}
+  - {verb: NUMBERS, meaning: "show numbers on the entries of the focused list, to pick by number"}
+  - {verb: JUMP, meaning: "label every widget on the page you can reach (or only those whose name starts with a letter) to jump to one by its number"}
+  - {verb: SHOW, meaning: "show a hidden dock by name"}
+  - {verb: CLOSE, meaning: "hide the current dock"}
+  - {verb: CANCEL, meaning: "drop what is pending: the numbers, a choice, a pick"}
+  - {verb: MODE, meaning: "switch to dictation (what you say goes into the text field) or back to commands"}
+  - {verb: HELP, meaning: "ask what can be said here"}
+  - {verb: UNKNOWN, meaning: "anything that is not a way to move around the page"}
+
+slots:
+  widget: {enum: [BAND, CTRL, PLAY, STEP, MAP, CARD, CARDCLOSE, TALK, HIERARCHY, HLIST, JOURNAL, JLOG]}
+  name: string
+  number: number
+  to: {enum: [DICTATION, COMMAND]}
+  letter: {enum: [A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z]}
+
+guidance: |
+  The page's widgets: the BAND at the top (its CTRL, the controls, with PLAY and STEP); the
+  MAP, the world as a grid (its entries are the things on it: places, things, the agent); the
+  CARD, the task card (a dialog, with its CARDCLOSE "close button"); the TALK dock, "the
+  dialog panel", "the voice panel"; the HIERARCHY dock, "the domains", with HLIST "the list of
+  domains"; the JOURNAL dock, "the log", with JLOG "the journal's lines". "the task" and "the
+  task card" are CARD; "the controls" are CTRL; "the map" and "the world" are MAP. GO takes
+  `widget`; PICK takes `name` (the person's words for the entry, as said: "pick the
+  microwave", "the fridge", "the agent") or `number` ("pick three", "number three", "three"
+  alone when numbers or labels are up); JUMP takes an optional `letter` ("jump", "jump m": a
+  single letter, the first of the widget's name; then a number picks the label), but "jump to
+  <a widget's name>" ("jump to the map") is GO to that widget, not JUMP; SHOW takes `widget`;
+  MODE takes `to`. Fetching, putting, taking, opening, closing, and going to a place IN THE
+  WORLD ("go to the fridge", "put the mug on the desk", "open the microwave", "close the
+  drawer") are the task's, not the page's: UNKNOWN; only the page's own widgets above are GO
+  targets, and "open" a thing of the world is never GO. "up a level", "leave this", "step out"
+  are EXIT (out of the current widget), never a widget's name. "bring back X" and "show X" for a
+  dock are SHOW. One utterance is one intent: when the person asks for two things, take the
+  first. Omit fields you don't need.
+
+examples:
+  - ["go to the map", {"intent":"GO","widget":"MAP"}]
+  - ["show me the world", {"intent":"GO","widget":"MAP"}]
+  - ["open the task card", {"intent":"GO","widget":"CARD"}]
+  - ["take me to the journal", {"intent":"GO","widget":"JOURNAL"}]
+  - ["go to the hierarchy", {"intent":"GO","widget":"HIERARCHY"}]
+  - ["the list of domains", {"intent":"GO","widget":"HLIST"}]
+  - ["go to the dialog panel", {"intent":"GO","widget":"TALK"}]
+  - ["go to the controls", {"intent":"GO","widget":"CTRL"}]
+  - ["go to the close button", {"intent":"GO","widget":"CARDCLOSE"}]
+  - ["exit", {"intent":"EXIT"}]
+  - ["step out", {"intent":"EXIT"}]
+  - ["home", {"intent":"HOME"}]
+  - ["back", {"intent":"BACK"}]
+  - ["pick the microwave", {"intent":"PICK","name":"the microwave"}]
+  - ["select fridge one", {"intent":"PICK","name":"fridge one"}]
+  - ["the agent", {"intent":"PICK","name":"the agent"}]
+  - ["pick three", {"intent":"PICK","number":3}]
+  - ["number two", {"intent":"PICK","number":2}]
+  - ["numbers", {"intent":"NUMBERS"}]
+  - ["number the things", {"intent":"NUMBERS"}]
+  - ["jump", {"intent":"JUMP"}]
+  - ["jump m", {"intent":"JUMP","letter":"M"}]
+  - ["jump to the map", {"intent":"GO","widget":"MAP"}]
+  - ["show the journal", {"intent":"SHOW","widget":"JOURNAL"}]
+  - ["bring back the hierarchy", {"intent":"SHOW","widget":"HIERARCHY"}]
+  - ["close", {"intent":"CLOSE"}]
+  - ["hide this", {"intent":"CLOSE"}]
+  - ["cancel", {"intent":"CANCEL"}]
+  - ["never mind", {"intent":"CANCEL"}]
+  - ["dictation", {"intent":"MODE","to":"DICTATION"}]
+  - ["commands", {"intent":"MODE","to":"COMMAND"}]
+  - ["help", {"intent":"HELP"}]
+  - ["what can I say here", {"intent":"HELP"}]
+  - note: "Fetching, putting, taking, opening and going to a place in the world are the task's, not ways to move around this page: UNKNOWN."
+  - ["put a tomato in the microwave", {"intent":"UNKNOWN"}]
+  - ["go to the fridge", {"intent":"UNKNOWN"}]
+  - ["what time is it", {"intent":"UNKNOWN"}]
+
+spoken:
+  heading: Spoken response (after the JSON)
+  text: |
+    After the JSON comes "Spoken response:" and one short sentence the navigator says, in
+    the first person: where the focus went, what was picked, or why not. Never JSON, never
+    an intent name.
+  examples:
+    - ["go to the map", {"intent":"GO","widget":"MAP"}, "I'm on the map."]
+    - ["pick three", {"intent":"PICK","number":3}, "Number three."]
+    - ["put a tomato in the microwave", {"intent":"UNKNOWN"}, "That's the task's, not a way to move around this page."]
+
+# ── the mapper: the ui card's table ──
+map:
+  - {verb: GO, atom: "cmd_go({widget:widget})", act: go}
+  - {verb: EXIT, atom: cmd_exit, act: exit}
+  - {verb: HOME, atom: cmd_home, act: home}
+  - {verb: BACK, atom: cmd_back, act: back}
+  - {verb: PICK, atom: "cmd_pick_n({number:num})", act: pick}
+  - {verb: PICK, atom: cmd_pick, act: pick}
+  - {verb: NUMBERS, atom: cmd_numbers, act: numbers}
+  - {verb: JUMP, atom: "cmd_jump_to({letter:letter})", act: jump}
+  - {verb: JUMP, atom: cmd_jump, act: jump}
+  - {verb: SHOW, atom: "cmd_show({widget:widget})", act: show}
+  - {verb: CLOSE, atom: cmd_close, act: close}
+  - {verb: CANCEL, atom: cmd_cancel, act: cancel}
+  - {verb: MODE, when: {to: DICTATION}, atom: cmd_dictate, act: dictate}
+  - {verb: MODE, when: {to: COMMAND}, atom: cmd_command, act: command}
+  - {verb: HELP, atom: cmd_help, act: help}
+  - {verb: UNKNOWN, atom: cmd_unknown, act: unknown}
+  # push-to-talk: never spoken, a page sends them as typed intents (the wire's intent frame)
+  - {verb: HOLD, atom: cmd_hold, act: hold}
+  - {verb: RELEASE, atom: cmd_release, act: release}
+values:
+  widget: {BAND: band, CTRL: ctrl, PLAY: play, STEP: step, MAP: map, CARD: card, CARDCLOSE: cardclose, TALK: talk,
+           HIERARCHY: hierarchy, HLIST: hlist, JOURNAL: journal, JLOG: jlog}
+  num: {1: n1, 2: n2, 3: n3, 4: n4, 5: n5, 6: n6, 7: n7, 8: n8, 9: n9}
+  letter: {A: a, B: b, C: c, D: d, E: e, F: f, G: g, H: h, I: i, J: j, K: k, L: l, M: m, N: n, O: o, P: p, Q: q, R: r, S: s, T: t, U: u, V: v, W: w, X: x, Y: y, Z: z}
+
+enders: [cmd_cancel]
+asks: [HELP]
+silent: [HOLD, RELEASE]
+
+outcomes: {done: done, refused: refused, progress: progress}
+# the alternatives are EMPTY on purpose, as the ui card's (console-nav A1): a navigation domain
+# never moves the focus unasked; the %% lines already say what to do
+alternatives:
+  max: 2
+  rules:
+    p_go_modal: []
+    p_go: []
+    p_go_absent: []
+    p_exit_modal: []
+    p_exit: []
+    p_home_modal: []
+    p_home: []
+    p_back_modal: []
+    p_back: []
+    p_pick_busy: []
+    p_pick: []
+    p_pick_n_busy: []
+    p_pick_n: []
+    p_numbers_shown: []
+    p_numbers_jumping: []
+    p_jump_busy: []
+    p_jump_to_busy: []
+    p_jump_picking: []
+    p_jump_to_picking: []
+    p_jumped_modal: []
+    p_jumped_absent: []
+    jump_none: []
+    p_numbers: []
+    p_show_shown: []
+    p_show: []
+    p_show_modal: []
+    p_show_absent: []
+    p_close: []
+    p_close_hidden: []
+    p_close_modal: []
+    p_dictate: []
+    p_dictate_on: []
+    p_command: []
+    p_unknown: []
+    pick_none: []

@@ -204,6 +204,6 @@ def test_tiles_export(tmp_path):
     assert max(meta["glyph2tile"]) < n
     head = (tmp_path / "glyphs.png").read_bytes()[:24]
     assert head[:8] == b"\x89PNG\r\n\x1a\n" and int.from_bytes(head[16:20], "big") == 640 and int.from_bytes(head[20:24], "big") == 448
-    ref = os.path.join(ROOT, "..", "web", "assets", "nethack")
+    ref = os.path.join(ROOT, "..", "web", "tiles", "nethack")
     assert (tmp_path / "glyphs.png").read_bytes() == open(os.path.join(ref, "glyphs.png"), "rb").read()
     assert meta == json.load(open(os.path.join(ref, "glyphs.json")))

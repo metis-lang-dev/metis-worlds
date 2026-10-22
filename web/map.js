@@ -4,8 +4,8 @@
 //   import { WorldMap, toGrid } from './map.js';
 //   const map = new WorldMap(el, { base: { sheet, glyphs, index: [url…] }, onTask, onAttend });
 //   await map.load(url)              // the grid schema, or a semantic map (DEMO.md §3: places/things)
-//   map.delta({ agent: {pos, yaw}, entities: [{id, pos?, tile?, gone?}], cells: [{pos, tile}],
-//               hot: [id…], task: {chain, results} })      // the world's live state (world/delta)
+//   map.delta({ agent: {pos | at, yaw, holding}, entities: [{id, pos?, tile?, items?, closed?, gone?}],
+//               cells: [{pos, tile}], hot: [id…], cornered: id | null, task: {chain, results} })   // world/delta
 //
 // The grid: {cols, rows, cells: [[tile|null]], entities: [{id, name, pos: [x, y], tile, ch?, kind?,
 // frame?, items?, hot?}], agent: {pos, yaw?, tile?, ch?}, task: {text, goal, chain?, results?},
@@ -84,7 +84,8 @@ export class WorldMap {
     this.index = {};
     const lists = [...(this.base.index || []).map(u => at(u, location.href)), ...(ts.index || []).map(u => at(u, url))];
     for (const u of lists) {                          // later wins: the world's entries over the base
-      const idx = await json(u);
+      let idx;
+      try { idx = await json(u); } catch (e) { console.warn(`map: no tile index at ${u} (its names draw as glyphs)`); continue; }
       for (const [k, v] of Object.entries(idx)) this.index[nameOf(k)] = { ...v, image: v.image ? at(v.image, u) : null };
     }
   }
@@ -131,16 +132,23 @@ export class WorldMap {
     }
     b.dataset.kind = e.kind || ''; b.dataset.name = e.name || e.id;
     b.setAttribute('aria-label', (e.name || e.id) + (e.items?.length ? ` (${e.items.length} in it)` : ''));
-    b.classList.toggle('wm-hot', !!e.hot); b.classList.toggle('wm-agent', e.id === '@agent');
+    b.classList.toggle('wm-hot', !!e.hot); b.classList.toggle('wm-agent', e.id === '@agent'); b.classList.toggle('wm-cornered', !!e.cornered);
     b.style.setProperty('--x', e.pos[0]); b.style.setProperty('--y', e.pos[1]);
     if (e.yaw != null) b.style.setProperty('--yaw', `${e.yaw}deg`);
-    b.innerHTML = this.tile(e.tile, e.ch) + (e.items?.length ? `<sup>${e.items.length}</sup>` : '');
+    b.innerHTML = this.tile(e.tile, e.ch) + (e.items?.length ? `<sup>${e.items.length}</sup>` : '')
+      + `<span class="wm-name">${esc(e.name || e.id)}</span>`;     // its name as text: a pick by name reads it (the ui port)
   }
 
   // the live state: the agent moves, entities move, change or go, cells change, the task's progress
   delta(d) {
     const m = this.map;
-    if (d.agent) { Object.assign(m.agent, d.agent); this.put({ ...this.agentEnt(), ch: m.agent.ch || '@' }); }
+    if (d.agent) {                                    // `at` a place: the agent stands on its cell; `holding` what it carries
+      Object.assign(m.agent, d.agent);
+      const at = d.agent.at && m.entities.find(e => e.id === d.agent.at);
+      if (at && !d.agent.pos) m.agent.pos = [...at.pos];
+      m.agent.name = 'the agent' + (m.agent.holding ? `, holding ${m.agent.holding}` : '');
+      this.put({ ...this.agentEnt(), ch: m.agent.ch || '@' });
+    }
     for (const u of d.entities || []) {
       const i = m.entities.findIndex(e => e.id === u.id);
       if (u.gone) { if (i >= 0) m.entities.splice(i, 1); this.els.get(u.id)?.remove(); this.els.delete(u.id); continue; }
@@ -153,6 +161,9 @@ export class WorldMap {
       if (s) { s.innerHTML = c.tile == null ? '' : this.tile(c.tile); s.classList.toggle('wm-void', c.tile == null); }
     }
     if (d.hot) for (const e of m.entities) { e.hot = d.hot.includes(e.id); this.els.get(e.id)?.classList.toggle('wm-hot', e.hot); }
+    if ('cornered' in d) for (const e of m.entities) {   // where the loop stopped and asks (disengagement): the place in red
+      e.cornered = e.id === d.cornered; this.els.get(e.id)?.classList.toggle('wm-cornered', e.cornered);
+    }
     if (d.task) Object.assign(m.task, d.task);
     if (this.card.open && this.cardFor) this.showTask(this.cardFor);
   }
@@ -163,7 +174,7 @@ export class WorldMap {
     const ix = this.index[nameOf(e.tile ?? '')] || this.index[nameOf(e.tile ?? '').replace(/_?\d+$/, '')];
     const frame = e.frame ? new URL(e.frame, this.frameBase).href : null;
     this.attn.innerHTML = `<div class="wm-big">${this.tile(e.tile, e.ch)}</div><b>${esc(e.name || e.id)}</b>
-      <span class="wm-kind">${esc(e.kind || '')}${e.closed ? ' · closed' : ''}${e.hot ? ' · in the task' : ''}</span>
+      <span class="wm-kind">${esc(e.kind || '')}${e.closed ? ' · closed' : ''}${e.hot ? ' · in the task' : ''}${e.cornered ? ' · the loop stopped here' : ''}</span>
       ${frame ? `<img class="wm-frame" src="${esc(frame)}" alt="${esc(e.name)} as the world showed it">` : ''}
       ${e.items?.length ? `<div class="wm-items">in it: ${e.items.map(esc).join(', ')}</div>` : ''}
       ${ix?.source?.startsWith('http') ? `<a href="${esc(ix.source)}" target="_blank" rel="noopener">about the picture</a>` : ''}`;

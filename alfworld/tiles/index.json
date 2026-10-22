@@ -25,7 +25,7 @@
 "source": "alfworld: a vessel: NetHack's potion glyph"
 },
 "box": {
-"image": "../../web/assets/editor/items/chest.png",
+"image": "../../web/tiles/editor/items/chest.png",
 "source": "alfworld: an openable receptacle draws as a chest (DEMO.md \u00a78)"
 },
 "bread": {
@@ -34,15 +34,15 @@
 "source": "alfworld: food: NetHack's food glyph"
 },
 "butterknife": {
-"image": "../../web/assets/editor/items/knife.png",
+"image": "../../web/tiles/editor/items/knife.png",
 "source": "alfworld: NetHack's knife"
 },
 "cabinet": {
-"image": "../../web/assets/editor/items/chest.png",
+"image": "../../web/tiles/editor/items/chest.png",
 "source": "alfworld: an openable receptacle draws as a chest (DEMO.md \u00a78)"
 },
 "candle": {
-"image": "../../web/assets/editor/items/oil lamp.png",
+"image": "../../web/tiles/editor/items/oil lamp.png",
 "source": "alfworld: a light"
 },
 "cart": {
@@ -66,7 +66,7 @@
 "source": "alfworld: a surface: no NetHack icon, its glyph (an altar's _)"
 },
 "creditcard": {
-"image": "../../web/assets/editor/items/credit card.png",
+"image": "../../web/tiles/editor/items/credit card.png",
 "source": "alfworld: NetHack's credit card"
 },
 "cup": {
@@ -85,7 +85,7 @@
 "source": "alfworld: a surface: no NetHack icon, its glyph (an altar's _)"
 },
 "drawer": {
-"image": "../../web/assets/editor/items/chest.png",
+"image": "../../web/tiles/editor/items/chest.png",
 "source": "alfworld: an openable receptacle draws as a chest (DEMO.md \u00a78)"
 },
 "dresser": {
@@ -94,7 +94,7 @@
 "source": "alfworld: a surface: no NetHack icon, its glyph (an altar's _)"
 },
 "fridge": {
-"image": "../../web/assets/editor/items/ice box.png",
+"image": "../../web/tiles/editor/items/ice box.png",
 "source": "alfworld: NetHack's ice box"
 },
 "garbagecan": {
@@ -118,7 +118,7 @@
 "source": "alfworld: food: NetHack's food glyph"
 },
 "microwave": {
-"image": "../../web/assets/editor/items/large box.png",
+"image": "../../web/tiles/editor/items/large box.png",
 "source": "alfworld: a closed box that opens"
 },
 "mug": {
@@ -152,7 +152,7 @@
 "source": "alfworld: food: NetHack's food glyph"
 },
 "safe": {
-"image": "../../web/assets/editor/items/chest.png",
+"image": "../../web/tiles/editor/items/chest.png",
 "source": "alfworld: an openable receptacle draws as a chest (DEMO.md \u00a78)"
 },
 "shelf": {

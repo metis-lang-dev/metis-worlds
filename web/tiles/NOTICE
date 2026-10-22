@@ -1,4 +1,4 @@
-web/assets/ — the tileset images and their indexes. NOT under the Apache License of metis-worlds:
+web/tiles/ — the tileset images and their indexes. NOT under the Apache License of metis-worlds:
 these are NetHack's art and keep their own terms.
 
 nethack/glyphs.png, nethack/glyphs.json

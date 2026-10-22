@@ -1,0 +1,57 @@
+# utterance	expected_intent	source   (source: prompt = in the few-shot examples; heldout = paraphrase)
+go to the map	GO	prompt
+show me the world	GO	prompt
+open the task card	GO	prompt
+take me to the journal	GO	prompt
+go to the hierarchy	GO	prompt
+go to the dialog panel	GO	prompt
+exit	EXIT	prompt
+home	HOME	prompt
+back	BACK	prompt
+pick the microwave	PICK	prompt
+pick three	PICK	prompt
+numbers	NUMBERS	prompt
+jump	JUMP	prompt
+show the journal	SHOW	prompt
+close	CLOSE	prompt
+cancel	CANCEL	prompt
+dictation	MODE	prompt
+help	HELP	prompt
+put a tomato in the microwave	UNKNOWN	prompt
+go to the map please	GO	heldout
+I want to see the map	GO	heldout
+show me the task	GO	heldout
+go to the log	GO	heldout
+take me to the domains	GO	heldout
+go to the controls	GO	heldout
+go to the voice panel	GO	heldout
+leave this	EXIT	heldout
+go up a level	EXIT	heldout
+start over at the top	HOME	heldout
+where was I before	BACK	heldout
+select the fridge	PICK	heldout
+choose the agent	PICK	heldout
+the countertop	PICK	heldout
+number four	PICK	heldout
+show the numbers	NUMBERS	heldout
+label everything	JUMP	heldout
+jump h	JUMP	heldout
+jump to the journal	GO	heldout
+bring back the talk panel	SHOW	heldout
+hide the journal	CLOSE	heldout
+forget it	CANCEL	heldout
+let me dictate	MODE	heldout
+back to commands	MODE	heldout
+what can I say	HELP	heldout
+go to the fridge	UNKNOWN	heldout
+put the mug on the desk	UNKNOWN	heldout
+open the microwave	UNKNOWN	heldout
+what's the weather	UNKNOWN	heldout
+step back out of here	EXIT	heldout2
+close the drawer	UNKNOWN	heldout2
+take the apple	UNKNOWN	heldout2
+bring the hierarchy back	SHOW	heldout2
+move to the journal	GO	heldout2
+up one	EXIT	heldout2
+open the fridge	UNKNOWN	heldout2
+let me see the task card	GO	heldout2

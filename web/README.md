@@ -1,4 +1,4 @@
-# web — the world map (alf-demo step 3a)
+# web — the world map and the world page (alf-demo steps 3a, 3b)
 
 One renderer for every world's map, over one schema, with a tileset per world
 (`alfworld/docs/DEMO.md` §8). World-neutral and framework-free; a page copies it, as the
@@ -11,8 +11,13 @@ console copies fsttm-web's lib (copies, not dependencies).
 | `map.html` | a static page with both fixtures (`?theme=light|dark`, `?mh=` / `?alf=` another map) |
 | `fixtures/minihack_room_medium.json` | a MiniHack level's first screen from its `glyphs` observation (`minihack/world/map_export.py`) |
 | `fixtures/alfworld_tomato_microwave_13.json` | an ALFWorld scene's semantic map in text mode (`alfworld/world/semantic_map.py`): the task "Put a tomato in the microwave." |
-| `assets/` | the base tileset: NetHack's art, **not Apache** — see `assets/NOTICE` |
-| `tests/map_e2e.mjs` | the page end to end in headless Chrome (real mouse and keys) |
+| `tiles/` | the base tileset: NetHack's art, **not Apache** — see `tiles/NOTICE` (not `assets/`: an installed fsttm_web claims `/assets/` and `/lib/` on metis-agent's server) |
+| `world.html`, `world.js` | the world page (3b, DEMO.md §4–§5): the map, the dialog band (fsttm-web's panel), the hierarchy of the domains at work (the director's atoms), the journal (metis-agent's model); `?replay=fixtures/x.run.jsonl` a recorded turn (play / step), `?live=1` metis-agent's `/ws` (`run.sh`) |
+| `vendor/` | the page's copies: fsttm-web's `lib/` (panel, dialog, floor, tts, ws), metis-loop's `ui-port.js`, metis-agent's `journal.js` (not `lib/`: an installed fsttm_web claims `/lib/` on metis-agent's server) |
+| `domains/world_ui/` | the page's voice navigation: `world_ui.llp` (facts only) over `ui_domain.llp` (a copy of the lifted base v6.5, `COPIES.md`), the card (`intent.yaml`, `intent/`), the host, 14 cases. The map is a list: its things are picked by name or number |
+| `fixtures/*.run.jsonl` | recorded turns (`alfworld/experiments/record_run.py`): the win ("put a tomato in the microwave") and a disengagement (the fridge) |
+| `run.sh` | the live stack: metis-agent's service serving `world_ui` on Gemma E2B (local), the page at `http://127.0.0.1:8397/world.html?live=1` |
+| `tests/` | `map_e2e.mjs`, `world_e2e.mjs` (headless Chrome, real mouse and keys, `cdp.mjs` the harness); `test_world_ui.py` (the cases in both toolchains, the card, the host, the copies) |
 
 ## The schema
 
@@ -42,10 +47,13 @@ atom formalization made of them, the specialist chain so far, and the result lin
 ## Regenerating
 
 ```sh
-.worlds/mh/bin/python tools/tiles_export.py EDITOR_CHECKOUT    # assets/ (EDITOR_CHECKOUT: minihack-editor.github.io)
+.worlds/mh/bin/python tools/tiles_export.py EDITOR_CHECKOUT    # tiles/ (EDITOR_CHECKOUT: minihack-editor.github.io)
 cd minihack && ../../.worlds/mh/bin/python world/map_export.py domains/room_medium_apple_newt_closed_none ../web/fixtures/minihack_room_medium.json
 cd alfworld && ALFWORLD_DATA=… ../../.worlds/alf/bin/python world/semantic_map.py GAME_DIR ../web/fixtures/alfworld_tomato_microwave_13.json ../../alfworld/tiles/index.json
-node web/tests/map_e2e.mjs                                      # node >= 22 (see below), google-chrome (or CHROME=)
+node web/tests/map_e2e.mjs; node web/tests/world_e2e.mjs        # node >= 22 (see below), google-chrome (or CHROME=)
+METISC=… python -m pytest web/tests -q                          # a python with metispy (the perotheia-packages .venv)
+cd web && python -m metis.intents gen world_ui                  # the card's intent/ files
+cd alfworld && ALFWORLD_DATA=… METIS_PY=… ../../.worlds/alf/bin/python experiments/record_run.py GAME_DIR ../web/fixtures/alfworld_tomato_microwave_13.json OUT.run.jsonl "the words" [GOAL]
 ```
 
 The worlds' suites check that the committed fixtures and the sheet are what these write.
