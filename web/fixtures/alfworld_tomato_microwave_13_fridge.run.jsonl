@@ -2,7 +2,7 @@
 {"ev": "journal", "rec": {"kind": "dlg-wake", "what": "person", "person": "put the tomato in the fridge"}, "dt": 400}
 {"ev": "journal", "rec": {"kind": "dlg-dispatch", "cid": "c1", "domain": "task", "j": "{\"intent\":\"FETCH\",\"object\":\"TOMATO1\",\"receptacle\":\"FRIDGE1\"}"}, "dt": 400}
 {"ev": "world/hierarchy", "beat": 0, "arrival": "seen(fetch)", "effects": ["forward(task,fetch)"], "state": ["active(task)", "attention(task)", "fresh", "inactive(access)", "inactive(grasp)", "inactive(nav)", "inactive(place)"], "dt": 400}
-{"ev": "journal", "rec": {"kind": "dlg-trace", "domain": "task", "beat": 0, "fired": ["not_dest[O=tomato1,R=fridge1]"]}, "dt": 400}
-{"ev": "world/delta", "task": {"chain": [], "results": ["Fridge 1 is not where this task wants tomato 1. Put it there anyway, or leave tomato 1 where it is?"]}, "cornered": "fridge1", "dt": 400}
-{"ev": "journal", "rec": {"kind": "dlg-say", "what": "ask", "text": "Fridge 1 is not where this task wants tomato 1. Put it there anyway, or leave tomato 1 where it is?", "src": {"by": "harness", "domain": "task", "what": "result"}}, "dt": 400}
+{"ev": "journal", "rec": {"kind": "dlg-trace", "domain": "task", "beat": 0, "fired": ["not_dest[O=tomato1,R=fridge1,D=microwave1]"]}, "dt": 400}
+{"ev": "world/delta", "task": {"chain": [], "results": ["Fridge 1 is not where this task wants tomato 1. | put tomato 1 in microwave 1 | stop"]}, "cornered": "fridge1", "dt": 400}
+{"ev": "journal", "rec": {"kind": "dlg-say", "what": "ask", "text": "Fridge 1 is not where this task wants tomato 1. | put tomato 1 in microwave 1 | stop", "src": {"by": "harness", "domain": "task", "what": "result"}}, "dt": 400}
 {"ev": "world/hierarchy", "beat": 1, "arrival": "seen(wrong_dest)", "effects": ["ask(wrong_dest)", "ended(wrong_dest)"], "state": ["active(task)", "attention(task)", "fresh", "inactive(access)", "inactive(grasp)", "inactive(nav)", "inactive(place)"], "dt": 400}

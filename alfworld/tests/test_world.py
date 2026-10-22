@@ -453,3 +453,82 @@ def test_the_director_copy_matches_the_catalogs():
         pytest.skip("no metis-catalog checkout beside the worlds")
     mine = os.path.join(ROOT, "domains", "director_domain.llp")
     assert open(mine).read() == open(cat).read(), "the copy drifted from metis-catalog domains/director/director_domain.llp"
+
+
+# ── alf-demo step 3b (the architect's world items of opus's findings): F3 answerable asks, F7 a new episode, F8 a done task asked again ──
+def _task_instance(wd, name, reading, init):
+    """The task's instance over the lifted task domain, run by metisc: the fired rules and the final facts."""
+    import json
+    flat, _, _ = gen_instance.generate(game_dir(), os.path.join(wd, "flat"))
+    fp = os.path.dirname(flat)
+    from alf_host import AlfHost
+    m = AlfHost(fp)
+    try:
+        info = dict(json.load(open(os.path.join(fp, "game.json"))), static=sorted(m.static), task_type=m.task, params=m.params)
+        world = m.reading()
+    finally:
+        m.gym.close()
+    dom = os.path.relpath(os.path.join(ROOT, "domains", "hier", "task_domain.llp"), os.path.join(wd, name, "task-0"))
+    rd = reading(info, world)
+    path = gen_hier.generate(game_dir(), os.path.join(wd, name), "task", 0, info, rd, init(info), [], domain_rel=dom)
+    out = subprocess.run([os.environ["METISC"], "--run", path], capture_output=True, text=True, timeout=300)
+    assert out.returncode == 0, out.stderr[-500:]
+    fired = [l.split()[2].split("[")[0] for l in out.stdout.splitlines() if l.startswith("T ")]
+    final = next(l for l in out.stdout.splitlines() if l.startswith("F "))
+    return fired, final
+
+
+def test_a_fetch_already_in_place_is_done_at_once(tmp_path):
+    """F8: asking for a task that is done must not undo it — the planner sees the target in its
+    destination and is done without a sub-goal (no goto, nothing taken out again)."""
+    def seed(info):
+        return gen_hier.seed(info)
+    def already(info, world):
+        o, r = seed(info)[0][6:-1].split(",")
+        return [a for a in world if not a.startswith("inrecep(%s," % o)] + ["inrecep(%s,%s)" % (o, r)]
+    fired, final = _task_instance(str(tmp_path), "already", already, seed)
+    assert fired == ["already"] and " done:1" in final and "goto(" not in final, (fired, final)
+    fired, final = _task_instance(str(tmp_path), "fresh", lambda info, world: world, seed)
+    assert fired[0] == "fetch" and "goto(" in final and " done:" not in final, (fired, final)
+
+
+def test_the_asks_carry_their_answers(tmp_path):
+    """F3: a question to the person ends its doc line with the answers the card takes, `| put O in D
+    | stop`, every placeholder bound by the rule (the destination this task wants, the object it fetches)."""
+    import re
+    src = open(os.path.join(ROOT, "domains", "hier", "task_domain.llp")).read()
+    asks = re.findall(r"%% ([^\n]*\| stop)\n\s*(\w+) \[dyn\] : ([^\n]*)", src)
+    assert sorted(n for _, n, _ in asks) == ["not_dest", "not_target"], asks
+    for doc, name, rule in asks:
+        answers = [a.strip() for a in doc.split("|")[1:]]
+        assert len(answers) == 2 and answers[-1] == "stop" and answers[0].startswith("put "), (name, answers)
+        for v in re.findall(r"\{(\w+)\}", doc):
+            assert re.search(r"\(\s*%s\s*[,)]|,\s*%s\s*[,)]" % (v, v), rule.split("-o")[0]), (name, v, rule)
+    def notdest(info):
+        o = gen_hier.seed(info)[0][6:-1].split(",")[0]
+        nd = sorted(a[8:-1] for a in gen_hier.static_facts("task", info) if a.startswith("notdest("))[0]
+        return ["fetch(%s,%s)" % (o, nd)]
+    fired, final = _task_instance(str(tmp_path), "notdest", lambda info, world: world, notdest)
+    assert fired == ["not_dest"] and "wrong_dest(" in final, (fired, final)
+
+
+def test_new_episode_restarts_the_won_game(package):
+    """F7: after a win the game is over (commands change nothing); new_episode() restarts the same
+    game from its start with the shared commands log emptied and nothing reported."""
+    from alf_host import AlfHost
+    pkg, _ = package
+    log = os.path.join(pkg, ".commands.jsonl")
+    open(log, "w").close()
+    import json
+    meta = json.load(open(os.path.join(pkg, "game.json")))
+    json.dump(dict(meta, commands_log=log), open(os.path.join(pkg, "game.json"), "w"))
+    h = AlfHost(pkg)
+    try:
+        for name, args in plan(h):
+            h.on_event(name, args)
+        assert h.won and h.t > 0 and os.path.getsize(log) > 0
+        h.new_episode()
+        assert not h.won and not h.done and h.t == 0 and os.path.getsize(log) == 0 and not h.reported
+        assert any(a.startswith("holds(") for a in h.reading()) is False
+    finally:
+        h.gym.close()

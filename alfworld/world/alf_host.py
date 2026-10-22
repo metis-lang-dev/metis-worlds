@@ -120,6 +120,15 @@ class AlfHost:
             self._take(self.gym.call("step", command=c))
             self.t += 1
 
+    def new_episode(self):
+        """The same game from its start (alf-demo step 3b, F7: a won game accepts commands that change
+        nothing): the shared commands log truncated, the reported results and the pending frames
+        dropped, the episode reset. Another game = gen_hier.install() on its directory."""
+        if self.commands_log:
+            open(self.commands_log, "w").close()
+        self.reported, self.pending_frames = set(), []
+        self._reset()
+
     def _replay(self):
         if self.commands_log and os.path.exists(self.commands_log):
             return [json.loads(l)["command"] for l in open(self.commands_log) if l.strip()]

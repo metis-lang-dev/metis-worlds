@@ -3,7 +3,10 @@
 % one sub-goal at a time — goto(R) to nav, open(R) to access, take(O) to grasp, put(O, R) to
 % place — and waits for the result atom. It never acts in the world; it sees one world fact
 % (which receptacle holds the target). A refusal it has no rule for ends in stuck(X): the
-% disengagement point (metis-agentic-loop docs/POLICY.md). One way in: fetch(O, R) — the FETCH
+% disengagement point (metis-loop pi docs/POLICY.md). A question to the person (alf-demo step 3b, F3)
+% ends its doc line with the answers it takes, `| answer | answer`: each a sentence the agent maps
+% to an intent the card has (a fetch, or stop); the wire carries them as the ask's options. A fetch
+% whose target is already in its destination is done at once (F8: it must not be undone). One way in: fetch(O, R) — the FETCH
 % intent a person types, or the driver's seed (the first target, the first destination).
 catalog task_domain 1.
 provenance text "ALFWorld pick-and-place as the task domain over four specialists: sub-goals out, results in" "2026-10-22".
@@ -43,11 +46,13 @@ pred wrong_object(object) : task.         % … or an object it does not want (a
 
 stage act {
   %% I'll fetch {O} to {R}.
-  fetch [dyn] : fetch(O, R) * $target(O) * $dest(R) -o want(O) * to(R) * start.
-  %% {R} is not where this task wants {O}. Put it there anyway, or leave {O} where it is?
-  not_dest [dyn] : fetch(O, R) * $target(O) * $notdest(R) -o wrong_dest(R).
-  %% {O} is not what this task fetches. Did you mean another thing, or should I stop?
-  not_target [dyn] : fetch(O, R) * $nottarget(O) -o wrong_object(O).
+  fetch [dyn] : fetch(O, R) * $target(O) * $dest(R) * $inrecep(O, R0) * R0 <> R -o want(O) * to(R) * start.
+  %% {O} is already in {R}: nothing to do.
+  already [dyn] : fetch(O, R) * $target(O) * $dest(R) * $inrecep(O, R) -o done.
+  %% {R} is not where this task wants {O}. | put {O} in {D} | stop
+  not_dest [dyn] : fetch(O, R) * $target(O) * $notdest(R) * $dest(D) -o wrong_dest(R).
+  %% {O} is not what this task fetches. | put {T} in {R} | stop
+  not_target [dyn] : fetch(O, R) * $nottarget(O) * $target(T) -o wrong_object(O).
   %% {O} is in {R}: I go there.
   go_for [dyn] : want(O) * start * $inrecep(O, R) -o want(O) * goto(R).
   %% At {R}: I need it open.
