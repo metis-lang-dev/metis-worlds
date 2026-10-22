@@ -27,6 +27,7 @@ become `+atom` / `-atom` lines, the program's actions become the environment's c
 | `experiments/baseline.py` | the program's own rules on a sample of games, no loop: won / lost, the commands, the refusals |
 | `domains/hier/` | the HIERARCHY (alf-hierarchy, `docs/HIERARCHY.md`): five lifted specialists — `nav` (goto→reached), `access` (open→accessible / refused), `grasp` (take→taken / refused), `place` (put→placed / refused), `task` (the planner: sub-goals out, results in, `done` / `stuck`) |
 | `world/gen_hier.py` | one activation of a specialist as a generated instance: its predicates, its facts, the things its goal names (`game.json`: `replay`, `observe`, `out`, `things` for the host) |
+| `world/semantic_map.py` | a game's semantic map (`docs/DEMO.md` §3), text mode: places at the positions their THOR ids carry, things in places, the agent's start, the task's words and goal; `web/fixtures/` holds the reference game's. `tiles/index.json`: this world's tiles for `web/map.js` (merged over the base) |
 | `experiments/hier.py` | the hierarchy with a MANUAL switch: one kernel run per activation, the driver's table `{goto: nav, open: access, take: grasp, put: place}` is the switch; `hier_vector.py` the complexity vector per domain |
 | `tests/` | the grounding is deterministic, the host runs a plan to a win on the real game, a refusal leaves the facts, the package compiles and reaches `placed` alone; the hierarchy wins by the manual switch, its instances see less |
 

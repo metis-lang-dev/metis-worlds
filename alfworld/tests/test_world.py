@@ -260,3 +260,24 @@ def test_director_detours_a_goal_from_elsewhere(tmp_path):
     assert set(detour["effects"]) == {"forward(nav,goto)", "sleep(access)", "wake(nav)"}
     effects = [e for b in r["beats"] for e in b["effects"]]
     assert effects.count("forward(access,open)") == 2
+
+
+def test_semantic_map_text_mode():
+    """alf-demo step 3a: a game's semantic map in text mode (DEMO.md §3): every receptacle a place
+    at the position its THOR id carries, every thing in a place, the agent at traj_data's start,
+    the task's words and its goal; web/fixtures/ holds the reference game's, as written by it."""
+    import semantic_map
+    assert semantic_map.thor_id("countertop_bar__minus_01_dot_87_bar__plus_00_dot_96_bar__plus_01_dot_80") == (
+        "countertop", -1.87, 0.96, 1.8)
+    assert semantic_map.thor_id("loc_bar_3") is None and semantic_map.spoken("cabinet10") == "cabinet 10"
+    m = semantic_map.text_map(game_dir(), "idx.json")
+    ids = {p["id"] for p in m["places"]}
+    assert m["places"] and all(p["pos"] and len(p["pos"]) == 2 for p in m["places"])
+    assert m["things"] and all(t["at"] in ids for t in m["things"])
+    assert m["task"]["text"] and m["task"]["goal"].startswith("fetch(") and m["tileset"] == {"index": ["idx.json"]}
+    assert len(m["edges"]) == len(ids) * (len(ids) - 1) // 2
+    ref = os.path.join(ROOT, "..", "web", "fixtures", "alfworld_tomato_microwave_13.json")
+    fix = json.load(open(ref))
+    trial = os.path.join(families.data_root(), fix["game"])
+    if os.path.isdir(trial):
+        assert semantic_map.text_map(trial, fix["tileset"]["index"][0]) == fix, "web/fixtures/ is stale: rerun semantic_map.py"

@@ -1,0 +1,218 @@
+{
+"armchair": {
+"color": "clr-brown",
+"glyph": "_",
+"source": "alfworld: a surface: no NetHack icon, its glyph (an altar's _)"
+},
+"bathtub": {
+"color": "clr-gray",
+"glyph": "#",
+"source": "alfworld: NetHack's sink glyph"
+},
+"bathtubbasin": {
+"color": "clr-gray",
+"glyph": "#",
+"source": "alfworld: NetHack's sink glyph"
+},
+"bed": {
+"color": "clr-brown",
+"glyph": "_",
+"source": "alfworld: a surface: no NetHack icon, its glyph (an altar's _)"
+},
+"bowl": {
+"color": "clr-cyan",
+"glyph": "!",
+"source": "alfworld: a vessel: NetHack's potion glyph"
+},
+"box": {
+"image": "../../web/assets/editor/items/chest.png",
+"source": "alfworld: an openable receptacle draws as a chest (DEMO.md \u00a78)"
+},
+"bread": {
+"color": "clr-green",
+"glyph": "%",
+"source": "alfworld: food: NetHack's food glyph"
+},
+"butterknife": {
+"image": "../../web/assets/editor/items/knife.png",
+"source": "alfworld: NetHack's knife"
+},
+"cabinet": {
+"image": "../../web/assets/editor/items/chest.png",
+"source": "alfworld: an openable receptacle draws as a chest (DEMO.md \u00a78)"
+},
+"candle": {
+"image": "../../web/assets/editor/items/oil lamp.png",
+"source": "alfworld: a light"
+},
+"cart": {
+"color": "clr-brown",
+"glyph": "_",
+"source": "alfworld: a surface: no NetHack icon, its glyph (an altar's _)"
+},
+"coffeemachine": {
+"color": "clr-brown",
+"glyph": "&",
+"source": "alfworld: a machine: no icon"
+},
+"coffeetable": {
+"color": "clr-brown",
+"glyph": "_",
+"source": "alfworld: a surface: no NetHack icon, its glyph (an altar's _)"
+},
+"countertop": {
+"color": "clr-brown",
+"glyph": "_",
+"source": "alfworld: a surface: no NetHack icon, its glyph (an altar's _)"
+},
+"creditcard": {
+"image": "../../web/assets/editor/items/credit card.png",
+"source": "alfworld: NetHack's credit card"
+},
+"cup": {
+"color": "clr-cyan",
+"glyph": "!",
+"source": "alfworld: a vessel: NetHack's potion glyph"
+},
+"desk": {
+"color": "clr-brown",
+"glyph": "_",
+"source": "alfworld: a surface: no NetHack icon, its glyph (an altar's _)"
+},
+"diningtable": {
+"color": "clr-brown",
+"glyph": "_",
+"source": "alfworld: a surface: no NetHack icon, its glyph (an altar's _)"
+},
+"drawer": {
+"image": "../../web/assets/editor/items/chest.png",
+"source": "alfworld: an openable receptacle draws as a chest (DEMO.md \u00a78)"
+},
+"dresser": {
+"color": "clr-brown",
+"glyph": "_",
+"source": "alfworld: a surface: no NetHack icon, its glyph (an altar's _)"
+},
+"fridge": {
+"image": "../../web/assets/editor/items/ice box.png",
+"source": "alfworld: NetHack's ice box"
+},
+"garbagecan": {
+"color": "clr-gray",
+"glyph": "0",
+"source": "alfworld: a can: no icon"
+},
+"glassbottle": {
+"color": "clr-cyan",
+"glyph": "!",
+"source": "alfworld: a vessel: NetHack's potion glyph"
+},
+"kettle": {
+"color": "clr-cyan",
+"glyph": "!",
+"source": "alfworld: a vessel: NetHack's potion glyph"
+},
+"lettuce": {
+"color": "clr-green",
+"glyph": "%",
+"source": "alfworld: food: NetHack's food glyph"
+},
+"microwave": {
+"image": "../../web/assets/editor/items/large box.png",
+"source": "alfworld: a closed box that opens"
+},
+"mug": {
+"color": "clr-cyan",
+"glyph": "!",
+"source": "alfworld: a vessel: NetHack's potion glyph"
+},
+"ottoman": {
+"color": "clr-brown",
+"glyph": "_",
+"source": "alfworld: a surface: no NetHack icon, its glyph (an altar's _)"
+},
+"pan": {
+"color": "clr-cyan",
+"glyph": "!",
+"source": "alfworld: a vessel: NetHack's potion glyph"
+},
+"plate": {
+"color": "clr-cyan",
+"glyph": "!",
+"source": "alfworld: a vessel: NetHack's potion glyph"
+},
+"pot": {
+"color": "clr-cyan",
+"glyph": "!",
+"source": "alfworld: a vessel: NetHack's potion glyph"
+},
+"potato": {
+"color": "clr-green",
+"glyph": "%",
+"source": "alfworld: food: NetHack's food glyph"
+},
+"safe": {
+"image": "../../web/assets/editor/items/chest.png",
+"source": "alfworld: an openable receptacle draws as a chest (DEMO.md \u00a78)"
+},
+"shelf": {
+"color": "clr-brown",
+"glyph": "_",
+"source": "alfworld: a surface: no NetHack icon, its glyph (an altar's _)"
+},
+"sidetable": {
+"color": "clr-brown",
+"glyph": "_",
+"source": "alfworld: a surface: no NetHack icon, its glyph (an altar's _)"
+},
+"sink": {
+"color": "clr-gray",
+"glyph": "#",
+"source": "alfworld: NetHack's sink glyph"
+},
+"sinkbasin": {
+"color": "clr-gray",
+"glyph": "#",
+"source": "alfworld: NetHack's sink glyph"
+},
+"soapbottle": {
+"color": "clr-cyan",
+"glyph": "!",
+"source": "alfworld: a vessel: NetHack's potion glyph"
+},
+"sofa": {
+"color": "clr-brown",
+"glyph": "_",
+"source": "alfworld: a surface: no NetHack icon, its glyph (an altar's _)"
+},
+"stoveburner": {
+"color": "clr-red",
+"glyph": "{",
+"source": "alfworld: a fire: no icon"
+},
+"toaster": {
+"color": "clr-gray",
+"glyph": "=",
+"source": "alfworld: no icon"
+},
+"toilet": {
+"color": "clr-white",
+"glyph": "\\",
+"source": "alfworld: NetHack's throne glyph"
+},
+"tomato": {
+"color": "clr-red",
+"glyph": "%",
+"source": "alfworld: food: NetHack's food glyph"
+},
+"vase": {
+"color": "clr-cyan",
+"glyph": "!",
+"source": "alfworld: a vessel: NetHack's potion glyph"
+},
+"winebottle": {
+"color": "clr-cyan",
+"glyph": "!",
+"source": "alfworld: a vessel: NetHack's potion glyph"
+}
+}

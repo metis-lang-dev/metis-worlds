@@ -8,6 +8,7 @@ which move to `metis.host` / `metis.repl` in metispy under the metis-packages su
 |---|---|---|
 | [`alfworld/`](alfworld/README.md) | ALFWorld 0.4.2 (TextWorld games; AI2-THOR for frames) | the kernel acts, surprises become rules; the domain hierarchy with a director (`alfworld/docs/HIERARCHY.md`); the exploitation demo (`alfworld/docs/DEMO.md`) |
 | [`minihack/`](minihack/README.md) | MiniHack 1.0.2 on NLE 1.3.0 | the small LLM agent in the loop, the domain extracted after |
+| [`web/`](web/README.md) | (every world) | the world map: one renderer and schema, a tileset per world (`web/assets/` is NetHack's art, its own NOTICE) |
 
 Each world has its own `setup.sh` (a venv at `<world>/.venv`, or `.worlds/<alf|mh>` found by
 walking up), `world/` (the gym child, the host, the generators), `domains/` (generated

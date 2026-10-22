@@ -1,0 +1,16 @@
+web/assets/ — the tileset images and their indexes. NOT under the Apache License of metis-worlds:
+these are NetHack's art and keep their own terms.
+
+nethack/glyphs.png, nethack/glyphs.json
+  The NetHack 3.6 tileset as MiniHack ships it (minihack/tiles/tiles.pkl and glyph2tile,
+  https://github.com/facebookresearch/minihack), exported as a sprite sheet by
+  tools/tiles_export.py. The tiles are NetHack's (win/share/*.txt), distributed under the
+  NetHack General Public License (https://www.nethack.org/common/license.html).
+
+editor/, index.json
+  The named icons of the MiniHack Level Editor (https://github.com/minihack-editor/minihack-editor.github.io,
+  whose code is Apache-2.0), scraped by its authors from NetHackWiki (https://nethackwiki.com).
+  NetHackWiki publishes NetHack-derived images under the NetHack General Public License and its
+  other content under CC BY-SA 3.0 (https://creativecommons.org/licenses/by-sa/3.0/). Each
+  index.json entry keeps its NetHackWiki page as `source`. index.json is derived from the
+  editor's src/tilesets/nethack/*.json by tools/tiles_export.py.

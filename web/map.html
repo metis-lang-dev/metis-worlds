@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>World Maps</title>
+<link rel="stylesheet" href="map.css">
+<style>
+  body { margin: 0; padding: 16px; background: var(--wm-bg); color: var(--wm-fg); font: 14px/1.4 system-ui, sans-serif; }
+  h1 { font-size: 18px; margin: 0 0 4px; } h2 { font-size: 15px; margin: 20px 0 6px; }
+  p.note { color: var(--wm-mute); margin: 0 0 8px; max-width: 70ch; }
+</style>
+</head>
+<body>
+<h1>World maps</h1>
+<p class="note">One renderer, one schema, a tileset per world (alfworld/docs/DEMO.md §8). Point at a
+thing to see it; click it, or press Enter on it, for the task card; the arrow keys move between things.</p>
+<h2>MiniHack: <span id="mh-name">the room</span></h2>
+<section id="minihack" aria-label="the MiniHack level"></section>
+<h2>ALFWorld: <span id="alf-name">a kitchen</span> (text mode: no frames)</h2>
+<section id="alfworld" aria-label="the ALFWorld scene"></section>
+<script type="module">
+import { WorldMap } from './map.js';
+const q = new URLSearchParams(location.search);
+if (q.get('theme')) document.documentElement.dataset.theme = q.get('theme');
+const base = { sheet: 'assets/nethack/glyphs.png', glyphs: 'assets/nethack/glyphs.json', index: ['assets/index.json'] };
+const maps = window.maps = {
+  minihack: new WorldMap(document.getElementById('minihack'), { base }),
+  alfworld: new WorldMap(document.getElementById('alfworld'), { base }),
+};
+const [mh, alf] = await Promise.all([
+  maps.minihack.load(q.get('mh') || 'fixtures/minihack_room_medium.json'),
+  maps.alfworld.load(q.get('alf') || 'fixtures/alfworld_tomato_microwave_13.json'),
+]);
+document.getElementById('mh-name').textContent = mh.level || 'the room';
+document.getElementById('alf-name').textContent = `${alf.scene || 'a scene'}, “${alf.task?.text || ''}”`;
+document.body.dataset.ready = '1';
+</script>
+</body>
+</html>

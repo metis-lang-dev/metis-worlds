@@ -1,0 +1,6254 @@
+{
+ "world": "alfworld",
+ "scene": "FloorPlan13",
+ "units": "m",
+ "mode": "text",
+ "game": "train/pick_and_place_simple-Tomato-None-Microwave-13/trial_T20190908_125158_098734",
+ "places": [
+  {
+   "id": "cabinet1",
+   "name": "cabinet 1",
+   "type": "cabinet",
+   "pos": [
+    -3.97,
+    2.89
+   ],
+   "openable": true,
+   "closed": true,
+   "frame": null
+  },
+  {
+   "id": "cabinet10",
+   "name": "cabinet 10",
+   "type": "cabinet",
+   "pos": [
+    -1.54,
+    2.09
+   ],
+   "openable": true,
+   "closed": true,
+   "frame": null
+  },
+  {
+   "id": "cabinet11",
+   "name": "cabinet 11",
+   "type": "cabinet",
+   "pos": [
+    -3.64,
+    5.03
+   ],
+   "openable": true,
+   "closed": true,
+   "frame": null
+  },
+  {
+   "id": "cabinet12",
+   "name": "cabinet 12",
+   "type": "cabinet",
+   "pos": [
+    -3.67,
+    5.03
+   ],
+   "openable": true,
+   "closed": true,
+   "frame": null
+  },
+  {
+   "id": "cabinet13",
+   "name": "cabinet 13",
+   "type": "cabinet",
+   "pos": [
+    -3.92,
+    2.09
+   ],
+   "openable": true,
+   "closed": true,
+   "frame": null
+  },
+  {
+   "id": "cabinet14",
+   "name": "cabinet 14",
+   "type": "cabinet",
+   "pos": [
+    -3.96,
+    2.12
+   ],
+   "openable": true,
+   "closed": true,
+   "frame": null
+  },
+  {
+   "id": "cabinet15",
+   "name": "cabinet 15",
+   "type": "cabinet",
+   "pos": [
+    -3.96,
+    2.88
+   ],
+   "openable": true,
+   "closed": true,
+   "frame": null
+  },
+  {
+   "id": "cabinet16",
+   "name": "cabinet 16",
+   "type": "cabinet",
+   "pos": [
+    -3.96,
+    4.34
+   ],
+   "openable": true,
+   "closed": true,
+   "frame": null
+  },
+  {
+   "id": "cabinet17",
+   "name": "cabinet 17",
+   "type": "cabinet",
+   "pos": [
+    -3.97,
+    3.66
+   ],
+   "openable": true,
+   "closed": true,
+   "frame": null
+  },
+  {
+   "id": "cabinet18",
+   "name": "cabinet 18",
+   "type": "cabinet",
+   "pos": [
+    -4.11,
+    5.32
+   ],
+   "openable": true,
+   "closed": true,
+   "frame": null
+  },
+  {
+   "id": "cabinet19",
+   "name": "cabinet 19",
+   "type": "cabinet",
+   "pos": [
+    -0.33,
+    4.21
+   ],
+   "openable": false,
+   "closed": false,
+   "frame": null
+  },
+  {
+   "id": "cabinet2",
+   "name": "cabinet 2",
+   "type": "cabinet",
+   "pos": [
+    -3.04,
+    5.03
+   ],
+   "openable": true,
+   "closed": true,
+   "frame": null
+  },
+  {
+   "id": "cabinet20",
+   "name": "cabinet 20",
+   "type": "cabinet",
+   "pos": [
+    -0.33,
+    4.31
+   ],
+   "openable": false,
+   "closed": false,
+   "frame": null
+  },
+  {
+   "id": "cabinet21",
+   "name": "cabinet 21",
+   "type": "cabinet",
+   "pos": [
+    -0.33,
+    5.51
+   ],
+   "openable": false,
+   "closed": false,
+   "frame": null
+  },
+  {
+   "id": "cabinet22",
+   "name": "cabinet 22",
+   "type": "cabinet",
+   "pos": [
+    -0.33,
+    5.61
+   ],
+   "openable": false,
+   "closed": false,
+   "frame": null
+  },
+  {
+   "id": "cabinet23",
+   "name": "cabinet 23",
+   "type": "cabinet",
+   "pos": [
+    -0.33,
+    6.81
+   ],
+   "openable": false,
+   "closed": false,
+   "frame": null
+  },
+  {
+   "id": "cabinet24",
+   "name": "cabinet 24",
+   "type": "cabinet",
+   "pos": [
+    -1.58,
+    1.78
+   ],
+   "openable": false,
+   "closed": false,
+   "frame": null
+  },
+  {
+   "id": "cabinet25",
+   "name": "cabinet 25",
+   "type": "cabinet",
+   "pos": [
+    -3.2,
+    1.78
+   ],
+   "openable": false,
+   "closed": false,
+   "frame": null
+  },
+  {
+   "id": "cabinet26",
+   "name": "cabinet 26",
+   "type": "cabinet",
+   "pos": [
+    -4.28,
+    2.23
+   ],
+   "openable": false,
+   "closed": false,
+   "frame": null
+  },
+  {
+   "id": "cabinet3",
+   "name": "cabinet 3",
+   "type": "cabinet",
+   "pos": [
+    -0.33,
+    3.01
+   ],
+   "openable": false,
+   "closed": false,
+   "frame": null
+  },
+  {
+   "id": "cabinet4",
+   "name": "cabinet 4",
+   "type": "cabinet",
+   "pos": [
+    -3.04,
+    5.32
+   ],
+   "openable": true,
+   "closed": true,
+   "frame": null
+  },
+  {
+   "id": "cabinet5",
+   "name": "cabinet 5",
+   "type": "cabinet",
+   "pos": [
+    -3.19,
+    2.09
+   ],
+   "openable": true,
+   "closed": true,
+   "frame": null
+  },
+  {
+   "id": "cabinet6",
+   "name": "cabinet 6",
+   "type": "cabinet",
+   "pos": [
+    -0.64,
+    4.3
+   ],
+   "openable": true,
+   "closed": true,
+   "frame": null
+  },
+  {
+   "id": "cabinet7",
+   "name": "cabinet 7",
+   "type": "cabinet",
+   "pos": [
+    -0.64,
+    5.58
+   ],
+   "openable": true,
+   "closed": true,
+   "frame": null
+  },
+  {
+   "id": "cabinet8",
+   "name": "cabinet 8",
+   "type": "cabinet",
+   "pos": [
+    -0.64,
+    5.6
+   ],
+   "openable": true,
+   "closed": true,
+   "frame": null
+  },
+  {
+   "id": "cabinet9",
+   "name": "cabinet 9",
+   "type": "cabinet",
+   "pos": [
+    -0.64,
+    6.88
+   ],
+   "openable": true,
+   "closed": true,
+   "frame": null
+  },
+  {
+   "id": "coffeemachine1",
+   "name": "coffeemachine 1",
+   "type": "coffeemachine",
+   "pos": [
+    -0.28,
+    6.56
+   ],
+   "openable": false,
+   "closed": false,
+   "frame": null
+  },
+  {
+   "id": "countertop1",
+   "name": "countertop 1",
+   "type": "countertop",
+   "pos": [
+    -4.26,
+    4.94
+   ],
+   "openable": false,
+   "closed": false,
+   "frame": null
+  },
+  {
+   "id": "countertop2",
+   "name": "countertop 2",
+   "type": "countertop",
+   "pos": [
+    -0.35,
+    5.6
+   ],
+   "openable": false,
+   "closed": false,
+   "frame": null
+  },
+  {
+   "id": "countertop3",
+   "name": "countertop 3",
+   "type": "countertop",
+   "pos": [
+    -1.87,
+    1.8
+   ],
+   "openable": false,
+   "closed": false,
+   "frame": null
+  },
+  {
+   "id": "drawer1",
+   "name": "drawer 1",
+   "type": "drawer",
+   "pos": [
+    -4.09,
+    4.66
+   ],
+   "openable": true,
+   "closed": true,
+   "frame": null
+  },
+  {
+   "id": "drawer10",
+   "name": "drawer 10",
+   "type": "drawer",
+   "pos": [
+    -3.51,
+    5.16
+   ],
+   "openable": false,
+   "closed": false,
+   "frame": null
+  },
+  {
+   "id": "drawer11",
+   "name": "drawer 11",
+   "type": "drawer",
+   "pos": [
+    -3.8,
+    1.96
+   ],
+   "openable": false,
+   "closed": false,
+   "frame": null
+  },
+  {
+   "id": "drawer12",
+   "name": "drawer 12",
+   "type": "drawer",
+   "pos": [
+    -3.8,
+    5.16
+   ],
+   "openable": false,
+   "closed": false,
+   "frame": null
+  },
+  {
+   "id": "drawer2",
+   "name": "drawer 2",
+   "type": "drawer",
+   "pos": [
+    -0.51,
+    4.62
+   ],
+   "openable": true,
+   "closed": true,
+   "frame": null
+  },
+  {
+   "id": "drawer3",
+   "name": "drawer 3",
+   "type": "drawer",
+   "pos": [
+    -3.42,
+    1.96
+   ],
+   "openable": false,
+   "closed": false,
+   "frame": null
+  },
+  {
+   "id": "drawer4",
+   "name": "drawer 4",
+   "type": "drawer",
+   "pos": [
+    -0.51,
+    6.57
+   ],
+   "openable": true,
+   "closed": true,
+   "frame": null
+  },
+  {
+   "id": "drawer5",
+   "name": "drawer 5",
+   "type": "drawer",
+   "pos": [
+    -3.19,
+    5.16
+   ],
+   "openable": true,
+   "closed": true,
+   "frame": null
+  },
+  {
+   "id": "drawer6",
+   "name": "drawer 6",
+   "type": "drawer",
+   "pos": [
+    -0.51,
+    5.27
+   ],
+   "openable": true,
+   "closed": true,
+   "frame": null
+  },
+  {
+   "id": "drawer7",
+   "name": "drawer 7",
+   "type": "drawer",
+   "pos": [
+    -0.51,
+    5.92
+   ],
+   "openable": true,
+   "closed": true,
+   "frame": null
+  },
+  {
+   "id": "drawer8",
+   "name": "drawer 8",
+   "type": "drawer",
+   "pos": [
+    -1.86,
+    1.96
+   ],
+   "openable": true,
+   "closed": true,
+   "frame": null
+  },
+  {
+   "id": "drawer9",
+   "name": "drawer 9",
+   "type": "drawer",
+   "pos": [
+    -4.13,
+    2.5
+   ],
+   "openable": true,
+   "closed": true,
+   "frame": null
+  },
+  {
+   "id": "fridge1",
+   "name": "fridge 1",
+   "type": "fridge",
+   "pos": [
+    -0.32,
+    3.6
+   ],
+   "openable": true,
+   "closed": true,
+   "frame": null
+  },
+  {
+   "id": "garbagecan1",
+   "name": "garbagecan 1",
+   "type": "garbagecan",
+   "pos": [
+    -3.71,
+    6.38
+   ],
+   "openable": false,
+   "closed": false,
+   "frame": null
+  },
+  {
+   "id": "microwave1",
+   "name": "microwave 1",
+   "type": "microwave",
+   "pos": [
+    -2.69,
+    1.69
+   ],
+   "openable": true,
+   "closed": true,
+   "frame": null
+  },
+  {
+   "id": "sink1",
+   "name": "sink 1",
+   "type": "sink",
+   "pos": [
+    -4.19,
+    3.28
+   ],
+   "openable": false,
+   "closed": false,
+   "frame": null
+  },
+  {
+   "id": "stoveburner1",
+   "name": "stoveburner 1",
+   "type": "stoveburner",
+   "pos": [
+    -2.47,
+    1.71
+   ],
+   "openable": false,
+   "closed": false,
+   "frame": null
+  },
+  {
+   "id": "stoveburner2",
+   "name": "stoveburner 2",
+   "type": "stoveburner",
+   "pos": [
+    -2.92,
+    1.71
+   ],
+   "openable": false,
+   "closed": false,
+   "frame": null
+  },
+  {
+   "id": "stoveburner3",
+   "name": "stoveburner 3",
+   "type": "stoveburner",
+   "pos": [
+    -2.92,
+    2.01
+   ],
+   "openable": false,
+   "closed": false,
+   "frame": null
+  },
+  {
+   "id": "stoveburner4",
+   "name": "stoveburner 4",
+   "type": "stoveburner",
+   "pos": [
+    -2.47,
+    2.01
+   ],
+   "openable": false,
+   "closed": false,
+   "frame": null
+  },
+  {
+   "id": "toaster1",
+   "name": "toaster 1",
+   "type": "toaster",
+   "pos": [
+    -3.58,
+    1.76
+   ],
+   "openable": false,
+   "closed": false,
+   "frame": null
+  }
+ ],
+ "things": [
+  {
+   "id": "apple1",
+   "name": "apple 1",
+   "type": "apple",
+   "at": "fridge1",
+   "pos": [
+    -0.38,
+    3.48
+   ],
+   "pickupable": true
+  },
+  {
+   "id": "apple2",
+   "name": "apple 2",
+   "type": "apple",
+   "at": "garbagecan1",
+   "pos": [
+    -3.68,
+    6.33
+   ],
+   "pickupable": true
+  },
+  {
+   "id": "bowl1",
+   "name": "bowl 1",
+   "type": "bowl",
+   "at": "fridge1",
+   "pos": [
+    -0.3,
+    3.6
+   ],
+   "pickupable": true
+  },
+  {
+   "id": "bowl2",
+   "name": "bowl 2",
+   "type": "bowl",
+   "at": "fridge1",
+   "pos": [
+    -0.4,
+    3.97
+   ],
+   "pickupable": true
+  },
+  {
+   "id": "bowl3",
+   "name": "bowl 3",
+   "type": "bowl",
+   "at": "sink1",
+   "pos": [
+    -4.2,
+    3.41
+   ],
+   "pickupable": true
+  },
+  {
+   "id": "bread1",
+   "name": "bread 1",
+   "type": "bread",
+   "at": "countertop1",
+   "pos": [
+    -4.17,
+    2.3
+   ],
+   "pickupable": true
+  },
+  {
+   "id": "butterknife1",
+   "name": "butterknife 1",
+   "type": "butterknife",
+   "at": "countertop2",
+   "pos": [
+    -0.33,
+    5.27
+   ],
+   "pickupable": true
+  },
+  {
+   "id": "butterknife2",
+   "name": "butterknife 2",
+   "type": "butterknife",
+   "at": "countertop3",
+   "pos": [
+    -1.78,
+    1.8
+   ],
+   "pickupable": true
+  },
+  {
+   "id": "cup1",
+   "name": "cup 1",
+   "type": "cup",
+   "at": "countertop2",
+   "pos": [
+    -0.41,
+    4.94
+   ],
+   "pickupable": true
+  },
+  {
+   "id": "cup2",
+   "name": "cup 2",
+   "type": "cup",
+   "at": "fridge1",
+   "pos": [
+    -0.45,
+    3.36
+   ],
+   "pickupable": true
+  },
+  {
+   "id": "cup3",
+   "name": "cup 3",
+   "type": "cup",
+   "at": "countertop1",
+   "pos": [
+    -4.11,
+    4.64
+   ],
+   "pickupable": true
+  },
+  {
+   "id": "dishsponge1",
+   "name": "dishsponge 1",
+   "type": "dishsponge",
+   "at": "drawer1",
+   "pos": [
+    -4.1,
+    4.74
+   ],
+   "pickupable": true
+  },
+  {
+   "id": "egg1",
+   "name": "egg 1",
+   "type": "egg",
+   "at": "sink1",
+   "pos": [
+    -4.16,
+    3.1
+   ],
+   "pickupable": true
+  },
+  {
+   "id": "fork1",
+   "name": "fork 1",
+   "type": "fork",
+   "at": "countertop3",
+   "pos": [
+    -1.69,
+    1.95
+   ],
+   "pickupable": true
+  },
+  {
+   "id": "fork2",
+   "name": "fork 2",
+   "type": "fork",
+   "at": "countertop1",
+   "pos": [
+    -3.61,
+    5.49
+   ],
+   "pickupable": true
+  },
+  {
+   "id": "knife1",
+   "name": "knife 1",
+   "type": "knife",
+   "at": "countertop3",
+   "pos": [
+    -1.86,
+    2.03
+   ],
+   "pickupable": true
+  },
+  {
+   "id": "knife2",
+   "name": "knife 2",
+   "type": "knife",
+   "at": "countertop1",
+   "pos": [
+    -3.73,
+    5.26
+   ],
+   "pickupable": true
+  },
+  {
+   "id": "lettuce1",
+   "name": "lettuce 1",
+   "type": "lettuce",
+   "at": "countertop1",
+   "pos": [
+    -4.19,
+    2.54
+   ],
+   "pickupable": true
+  },
+  {
+   "id": "mug1",
+   "name": "mug 1",
+   "type": "mug",
+   "at": "cabinet1",
+   "pos": [
+    -4.06,
+    3.18
+   ],
+   "pickupable": true
+  },
+  {
+   "id": "pan1",
+   "name": "pan 1",
+   "type": "pan",
+   "at": "stoveburner1",
+   "pos": [
+    -2.47,
+    1.71
+   ],
+   "pickupable": true
+  },
+  {
+   "id": "pan2",
+   "name": "pan 2",
+   "type": "pan",
+   "at": "stoveburner2",
+   "pos": [
+    -2.92,
+    1.71
+   ],
+   "pickupable": true
+  },
+  {
+   "id": "pan2",
+   "name": "pan 2",
+   "type": "pan",
+   "at": "stoveburner3",
+   "pos": [
+    -2.92,
+    1.71
+   ],
+   "pickupable": true
+  },
+  {
+   "id": "papertowelroll1",
+   "name": "papertowelroll 1",
+   "type": "papertowelroll",
+   "at": "countertop3",
+   "pos": [
+    -2.11,
+    1.57
+   ],
+   "pickupable": true
+  },
+  {
+   "id": "pencil1",
+   "name": "pencil 1",
+   "type": "pencil",
+   "at": "drawer2",
+   "pos": [
+    -0.5,
+    4.62
+   ],
+   "pickupable": true
+  },
+  {
+   "id": "pencil2",
+   "name": "pencil 2",
+   "type": "pencil",
+   "at": "countertop3",
+   "pos": [
+    -2.11,
+    1.72
+   ],
+   "pickupable": true
+  },
+  {
+   "id": "pencil3",
+   "name": "pencil 3",
+   "type": "pencil",
+   "at": "drawer3",
+   "pos": [
+    -3.42,
+    1.99
+   ],
+   "pickupable": true
+  },
+  {
+   "id": "peppershaker1",
+   "name": "peppershaker 1",
+   "type": "peppershaker",
+   "at": "countertop2",
+   "pos": [
+    -0.33,
+    4.62
+   ],
+   "pickupable": true
+  },
+  {
+   "id": "peppershaker2",
+   "name": "peppershaker 2",
+   "type": "peppershaker",
+   "at": "drawer4",
+   "pos": [
+    -0.53,
+    6.72
+   ],
+   "pickupable": true
+  },
+  {
+   "id": "peppershaker3",
+   "name": "peppershaker 3",
+   "type": "peppershaker",
+   "at": "drawer5",
+   "pos": [
+    -3.16,
+    5.19
+   ],
+   "pickupable": true
+  },
+  {
+   "id": "plate1",
+   "name": "plate 1",
+   "type": "plate",
+   "at": "countertop2",
+   "pos": [
+    -0.18,
+    4.94
+   ],
+   "pickupable": true
+  },
+  {
+   "id": "plate2",
+   "name": "plate 2",
+   "type": "plate",
+   "at": "countertop3",
+   "pos": [
+    -1.94,
+    1.65
+   ],
+   "pickupable": true
+  },
+  {
+   "id": "plate3",
+   "name": "plate 3",
+   "type": "plate",
+   "at": "cabinet2",
+   "pos": [
+    -3.2,
+    5.23
+   ],
+   "pickupable": true
+  },
+  {
+   "id": "pot1",
+   "name": "pot 1",
+   "type": "pot",
+   "at": "countertop2",
+   "pos": [
+    -0.41,
+    5.6
+   ],
+   "pickupable": true
+  },
+  {
+   "id": "potato1",
+   "name": "potato 1",
+   "type": "potato",
+   "at": "fridge1",
+   "pos": [
+    -0.38,
+    3.29
+   ],
+   "pickupable": true
+  },
+  {
+   "id": "potato2",
+   "name": "potato 2",
+   "type": "potato",
+   "at": "fridge1",
+   "pos": [
+    -0.38,
+    3.41
+   ],
+   "pickupable": true
+  },
+  {
+   "id": "saltshaker1",
+   "name": "saltshaker 1",
+   "type": "saltshaker",
+   "at": "cabinet3",
+   "pos": [
+    -0.2,
+    3.25
+   ],
+   "pickupable": true
+  },
+  {
+   "id": "saltshaker2",
+   "name": "saltshaker 2",
+   "type": "saltshaker",
+   "at": "countertop1",
+   "pos": [
+    -4.26,
+    4.9
+   ],
+   "pickupable": true
+  },
+  {
+   "id": "soapbottle1",
+   "name": "soapbottle 1",
+   "type": "soapbottle",
+   "at": "countertop2",
+   "pos": [
+    -0.18,
+    4.62
+   ],
+   "pickupable": true
+  },
+  {
+   "id": "soapbottle2",
+   "name": "soapbottle 2",
+   "type": "soapbottle",
+   "at": "cabinet4",
+   "pos": [
+    -3.45,
+    5.58
+   ],
+   "pickupable": true
+  },
+  {
+   "id": "spatula1",
+   "name": "spatula 1",
+   "type": "spatula",
+   "at": "countertop2",
+   "pos": [
+    -0.33,
+    4.62
+   ],
+   "pickupable": true
+  },
+  {
+   "id": "spatula2",
+   "name": "spatula 2",
+   "type": "spatula",
+   "at": "countertop1",
+   "pos": [
+    -3.26,
+    5.26
+   ],
+   "pickupable": true
+  },
+  {
+   "id": "spoon1",
+   "name": "spoon 1",
+   "type": "spoon",
+   "at": "countertop2",
+   "pos": [
+    -0.49,
+    5.27
+   ],
+   "pickupable": true
+  },
+  {
+   "id": "tomato1",
+   "name": "tomato 1",
+   "type": "tomato",
+   "at": "countertop3",
+   "pos": [
+    -1.61,
+    1.72
+   ],
+   "pickupable": true
+  },
+  {
+   "id": "tomato2",
+   "name": "tomato 2",
+   "type": "tomato",
+   "at": "garbagecan1",
+   "pos": [
+    -3.71,
+    6.46
+   ],
+   "pickupable": true
+  },
+  {
+   "id": "winebottle1",
+   "name": "winebottle 1",
+   "type": "winebottle",
+   "at": "cabinet5",
+   "pos": [
+    -3.59,
+    2.0
+   ],
+   "pickupable": true
+  }
+ ],
+ "agent": {
+  "pos": [
+   -1.25,
+   3.75
+  ],
+  "yaw": 0,
+  "at": null,
+  "holding": null
+ },
+ "edges": [
+  [
+   "cabinet1",
+   "cabinet10"
+  ],
+  [
+   "cabinet1",
+   "cabinet11"
+  ],
+  [
+   "cabinet1",
+   "cabinet12"
+  ],
+  [
+   "cabinet1",
+   "cabinet13"
+  ],
+  [
+   "cabinet1",
+   "cabinet14"
+  ],
+  [
+   "cabinet1",
+   "cabinet15"
+  ],
+  [
+   "cabinet1",
+   "cabinet16"
+  ],
+  [
+   "cabinet1",
+   "cabinet17"
+  ],
+  [
+   "cabinet1",
+   "cabinet18"
+  ],
+  [
+   "cabinet1",
+   "cabinet19"
+  ],
+  [
+   "cabinet1",
+   "cabinet2"
+  ],
+  [
+   "cabinet1",
+   "cabinet20"
+  ],
+  [
+   "cabinet1",
+   "cabinet21"
+  ],
+  [
+   "cabinet1",
+   "cabinet22"
+  ],
+  [
+   "cabinet1",
+   "cabinet23"
+  ],
+  [
+   "cabinet1",
+   "cabinet24"
+  ],
+  [
+   "cabinet1",
+   "cabinet25"
+  ],
+  [
+   "cabinet1",
+   "cabinet26"
+  ],
+  [
+   "cabinet1",
+   "cabinet3"
+  ],
+  [
+   "cabinet1",
+   "cabinet4"
+  ],
+  [
+   "cabinet1",
+   "cabinet5"
+  ],
+  [
+   "cabinet1",
+   "cabinet6"
+  ],
+  [
+   "cabinet1",
+   "cabinet7"
+  ],
+  [
+   "cabinet1",
+   "cabinet8"
+  ],
+  [
+   "cabinet1",
+   "cabinet9"
+  ],
+  [
+   "cabinet1",
+   "coffeemachine1"
+  ],
+  [
+   "cabinet1",
+   "countertop1"
+  ],
+  [
+   "cabinet1",
+   "countertop2"
+  ],
+  [
+   "cabinet1",
+   "countertop3"
+  ],
+  [
+   "cabinet1",
+   "drawer1"
+  ],
+  [
+   "cabinet1",
+   "drawer10"
+  ],
+  [
+   "cabinet1",
+   "drawer11"
+  ],
+  [
+   "cabinet1",
+   "drawer12"
+  ],
+  [
+   "cabinet1",
+   "drawer2"
+  ],
+  [
+   "cabinet1",
+   "drawer3"
+  ],
+  [
+   "cabinet1",
+   "drawer4"
+  ],
+  [
+   "cabinet1",
+   "drawer5"
+  ],
+  [
+   "cabinet1",
+   "drawer6"
+  ],
+  [
+   "cabinet1",
+   "drawer7"
+  ],
+  [
+   "cabinet1",
+   "drawer8"
+  ],
+  [
+   "cabinet1",
+   "drawer9"
+  ],
+  [
+   "cabinet1",
+   "fridge1"
+  ],
+  [
+   "cabinet1",
+   "garbagecan1"
+  ],
+  [
+   "cabinet1",
+   "microwave1"
+  ],
+  [
+   "cabinet1",
+   "sink1"
+  ],
+  [
+   "cabinet1",
+   "stoveburner1"
+  ],
+  [
+   "cabinet1",
+   "stoveburner2"
+  ],
+  [
+   "cabinet1",
+   "stoveburner3"
+  ],
+  [
+   "cabinet1",
+   "stoveburner4"
+  ],
+  [
+   "cabinet1",
+   "toaster1"
+  ],
+  [
+   "cabinet10",
+   "cabinet11"
+  ],
+  [
+   "cabinet10",
+   "cabinet12"
+  ],
+  [
+   "cabinet10",
+   "cabinet13"
+  ],
+  [
+   "cabinet10",
+   "cabinet14"
+  ],
+  [
+   "cabinet10",
+   "cabinet15"
+  ],
+  [
+   "cabinet10",
+   "cabinet16"
+  ],
+  [
+   "cabinet10",
+   "cabinet17"
+  ],
+  [
+   "cabinet10",
+   "cabinet18"
+  ],
+  [
+   "cabinet10",
+   "cabinet19"
+  ],
+  [
+   "cabinet10",
+   "cabinet2"
+  ],
+  [
+   "cabinet10",
+   "cabinet20"
+  ],
+  [
+   "cabinet10",
+   "cabinet21"
+  ],
+  [
+   "cabinet10",
+   "cabinet22"
+  ],
+  [
+   "cabinet10",
+   "cabinet23"
+  ],
+  [
+   "cabinet10",
+   "cabinet24"
+  ],
+  [
+   "cabinet10",
+   "cabinet25"
+  ],
+  [
+   "cabinet10",
+   "cabinet26"
+  ],
+  [
+   "cabinet10",
+   "cabinet3"
+  ],
+  [
+   "cabinet10",
+   "cabinet4"
+  ],
+  [
+   "cabinet10",
+   "cabinet5"
+  ],
+  [
+   "cabinet10",
+   "cabinet6"
+  ],
+  [
+   "cabinet10",
+   "cabinet7"
+  ],
+  [
+   "cabinet10",
+   "cabinet8"
+  ],
+  [
+   "cabinet10",
+   "cabinet9"
+  ],
+  [
+   "cabinet10",
+   "coffeemachine1"
+  ],
+  [
+   "cabinet10",
+   "countertop1"
+  ],
+  [
+   "cabinet10",
+   "countertop2"
+  ],
+  [
+   "cabinet10",
+   "countertop3"
+  ],
+  [
+   "cabinet10",
+   "drawer1"
+  ],
+  [
+   "cabinet10",
+   "drawer10"
+  ],
+  [
+   "cabinet10",
+   "drawer11"
+  ],
+  [
+   "cabinet10",
+   "drawer12"
+  ],
+  [
+   "cabinet10",
+   "drawer2"
+  ],
+  [
+   "cabinet10",
+   "drawer3"
+  ],
+  [
+   "cabinet10",
+   "drawer4"
+  ],
+  [
+   "cabinet10",
+   "drawer5"
+  ],
+  [
+   "cabinet10",
+   "drawer6"
+  ],
+  [
+   "cabinet10",
+   "drawer7"
+  ],
+  [
+   "cabinet10",
+   "drawer8"
+  ],
+  [
+   "cabinet10",
+   "drawer9"
+  ],
+  [
+   "cabinet10",
+   "fridge1"
+  ],
+  [
+   "cabinet10",
+   "garbagecan1"
+  ],
+  [
+   "cabinet10",
+   "microwave1"
+  ],
+  [
+   "cabinet10",
+   "sink1"
+  ],
+  [
+   "cabinet10",
+   "stoveburner1"
+  ],
+  [
+   "cabinet10",
+   "stoveburner2"
+  ],
+  [
+   "cabinet10",
+   "stoveburner3"
+  ],
+  [
+   "cabinet10",
+   "stoveburner4"
+  ],
+  [
+   "cabinet10",
+   "toaster1"
+  ],
+  [
+   "cabinet11",
+   "cabinet12"
+  ],
+  [
+   "cabinet11",
+   "cabinet13"
+  ],
+  [
+   "cabinet11",
+   "cabinet14"
+  ],
+  [
+   "cabinet11",
+   "cabinet15"
+  ],
+  [
+   "cabinet11",
+   "cabinet16"
+  ],
+  [
+   "cabinet11",
+   "cabinet17"
+  ],
+  [
+   "cabinet11",
+   "cabinet18"
+  ],
+  [
+   "cabinet11",
+   "cabinet19"
+  ],
+  [
+   "cabinet11",
+   "cabinet2"
+  ],
+  [
+   "cabinet11",
+   "cabinet20"
+  ],
+  [
+   "cabinet11",
+   "cabinet21"
+  ],
+  [
+   "cabinet11",
+   "cabinet22"
+  ],
+  [
+   "cabinet11",
+   "cabinet23"
+  ],
+  [
+   "cabinet11",
+   "cabinet24"
+  ],
+  [
+   "cabinet11",
+   "cabinet25"
+  ],
+  [
+   "cabinet11",
+   "cabinet26"
+  ],
+  [
+   "cabinet11",
+   "cabinet3"
+  ],
+  [
+   "cabinet11",
+   "cabinet4"
+  ],
+  [
+   "cabinet11",
+   "cabinet5"
+  ],
+  [
+   "cabinet11",
+   "cabinet6"
+  ],
+  [
+   "cabinet11",
+   "cabinet7"
+  ],
+  [
+   "cabinet11",
+   "cabinet8"
+  ],
+  [
+   "cabinet11",
+   "cabinet9"
+  ],
+  [
+   "cabinet11",
+   "coffeemachine1"
+  ],
+  [
+   "cabinet11",
+   "countertop1"
+  ],
+  [
+   "cabinet11",
+   "countertop2"
+  ],
+  [
+   "cabinet11",
+   "countertop3"
+  ],
+  [
+   "cabinet11",
+   "drawer1"
+  ],
+  [
+   "cabinet11",
+   "drawer10"
+  ],
+  [
+   "cabinet11",
+   "drawer11"
+  ],
+  [
+   "cabinet11",
+   "drawer12"
+  ],
+  [
+   "cabinet11",
+   "drawer2"
+  ],
+  [
+   "cabinet11",
+   "drawer3"
+  ],
+  [
+   "cabinet11",
+   "drawer4"
+  ],
+  [
+   "cabinet11",
+   "drawer5"
+  ],
+  [
+   "cabinet11",
+   "drawer6"
+  ],
+  [
+   "cabinet11",
+   "drawer7"
+  ],
+  [
+   "cabinet11",
+   "drawer8"
+  ],
+  [
+   "cabinet11",
+   "drawer9"
+  ],
+  [
+   "cabinet11",
+   "fridge1"
+  ],
+  [
+   "cabinet11",
+   "garbagecan1"
+  ],
+  [
+   "cabinet11",
+   "microwave1"
+  ],
+  [
+   "cabinet11",
+   "sink1"
+  ],
+  [
+   "cabinet11",
+   "stoveburner1"
+  ],
+  [
+   "cabinet11",
+   "stoveburner2"
+  ],
+  [
+   "cabinet11",
+   "stoveburner3"
+  ],
+  [
+   "cabinet11",
+   "stoveburner4"
+  ],
+  [
+   "cabinet11",
+   "toaster1"
+  ],
+  [
+   "cabinet12",
+   "cabinet13"
+  ],
+  [
+   "cabinet12",
+   "cabinet14"
+  ],
+  [
+   "cabinet12",
+   "cabinet15"
+  ],
+  [
+   "cabinet12",
+   "cabinet16"
+  ],
+  [
+   "cabinet12",
+   "cabinet17"
+  ],
+  [
+   "cabinet12",
+   "cabinet18"
+  ],
+  [
+   "cabinet12",
+   "cabinet19"
+  ],
+  [
+   "cabinet12",
+   "cabinet2"
+  ],
+  [
+   "cabinet12",
+   "cabinet20"
+  ],
+  [
+   "cabinet12",
+   "cabinet21"
+  ],
+  [
+   "cabinet12",
+   "cabinet22"
+  ],
+  [
+   "cabinet12",
+   "cabinet23"
+  ],
+  [
+   "cabinet12",
+   "cabinet24"
+  ],
+  [
+   "cabinet12",
+   "cabinet25"
+  ],
+  [
+   "cabinet12",
+   "cabinet26"
+  ],
+  [
+   "cabinet12",
+   "cabinet3"
+  ],
+  [
+   "cabinet12",
+   "cabinet4"
+  ],
+  [
+   "cabinet12",
+   "cabinet5"
+  ],
+  [
+   "cabinet12",
+   "cabinet6"
+  ],
+  [
+   "cabinet12",
+   "cabinet7"
+  ],
+  [
+   "cabinet12",
+   "cabinet8"
+  ],
+  [
+   "cabinet12",
+   "cabinet9"
+  ],
+  [
+   "cabinet12",
+   "coffeemachine1"
+  ],
+  [
+   "cabinet12",
+   "countertop1"
+  ],
+  [
+   "cabinet12",
+   "countertop2"
+  ],
+  [
+   "cabinet12",
+   "countertop3"
+  ],
+  [
+   "cabinet12",
+   "drawer1"
+  ],
+  [
+   "cabinet12",
+   "drawer10"
+  ],
+  [
+   "cabinet12",
+   "drawer11"
+  ],
+  [
+   "cabinet12",
+   "drawer12"
+  ],
+  [
+   "cabinet12",
+   "drawer2"
+  ],
+  [
+   "cabinet12",
+   "drawer3"
+  ],
+  [
+   "cabinet12",
+   "drawer4"
+  ],
+  [
+   "cabinet12",
+   "drawer5"
+  ],
+  [
+   "cabinet12",
+   "drawer6"
+  ],
+  [
+   "cabinet12",
+   "drawer7"
+  ],
+  [
+   "cabinet12",
+   "drawer8"
+  ],
+  [
+   "cabinet12",
+   "drawer9"
+  ],
+  [
+   "cabinet12",
+   "fridge1"
+  ],
+  [
+   "cabinet12",
+   "garbagecan1"
+  ],
+  [
+   "cabinet12",
+   "microwave1"
+  ],
+  [
+   "cabinet12",
+   "sink1"
+  ],
+  [
+   "cabinet12",
+   "stoveburner1"
+  ],
+  [
+   "cabinet12",
+   "stoveburner2"
+  ],
+  [
+   "cabinet12",
+   "stoveburner3"
+  ],
+  [
+   "cabinet12",
+   "stoveburner4"
+  ],
+  [
+   "cabinet12",
+   "toaster1"
+  ],
+  [
+   "cabinet13",
+   "cabinet14"
+  ],
+  [
+   "cabinet13",
+   "cabinet15"
+  ],
+  [
+   "cabinet13",
+   "cabinet16"
+  ],
+  [
+   "cabinet13",
+   "cabinet17"
+  ],
+  [
+   "cabinet13",
+   "cabinet18"
+  ],
+  [
+   "cabinet13",
+   "cabinet19"
+  ],
+  [
+   "cabinet13",
+   "cabinet2"
+  ],
+  [
+   "cabinet13",
+   "cabinet20"
+  ],
+  [
+   "cabinet13",
+   "cabinet21"
+  ],
+  [
+   "cabinet13",
+   "cabinet22"
+  ],
+  [
+   "cabinet13",
+   "cabinet23"
+  ],
+  [
+   "cabinet13",
+   "cabinet24"
+  ],
+  [
+   "cabinet13",
+   "cabinet25"
+  ],
+  [
+   "cabinet13",
+   "cabinet26"
+  ],
+  [
+   "cabinet13",
+   "cabinet3"
+  ],
+  [
+   "cabinet13",
+   "cabinet4"
+  ],
+  [
+   "cabinet13",
+   "cabinet5"
+  ],
+  [
+   "cabinet13",
+   "cabinet6"
+  ],
+  [
+   "cabinet13",
+   "cabinet7"
+  ],
+  [
+   "cabinet13",
+   "cabinet8"
+  ],
+  [
+   "cabinet13",
+   "cabinet9"
+  ],
+  [
+   "cabinet13",
+   "coffeemachine1"
+  ],
+  [
+   "cabinet13",
+   "countertop1"
+  ],
+  [
+   "cabinet13",
+   "countertop2"
+  ],
+  [
+   "cabinet13",
+   "countertop3"
+  ],
+  [
+   "cabinet13",
+   "drawer1"
+  ],
+  [
+   "cabinet13",
+   "drawer10"
+  ],
+  [
+   "cabinet13",
+   "drawer11"
+  ],
+  [
+   "cabinet13",
+   "drawer12"
+  ],
+  [
+   "cabinet13",
+   "drawer2"
+  ],
+  [
+   "cabinet13",
+   "drawer3"
+  ],
+  [
+   "cabinet13",
+   "drawer4"
+  ],
+  [
+   "cabinet13",
+   "drawer5"
+  ],
+  [
+   "cabinet13",
+   "drawer6"
+  ],
+  [
+   "cabinet13",
+   "drawer7"
+  ],
+  [
+   "cabinet13",
+   "drawer8"
+  ],
+  [
+   "cabinet13",
+   "drawer9"
+  ],
+  [
+   "cabinet13",
+   "fridge1"
+  ],
+  [
+   "cabinet13",
+   "garbagecan1"
+  ],
+  [
+   "cabinet13",
+   "microwave1"
+  ],
+  [
+   "cabinet13",
+   "sink1"
+  ],
+  [
+   "cabinet13",
+   "stoveburner1"
+  ],
+  [
+   "cabinet13",
+   "stoveburner2"
+  ],
+  [
+   "cabinet13",
+   "stoveburner3"
+  ],
+  [
+   "cabinet13",
+   "stoveburner4"
+  ],
+  [
+   "cabinet13",
+   "toaster1"
+  ],
+  [
+   "cabinet14",
+   "cabinet15"
+  ],
+  [
+   "cabinet14",
+   "cabinet16"
+  ],
+  [
+   "cabinet14",
+   "cabinet17"
+  ],
+  [
+   "cabinet14",
+   "cabinet18"
+  ],
+  [
+   "cabinet14",
+   "cabinet19"
+  ],
+  [
+   "cabinet14",
+   "cabinet2"
+  ],
+  [
+   "cabinet14",
+   "cabinet20"
+  ],
+  [
+   "cabinet14",
+   "cabinet21"
+  ],
+  [
+   "cabinet14",
+   "cabinet22"
+  ],
+  [
+   "cabinet14",
+   "cabinet23"
+  ],
+  [
+   "cabinet14",
+   "cabinet24"
+  ],
+  [
+   "cabinet14",
+   "cabinet25"
+  ],
+  [
+   "cabinet14",
+   "cabinet26"
+  ],
+  [
+   "cabinet14",
+   "cabinet3"
+  ],
+  [
+   "cabinet14",
+   "cabinet4"
+  ],
+  [
+   "cabinet14",
+   "cabinet5"
+  ],
+  [
+   "cabinet14",
+   "cabinet6"
+  ],
+  [
+   "cabinet14",
+   "cabinet7"
+  ],
+  [
+   "cabinet14",
+   "cabinet8"
+  ],
+  [
+   "cabinet14",
+   "cabinet9"
+  ],
+  [
+   "cabinet14",
+   "coffeemachine1"
+  ],
+  [
+   "cabinet14",
+   "countertop1"
+  ],
+  [
+   "cabinet14",
+   "countertop2"
+  ],
+  [
+   "cabinet14",
+   "countertop3"
+  ],
+  [
+   "cabinet14",
+   "drawer1"
+  ],
+  [
+   "cabinet14",
+   "drawer10"
+  ],
+  [
+   "cabinet14",
+   "drawer11"
+  ],
+  [
+   "cabinet14",
+   "drawer12"
+  ],
+  [
+   "cabinet14",
+   "drawer2"
+  ],
+  [
+   "cabinet14",
+   "drawer3"
+  ],
+  [
+   "cabinet14",
+   "drawer4"
+  ],
+  [
+   "cabinet14",
+   "drawer5"
+  ],
+  [
+   "cabinet14",
+   "drawer6"
+  ],
+  [
+   "cabinet14",
+   "drawer7"
+  ],
+  [
+   "cabinet14",
+   "drawer8"
+  ],
+  [
+   "cabinet14",
+   "drawer9"
+  ],
+  [
+   "cabinet14",
+   "fridge1"
+  ],
+  [
+   "cabinet14",
+   "garbagecan1"
+  ],
+  [
+   "cabinet14",
+   "microwave1"
+  ],
+  [
+   "cabinet14",
+   "sink1"
+  ],
+  [
+   "cabinet14",
+   "stoveburner1"
+  ],
+  [
+   "cabinet14",
+   "stoveburner2"
+  ],
+  [
+   "cabinet14",
+   "stoveburner3"
+  ],
+  [
+   "cabinet14",
+   "stoveburner4"
+  ],
+  [
+   "cabinet14",
+   "toaster1"
+  ],
+  [
+   "cabinet15",
+   "cabinet16"
+  ],
+  [
+   "cabinet15",
+   "cabinet17"
+  ],
+  [
+   "cabinet15",
+   "cabinet18"
+  ],
+  [
+   "cabinet15",
+   "cabinet19"
+  ],
+  [
+   "cabinet15",
+   "cabinet2"
+  ],
+  [
+   "cabinet15",
+   "cabinet20"
+  ],
+  [
+   "cabinet15",
+   "cabinet21"
+  ],
+  [
+   "cabinet15",
+   "cabinet22"
+  ],
+  [
+   "cabinet15",
+   "cabinet23"
+  ],
+  [
+   "cabinet15",
+   "cabinet24"
+  ],
+  [
+   "cabinet15",
+   "cabinet25"
+  ],
+  [
+   "cabinet15",
+   "cabinet26"
+  ],
+  [
+   "cabinet15",
+   "cabinet3"
+  ],
+  [
+   "cabinet15",
+   "cabinet4"
+  ],
+  [
+   "cabinet15",
+   "cabinet5"
+  ],
+  [
+   "cabinet15",
+   "cabinet6"
+  ],
+  [
+   "cabinet15",
+   "cabinet7"
+  ],
+  [
+   "cabinet15",
+   "cabinet8"
+  ],
+  [
+   "cabinet15",
+   "cabinet9"
+  ],
+  [
+   "cabinet15",
+   "coffeemachine1"
+  ],
+  [
+   "cabinet15",
+   "countertop1"
+  ],
+  [
+   "cabinet15",
+   "countertop2"
+  ],
+  [
+   "cabinet15",
+   "countertop3"
+  ],
+  [
+   "cabinet15",
+   "drawer1"
+  ],
+  [
+   "cabinet15",
+   "drawer10"
+  ],
+  [
+   "cabinet15",
+   "drawer11"
+  ],
+  [
+   "cabinet15",
+   "drawer12"
+  ],
+  [
+   "cabinet15",
+   "drawer2"
+  ],
+  [
+   "cabinet15",
+   "drawer3"
+  ],
+  [
+   "cabinet15",
+   "drawer4"
+  ],
+  [
+   "cabinet15",
+   "drawer5"
+  ],
+  [
+   "cabinet15",
+   "drawer6"
+  ],
+  [
+   "cabinet15",
+   "drawer7"
+  ],
+  [
+   "cabinet15",
+   "drawer8"
+  ],
+  [
+   "cabinet15",
+   "drawer9"
+  ],
+  [
+   "cabinet15",
+   "fridge1"
+  ],
+  [
+   "cabinet15",
+   "garbagecan1"
+  ],
+  [
+   "cabinet15",
+   "microwave1"
+  ],
+  [
+   "cabinet15",
+   "sink1"
+  ],
+  [
+   "cabinet15",
+   "stoveburner1"
+  ],
+  [
+   "cabinet15",
+   "stoveburner2"
+  ],
+  [
+   "cabinet15",
+   "stoveburner3"
+  ],
+  [
+   "cabinet15",
+   "stoveburner4"
+  ],
+  [
+   "cabinet15",
+   "toaster1"
+  ],
+  [
+   "cabinet16",
+   "cabinet17"
+  ],
+  [
+   "cabinet16",
+   "cabinet18"
+  ],
+  [
+   "cabinet16",
+   "cabinet19"
+  ],
+  [
+   "cabinet16",
+   "cabinet2"
+  ],
+  [
+   "cabinet16",
+   "cabinet20"
+  ],
+  [
+   "cabinet16",
+   "cabinet21"
+  ],
+  [
+   "cabinet16",
+   "cabinet22"
+  ],
+  [
+   "cabinet16",
+   "cabinet23"
+  ],
+  [
+   "cabinet16",
+   "cabinet24"
+  ],
+  [
+   "cabinet16",
+   "cabinet25"
+  ],
+  [
+   "cabinet16",
+   "cabinet26"
+  ],
+  [
+   "cabinet16",
+   "cabinet3"
+  ],
+  [
+   "cabinet16",
+   "cabinet4"
+  ],
+  [
+   "cabinet16",
+   "cabinet5"
+  ],
+  [
+   "cabinet16",
+   "cabinet6"
+  ],
+  [
+   "cabinet16",
+   "cabinet7"
+  ],
+  [
+   "cabinet16",
+   "cabinet8"
+  ],
+  [
+   "cabinet16",
+   "cabinet9"
+  ],
+  [
+   "cabinet16",
+   "coffeemachine1"
+  ],
+  [
+   "cabinet16",
+   "countertop1"
+  ],
+  [
+   "cabinet16",
+   "countertop2"
+  ],
+  [
+   "cabinet16",
+   "countertop3"
+  ],
+  [
+   "cabinet16",
+   "drawer1"
+  ],
+  [
+   "cabinet16",
+   "drawer10"
+  ],
+  [
+   "cabinet16",
+   "drawer11"
+  ],
+  [
+   "cabinet16",
+   "drawer12"
+  ],
+  [
+   "cabinet16",
+   "drawer2"
+  ],
+  [
+   "cabinet16",
+   "drawer3"
+  ],
+  [
+   "cabinet16",
+   "drawer4"
+  ],
+  [
+   "cabinet16",
+   "drawer5"
+  ],
+  [
+   "cabinet16",
+   "drawer6"
+  ],
+  [
+   "cabinet16",
+   "drawer7"
+  ],
+  [
+   "cabinet16",
+   "drawer8"
+  ],
+  [
+   "cabinet16",
+   "drawer9"
+  ],
+  [
+   "cabinet16",
+   "fridge1"
+  ],
+  [
+   "cabinet16",
+   "garbagecan1"
+  ],
+  [
+   "cabinet16",
+   "microwave1"
+  ],
+  [
+   "cabinet16",
+   "sink1"
+  ],
+  [
+   "cabinet16",
+   "stoveburner1"
+  ],
+  [
+   "cabinet16",
+   "stoveburner2"
+  ],
+  [
+   "cabinet16",
+   "stoveburner3"
+  ],
+  [
+   "cabinet16",
+   "stoveburner4"
+  ],
+  [
+   "cabinet16",
+   "toaster1"
+  ],
+  [
+   "cabinet17",
+   "cabinet18"
+  ],
+  [
+   "cabinet17",
+   "cabinet19"
+  ],
+  [
+   "cabinet17",
+   "cabinet2"
+  ],
+  [
+   "cabinet17",
+   "cabinet20"
+  ],
+  [
+   "cabinet17",
+   "cabinet21"
+  ],
+  [
+   "cabinet17",
+   "cabinet22"
+  ],
+  [
+   "cabinet17",
+   "cabinet23"
+  ],
+  [
+   "cabinet17",
+   "cabinet24"
+  ],
+  [
+   "cabinet17",
+   "cabinet25"
+  ],
+  [
+   "cabinet17",
+   "cabinet26"
+  ],
+  [
+   "cabinet17",
+   "cabinet3"
+  ],
+  [
+   "cabinet17",
+   "cabinet4"
+  ],
+  [
+   "cabinet17",
+   "cabinet5"
+  ],
+  [
+   "cabinet17",
+   "cabinet6"
+  ],
+  [
+   "cabinet17",
+   "cabinet7"
+  ],
+  [
+   "cabinet17",
+   "cabinet8"
+  ],
+  [
+   "cabinet17",
+   "cabinet9"
+  ],
+  [
+   "cabinet17",
+   "coffeemachine1"
+  ],
+  [
+   "cabinet17",
+   "countertop1"
+  ],
+  [
+   "cabinet17",
+   "countertop2"
+  ],
+  [
+   "cabinet17",
+   "countertop3"
+  ],
+  [
+   "cabinet17",
+   "drawer1"
+  ],
+  [
+   "cabinet17",
+   "drawer10"
+  ],
+  [
+   "cabinet17",
+   "drawer11"
+  ],
+  [
+   "cabinet17",
+   "drawer12"
+  ],
+  [
+   "cabinet17",
+   "drawer2"
+  ],
+  [
+   "cabinet17",
+   "drawer3"
+  ],
+  [
+   "cabinet17",
+   "drawer4"
+  ],
+  [
+   "cabinet17",
+   "drawer5"
+  ],
+  [
+   "cabinet17",
+   "drawer6"
+  ],
+  [
+   "cabinet17",
+   "drawer7"
+  ],
+  [
+   "cabinet17",
+   "drawer8"
+  ],
+  [
+   "cabinet17",
+   "drawer9"
+  ],
+  [
+   "cabinet17",
+   "fridge1"
+  ],
+  [
+   "cabinet17",
+   "garbagecan1"
+  ],
+  [
+   "cabinet17",
+   "microwave1"
+  ],
+  [
+   "cabinet17",
+   "sink1"
+  ],
+  [
+   "cabinet17",
+   "stoveburner1"
+  ],
+  [
+   "cabinet17",
+   "stoveburner2"
+  ],
+  [
+   "cabinet17",
+   "stoveburner3"
+  ],
+  [
+   "cabinet17",
+   "stoveburner4"
+  ],
+  [
+   "cabinet17",
+   "toaster1"
+  ],
+  [
+   "cabinet18",
+   "cabinet19"
+  ],
+  [
+   "cabinet18",
+   "cabinet2"
+  ],
+  [
+   "cabinet18",
+   "cabinet20"
+  ],
+  [
+   "cabinet18",
+   "cabinet21"
+  ],
+  [
+   "cabinet18",
+   "cabinet22"
+  ],
+  [
+   "cabinet18",
+   "cabinet23"
+  ],
+  [
+   "cabinet18",
+   "cabinet24"
+  ],
+  [
+   "cabinet18",
+   "cabinet25"
+  ],
+  [
+   "cabinet18",
+   "cabinet26"
+  ],
+  [
+   "cabinet18",
+   "cabinet3"
+  ],
+  [
+   "cabinet18",
+   "cabinet4"
+  ],
+  [
+   "cabinet18",
+   "cabinet5"
+  ],
+  [
+   "cabinet18",
+   "cabinet6"
+  ],
+  [
+   "cabinet18",
+   "cabinet7"
+  ],
+  [
+   "cabinet18",
+   "cabinet8"
+  ],
+  [
+   "cabinet18",
+   "cabinet9"
+  ],
+  [
+   "cabinet18",
+   "coffeemachine1"
+  ],
+  [
+   "cabinet18",
+   "countertop1"
+  ],
+  [
+   "cabinet18",
+   "countertop2"
+  ],
+  [
+   "cabinet18",
+   "countertop3"
+  ],
+  [
+   "cabinet18",
+   "drawer1"
+  ],
+  [
+   "cabinet18",
+   "drawer10"
+  ],
+  [
+   "cabinet18",
+   "drawer11"
+  ],
+  [
+   "cabinet18",
+   "drawer12"
+  ],
+  [
+   "cabinet18",
+   "drawer2"
+  ],
+  [
+   "cabinet18",
+   "drawer3"
+  ],
+  [
+   "cabinet18",
+   "drawer4"
+  ],
+  [
+   "cabinet18",
+   "drawer5"
+  ],
+  [
+   "cabinet18",
+   "drawer6"
+  ],
+  [
+   "cabinet18",
+   "drawer7"
+  ],
+  [
+   "cabinet18",
+   "drawer8"
+  ],
+  [
+   "cabinet18",
+   "drawer9"
+  ],
+  [
+   "cabinet18",
+   "fridge1"
+  ],
+  [
+   "cabinet18",
+   "garbagecan1"
+  ],
+  [
+   "cabinet18",
+   "microwave1"
+  ],
+  [
+   "cabinet18",
+   "sink1"
+  ],
+  [
+   "cabinet18",
+   "stoveburner1"
+  ],
+  [
+   "cabinet18",
+   "stoveburner2"
+  ],
+  [
+   "cabinet18",
+   "stoveburner3"
+  ],
+  [
+   "cabinet18",
+   "stoveburner4"
+  ],
+  [
+   "cabinet18",
+   "toaster1"
+  ],
+  [
+   "cabinet19",
+   "cabinet2"
+  ],
+  [
+   "cabinet19",
+   "cabinet20"
+  ],
+  [
+   "cabinet19",
+   "cabinet21"
+  ],
+  [
+   "cabinet19",
+   "cabinet22"
+  ],
+  [
+   "cabinet19",
+   "cabinet23"
+  ],
+  [
+   "cabinet19",
+   "cabinet24"
+  ],
+  [
+   "cabinet19",
+   "cabinet25"
+  ],
+  [
+   "cabinet19",
+   "cabinet26"
+  ],
+  [
+   "cabinet19",
+   "cabinet3"
+  ],
+  [
+   "cabinet19",
+   "cabinet4"
+  ],
+  [
+   "cabinet19",
+   "cabinet5"
+  ],
+  [
+   "cabinet19",
+   "cabinet6"
+  ],
+  [
+   "cabinet19",
+   "cabinet7"
+  ],
+  [
+   "cabinet19",
+   "cabinet8"
+  ],
+  [
+   "cabinet19",
+   "cabinet9"
+  ],
+  [
+   "cabinet19",
+   "coffeemachine1"
+  ],
+  [
+   "cabinet19",
+   "countertop1"
+  ],
+  [
+   "cabinet19",
+   "countertop2"
+  ],
+  [
+   "cabinet19",
+   "countertop3"
+  ],
+  [
+   "cabinet19",
+   "drawer1"
+  ],
+  [
+   "cabinet19",
+   "drawer10"
+  ],
+  [
+   "cabinet19",
+   "drawer11"
+  ],
+  [
+   "cabinet19",
+   "drawer12"
+  ],
+  [
+   "cabinet19",
+   "drawer2"
+  ],
+  [
+   "cabinet19",
+   "drawer3"
+  ],
+  [
+   "cabinet19",
+   "drawer4"
+  ],
+  [
+   "cabinet19",
+   "drawer5"
+  ],
+  [
+   "cabinet19",
+   "drawer6"
+  ],
+  [
+   "cabinet19",
+   "drawer7"
+  ],
+  [
+   "cabinet19",
+   "drawer8"
+  ],
+  [
+   "cabinet19",
+   "drawer9"
+  ],
+  [
+   "cabinet19",
+   "fridge1"
+  ],
+  [
+   "cabinet19",
+   "garbagecan1"
+  ],
+  [
+   "cabinet19",
+   "microwave1"
+  ],
+  [
+   "cabinet19",
+   "sink1"
+  ],
+  [
+   "cabinet19",
+   "stoveburner1"
+  ],
+  [
+   "cabinet19",
+   "stoveburner2"
+  ],
+  [
+   "cabinet19",
+   "stoveburner3"
+  ],
+  [
+   "cabinet19",
+   "stoveburner4"
+  ],
+  [
+   "cabinet19",
+   "toaster1"
+  ],
+  [
+   "cabinet2",
+   "cabinet20"
+  ],
+  [
+   "cabinet2",
+   "cabinet21"
+  ],
+  [
+   "cabinet2",
+   "cabinet22"
+  ],
+  [
+   "cabinet2",
+   "cabinet23"
+  ],
+  [
+   "cabinet2",
+   "cabinet24"
+  ],
+  [
+   "cabinet2",
+   "cabinet25"
+  ],
+  [
+   "cabinet2",
+   "cabinet26"
+  ],
+  [
+   "cabinet2",
+   "cabinet3"
+  ],
+  [
+   "cabinet2",
+   "cabinet4"
+  ],
+  [
+   "cabinet2",
+   "cabinet5"
+  ],
+  [
+   "cabinet2",
+   "cabinet6"
+  ],
+  [
+   "cabinet2",
+   "cabinet7"
+  ],
+  [
+   "cabinet2",
+   "cabinet8"
+  ],
+  [
+   "cabinet2",
+   "cabinet9"
+  ],
+  [
+   "cabinet2",
+   "coffeemachine1"
+  ],
+  [
+   "cabinet2",
+   "countertop1"
+  ],
+  [
+   "cabinet2",
+   "countertop2"
+  ],
+  [
+   "cabinet2",
+   "countertop3"
+  ],
+  [
+   "cabinet2",
+   "drawer1"
+  ],
+  [
+   "cabinet2",
+   "drawer10"
+  ],
+  [
+   "cabinet2",
+   "drawer11"
+  ],
+  [
+   "cabinet2",
+   "drawer12"
+  ],
+  [
+   "cabinet2",
+   "drawer2"
+  ],
+  [
+   "cabinet2",
+   "drawer3"
+  ],
+  [
+   "cabinet2",
+   "drawer4"
+  ],
+  [
+   "cabinet2",
+   "drawer5"
+  ],
+  [
+   "cabinet2",
+   "drawer6"
+  ],
+  [
+   "cabinet2",
+   "drawer7"
+  ],
+  [
+   "cabinet2",
+   "drawer8"
+  ],
+  [
+   "cabinet2",
+   "drawer9"
+  ],
+  [
+   "cabinet2",
+   "fridge1"
+  ],
+  [
+   "cabinet2",
+   "garbagecan1"
+  ],
+  [
+   "cabinet2",
+   "microwave1"
+  ],
+  [
+   "cabinet2",
+   "sink1"
+  ],
+  [
+   "cabinet2",
+   "stoveburner1"
+  ],
+  [
+   "cabinet2",
+   "stoveburner2"
+  ],
+  [
+   "cabinet2",
+   "stoveburner3"
+  ],
+  [
+   "cabinet2",
+   "stoveburner4"
+  ],
+  [
+   "cabinet2",
+   "toaster1"
+  ],
+  [
+   "cabinet20",
+   "cabinet21"
+  ],
+  [
+   "cabinet20",
+   "cabinet22"
+  ],
+  [
+   "cabinet20",
+   "cabinet23"
+  ],
+  [
+   "cabinet20",
+   "cabinet24"
+  ],
+  [
+   "cabinet20",
+   "cabinet25"
+  ],
+  [
+   "cabinet20",
+   "cabinet26"
+  ],
+  [
+   "cabinet20",
+   "cabinet3"
+  ],
+  [
+   "cabinet20",
+   "cabinet4"
+  ],
+  [
+   "cabinet20",
+   "cabinet5"
+  ],
+  [
+   "cabinet20",
+   "cabinet6"
+  ],
+  [
+   "cabinet20",
+   "cabinet7"
+  ],
+  [
+   "cabinet20",
+   "cabinet8"
+  ],
+  [
+   "cabinet20",
+   "cabinet9"
+  ],
+  [
+   "cabinet20",
+   "coffeemachine1"
+  ],
+  [
+   "cabinet20",
+   "countertop1"
+  ],
+  [
+   "cabinet20",
+   "countertop2"
+  ],
+  [
+   "cabinet20",
+   "countertop3"
+  ],
+  [
+   "cabinet20",
+   "drawer1"
+  ],
+  [
+   "cabinet20",
+   "drawer10"
+  ],
+  [
+   "cabinet20",
+   "drawer11"
+  ],
+  [
+   "cabinet20",
+   "drawer12"
+  ],
+  [
+   "cabinet20",
+   "drawer2"
+  ],
+  [
+   "cabinet20",
+   "drawer3"
+  ],
+  [
+   "cabinet20",
+   "drawer4"
+  ],
+  [
+   "cabinet20",
+   "drawer5"
+  ],
+  [
+   "cabinet20",
+   "drawer6"
+  ],
+  [
+   "cabinet20",
+   "drawer7"
+  ],
+  [
+   "cabinet20",
+   "drawer8"
+  ],
+  [
+   "cabinet20",
+   "drawer9"
+  ],
+  [
+   "cabinet20",
+   "fridge1"
+  ],
+  [
+   "cabinet20",
+   "garbagecan1"
+  ],
+  [
+   "cabinet20",
+   "microwave1"
+  ],
+  [
+   "cabinet20",
+   "sink1"
+  ],
+  [
+   "cabinet20",
+   "stoveburner1"
+  ],
+  [
+   "cabinet20",
+   "stoveburner2"
+  ],
+  [
+   "cabinet20",
+   "stoveburner3"
+  ],
+  [
+   "cabinet20",
+   "stoveburner4"
+  ],
+  [
+   "cabinet20",
+   "toaster1"
+  ],
+  [
+   "cabinet21",
+   "cabinet22"
+  ],
+  [
+   "cabinet21",
+   "cabinet23"
+  ],
+  [
+   "cabinet21",
+   "cabinet24"
+  ],
+  [
+   "cabinet21",
+   "cabinet25"
+  ],
+  [
+   "cabinet21",
+   "cabinet26"
+  ],
+  [
+   "cabinet21",
+   "cabinet3"
+  ],
+  [
+   "cabinet21",
+   "cabinet4"
+  ],
+  [
+   "cabinet21",
+   "cabinet5"
+  ],
+  [
+   "cabinet21",
+   "cabinet6"
+  ],
+  [
+   "cabinet21",
+   "cabinet7"
+  ],
+  [
+   "cabinet21",
+   "cabinet8"
+  ],
+  [
+   "cabinet21",
+   "cabinet9"
+  ],
+  [
+   "cabinet21",
+   "coffeemachine1"
+  ],
+  [
+   "cabinet21",
+   "countertop1"
+  ],
+  [
+   "cabinet21",
+   "countertop2"
+  ],
+  [
+   "cabinet21",
+   "countertop3"
+  ],
+  [
+   "cabinet21",
+   "drawer1"
+  ],
+  [
+   "cabinet21",
+   "drawer10"
+  ],
+  [
+   "cabinet21",
+   "drawer11"
+  ],
+  [
+   "cabinet21",
+   "drawer12"
+  ],
+  [
+   "cabinet21",
+   "drawer2"
+  ],
+  [
+   "cabinet21",
+   "drawer3"
+  ],
+  [
+   "cabinet21",
+   "drawer4"
+  ],
+  [
+   "cabinet21",
+   "drawer5"
+  ],
+  [
+   "cabinet21",
+   "drawer6"
+  ],
+  [
+   "cabinet21",
+   "drawer7"
+  ],
+  [
+   "cabinet21",
+   "drawer8"
+  ],
+  [
+   "cabinet21",
+   "drawer9"
+  ],
+  [
+   "cabinet21",
+   "fridge1"
+  ],
+  [
+   "cabinet21",
+   "garbagecan1"
+  ],
+  [
+   "cabinet21",
+   "microwave1"
+  ],
+  [
+   "cabinet21",
+   "sink1"
+  ],
+  [
+   "cabinet21",
+   "stoveburner1"
+  ],
+  [
+   "cabinet21",
+   "stoveburner2"
+  ],
+  [
+   "cabinet21",
+   "stoveburner3"
+  ],
+  [
+   "cabinet21",
+   "stoveburner4"
+  ],
+  [
+   "cabinet21",
+   "toaster1"
+  ],
+  [
+   "cabinet22",
+   "cabinet23"
+  ],
+  [
+   "cabinet22",
+   "cabinet24"
+  ],
+  [
+   "cabinet22",
+   "cabinet25"
+  ],
+  [
+   "cabinet22",
+   "cabinet26"
+  ],
+  [
+   "cabinet22",
+   "cabinet3"
+  ],
+  [
+   "cabinet22",
+   "cabinet4"
+  ],
+  [
+   "cabinet22",
+   "cabinet5"
+  ],
+  [
+   "cabinet22",
+   "cabinet6"
+  ],
+  [
+   "cabinet22",
+   "cabinet7"
+  ],
+  [
+   "cabinet22",
+   "cabinet8"
+  ],
+  [
+   "cabinet22",
+   "cabinet9"
+  ],
+  [
+   "cabinet22",
+   "coffeemachine1"
+  ],
+  [
+   "cabinet22",
+   "countertop1"
+  ],
+  [
+   "cabinet22",
+   "countertop2"
+  ],
+  [
+   "cabinet22",
+   "countertop3"
+  ],
+  [
+   "cabinet22",
+   "drawer1"
+  ],
+  [
+   "cabinet22",
+   "drawer10"
+  ],
+  [
+   "cabinet22",
+   "drawer11"
+  ],
+  [
+   "cabinet22",
+   "drawer12"
+  ],
+  [
+   "cabinet22",
+   "drawer2"
+  ],
+  [
+   "cabinet22",
+   "drawer3"
+  ],
+  [
+   "cabinet22",
+   "drawer4"
+  ],
+  [
+   "cabinet22",
+   "drawer5"
+  ],
+  [
+   "cabinet22",
+   "drawer6"
+  ],
+  [
+   "cabinet22",
+   "drawer7"
+  ],
+  [
+   "cabinet22",
+   "drawer8"
+  ],
+  [
+   "cabinet22",
+   "drawer9"
+  ],
+  [
+   "cabinet22",
+   "fridge1"
+  ],
+  [
+   "cabinet22",
+   "garbagecan1"
+  ],
+  [
+   "cabinet22",
+   "microwave1"
+  ],
+  [
+   "cabinet22",
+   "sink1"
+  ],
+  [
+   "cabinet22",
+   "stoveburner1"
+  ],
+  [
+   "cabinet22",
+   "stoveburner2"
+  ],
+  [
+   "cabinet22",
+   "stoveburner3"
+  ],
+  [
+   "cabinet22",
+   "stoveburner4"
+  ],
+  [
+   "cabinet22",
+   "toaster1"
+  ],
+  [
+   "cabinet23",
+   "cabinet24"
+  ],
+  [
+   "cabinet23",
+   "cabinet25"
+  ],
+  [
+   "cabinet23",
+   "cabinet26"
+  ],
+  [
+   "cabinet23",
+   "cabinet3"
+  ],
+  [
+   "cabinet23",
+   "cabinet4"
+  ],
+  [
+   "cabinet23",
+   "cabinet5"
+  ],
+  [
+   "cabinet23",
+   "cabinet6"
+  ],
+  [
+   "cabinet23",
+   "cabinet7"
+  ],
+  [
+   "cabinet23",
+   "cabinet8"
+  ],
+  [
+   "cabinet23",
+   "cabinet9"
+  ],
+  [
+   "cabinet23",
+   "coffeemachine1"
+  ],
+  [
+   "cabinet23",
+   "countertop1"
+  ],
+  [
+   "cabinet23",
+   "countertop2"
+  ],
+  [
+   "cabinet23",
+   "countertop3"
+  ],
+  [
+   "cabinet23",
+   "drawer1"
+  ],
+  [
+   "cabinet23",
+   "drawer10"
+  ],
+  [
+   "cabinet23",
+   "drawer11"
+  ],
+  [
+   "cabinet23",
+   "drawer12"
+  ],
+  [
+   "cabinet23",
+   "drawer2"
+  ],
+  [
+   "cabinet23",
+   "drawer3"
+  ],
+  [
+   "cabinet23",
+   "drawer4"
+  ],
+  [
+   "cabinet23",
+   "drawer5"
+  ],
+  [
+   "cabinet23",
+   "drawer6"
+  ],
+  [
+   "cabinet23",
+   "drawer7"
+  ],
+  [
+   "cabinet23",
+   "drawer8"
+  ],
+  [
+   "cabinet23",
+   "drawer9"
+  ],
+  [
+   "cabinet23",
+   "fridge1"
+  ],
+  [
+   "cabinet23",
+   "garbagecan1"
+  ],
+  [
+   "cabinet23",
+   "microwave1"
+  ],
+  [
+   "cabinet23",
+   "sink1"
+  ],
+  [
+   "cabinet23",
+   "stoveburner1"
+  ],
+  [
+   "cabinet23",
+   "stoveburner2"
+  ],
+  [
+   "cabinet23",
+   "stoveburner3"
+  ],
+  [
+   "cabinet23",
+   "stoveburner4"
+  ],
+  [
+   "cabinet23",
+   "toaster1"
+  ],
+  [
+   "cabinet24",
+   "cabinet25"
+  ],
+  [
+   "cabinet24",
+   "cabinet26"
+  ],
+  [
+   "cabinet24",
+   "cabinet3"
+  ],
+  [
+   "cabinet24",
+   "cabinet4"
+  ],
+  [
+   "cabinet24",
+   "cabinet5"
+  ],
+  [
+   "cabinet24",
+   "cabinet6"
+  ],
+  [
+   "cabinet24",
+   "cabinet7"
+  ],
+  [
+   "cabinet24",
+   "cabinet8"
+  ],
+  [
+   "cabinet24",
+   "cabinet9"
+  ],
+  [
+   "cabinet24",
+   "coffeemachine1"
+  ],
+  [
+   "cabinet24",
+   "countertop1"
+  ],
+  [
+   "cabinet24",
+   "countertop2"
+  ],
+  [
+   "cabinet24",
+   "countertop3"
+  ],
+  [
+   "cabinet24",
+   "drawer1"
+  ],
+  [
+   "cabinet24",
+   "drawer10"
+  ],
+  [
+   "cabinet24",
+   "drawer11"
+  ],
+  [
+   "cabinet24",
+   "drawer12"
+  ],
+  [
+   "cabinet24",
+   "drawer2"
+  ],
+  [
+   "cabinet24",
+   "drawer3"
+  ],
+  [
+   "cabinet24",
+   "drawer4"
+  ],
+  [
+   "cabinet24",
+   "drawer5"
+  ],
+  [
+   "cabinet24",
+   "drawer6"
+  ],
+  [
+   "cabinet24",
+   "drawer7"
+  ],
+  [
+   "cabinet24",
+   "drawer8"
+  ],
+  [
+   "cabinet24",
+   "drawer9"
+  ],
+  [
+   "cabinet24",
+   "fridge1"
+  ],
+  [
+   "cabinet24",
+   "garbagecan1"
+  ],
+  [
+   "cabinet24",
+   "microwave1"
+  ],
+  [
+   "cabinet24",
+   "sink1"
+  ],
+  [
+   "cabinet24",
+   "stoveburner1"
+  ],
+  [
+   "cabinet24",
+   "stoveburner2"
+  ],
+  [
+   "cabinet24",
+   "stoveburner3"
+  ],
+  [
+   "cabinet24",
+   "stoveburner4"
+  ],
+  [
+   "cabinet24",
+   "toaster1"
+  ],
+  [
+   "cabinet25",
+   "cabinet26"
+  ],
+  [
+   "cabinet25",
+   "cabinet3"
+  ],
+  [
+   "cabinet25",
+   "cabinet4"
+  ],
+  [
+   "cabinet25",
+   "cabinet5"
+  ],
+  [
+   "cabinet25",
+   "cabinet6"
+  ],
+  [
+   "cabinet25",
+   "cabinet7"
+  ],
+  [
+   "cabinet25",
+   "cabinet8"
+  ],
+  [
+   "cabinet25",
+   "cabinet9"
+  ],
+  [
+   "cabinet25",
+   "coffeemachine1"
+  ],
+  [
+   "cabinet25",
+   "countertop1"
+  ],
+  [
+   "cabinet25",
+   "countertop2"
+  ],
+  [
+   "cabinet25",
+   "countertop3"
+  ],
+  [
+   "cabinet25",
+   "drawer1"
+  ],
+  [
+   "cabinet25",
+   "drawer10"
+  ],
+  [
+   "cabinet25",
+   "drawer11"
+  ],
+  [
+   "cabinet25",
+   "drawer12"
+  ],
+  [
+   "cabinet25",
+   "drawer2"
+  ],
+  [
+   "cabinet25",
+   "drawer3"
+  ],
+  [
+   "cabinet25",
+   "drawer4"
+  ],
+  [
+   "cabinet25",
+   "drawer5"
+  ],
+  [
+   "cabinet25",
+   "drawer6"
+  ],
+  [
+   "cabinet25",
+   "drawer7"
+  ],
+  [
+   "cabinet25",
+   "drawer8"
+  ],
+  [
+   "cabinet25",
+   "drawer9"
+  ],
+  [
+   "cabinet25",
+   "fridge1"
+  ],
+  [
+   "cabinet25",
+   "garbagecan1"
+  ],
+  [
+   "cabinet25",
+   "microwave1"
+  ],
+  [
+   "cabinet25",
+   "sink1"
+  ],
+  [
+   "cabinet25",
+   "stoveburner1"
+  ],
+  [
+   "cabinet25",
+   "stoveburner2"
+  ],
+  [
+   "cabinet25",
+   "stoveburner3"
+  ],
+  [
+   "cabinet25",
+   "stoveburner4"
+  ],
+  [
+   "cabinet25",
+   "toaster1"
+  ],
+  [
+   "cabinet26",
+   "cabinet3"
+  ],
+  [
+   "cabinet26",
+   "cabinet4"
+  ],
+  [
+   "cabinet26",
+   "cabinet5"
+  ],
+  [
+   "cabinet26",
+   "cabinet6"
+  ],
+  [
+   "cabinet26",
+   "cabinet7"
+  ],
+  [
+   "cabinet26",
+   "cabinet8"
+  ],
+  [
+   "cabinet26",
+   "cabinet9"
+  ],
+  [
+   "cabinet26",
+   "coffeemachine1"
+  ],
+  [
+   "cabinet26",
+   "countertop1"
+  ],
+  [
+   "cabinet26",
+   "countertop2"
+  ],
+  [
+   "cabinet26",
+   "countertop3"
+  ],
+  [
+   "cabinet26",
+   "drawer1"
+  ],
+  [
+   "cabinet26",
+   "drawer10"
+  ],
+  [
+   "cabinet26",
+   "drawer11"
+  ],
+  [
+   "cabinet26",
+   "drawer12"
+  ],
+  [
+   "cabinet26",
+   "drawer2"
+  ],
+  [
+   "cabinet26",
+   "drawer3"
+  ],
+  [
+   "cabinet26",
+   "drawer4"
+  ],
+  [
+   "cabinet26",
+   "drawer5"
+  ],
+  [
+   "cabinet26",
+   "drawer6"
+  ],
+  [
+   "cabinet26",
+   "drawer7"
+  ],
+  [
+   "cabinet26",
+   "drawer8"
+  ],
+  [
+   "cabinet26",
+   "drawer9"
+  ],
+  [
+   "cabinet26",
+   "fridge1"
+  ],
+  [
+   "cabinet26",
+   "garbagecan1"
+  ],
+  [
+   "cabinet26",
+   "microwave1"
+  ],
+  [
+   "cabinet26",
+   "sink1"
+  ],
+  [
+   "cabinet26",
+   "stoveburner1"
+  ],
+  [
+   "cabinet26",
+   "stoveburner2"
+  ],
+  [
+   "cabinet26",
+   "stoveburner3"
+  ],
+  [
+   "cabinet26",
+   "stoveburner4"
+  ],
+  [
+   "cabinet26",
+   "toaster1"
+  ],
+  [
+   "cabinet3",
+   "cabinet4"
+  ],
+  [
+   "cabinet3",
+   "cabinet5"
+  ],
+  [
+   "cabinet3",
+   "cabinet6"
+  ],
+  [
+   "cabinet3",
+   "cabinet7"
+  ],
+  [
+   "cabinet3",
+   "cabinet8"
+  ],
+  [
+   "cabinet3",
+   "cabinet9"
+  ],
+  [
+   "cabinet3",
+   "coffeemachine1"
+  ],
+  [
+   "cabinet3",
+   "countertop1"
+  ],
+  [
+   "cabinet3",
+   "countertop2"
+  ],
+  [
+   "cabinet3",
+   "countertop3"
+  ],
+  [
+   "cabinet3",
+   "drawer1"
+  ],
+  [
+   "cabinet3",
+   "drawer10"
+  ],
+  [
+   "cabinet3",
+   "drawer11"
+  ],
+  [
+   "cabinet3",
+   "drawer12"
+  ],
+  [
+   "cabinet3",
+   "drawer2"
+  ],
+  [
+   "cabinet3",
+   "drawer3"
+  ],
+  [
+   "cabinet3",
+   "drawer4"
+  ],
+  [
+   "cabinet3",
+   "drawer5"
+  ],
+  [
+   "cabinet3",
+   "drawer6"
+  ],
+  [
+   "cabinet3",
+   "drawer7"
+  ],
+  [
+   "cabinet3",
+   "drawer8"
+  ],
+  [
+   "cabinet3",
+   "drawer9"
+  ],
+  [
+   "cabinet3",
+   "fridge1"
+  ],
+  [
+   "cabinet3",
+   "garbagecan1"
+  ],
+  [
+   "cabinet3",
+   "microwave1"
+  ],
+  [
+   "cabinet3",
+   "sink1"
+  ],
+  [
+   "cabinet3",
+   "stoveburner1"
+  ],
+  [
+   "cabinet3",
+   "stoveburner2"
+  ],
+  [
+   "cabinet3",
+   "stoveburner3"
+  ],
+  [
+   "cabinet3",
+   "stoveburner4"
+  ],
+  [
+   "cabinet3",
+   "toaster1"
+  ],
+  [
+   "cabinet4",
+   "cabinet5"
+  ],
+  [
+   "cabinet4",
+   "cabinet6"
+  ],
+  [
+   "cabinet4",
+   "cabinet7"
+  ],
+  [
+   "cabinet4",
+   "cabinet8"
+  ],
+  [
+   "cabinet4",
+   "cabinet9"
+  ],
+  [
+   "cabinet4",
+   "coffeemachine1"
+  ],
+  [
+   "cabinet4",
+   "countertop1"
+  ],
+  [
+   "cabinet4",
+   "countertop2"
+  ],
+  [
+   "cabinet4",
+   "countertop3"
+  ],
+  [
+   "cabinet4",
+   "drawer1"
+  ],
+  [
+   "cabinet4",
+   "drawer10"
+  ],
+  [
+   "cabinet4",
+   "drawer11"
+  ],
+  [
+   "cabinet4",
+   "drawer12"
+  ],
+  [
+   "cabinet4",
+   "drawer2"
+  ],
+  [
+   "cabinet4",
+   "drawer3"
+  ],
+  [
+   "cabinet4",
+   "drawer4"
+  ],
+  [
+   "cabinet4",
+   "drawer5"
+  ],
+  [
+   "cabinet4",
+   "drawer6"
+  ],
+  [
+   "cabinet4",
+   "drawer7"
+  ],
+  [
+   "cabinet4",
+   "drawer8"
+  ],
+  [
+   "cabinet4",
+   "drawer9"
+  ],
+  [
+   "cabinet4",
+   "fridge1"
+  ],
+  [
+   "cabinet4",
+   "garbagecan1"
+  ],
+  [
+   "cabinet4",
+   "microwave1"
+  ],
+  [
+   "cabinet4",
+   "sink1"
+  ],
+  [
+   "cabinet4",
+   "stoveburner1"
+  ],
+  [
+   "cabinet4",
+   "stoveburner2"
+  ],
+  [
+   "cabinet4",
+   "stoveburner3"
+  ],
+  [
+   "cabinet4",
+   "stoveburner4"
+  ],
+  [
+   "cabinet4",
+   "toaster1"
+  ],
+  [
+   "cabinet5",
+   "cabinet6"
+  ],
+  [
+   "cabinet5",
+   "cabinet7"
+  ],
+  [
+   "cabinet5",
+   "cabinet8"
+  ],
+  [
+   "cabinet5",
+   "cabinet9"
+  ],
+  [
+   "cabinet5",
+   "coffeemachine1"
+  ],
+  [
+   "cabinet5",
+   "countertop1"
+  ],
+  [
+   "cabinet5",
+   "countertop2"
+  ],
+  [
+   "cabinet5",
+   "countertop3"
+  ],
+  [
+   "cabinet5",
+   "drawer1"
+  ],
+  [
+   "cabinet5",
+   "drawer10"
+  ],
+  [
+   "cabinet5",
+   "drawer11"
+  ],
+  [
+   "cabinet5",
+   "drawer12"
+  ],
+  [
+   "cabinet5",
+   "drawer2"
+  ],
+  [
+   "cabinet5",
+   "drawer3"
+  ],
+  [
+   "cabinet5",
+   "drawer4"
+  ],
+  [
+   "cabinet5",
+   "drawer5"
+  ],
+  [
+   "cabinet5",
+   "drawer6"
+  ],
+  [
+   "cabinet5",
+   "drawer7"
+  ],
+  [
+   "cabinet5",
+   "drawer8"
+  ],
+  [
+   "cabinet5",
+   "drawer9"
+  ],
+  [
+   "cabinet5",
+   "fridge1"
+  ],
+  [
+   "cabinet5",
+   "garbagecan1"
+  ],
+  [
+   "cabinet5",
+   "microwave1"
+  ],
+  [
+   "cabinet5",
+   "sink1"
+  ],
+  [
+   "cabinet5",
+   "stoveburner1"
+  ],
+  [
+   "cabinet5",
+   "stoveburner2"
+  ],
+  [
+   "cabinet5",
+   "stoveburner3"
+  ],
+  [
+   "cabinet5",
+   "stoveburner4"
+  ],
+  [
+   "cabinet5",
+   "toaster1"
+  ],
+  [
+   "cabinet6",
+   "cabinet7"
+  ],
+  [
+   "cabinet6",
+   "cabinet8"
+  ],
+  [
+   "cabinet6",
+   "cabinet9"
+  ],
+  [
+   "cabinet6",
+   "coffeemachine1"
+  ],
+  [
+   "cabinet6",
+   "countertop1"
+  ],
+  [
+   "cabinet6",
+   "countertop2"
+  ],
+  [
+   "cabinet6",
+   "countertop3"
+  ],
+  [
+   "cabinet6",
+   "drawer1"
+  ],
+  [
+   "cabinet6",
+   "drawer10"
+  ],
+  [
+   "cabinet6",
+   "drawer11"
+  ],
+  [
+   "cabinet6",
+   "drawer12"
+  ],
+  [
+   "cabinet6",
+   "drawer2"
+  ],
+  [
+   "cabinet6",
+   "drawer3"
+  ],
+  [
+   "cabinet6",
+   "drawer4"
+  ],
+  [
+   "cabinet6",
+   "drawer5"
+  ],
+  [
+   "cabinet6",
+   "drawer6"
+  ],
+  [
+   "cabinet6",
+   "drawer7"
+  ],
+  [
+   "cabinet6",
+   "drawer8"
+  ],
+  [
+   "cabinet6",
+   "drawer9"
+  ],
+  [
+   "cabinet6",
+   "fridge1"
+  ],
+  [
+   "cabinet6",
+   "garbagecan1"
+  ],
+  [
+   "cabinet6",
+   "microwave1"
+  ],
+  [
+   "cabinet6",
+   "sink1"
+  ],
+  [
+   "cabinet6",
+   "stoveburner1"
+  ],
+  [
+   "cabinet6",
+   "stoveburner2"
+  ],
+  [
+   "cabinet6",
+   "stoveburner3"
+  ],
+  [
+   "cabinet6",
+   "stoveburner4"
+  ],
+  [
+   "cabinet6",
+   "toaster1"
+  ],
+  [
+   "cabinet7",
+   "cabinet8"
+  ],
+  [
+   "cabinet7",
+   "cabinet9"
+  ],
+  [
+   "cabinet7",
+   "coffeemachine1"
+  ],
+  [
+   "cabinet7",
+   "countertop1"
+  ],
+  [
+   "cabinet7",
+   "countertop2"
+  ],
+  [
+   "cabinet7",
+   "countertop3"
+  ],
+  [
+   "cabinet7",
+   "drawer1"
+  ],
+  [
+   "cabinet7",
+   "drawer10"
+  ],
+  [
+   "cabinet7",
+   "drawer11"
+  ],
+  [
+   "cabinet7",
+   "drawer12"
+  ],
+  [
+   "cabinet7",
+   "drawer2"
+  ],
+  [
+   "cabinet7",
+   "drawer3"
+  ],
+  [
+   "cabinet7",
+   "drawer4"
+  ],
+  [
+   "cabinet7",
+   "drawer5"
+  ],
+  [
+   "cabinet7",
+   "drawer6"
+  ],
+  [
+   "cabinet7",
+   "drawer7"
+  ],
+  [
+   "cabinet7",
+   "drawer8"
+  ],
+  [
+   "cabinet7",
+   "drawer9"
+  ],
+  [
+   "cabinet7",
+   "fridge1"
+  ],
+  [
+   "cabinet7",
+   "garbagecan1"
+  ],
+  [
+   "cabinet7",
+   "microwave1"
+  ],
+  [
+   "cabinet7",
+   "sink1"
+  ],
+  [
+   "cabinet7",
+   "stoveburner1"
+  ],
+  [
+   "cabinet7",
+   "stoveburner2"
+  ],
+  [
+   "cabinet7",
+   "stoveburner3"
+  ],
+  [
+   "cabinet7",
+   "stoveburner4"
+  ],
+  [
+   "cabinet7",
+   "toaster1"
+  ],
+  [
+   "cabinet8",
+   "cabinet9"
+  ],
+  [
+   "cabinet8",
+   "coffeemachine1"
+  ],
+  [
+   "cabinet8",
+   "countertop1"
+  ],
+  [
+   "cabinet8",
+   "countertop2"
+  ],
+  [
+   "cabinet8",
+   "countertop3"
+  ],
+  [
+   "cabinet8",
+   "drawer1"
+  ],
+  [
+   "cabinet8",
+   "drawer10"
+  ],
+  [
+   "cabinet8",
+   "drawer11"
+  ],
+  [
+   "cabinet8",
+   "drawer12"
+  ],
+  [
+   "cabinet8",
+   "drawer2"
+  ],
+  [
+   "cabinet8",
+   "drawer3"
+  ],
+  [
+   "cabinet8",
+   "drawer4"
+  ],
+  [
+   "cabinet8",
+   "drawer5"
+  ],
+  [
+   "cabinet8",
+   "drawer6"
+  ],
+  [
+   "cabinet8",
+   "drawer7"
+  ],
+  [
+   "cabinet8",
+   "drawer8"
+  ],
+  [
+   "cabinet8",
+   "drawer9"
+  ],
+  [
+   "cabinet8",
+   "fridge1"
+  ],
+  [
+   "cabinet8",
+   "garbagecan1"
+  ],
+  [
+   "cabinet8",
+   "microwave1"
+  ],
+  [
+   "cabinet8",
+   "sink1"
+  ],
+  [
+   "cabinet8",
+   "stoveburner1"
+  ],
+  [
+   "cabinet8",
+   "stoveburner2"
+  ],
+  [
+   "cabinet8",
+   "stoveburner3"
+  ],
+  [
+   "cabinet8",
+   "stoveburner4"
+  ],
+  [
+   "cabinet8",
+   "toaster1"
+  ],
+  [
+   "cabinet9",
+   "coffeemachine1"
+  ],
+  [
+   "cabinet9",
+   "countertop1"
+  ],
+  [
+   "cabinet9",
+   "countertop2"
+  ],
+  [
+   "cabinet9",
+   "countertop3"
+  ],
+  [
+   "cabinet9",
+   "drawer1"
+  ],
+  [
+   "cabinet9",
+   "drawer10"
+  ],
+  [
+   "cabinet9",
+   "drawer11"
+  ],
+  [
+   "cabinet9",
+   "drawer12"
+  ],
+  [
+   "cabinet9",
+   "drawer2"
+  ],
+  [
+   "cabinet9",
+   "drawer3"
+  ],
+  [
+   "cabinet9",
+   "drawer4"
+  ],
+  [
+   "cabinet9",
+   "drawer5"
+  ],
+  [
+   "cabinet9",
+   "drawer6"
+  ],
+  [
+   "cabinet9",
+   "drawer7"
+  ],
+  [
+   "cabinet9",
+   "drawer8"
+  ],
+  [
+   "cabinet9",
+   "drawer9"
+  ],
+  [
+   "cabinet9",
+   "fridge1"
+  ],
+  [
+   "cabinet9",
+   "garbagecan1"
+  ],
+  [
+   "cabinet9",
+   "microwave1"
+  ],
+  [
+   "cabinet9",
+   "sink1"
+  ],
+  [
+   "cabinet9",
+   "stoveburner1"
+  ],
+  [
+   "cabinet9",
+   "stoveburner2"
+  ],
+  [
+   "cabinet9",
+   "stoveburner3"
+  ],
+  [
+   "cabinet9",
+   "stoveburner4"
+  ],
+  [
+   "cabinet9",
+   "toaster1"
+  ],
+  [
+   "coffeemachine1",
+   "countertop1"
+  ],
+  [
+   "coffeemachine1",
+   "countertop2"
+  ],
+  [
+   "coffeemachine1",
+   "countertop3"
+  ],
+  [
+   "coffeemachine1",
+   "drawer1"
+  ],
+  [
+   "coffeemachine1",
+   "drawer10"
+  ],
+  [
+   "coffeemachine1",
+   "drawer11"
+  ],
+  [
+   "coffeemachine1",
+   "drawer12"
+  ],
+  [
+   "coffeemachine1",
+   "drawer2"
+  ],
+  [
+   "coffeemachine1",
+   "drawer3"
+  ],
+  [
+   "coffeemachine1",
+   "drawer4"
+  ],
+  [
+   "coffeemachine1",
+   "drawer5"
+  ],
+  [
+   "coffeemachine1",
+   "drawer6"
+  ],
+  [
+   "coffeemachine1",
+   "drawer7"
+  ],
+  [
+   "coffeemachine1",
+   "drawer8"
+  ],
+  [
+   "coffeemachine1",
+   "drawer9"
+  ],
+  [
+   "coffeemachine1",
+   "fridge1"
+  ],
+  [
+   "coffeemachine1",
+   "garbagecan1"
+  ],
+  [
+   "coffeemachine1",
+   "microwave1"
+  ],
+  [
+   "coffeemachine1",
+   "sink1"
+  ],
+  [
+   "coffeemachine1",
+   "stoveburner1"
+  ],
+  [
+   "coffeemachine1",
+   "stoveburner2"
+  ],
+  [
+   "coffeemachine1",
+   "stoveburner3"
+  ],
+  [
+   "coffeemachine1",
+   "stoveburner4"
+  ],
+  [
+   "coffeemachine1",
+   "toaster1"
+  ],
+  [
+   "countertop1",
+   "countertop2"
+  ],
+  [
+   "countertop1",
+   "countertop3"
+  ],
+  [
+   "countertop1",
+   "drawer1"
+  ],
+  [
+   "countertop1",
+   "drawer10"
+  ],
+  [
+   "countertop1",
+   "drawer11"
+  ],
+  [
+   "countertop1",
+   "drawer12"
+  ],
+  [
+   "countertop1",
+   "drawer2"
+  ],
+  [
+   "countertop1",
+   "drawer3"
+  ],
+  [
+   "countertop1",
+   "drawer4"
+  ],
+  [
+   "countertop1",
+   "drawer5"
+  ],
+  [
+   "countertop1",
+   "drawer6"
+  ],
+  [
+   "countertop1",
+   "drawer7"
+  ],
+  [
+   "countertop1",
+   "drawer8"
+  ],
+  [
+   "countertop1",
+   "drawer9"
+  ],
+  [
+   "countertop1",
+   "fridge1"
+  ],
+  [
+   "countertop1",
+   "garbagecan1"
+  ],
+  [
+   "countertop1",
+   "microwave1"
+  ],
+  [
+   "countertop1",
+   "sink1"
+  ],
+  [
+   "countertop1",
+   "stoveburner1"
+  ],
+  [
+   "countertop1",
+   "stoveburner2"
+  ],
+  [
+   "countertop1",
+   "stoveburner3"
+  ],
+  [
+   "countertop1",
+   "stoveburner4"
+  ],
+  [
+   "countertop1",
+   "toaster1"
+  ],
+  [
+   "countertop2",
+   "countertop3"
+  ],
+  [
+   "countertop2",
+   "drawer1"
+  ],
+  [
+   "countertop2",
+   "drawer10"
+  ],
+  [
+   "countertop2",
+   "drawer11"
+  ],
+  [
+   "countertop2",
+   "drawer12"
+  ],
+  [
+   "countertop2",
+   "drawer2"
+  ],
+  [
+   "countertop2",
+   "drawer3"
+  ],
+  [
+   "countertop2",
+   "drawer4"
+  ],
+  [
+   "countertop2",
+   "drawer5"
+  ],
+  [
+   "countertop2",
+   "drawer6"
+  ],
+  [
+   "countertop2",
+   "drawer7"
+  ],
+  [
+   "countertop2",
+   "drawer8"
+  ],
+  [
+   "countertop2",
+   "drawer9"
+  ],
+  [
+   "countertop2",
+   "fridge1"
+  ],
+  [
+   "countertop2",
+   "garbagecan1"
+  ],
+  [
+   "countertop2",
+   "microwave1"
+  ],
+  [
+   "countertop2",
+   "sink1"
+  ],
+  [
+   "countertop2",
+   "stoveburner1"
+  ],
+  [
+   "countertop2",
+   "stoveburner2"
+  ],
+  [
+   "countertop2",
+   "stoveburner3"
+  ],
+  [
+   "countertop2",
+   "stoveburner4"
+  ],
+  [
+   "countertop2",
+   "toaster1"
+  ],
+  [
+   "countertop3",
+   "drawer1"
+  ],
+  [
+   "countertop3",
+   "drawer10"
+  ],
+  [
+   "countertop3",
+   "drawer11"
+  ],
+  [
+   "countertop3",
+   "drawer12"
+  ],
+  [
+   "countertop3",
+   "drawer2"
+  ],
+  [
+   "countertop3",
+   "drawer3"
+  ],
+  [
+   "countertop3",
+   "drawer4"
+  ],
+  [
+   "countertop3",
+   "drawer5"
+  ],
+  [
+   "countertop3",
+   "drawer6"
+  ],
+  [
+   "countertop3",
+   "drawer7"
+  ],
+  [
+   "countertop3",
+   "drawer8"
+  ],
+  [
+   "countertop3",
+   "drawer9"
+  ],
+  [
+   "countertop3",
+   "fridge1"
+  ],
+  [
+   "countertop3",
+   "garbagecan1"
+  ],
+  [
+   "countertop3",
+   "microwave1"
+  ],
+  [
+   "countertop3",
+   "sink1"
+  ],
+  [
+   "countertop3",
+   "stoveburner1"
+  ],
+  [
+   "countertop3",
+   "stoveburner2"
+  ],
+  [
+   "countertop3",
+   "stoveburner3"
+  ],
+  [
+   "countertop3",
+   "stoveburner4"
+  ],
+  [
+   "countertop3",
+   "toaster1"
+  ],
+  [
+   "drawer1",
+   "drawer10"
+  ],
+  [
+   "drawer1",
+   "drawer11"
+  ],
+  [
+   "drawer1",
+   "drawer12"
+  ],
+  [
+   "drawer1",
+   "drawer2"
+  ],
+  [
+   "drawer1",
+   "drawer3"
+  ],
+  [
+   "drawer1",
+   "drawer4"
+  ],
+  [
+   "drawer1",
+   "drawer5"
+  ],
+  [
+   "drawer1",
+   "drawer6"
+  ],
+  [
+   "drawer1",
+   "drawer7"
+  ],
+  [
+   "drawer1",
+   "drawer8"
+  ],
+  [
+   "drawer1",
+   "drawer9"
+  ],
+  [
+   "drawer1",
+   "fridge1"
+  ],
+  [
+   "drawer1",
+   "garbagecan1"
+  ],
+  [
+   "drawer1",
+   "microwave1"
+  ],
+  [
+   "drawer1",
+   "sink1"
+  ],
+  [
+   "drawer1",
+   "stoveburner1"
+  ],
+  [
+   "drawer1",
+   "stoveburner2"
+  ],
+  [
+   "drawer1",
+   "stoveburner3"
+  ],
+  [
+   "drawer1",
+   "stoveburner4"
+  ],
+  [
+   "drawer1",
+   "toaster1"
+  ],
+  [
+   "drawer10",
+   "drawer11"
+  ],
+  [
+   "drawer10",
+   "drawer12"
+  ],
+  [
+   "drawer10",
+   "drawer2"
+  ],
+  [
+   "drawer10",
+   "drawer3"
+  ],
+  [
+   "drawer10",
+   "drawer4"
+  ],
+  [
+   "drawer10",
+   "drawer5"
+  ],
+  [
+   "drawer10",
+   "drawer6"
+  ],
+  [
+   "drawer10",
+   "drawer7"
+  ],
+  [
+   "drawer10",
+   "drawer8"
+  ],
+  [
+   "drawer10",
+   "drawer9"
+  ],
+  [
+   "drawer10",
+   "fridge1"
+  ],
+  [
+   "drawer10",
+   "garbagecan1"
+  ],
+  [
+   "drawer10",
+   "microwave1"
+  ],
+  [
+   "drawer10",
+   "sink1"
+  ],
+  [
+   "drawer10",
+   "stoveburner1"
+  ],
+  [
+   "drawer10",
+   "stoveburner2"
+  ],
+  [
+   "drawer10",
+   "stoveburner3"
+  ],
+  [
+   "drawer10",
+   "stoveburner4"
+  ],
+  [
+   "drawer10",
+   "toaster1"
+  ],
+  [
+   "drawer11",
+   "drawer12"
+  ],
+  [
+   "drawer11",
+   "drawer2"
+  ],
+  [
+   "drawer11",
+   "drawer3"
+  ],
+  [
+   "drawer11",
+   "drawer4"
+  ],
+  [
+   "drawer11",
+   "drawer5"
+  ],
+  [
+   "drawer11",
+   "drawer6"
+  ],
+  [
+   "drawer11",
+   "drawer7"
+  ],
+  [
+   "drawer11",
+   "drawer8"
+  ],
+  [
+   "drawer11",
+   "drawer9"
+  ],
+  [
+   "drawer11",
+   "fridge1"
+  ],
+  [
+   "drawer11",
+   "garbagecan1"
+  ],
+  [
+   "drawer11",
+   "microwave1"
+  ],
+  [
+   "drawer11",
+   "sink1"
+  ],
+  [
+   "drawer11",
+   "stoveburner1"
+  ],
+  [
+   "drawer11",
+   "stoveburner2"
+  ],
+  [
+   "drawer11",
+   "stoveburner3"
+  ],
+  [
+   "drawer11",
+   "stoveburner4"
+  ],
+  [
+   "drawer11",
+   "toaster1"
+  ],
+  [
+   "drawer12",
+   "drawer2"
+  ],
+  [
+   "drawer12",
+   "drawer3"
+  ],
+  [
+   "drawer12",
+   "drawer4"
+  ],
+  [
+   "drawer12",
+   "drawer5"
+  ],
+  [
+   "drawer12",
+   "drawer6"
+  ],
+  [
+   "drawer12",
+   "drawer7"
+  ],
+  [
+   "drawer12",
+   "drawer8"
+  ],
+  [
+   "drawer12",
+   "drawer9"
+  ],
+  [
+   "drawer12",
+   "fridge1"
+  ],
+  [
+   "drawer12",
+   "garbagecan1"
+  ],
+  [
+   "drawer12",
+   "microwave1"
+  ],
+  [
+   "drawer12",
+   "sink1"
+  ],
+  [
+   "drawer12",
+   "stoveburner1"
+  ],
+  [
+   "drawer12",
+   "stoveburner2"
+  ],
+  [
+   "drawer12",
+   "stoveburner3"
+  ],
+  [
+   "drawer12",
+   "stoveburner4"
+  ],
+  [
+   "drawer12",
+   "toaster1"
+  ],
+  [
+   "drawer2",
+   "drawer3"
+  ],
+  [
+   "drawer2",
+   "drawer4"
+  ],
+  [
+   "drawer2",
+   "drawer5"
+  ],
+  [
+   "drawer2",
+   "drawer6"
+  ],
+  [
+   "drawer2",
+   "drawer7"
+  ],
+  [
+   "drawer2",
+   "drawer8"
+  ],
+  [
+   "drawer2",
+   "drawer9"
+  ],
+  [
+   "drawer2",
+   "fridge1"
+  ],
+  [
+   "drawer2",
+   "garbagecan1"
+  ],
+  [
+   "drawer2",
+   "microwave1"
+  ],
+  [
+   "drawer2",
+   "sink1"
+  ],
+  [
+   "drawer2",
+   "stoveburner1"
+  ],
+  [
+   "drawer2",
+   "stoveburner2"
+  ],
+  [
+   "drawer2",
+   "stoveburner3"
+  ],
+  [
+   "drawer2",
+   "stoveburner4"
+  ],
+  [
+   "drawer2",
+   "toaster1"
+  ],
+  [
+   "drawer3",
+   "drawer4"
+  ],
+  [
+   "drawer3",
+   "drawer5"
+  ],
+  [
+   "drawer3",
+   "drawer6"
+  ],
+  [
+   "drawer3",
+   "drawer7"
+  ],
+  [
+   "drawer3",
+   "drawer8"
+  ],
+  [
+   "drawer3",
+   "drawer9"
+  ],
+  [
+   "drawer3",
+   "fridge1"
+  ],
+  [
+   "drawer3",
+   "garbagecan1"
+  ],
+  [
+   "drawer3",
+   "microwave1"
+  ],
+  [
+   "drawer3",
+   "sink1"
+  ],
+  [
+   "drawer3",
+   "stoveburner1"
+  ],
+  [
+   "drawer3",
+   "stoveburner2"
+  ],
+  [
+   "drawer3",
+   "stoveburner3"
+  ],
+  [
+   "drawer3",
+   "stoveburner4"
+  ],
+  [
+   "drawer3",
+   "toaster1"
+  ],
+  [
+   "drawer4",
+   "drawer5"
+  ],
+  [
+   "drawer4",
+   "drawer6"
+  ],
+  [
+   "drawer4",
+   "drawer7"
+  ],
+  [
+   "drawer4",
+   "drawer8"
+  ],
+  [
+   "drawer4",
+   "drawer9"
+  ],
+  [
+   "drawer4",
+   "fridge1"
+  ],
+  [
+   "drawer4",
+   "garbagecan1"
+  ],
+  [
+   "drawer4",
+   "microwave1"
+  ],
+  [
+   "drawer4",
+   "sink1"
+  ],
+  [
+   "drawer4",
+   "stoveburner1"
+  ],
+  [
+   "drawer4",
+   "stoveburner2"
+  ],
+  [
+   "drawer4",
+   "stoveburner3"
+  ],
+  [
+   "drawer4",
+   "stoveburner4"
+  ],
+  [
+   "drawer4",
+   "toaster1"
+  ],
+  [
+   "drawer5",
+   "drawer6"
+  ],
+  [
+   "drawer5",
+   "drawer7"
+  ],
+  [
+   "drawer5",
+   "drawer8"
+  ],
+  [
+   "drawer5",
+   "drawer9"
+  ],
+  [
+   "drawer5",
+   "fridge1"
+  ],
+  [
+   "drawer5",
+   "garbagecan1"
+  ],
+  [
+   "drawer5",
+   "microwave1"
+  ],
+  [
+   "drawer5",
+   "sink1"
+  ],
+  [
+   "drawer5",
+   "stoveburner1"
+  ],
+  [
+   "drawer5",
+   "stoveburner2"
+  ],
+  [
+   "drawer5",
+   "stoveburner3"
+  ],
+  [
+   "drawer5",
+   "stoveburner4"
+  ],
+  [
+   "drawer5",
+   "toaster1"
+  ],
+  [
+   "drawer6",
+   "drawer7"
+  ],
+  [
+   "drawer6",
+   "drawer8"
+  ],
+  [
+   "drawer6",
+   "drawer9"
+  ],
+  [
+   "drawer6",
+   "fridge1"
+  ],
+  [
+   "drawer6",
+   "garbagecan1"
+  ],
+  [
+   "drawer6",
+   "microwave1"
+  ],
+  [
+   "drawer6",
+   "sink1"
+  ],
+  [
+   "drawer6",
+   "stoveburner1"
+  ],
+  [
+   "drawer6",
+   "stoveburner2"
+  ],
+  [
+   "drawer6",
+   "stoveburner3"
+  ],
+  [
+   "drawer6",
+   "stoveburner4"
+  ],
+  [
+   "drawer6",
+   "toaster1"
+  ],
+  [
+   "drawer7",
+   "drawer8"
+  ],
+  [
+   "drawer7",
+   "drawer9"
+  ],
+  [
+   "drawer7",
+   "fridge1"
+  ],
+  [
+   "drawer7",
+   "garbagecan1"
+  ],
+  [
+   "drawer7",
+   "microwave1"
+  ],
+  [
+   "drawer7",
+   "sink1"
+  ],
+  [
+   "drawer7",
+   "stoveburner1"
+  ],
+  [
+   "drawer7",
+   "stoveburner2"
+  ],
+  [
+   "drawer7",
+   "stoveburner3"
+  ],
+  [
+   "drawer7",
+   "stoveburner4"
+  ],
+  [
+   "drawer7",
+   "toaster1"
+  ],
+  [
+   "drawer8",
+   "drawer9"
+  ],
+  [
+   "drawer8",
+   "fridge1"
+  ],
+  [
+   "drawer8",
+   "garbagecan1"
+  ],
+  [
+   "drawer8",
+   "microwave1"
+  ],
+  [
+   "drawer8",
+   "sink1"
+  ],
+  [
+   "drawer8",
+   "stoveburner1"
+  ],
+  [
+   "drawer8",
+   "stoveburner2"
+  ],
+  [
+   "drawer8",
+   "stoveburner3"
+  ],
+  [
+   "drawer8",
+   "stoveburner4"
+  ],
+  [
+   "drawer8",
+   "toaster1"
+  ],
+  [
+   "drawer9",
+   "fridge1"
+  ],
+  [
+   "drawer9",
+   "garbagecan1"
+  ],
+  [
+   "drawer9",
+   "microwave1"
+  ],
+  [
+   "drawer9",
+   "sink1"
+  ],
+  [
+   "drawer9",
+   "stoveburner1"
+  ],
+  [
+   "drawer9",
+   "stoveburner2"
+  ],
+  [
+   "drawer9",
+   "stoveburner3"
+  ],
+  [
+   "drawer9",
+   "stoveburner4"
+  ],
+  [
+   "drawer9",
+   "toaster1"
+  ],
+  [
+   "fridge1",
+   "garbagecan1"
+  ],
+  [
+   "fridge1",
+   "microwave1"
+  ],
+  [
+   "fridge1",
+   "sink1"
+  ],
+  [
+   "fridge1",
+   "stoveburner1"
+  ],
+  [
+   "fridge1",
+   "stoveburner2"
+  ],
+  [
+   "fridge1",
+   "stoveburner3"
+  ],
+  [
+   "fridge1",
+   "stoveburner4"
+  ],
+  [
+   "fridge1",
+   "toaster1"
+  ],
+  [
+   "garbagecan1",
+   "microwave1"
+  ],
+  [
+   "garbagecan1",
+   "sink1"
+  ],
+  [
+   "garbagecan1",
+   "stoveburner1"
+  ],
+  [
+   "garbagecan1",
+   "stoveburner2"
+  ],
+  [
+   "garbagecan1",
+   "stoveburner3"
+  ],
+  [
+   "garbagecan1",
+   "stoveburner4"
+  ],
+  [
+   "garbagecan1",
+   "toaster1"
+  ],
+  [
+   "microwave1",
+   "sink1"
+  ],
+  [
+   "microwave1",
+   "stoveburner1"
+  ],
+  [
+   "microwave1",
+   "stoveburner2"
+  ],
+  [
+   "microwave1",
+   "stoveburner3"
+  ],
+  [
+   "microwave1",
+   "stoveburner4"
+  ],
+  [
+   "microwave1",
+   "toaster1"
+  ],
+  [
+   "sink1",
+   "stoveburner1"
+  ],
+  [
+   "sink1",
+   "stoveburner2"
+  ],
+  [
+   "sink1",
+   "stoveburner3"
+  ],
+  [
+   "sink1",
+   "stoveburner4"
+  ],
+  [
+   "sink1",
+   "toaster1"
+  ],
+  [
+   "stoveburner1",
+   "stoveburner2"
+  ],
+  [
+   "stoveburner1",
+   "stoveburner3"
+  ],
+  [
+   "stoveburner1",
+   "stoveburner4"
+  ],
+  [
+   "stoveburner1",
+   "toaster1"
+  ],
+  [
+   "stoveburner2",
+   "stoveburner3"
+  ],
+  [
+   "stoveburner2",
+   "stoveburner4"
+  ],
+  [
+   "stoveburner2",
+   "toaster1"
+  ],
+  [
+   "stoveburner3",
+   "stoveburner4"
+  ],
+  [
+   "stoveburner3",
+   "toaster1"
+  ],
+  [
+   "stoveburner4",
+   "toaster1"
+  ]
+ ],
+ "task": {
+  "text": "Put a tomato in the microwave.",
+  "goal": "fetch(tomato1, microwave1)",
+  "targets": [
+   "tomato1",
+   "tomato2"
+  ],
+  "dests": [
+   "microwave1"
+  ],
+  "params": {
+   "mrecep_target": "",
+   "object_sliced": false,
+   "object_target": "Tomato",
+   "parent_target": "Microwave",
+   "toggle_target": ""
+  },
+  "source": "ALFWorld traj_data.json: turk_annotations (the annotators' words)"
+ },
+ "overview": null,
+ "tileset": {
+  "index": [
+   "../../alfworld/tiles/index.json"
+  ]
+ }
+}

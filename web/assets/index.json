@@ -1,0 +1,3890 @@
+{
+"1": {
+"color": "clr-brightgreen",
+"glyph": "F",
+"image": "editor/items/1.png",
+"source": "https://nethackwiki.com/wiki/Lichen_corpse"
+},
+"abbot": {
+"color": "",
+"glyph": "",
+"image": "editor/monsters/Abbot.png",
+"source": "https://nethackwiki.com/wiki/Abbot"
+},
+"acid": {
+"color": "clr-brightmagenta",
+"glyph": "!",
+"image": "editor/items/acid.png",
+"source": "https://nethackwiki.com/wiki/Potion_of_acid"
+},
+"acid_blob": {
+"color": "clr-white",
+"glyph": "b",
+"image": "editor/monsters/Acid blob.png",
+"source": "https://nethackwiki.com/wiki/Acid_blob"
+},
+"acolyte": {
+"color": "",
+"glyph": "",
+"image": "editor/monsters/Acolyte.png",
+"source": "https://nethackwiki.com/wiki/Acolyte"
+},
+"air_elemental": {
+"color": "clr-white",
+"glyph": "E",
+"image": "editor/monsters/Air elemental.png",
+"source": "https://nethackwiki.com/wiki/Air_elemental"
+},
+"aklys": {
+"color": "clr-cyan",
+"glyph": ")",
+"image": "editor/items/aklys.png",
+"source": "https://nethackwiki.com/wiki/Aklys"
+},
+"aleax": {
+"color": "clr-white",
+"glyph": "A",
+"image": "editor/monsters/Aleax.png",
+"source": "https://nethackwiki.com/wiki/Aleax"
+},
+"aligned_priest": {
+"color": "clr-white",
+"glyph": "@",
+"image": "editor/monsters/Aligned priest.png",
+"source": "https://nethackwiki.com/wiki/Aligned_priest"
+},
+"amnesia": {
+"color": "clr-white",
+"glyph": "?",
+"image": "editor/items/amnesia.png",
+"source": "https://nethackwiki.com/wiki/Scroll_of_amnesia"
+},
+"amulet_of_change": {
+"color": "clr-cyan",
+"glyph": "\"",
+"image": "editor/items/amulet of change.png",
+"source": "https://nethackwiki.com/wiki/Amulet_of_change"
+},
+"amulet_of_drain_resistance": {
+"color": "clr-cyan",
+"glyph": "\"",
+"image": "editor/items/amulet of drain resistance.png",
+"source": "https://nethackwiki.com/wiki/Amulet_of_drain_resistance"
+},
+"amulet_of_esp": {
+"color": "clr-cyan",
+"glyph": "\"",
+"image": "editor/items/amulet of ESP.png",
+"source": "https://nethackwiki.com/wiki/Amulet_of_ESP"
+},
+"amulet_of_flying": {
+"color": "clr-cyan",
+"glyph": "\"",
+"image": "editor/items/amulet of flying.png",
+"source": "https://nethackwiki.com/wiki/Amulet_of_flying"
+},
+"amulet_of_guarding": {
+"color": "clr-cyan",
+"glyph": "\"",
+"image": "editor/items/amulet of guarding.png",
+"source": "https://nethackwiki.com/wiki/Amulet_of_guarding"
+},
+"amulet_of_life_saving": {
+"color": "clr-cyan",
+"glyph": "\"",
+"image": "editor/items/amulet of life saving.png",
+"source": "https://nethackwiki.com/wiki/Amulet_of_life_saving"
+},
+"amulet_of_magical_breathing": {
+"color": "clr-cyan",
+"glyph": "\"",
+"image": "editor/items/amulet of magical breathing.png",
+"source": "https://nethackwiki.com/wiki/Amulet_of_magical_breathing"
+},
+"amulet_of_reflection": {
+"color": "clr-cyan",
+"glyph": "\"",
+"image": "editor/items/amulet of reflection.png",
+"source": "https://nethackwiki.com/wiki/Amulet_of_reflection"
+},
+"amulet_of_restful_sleep": {
+"color": "clr-cyan",
+"glyph": "\"",
+"image": "editor/items/amulet of restful sleep.png",
+"source": "https://nethackwiki.com/wiki/Amulet_of_restful_sleep"
+},
+"amulet_of_strangulation": {
+"color": "clr-cyan",
+"glyph": "\"",
+"image": "editor/items/amulet of strangulation.png",
+"source": "https://nethackwiki.com/wiki/Amulet_of_strangulation"
+},
+"amulet_of_unchanging": {
+"color": "clr-cyan",
+"glyph": "\"",
+"image": "editor/items/amulet of unchanging.png",
+"source": "https://nethackwiki.com/wiki/Amulet_of_unchanging"
+},
+"amulet_of_yendor": {
+"color": "clr-cyan",
+"glyph": "\"",
+"image": "editor/items/Amulet of Yendor.png",
+"source": "https://nethackwiki.com/wiki/Amulet_of_Yendor"
+},
+"amulet_versus_poison": {
+"color": "clr-cyan",
+"glyph": "\"",
+"image": "editor/items/amulet versus poison.png",
+"source": "https://nethackwiki.com/wiki/Amulet_versus_poison"
+},
+"angel": {
+"color": "clr-white",
+"glyph": "A",
+"image": "editor/monsters/Angel.png",
+"source": "https://nethackwiki.com/wiki/Angel"
+},
+"ape": {
+"color": "clr-white",
+"glyph": "Y",
+"image": "editor/monsters/Ape.png",
+"source": "https://nethackwiki.com/wiki/Ape"
+},
+"apple": {
+"color": "clr-red",
+"glyph": "%",
+"image": "editor/items/apple.png",
+"source": "https://nethackwiki.com/wiki/Apple"
+},
+"apprentice": {
+"color": "",
+"glyph": "",
+"image": "editor/monsters/Apprentice.png",
+"source": "https://nethackwiki.com/wiki/Apprentice"
+},
+"apron": {
+"color": "clr-white",
+"glyph": "[",
+"image": "editor/items/apron.png",
+"source": "https://nethackwiki.com/wiki/Alchemy_smock"
+},
+"arch_lich": {
+"color": "clr-white",
+"glyph": "L",
+"image": "editor/monsters/Arch-lich.png",
+"source": "https://nethackwiki.com/wiki/Arch-lich"
+},
+"arch_priest": {
+"color": "",
+"glyph": "",
+"image": "editor/monsters/Arch Priest.png",
+"source": "https://nethackwiki.com/wiki/Arch_Priest"
+},
+"archeologist_player_monster": {
+"color": "",
+"glyph": "@",
+"image": "editor/monsters/Archeologist (player monster).png",
+"source": "https://nethackwiki.com/wiki/Archeologist_(player_monster)"
+},
+"archon": {
+"color": "clr-white",
+"glyph": "A",
+"image": "editor/monsters/Archon.png",
+"source": "https://nethackwiki.com/wiki/Archon"
+},
+"arrow": {
+"color": "clr-cyan",
+"glyph": ")",
+"image": "editor/items/arrow.png",
+"source": "https://nethackwiki.com/wiki/Arrow"
+},
+"ashikaga_takauji": {
+"color": "",
+"glyph": "",
+"image": "editor/monsters/Ashikaga Takauji.png",
+"source": "https://nethackwiki.com/wiki/Ashikaga_Takauji"
+},
+"asian_pear": {
+"color": "clr-brightgreen",
+"glyph": "%",
+"image": "editor/items/asian pear.png",
+"source": "https://nethackwiki.com/wiki/Asian_pear"
+},
+"asmodeus": {
+"color": "clr-white",
+"glyph": "&",
+"image": "editor/monsters/Asmodeus.png",
+"source": "https://nethackwiki.com/wiki/Asmodeus"
+},
+"athame": {
+"color": "clr-cyan",
+"glyph": ")",
+"image": "editor/items/athame.png",
+"source": "https://nethackwiki.com/wiki/Athame"
+},
+"attendant": {
+"color": "",
+"glyph": "",
+"image": "editor/monsters/Attendant.png",
+"source": "https://nethackwiki.com/wiki/Attendant"
+},
+"axe": {
+"color": "clr-cyan",
+"glyph": ")",
+"image": "editor/items/axe.png",
+"source": "https://nethackwiki.com/wiki/Axe"
+},
+"baalzebub": {
+"color": "clr-white",
+"glyph": "&",
+"image": "editor/monsters/Baalzebub.png",
+"source": "https://nethackwiki.com/wiki/Baalzebub"
+},
+"baby_black_dragon": {
+"color": "clr-white",
+"glyph": "D",
+"image": "editor/monsters/Baby black dragon.png",
+"source": "https://nethackwiki.com/wiki/Baby_black_dragon"
+},
+"baby_blue_dragon": {
+"color": "clr-white",
+"glyph": "D",
+"image": "editor/monsters/Baby blue dragon.png",
+"source": "https://nethackwiki.com/wiki/Baby_blue_dragon"
+},
+"baby_crocodile": {
+"color": "clr-white",
+"glyph": ":",
+"image": "editor/monsters/Baby crocodile.png",
+"source": "https://nethackwiki.com/wiki/Baby_crocodile"
+},
+"baby_gray_dragon": {
+"color": "clr-white",
+"glyph": "D",
+"image": "editor/monsters/Baby gray dragon.png",
+"source": "https://nethackwiki.com/wiki/Baby_gray_dragon"
+},
+"baby_green_dragon": {
+"color": "clr-white",
+"glyph": "D",
+"image": "editor/monsters/Baby green dragon.png",
+"source": "https://nethackwiki.com/wiki/Baby_green_dragon"
+},
+"baby_long_worm": {
+"color": "clr-white",
+"glyph": "w",
+"image": "editor/monsters/Baby long worm.png",
+"source": "https://nethackwiki.com/wiki/Baby_long_worm"
+},
+"baby_orange_dragon": {
+"color": "clr-white",
+"glyph": "D",
+"image": "editor/monsters/Baby orange dragon.png",
+"source": "https://nethackwiki.com/wiki/Baby_orange_dragon"
+},
+"baby_purple_worm": {
+"color": "clr-white",
+"glyph": "w",
+"image": "editor/monsters/Baby purple worm.png",
+"source": "https://nethackwiki.com/wiki/Baby_purple_worm"
+},
+"baby_red_dragon": {
+"color": "clr-white",
+"glyph": "D",
+"image": "editor/monsters/Baby red dragon.png",
+"source": "https://nethackwiki.com/wiki/Baby_red_dragon"
+},
+"baby_silver_dragon": {
+"color": "clr-white",
+"glyph": "D",
+"image": "editor/monsters/Baby silver dragon.png",
+"source": "https://nethackwiki.com/wiki/Baby_silver_dragon"
+},
+"baby_white_dragon": {
+"color": "clr-white",
+"glyph": "D",
+"image": "editor/monsters/Baby white dragon.png",
+"source": "https://nethackwiki.com/wiki/Baby_white_dragon"
+},
+"baby_yellow_dragon": {
+"color": "clr-white",
+"glyph": "D",
+"image": "editor/monsters/Baby yellow dragon.png",
+"source": "https://nethackwiki.com/wiki/Baby_yellow_dragon"
+},
+"bag_of_holding": {
+"color": "clr-brown",
+"glyph": "(",
+"image": "editor/items/bag of holding.png",
+"source": "https://nethackwiki.com/wiki/Bag_of_holding"
+},
+"bag_of_tricks": {
+"color": "clr-brown",
+"glyph": "(",
+"image": "editor/items/bag of tricks.png",
+"source": "https://nethackwiki.com/wiki/Bag_of_tricks"
+},
+"balrog": {
+"color": "clr-white",
+"glyph": "&",
+"image": "editor/monsters/Balrog.png",
+"source": "https://nethackwiki.com/wiki/Balrog"
+},
+"baluchitherium": {
+"color": "clr-white",
+"glyph": "q",
+"image": "editor/monsters/Baluchitherium.png",
+"source": "https://nethackwiki.com/wiki/Baluchitherium"
+},
+"banana": {
+"color": "clr-yellow",
+"glyph": "%",
+"image": "editor/items/banana.png",
+"source": "https://nethackwiki.com/wiki/Banana"
+},
+"banded_mail": {
+"color": "clr-cyan",
+"glyph": "[",
+"image": "editor/items/banded mail.png",
+"source": "https://nethackwiki.com/wiki/Banded_mail"
+},
+"barbarian_player_monster": {
+"color": "",
+"glyph": "@",
+"image": "editor/monsters/Barbarian (player monster).png",
+"source": "https://nethackwiki.com/wiki/Barbarian_(player_monster)"
+},
+"barbed_devil": {
+"color": "clr-white",
+"glyph": "&",
+"image": "editor/monsters/Barbed devil.png",
+"source": "https://nethackwiki.com/wiki/Barbed_devil"
+},
+"bardiche": {
+"color": "clr-cyan",
+"glyph": ")",
+"image": "editor/items/bardiche.png",
+"source": "https://nethackwiki.com/wiki/Partisan"
+},
+"barrow_wight": {
+"color": "clr-white",
+"glyph": "W",
+"image": "editor/monsters/Barrow wight.png",
+"source": "https://nethackwiki.com/wiki/Barrow_wight"
+},
+"bat": {
+"color": "clr-white",
+"glyph": "B",
+"image": "editor/monsters/Bat.png",
+"source": "https://nethackwiki.com/wiki/Bat"
+},
+"battle_axe": {
+"color": "clr-cyan",
+"glyph": ")",
+"image": "editor/items/battle-axe.png",
+"source": "https://nethackwiki.com/wiki/Battle-axe"
+},
+"beartrap": {
+"color": "clr-cyan",
+"glyph": "(",
+"image": "editor/items/beartrap.png",
+"source": "https://nethackwiki.com/wiki/Beartrap"
+},
+"bec_de_corbin": {
+"color": "clr-cyan",
+"glyph": ")",
+"image": "editor/items/bec-de-corbin.png",
+"source": "https://nethackwiki.com/wiki/Partisan"
+},
+"bell": {
+"color": "clr-yellow",
+"glyph": "(",
+"image": "editor/items/bell.png",
+"source": "https://nethackwiki.com/wiki/Bell"
+},
+"bell_of_opening": {
+"color": "clr-lightgray",
+"glyph": "(",
+"image": "editor/items/Bell of Opening.png",
+"source": "https://nethackwiki.com/wiki/Bell_of_Opening"
+},
+"bill_guisarme": {
+"color": "clr-cyan",
+"glyph": ")",
+"image": "editor/items/bill-guisarme.png",
+"source": "https://nethackwiki.com/wiki/Partisan"
+},
+"black_dragon": {
+"color": "clr-white",
+"glyph": "D",
+"image": "editor/monsters/Black dragon.png",
+"source": "https://nethackwiki.com/wiki/Black_dragon"
+},
+"black_light": {
+"color": "clr-white",
+"glyph": "y",
+"image": "editor/monsters/Black light.png",
+"source": "https://nethackwiki.com/wiki/Black_light"
+},
+"black_naga": {
+"color": "clr-white",
+"glyph": "N",
+"image": "editor/monsters/Black naga.png",
+"source": "https://nethackwiki.com/wiki/Black_naga"
+},
+"black_naga_hatchling": {
+"color": "clr-white",
+"glyph": "N",
+"image": "editor/monsters/Black naga hatchling.png",
+"source": "https://nethackwiki.com/wiki/Black_naga_hatchling"
+},
+"black_pudding": {
+"color": "clr-white",
+"glyph": "P",
+"image": "editor/monsters/Black pudding.png",
+"source": "https://nethackwiki.com/wiki/Black_pudding"
+},
+"black_unicorn": {
+"color": "clr-white",
+"glyph": "u",
+"image": "editor/monsters/Black unicorn.png",
+"source": "https://nethackwiki.com/wiki/Black_unicorn"
+},
+"blindfold": {
+"color": "clr-darkgray",
+"glyph": "(",
+"image": "editor/items/blindfold.png",
+"source": "https://nethackwiki.com/wiki/Blindfold"
+},
+"blindness": {
+"color": "clr-brightmagenta",
+"glyph": "!",
+"image": "editor/items/blindness.png",
+"source": "https://nethackwiki.com/wiki/Potion_of_blindness"
+},
+"blue_and_green_shield": {
+"color": "clr-green",
+"glyph": "[",
+"image": "editor/items/blue and green shield.png",
+"source": "https://nethackwiki.com/wiki/Elven_shield"
+},
+"blue_dragon": {
+"color": "clr-white",
+"glyph": "D",
+"image": "editor/monsters/Blue dragon.png",
+"source": "https://nethackwiki.com/wiki/Blue_dragon"
+},
+"blue_jelly": {
+"color": "clr-white",
+"glyph": "j",
+"image": "editor/monsters/Blue jelly.png",
+"source": "https://nethackwiki.com/wiki/Blue_jelly"
+},
+"bone_devil": {
+"color": "clr-white",
+"glyph": "&",
+"image": "editor/monsters/Bone devil.png",
+"source": "https://nethackwiki.com/wiki/Bone_devil"
+},
+"boomerang": {
+"color": "clr-brown",
+"glyph": ")",
+"image": "editor/items/boomerang.png",
+"source": "https://nethackwiki.com/wiki/Boomerang"
+},
+"booze": {
+"color": "clr-brightmagenta",
+"glyph": "!",
+"image": "editor/items/booze.png",
+"source": "https://nethackwiki.com/wiki/Potion_of_booze"
+},
+"boulder": {
+"color": "clr-lightgray",
+"glyph": "`",
+"image": "editor/items/boulder.png",
+"source": "https://nethackwiki.com/wiki/Boulder"
+},
+"bow": {
+"color": "clr-brown",
+"glyph": ")",
+"image": "editor/items/bow.png",
+"source": "https://nethackwiki.com/wiki/Bow"
+},
+"brass_lantern": {
+"color": "clr-yellow",
+"glyph": "(",
+"image": "editor/items/brass lantern.png",
+"source": "https://nethackwiki.com/wiki/Brass_lantern"
+},
+"broadsword": {
+"color": "clr-cyan",
+"glyph": ")",
+"image": "editor/items/broadsword.png",
+"source": "https://nethackwiki.com/wiki/Broadsword"
+},
+"bronze_plate_mail": {
+"color": "clr-yellow",
+"glyph": "[",
+"image": "editor/items/bronze plate mail.png",
+"source": "https://nethackwiki.com/wiki/Bronze_plate_mail"
+},
+"brown_mold": {
+"color": "clr-white",
+"glyph": "F",
+"image": "editor/monsters/Brown mold.png",
+"source": "https://nethackwiki.com/wiki/Brown_mold"
+},
+"brown_pudding": {
+"color": "clr-white",
+"glyph": "P",
+"image": "editor/monsters/Brown pudding.png",
+"source": "https://nethackwiki.com/wiki/Brown_pudding"
+},
+"bugbear": {
+"color": "clr-white",
+"glyph": "h",
+"image": "editor/monsters/Bugbear.png",
+"source": "https://nethackwiki.com/wiki/Bugbear"
+},
+"bugle": {
+"color": "clr-yellow",
+"glyph": "(",
+"image": "editor/items/bugle.png",
+"source": "https://nethackwiki.com/wiki/Bugle"
+},
+"bullwhip": {
+"color": "clr-brown",
+"glyph": ")",
+"image": "editor/items/bullwhip.png",
+"source": "https://nethackwiki.com/wiki/Bullwhip"
+},
+"c_ration": {
+"color": "clr-brown",
+"glyph": "%",
+"image": "editor/items/C-ration.png",
+"source": "https://nethackwiki.com/wiki/C-ration"
+},
+"can_of_grease": {
+"color": "clr-cyan",
+"glyph": "(",
+"image": "editor/items/can of grease.png",
+"source": "https://nethackwiki.com/wiki/Can_of_grease"
+},
+"candelabrum_of_invocation": {
+"color": "clr-yellow",
+"glyph": "(",
+"image": "editor/items/Candelabrum of Invocation.png",
+"source": "https://nethackwiki.com/wiki/Candelabrum_of_Invocation"
+},
+"candy_bar": {
+"color": "clr-brown",
+"glyph": "%",
+"image": "editor/items/candy bar.png",
+"source": "https://nethackwiki.com/wiki/Candy_bar"
+},
+"captain": {
+"color": "clr-white",
+"glyph": "@",
+"image": "editor/monsters/Captain.png",
+"source": "https://nethackwiki.com/wiki/Captain"
+},
+"carnivorous_ape": {
+"color": "clr-white",
+"glyph": "Y",
+"image": "editor/monsters/Carnivorous ape.png",
+"source": "https://nethackwiki.com/wiki/Carnivorous_ape"
+},
+"carrot": {
+"color": "clr-orange",
+"glyph": "%",
+"image": "editor/items/carrot.png",
+"source": "https://nethackwiki.com/wiki/Carrot"
+},
+"cave_spider": {
+"color": "clr-white",
+"glyph": "s",
+"image": "editor/monsters/Cave spider.png",
+"source": "https://nethackwiki.com/wiki/Cave_spider"
+},
+"caveman_player_monster": {
+"color": "",
+"glyph": "@",
+"image": "editor/monsters/Caveman (player monster).png",
+"source": "https://nethackwiki.com/wiki/Caveman_(player_monster)"
+},
+"cavewoman_player_monster": {
+"color": "",
+"glyph": "@",
+"image": "editor/monsters/Cavewoman (player monster).png",
+"source": "https://nethackwiki.com/wiki/Cavewoman_(player_monster)"
+},
+"centipede": {
+"color": "clr-white",
+"glyph": "s",
+"image": "editor/monsters/Centipede.png",
+"source": "https://nethackwiki.com/wiki/Centipede"
+},
+"chain_mail": {
+"color": "clr-cyan",
+"glyph": "[",
+"image": "editor/items/chain mail.png",
+"source": "https://nethackwiki.com/wiki/Chain_mail"
+},
+"chameleon": {
+"color": "clr-white",
+"glyph": ":",
+"image": "editor/monsters/Chameleon.png",
+"source": "https://nethackwiki.com/wiki/Chameleon"
+},
+"charging": {
+"color": "clr-white",
+"glyph": "?",
+"image": "editor/items/charging.png",
+"source": "https://nethackwiki.com/wiki/Scroll_of_charging"
+},
+"cheap_plastic": {
+"color": "clr-cyan",
+"glyph": "\"",
+"image": "editor/items/cheap plastic.png",
+"source": "https://nethackwiki.com/wiki/Cheap_plastic_imitation_of_the_Amulet_of_Yendor"
+},
+"cheese": {
+"color": "clr-yellow",
+"glyph": "%",
+"image": "editor/items/cheese.png",
+"source": "https://nethackwiki.com/wiki/Cheese"
+},
+"chest": {
+"color": "clr-brown",
+"glyph": "(",
+"image": "editor/items/chest.png",
+"source": "https://nethackwiki.com/wiki/Chest"
+},
+"chickatrice": {
+"color": "clr-white",
+"glyph": "c",
+"image": "editor/monsters/Chickatrice.png",
+"source": "https://nethackwiki.com/wiki/Chickatrice"
+},
+"chieftain": {
+"color": "",
+"glyph": "",
+"image": "editor/monsters/Chieftain.png",
+"source": "https://nethackwiki.com/wiki/Chieftain"
+},
+"chromatic_dragon": {
+"color": "",
+"glyph": "",
+"image": "editor/monsters/Chromatic Dragon.png",
+"source": "https://nethackwiki.com/wiki/Chromatic_Dragon"
+},
+"clay_golem": {
+"color": "clr-white",
+"glyph": "'",
+"image": "editor/monsters/Clay golem.png",
+"source": "https://nethackwiki.com/wiki/Clay_golem"
+},
+"clove_of_garlic": {
+"color": "clr-white",
+"glyph": "%",
+"image": "editor/items/clove of garlic.png",
+"source": "https://nethackwiki.com/wiki/Clove_of_garlic"
+},
+"club": {
+"color": "clr-brown",
+"glyph": ")",
+"image": "editor/items/club.png",
+"source": "https://nethackwiki.com/wiki/Club"
+},
+"coarse_mantelet": {
+"color": "clr-darkgray",
+"glyph": "[",
+"image": "editor/items/coarse mantelet.png",
+"source": "https://nethackwiki.com/wiki/Orcish_cloak"
+},
+"cobra": {
+"color": "clr-white",
+"glyph": "S",
+"image": "editor/monsters/Cobra.png",
+"source": "https://nethackwiki.com/wiki/Cobra"
+},
+"cockatrice": {
+"color": "clr-white",
+"glyph": "c",
+"image": "editor/monsters/Cockatrice.png",
+"source": "https://nethackwiki.com/wiki/Cockatrice"
+},
+"color_dragon_scale_mail": {
+"color": "clr-darkgray",
+"glyph": "[",
+"image": "editor/items/<color> dragon scale mail.png",
+"source": "https://nethackwiki.com/wiki/Dragon_scales"
+},
+"color_dragon_scales": {
+"color": "clr-darkgray",
+"glyph": "[",
+"image": "editor/items/<color> dragon scales.png",
+"source": "https://nethackwiki.com/wiki/Dragon_scales"
+},
+"confuse_monster": {
+"color": "clr-white",
+"glyph": "?",
+"image": "editor/items/confuse monster.png",
+"source": "https://nethackwiki.com/wiki/Scroll_of_confuse_monster"
+},
+"confusion": {
+"color": "clr-brightmagenta",
+"glyph": "!",
+"image": "editor/items/confusion.png",
+"source": "https://nethackwiki.com/wiki/Potion_of_confusion"
+},
+"couatl": {
+"color": "clr-white",
+"glyph": "A",
+"image": "editor/monsters/Couatl.png",
+"source": "https://nethackwiki.com/wiki/Couatl"
+},
+"coyote": {
+"color": "clr-white",
+"glyph": "d",
+"image": "editor/monsters/Coyote.png",
+"source": "https://nethackwiki.com/wiki/Coyote"
+},
+"cram_ration": {
+"color": "clr-brown",
+"glyph": "%",
+"image": "editor/items/cram ration.png",
+"source": "https://nethackwiki.com/wiki/Cram_ration"
+},
+"cream_pie": {
+"color": "clr-white",
+"glyph": "%",
+"image": "editor/items/cream pie.png",
+"source": "https://nethackwiki.com/wiki/Cream_pie"
+},
+"create_monster": {
+"color": "clr-white",
+"glyph": "?",
+"image": "editor/items/create monster.png",
+"source": "https://nethackwiki.com/wiki/Scroll_of_create_monster"
+},
+"credit_card": {
+"color": "clr-white",
+"glyph": "(",
+"image": "editor/items/credit card.png",
+"source": "https://nethackwiki.com/wiki/Credit_card"
+},
+"crocodile": {
+"color": "clr-white",
+"glyph": ":",
+"image": "editor/monsters/Crocodile.png",
+"source": "https://nethackwiki.com/wiki/Crocodile"
+},
+"croesus": {
+"color": "clr-white",
+"glyph": "@",
+"image": "editor/monsters/Croesus.png",
+"source": "https://nethackwiki.com/wiki/Croesus"
+},
+"crossbow": {
+"color": "clr-brown",
+"glyph": ")",
+"image": "editor/items/crossbow.png",
+"source": "https://nethackwiki.com/wiki/Crossbow"
+},
+"crossbow_bolt": {
+"color": "clr-cyan",
+"glyph": ")",
+"image": "editor/items/crossbow bolt.png",
+"source": "https://nethackwiki.com/wiki/Crossbow_bolt"
+},
+"crude_chain_mail": {
+"color": "clr-darkgray",
+"glyph": "[",
+"image": "editor/items/crude chain mail.png",
+"source": "https://nethackwiki.com/wiki/Orcish_chain_mail"
+},
+"crude_ring_mail": {
+"color": "clr-darkgray",
+"glyph": "[",
+"image": "editor/items/crude ring mail.png",
+"source": "https://nethackwiki.com/wiki/Orcish_ring_mail"
+},
+"crysknife": {
+"color": "clr-cyan",
+"glyph": ")",
+"image": "editor/items/crysknife.png",
+"source": "https://nethackwiki.com/wiki/Crysknife"
+},
+"crystal_ball": {
+"color": "clr-brightcyan",
+"glyph": "(",
+"image": "editor/items/crystal ball.png",
+"source": "https://nethackwiki.com/wiki/Crystal_ball"
+},
+"crystal_plate_mail": {
+"color": "clr-white",
+"glyph": "[",
+"image": "editor/items/crystal plate mail.png",
+"source": "https://nethackwiki.com/wiki/Crystal_plate_mail"
+},
+"cyclops": {
+"color": "",
+"glyph": "",
+"image": "editor/monsters/Cyclops.png",
+"source": "https://nethackwiki.com/wiki/Cyclops"
+},
+"dagger": {
+"color": "clr-cyan",
+"glyph": ")",
+"image": "editor/items/dagger.png",
+"source": "https://nethackwiki.com/wiki/Orcish_dagger"
+},
+"dark_elven_dagger": {
+"color": "clr-brown",
+"glyph": ")",
+"image": "editor/items/dark elven dagger.png",
+"source": "https://nethackwiki.com/wiki/Orcish_dagger"
+},
+"dark_one": {
+"color": "",
+"glyph": "",
+"image": "editor/monsters/Dark One.png",
+"source": "https://nethackwiki.com/wiki/Dark_One"
+},
+"dart": {
+"color": "clr-cyan",
+"glyph": ")",
+"image": "editor/items/dart.png",
+"source": "https://nethackwiki.com/wiki/Dart"
+},
+"demilich": {
+"color": "clr-white",
+"glyph": "L",
+"image": "editor/monsters/Demilich.png",
+"source": "https://nethackwiki.com/wiki/Demilich"
+},
+"demogorgon": {
+"color": "clr-white",
+"glyph": "&",
+"image": "editor/monsters/Demogorgon.png",
+"source": "https://nethackwiki.com/wiki/Demogorgon"
+},
+"dented_pot": {
+"color": "clr-darkgray",
+"glyph": "[",
+"image": "editor/items/dented pot.png",
+"source": "https://nethackwiki.com/wiki/Dented_pot"
+},
+"destroy_armor": {
+"color": "clr-white",
+"glyph": "?",
+"image": "editor/items/destroy armor.png",
+"source": "https://nethackwiki.com/wiki/Scroll_of_destroy_armor"
+},
+"dingo": {
+"color": "clr-white",
+"glyph": "d",
+"image": "editor/monsters/Dingo.png",
+"source": "https://nethackwiki.com/wiki/Dingo"
+},
+"disenchanter": {
+"color": "clr-white",
+"glyph": "R",
+"image": "editor/monsters/Disenchanter.png",
+"source": "https://nethackwiki.com/wiki/Disenchanter"
+},
+"dispater": {
+"color": "clr-white",
+"glyph": "&",
+"image": "editor/monsters/Dispater.png",
+"source": "https://nethackwiki.com/wiki/Dispater"
+},
+"djinni": {
+"color": "clr-white",
+"glyph": "&",
+"image": "editor/monsters/Djinni.png",
+"source": "https://nethackwiki.com/wiki/Djinni"
+},
+"dog": {
+"color": "clr-white",
+"glyph": "d",
+"image": "editor/monsters/Dog.png",
+"source": "https://nethackwiki.com/wiki/Dog"
+},
+"doppelganger": {
+"color": "clr-white",
+"glyph": "@",
+"image": "editor/monsters/Doppelganger.png",
+"source": "https://nethackwiki.com/wiki/Doppelganger"
+},
+"drum_of_earthquake": {
+"color": "clr-brown",
+"glyph": "(",
+"image": "editor/items/drum of earthquake.png",
+"source": "https://nethackwiki.com/wiki/Drum_of_earthquake"
+},
+"dust_vortex": {
+"color": "clr-white",
+"glyph": "v",
+"image": "editor/monsters/Dust vortex.png",
+"source": "https://nethackwiki.com/wiki/Dust_vortex"
+},
+"dwarf_king": {
+"color": "clr-white",
+"glyph": "h",
+"image": "editor/monsters/Dwarf king.png",
+"source": "https://nethackwiki.com/wiki/Dwarf_king"
+},
+"dwarf_lord": {
+"color": "clr-white",
+"glyph": "h",
+"image": "editor/monsters/Dwarf lord.png",
+"source": "https://nethackwiki.com/wiki/Dwarf_lord"
+},
+"dwarf_monster": {
+"color": "clr-white",
+"glyph": "h",
+"image": "editor/monsters/Dwarf (monster).png",
+"source": "https://nethackwiki.com/wiki/Dwarf_(monster)"
+},
+"dwarf_mummy": {
+"color": "clr-white",
+"glyph": "M",
+"image": "editor/monsters/Dwarf mummy.png",
+"source": "https://nethackwiki.com/wiki/Dwarf_mummy"
+},
+"dwarf_zombie": {
+"color": "clr-white",
+"glyph": "Z",
+"image": "editor/monsters/Dwarf zombie.png",
+"source": "https://nethackwiki.com/wiki/Dwarf_zombie"
+},
+"dwarvish_mattock": {
+"color": "clr-cyan",
+"glyph": ")",
+"image": "editor/items/dwarvish mattock.png",
+"source": "https://nethackwiki.com/wiki/Dwarvish_mattock"
+},
+"dwarvish_mithril_coat": {
+"color": "clr-cyan",
+"glyph": "[",
+"image": "editor/items/dwarvish mithril-coat.png",
+"source": "https://nethackwiki.com/wiki/Elven_mithril-coat"
+},
+"dwarvish_short_sword": {
+"color": "clr-cyan",
+"glyph": ")",
+"image": "editor/items/dwarvish short sword.png",
+"source": "https://nethackwiki.com/wiki/Orcish_short_sword"
+},
+"dwarvish_spear": {
+"color": "clr-cyan",
+"glyph": ")",
+"image": "editor/items/dwarvish spear.png",
+"source": "https://nethackwiki.com/wiki/Orcish_spear"
+},
+"earth": {
+"color": "clr-white",
+"glyph": "?",
+"image": "editor/items/earth.png",
+"source": "https://nethackwiki.com/wiki/Scroll_of_earth"
+},
+"earth_elemental": {
+"color": "clr-white",
+"glyph": "E",
+"image": "editor/monsters/Earth elemental.png",
+"source": "https://nethackwiki.com/wiki/Earth_elemental"
+},
+"egg": {
+"color": "clr-white",
+"glyph": "%",
+"image": "editor/items/egg.png",
+"source": "https://nethackwiki.com/wiki/Egg"
+},
+"electric_eel": {
+"color": "clr-white",
+"glyph": ";",
+"image": "editor/monsters/Electric eel.png",
+"source": "https://nethackwiki.com/wiki/Electric_eel"
+},
+"elf_lord": {
+"color": "clr-white",
+"glyph": "@",
+"image": "editor/monsters/Elf-lord.png",
+"source": "https://nethackwiki.com/wiki/Elf-lord"
+},
+"elf_monster": {
+"color": "clr-white",
+"glyph": "@",
+"image": "editor/monsters/Elf (monster).png",
+"source": "https://nethackwiki.com/wiki/Elf_(monster)"
+},
+"elf_mummy": {
+"color": "clr-white",
+"glyph": "M",
+"image": "editor/monsters/Elf mummy.png",
+"source": "https://nethackwiki.com/wiki/Elf_mummy"
+},
+"elf_zombie": {
+"color": "clr-white",
+"glyph": "Z",
+"image": "editor/monsters/Elf zombie.png",
+"source": "https://nethackwiki.com/wiki/Elf_zombie"
+},
+"elven_arrow": {
+"color": "clr-brown",
+"glyph": ")",
+"image": "editor/items/elven arrow.png",
+"source": "https://nethackwiki.com/wiki/Elven_arrow"
+},
+"elven_bow": {
+"color": "clr-brown",
+"glyph": ")",
+"image": "editor/items/elven bow.png",
+"source": "https://nethackwiki.com/wiki/Elven_bow"
+},
+"elven_broadsword": {
+"color": "clr-brown",
+"glyph": ")",
+"image": "editor/items/elven broadsword.png",
+"source": "https://nethackwiki.com/wiki/Elven_broadsword"
+},
+"elven_dagger": {
+"color": "clr-brown",
+"glyph": ")",
+"image": "editor/items/elven dagger.png",
+"source": "https://nethackwiki.com/wiki/Orcish_dagger"
+},
+"elven_mithril_coat": {
+"color": "clr-cyan",
+"glyph": "[",
+"image": "editor/items/elven mithril-coat.png",
+"source": "https://nethackwiki.com/wiki/Elven_mithril-coat"
+},
+"elven_short_sword": {
+"color": "clr-brown",
+"glyph": ")",
+"image": "editor/items/elven short sword.png",
+"source": "https://nethackwiki.com/wiki/Orcish_short_sword"
+},
+"elven_spear": {
+"color": "clr-brown",
+"glyph": ")",
+"image": "editor/items/elven spear.png",
+"source": "https://nethackwiki.com/wiki/Orcish_spear"
+},
+"elvenking": {
+"color": "clr-white",
+"glyph": "@",
+"image": "editor/monsters/Elvenking.png",
+"source": "https://nethackwiki.com/wiki/Elvenking"
+},
+"enchant_armor": {
+"color": "clr-white",
+"glyph": "?",
+"image": "editor/items/enchant armor.png",
+"source": "https://nethackwiki.com/wiki/Scroll_of_enchant_armor"
+},
+"enchant_weapon": {
+"color": "clr-white",
+"glyph": "?",
+"image": "editor/items/enchant weapon.png",
+"source": "https://nethackwiki.com/wiki/Scroll_of_enchant_weapon"
+},
+"energy_vortex": {
+"color": "clr-white",
+"glyph": "v",
+"image": "editor/monsters/Energy vortex.png",
+"source": "https://nethackwiki.com/wiki/Energy_vortex"
+},
+"enlightenment": {
+"color": "clr-brightmagenta",
+"glyph": "!",
+"image": "editor/items/enlightenment.png",
+"source": "https://nethackwiki.com/wiki/Potion_of_enlightenment"
+},
+"erinys": {
+"color": "clr-white",
+"glyph": "&",
+"image": "editor/monsters/Erinys.png",
+"source": "https://nethackwiki.com/wiki/Erinys"
+},
+"ettin": {
+"color": "clr-white",
+"glyph": "H",
+"image": "editor/monsters/Ettin.png",
+"source": "https://nethackwiki.com/wiki/Ettin"
+},
+"ettin_mummy": {
+"color": "clr-white",
+"glyph": "M",
+"image": "editor/monsters/Ettin mummy.png",
+"source": "https://nethackwiki.com/wiki/Ettin_mummy"
+},
+"ettin_zombie": {
+"color": "clr-white",
+"glyph": "Z",
+"image": "editor/monsters/Ettin zombie.png",
+"source": "https://nethackwiki.com/wiki/Ettin_zombie"
+},
+"eucalyptus_leaf": {
+"color": "clr-green",
+"glyph": "%",
+"image": "editor/items/eucalyptus leaf.png",
+"source": "https://nethackwiki.com/wiki/Eucalyptus_leaf"
+},
+"expensive_camera": {
+"color": "clr-darkgray",
+"glyph": "(",
+"image": "editor/items/expensive camera.png",
+"source": "https://nethackwiki.com/wiki/Expensive_camera"
+},
+"extra_healing": {
+"color": "clr-brightmagenta",
+"glyph": "!",
+"image": "editor/items/extra healing.png",
+"source": "https://nethackwiki.com/wiki/Potion_of_extra_healing"
+},
+"faded_pall": {
+"color": "clr-darkgray",
+"glyph": "[",
+"image": "editor/items/faded pall.png",
+"source": "https://nethackwiki.com/wiki/Elven_cloak"
+},
+"famine": {
+"color": "clr-white",
+"glyph": "&",
+"image": "editor/monsters/Famine.png",
+"source": "https://nethackwiki.com/wiki/Famine"
+},
+"fauchard": {
+"color": "clr-cyan",
+"glyph": ")",
+"image": "editor/items/fauchard.png",
+"source": "https://nethackwiki.com/wiki/Partisan"
+},
+"fedora": {
+"color": "clr-brown",
+"glyph": "[",
+"image": "editor/items/fedora.png",
+"source": "https://nethackwiki.com/wiki/Fedora"
+},
+"figurine": {
+"color": "clr-lightgray",
+"glyph": "(",
+"image": "editor/items/figurine.png",
+"source": "https://nethackwiki.com/wiki/Figurine"
+},
+"fire": {
+"color": "clr-white",
+"glyph": "?",
+"image": "editor/items/fire.png",
+"source": "https://nethackwiki.com/wiki/Scroll_of_fire"
+},
+"fire_ant": {
+"color": "clr-white",
+"glyph": "a",
+"image": "editor/monsters/Fire ant.png",
+"source": "https://nethackwiki.com/wiki/Fire_ant"
+},
+"fire_elemental": {
+"color": "clr-white",
+"glyph": "E",
+"image": "editor/monsters/Fire elemental.png",
+"source": "https://nethackwiki.com/wiki/Fire_elemental"
+},
+"fire_giant": {
+"color": "clr-white",
+"glyph": "H",
+"image": "editor/monsters/Fire giant.png",
+"source": "https://nethackwiki.com/wiki/Fire_giant"
+},
+"fire_horn": {
+"color": "clr-white",
+"glyph": "(",
+"image": "editor/items/fire horn.png",
+"source": "https://nethackwiki.com/wiki/Fire_horn"
+},
+"fire_vortex": {
+"color": "clr-white",
+"glyph": "v",
+"image": "editor/monsters/Fire vortex.png",
+"source": "https://nethackwiki.com/wiki/Fire_vortex"
+},
+"flail": {
+"color": "clr-cyan",
+"glyph": ")",
+"image": "editor/items/flail.png",
+"source": "https://nethackwiki.com/wiki/Flail"
+},
+"flaming_sphere": {
+"color": "clr-white",
+"glyph": "e",
+"image": "editor/monsters/Flaming sphere.png",
+"source": "https://nethackwiki.com/wiki/Flaming_sphere"
+},
+"flesh_golem": {
+"color": "clr-white",
+"glyph": "'",
+"image": "editor/monsters/Flesh golem.png",
+"source": "https://nethackwiki.com/wiki/Flesh_golem"
+},
+"flint_stone": {
+"color": "clr-lightgray",
+"glyph": "*",
+"image": "editor/items/flint stone.png",
+"source": "https://nethackwiki.com/wiki/Flint_stone"
+},
+"floating_eye": {
+"color": "clr-white",
+"glyph": "e",
+"image": "editor/monsters/Floating eye.png",
+"source": "https://nethackwiki.com/wiki/Floating_eye"
+},
+"floor": {
+"color": "clr-cyan",
+"glyph": ".",
+"image": "editor/dungeon/floor1.png",
+"source": "https://nethackwiki.com/wiki/Floor"
+},
+"fog_cloud": {
+"color": "clr-white",
+"glyph": "v",
+"image": "editor/monsters/Fog cloud.png",
+"source": "https://nethackwiki.com/wiki/Fog_cloud"
+},
+"food_detection": {
+"color": "clr-white",
+"glyph": "?",
+"image": "editor/items/food detection.png",
+"source": "https://nethackwiki.com/wiki/Scroll_of_food_detection"
+},
+"food_ration": {
+"color": "clr-brown",
+"glyph": "%",
+"image": "editor/items/food ration.png",
+"source": "https://nethackwiki.com/wiki/Food_ration"
+},
+"forest_centaur": {
+"color": "clr-white",
+"glyph": "C",
+"image": "editor/monsters/Forest centaur.png",
+"source": "https://nethackwiki.com/wiki/Forest_centaur"
+},
+"fortune_cookie": {
+"color": "clr-yellow",
+"glyph": "%",
+"image": "editor/items/fortune cookie.png",
+"source": "https://nethackwiki.com/wiki/Fortune_cookie"
+},
+"fox": {
+"color": "clr-white",
+"glyph": "d",
+"image": "editor/monsters/Fox.png",
+"source": "https://nethackwiki.com/wiki/Fox"
+},
+"freezing_sphere": {
+"color": "clr-white",
+"glyph": "e",
+"image": "editor/monsters/Freezing sphere.png",
+"source": "https://nethackwiki.com/wiki/Freezing_sphere"
+},
+"frost_giant": {
+"color": "clr-white",
+"glyph": "H",
+"image": "editor/monsters/Frost giant.png",
+"source": "https://nethackwiki.com/wiki/Frost_giant"
+},
+"frost_horn": {
+"color": "clr-white",
+"glyph": "(",
+"image": "editor/items/frost horn.png",
+"source": "https://nethackwiki.com/wiki/Fire_horn"
+},
+"fruit_juice": {
+"color": "clr-brightmagenta",
+"glyph": "!",
+"image": "editor/items/fruit juice.png",
+"source": "https://nethackwiki.com/wiki/Potion_of_fruit_juice"
+},
+"full_healing": {
+"color": "clr-brightmagenta",
+"glyph": "!",
+"image": "editor/items/full healing.png",
+"source": "https://nethackwiki.com/wiki/Potion_of_full_healing"
+},
+"gain_ability": {
+"color": "clr-brightmagenta",
+"glyph": "!",
+"image": "editor/items/gain ability.png",
+"source": "https://nethackwiki.com/wiki/Potion_of_gain_ability"
+},
+"gain_energy": {
+"color": "clr-brightmagenta",
+"glyph": "!",
+"image": "editor/items/gain energy.png",
+"source": "https://nethackwiki.com/wiki/Potion_of_gain_energy"
+},
+"gain_level": {
+"color": "clr-brightmagenta",
+"glyph": "!",
+"image": "editor/items/gain level.png",
+"source": "https://nethackwiki.com/wiki/Potion_of_gain_level"
+},
+"gargoyle": {
+"color": "clr-white",
+"glyph": "g",
+"image": "editor/monsters/Gargoyle.png",
+"source": "https://nethackwiki.com/wiki/Gargoyle"
+},
+"garter_snake": {
+"color": "clr-white",
+"glyph": "S",
+"image": "editor/monsters/Garter snake.png",
+"source": "https://nethackwiki.com/wiki/Garter_snake"
+},
+"gas_spore": {
+"color": "clr-white",
+"glyph": "e",
+"image": "editor/monsters/Gas spore.png",
+"source": "https://nethackwiki.com/wiki/Gas_spore"
+},
+"gecko": {
+"color": "clr-white",
+"glyph": ":",
+"image": "editor/monsters/Gecko.png",
+"source": "https://nethackwiki.com/wiki/Gecko"
+},
+"gelatinous_cube": {
+"color": "clr-white",
+"glyph": "b",
+"image": "editor/monsters/Gelatinous cube.png",
+"source": "https://nethackwiki.com/wiki/Gelatinous_cube"
+},
+"genocide": {
+"color": "clr-white",
+"glyph": "?",
+"image": "editor/items/genocide.png",
+"source": "https://nethackwiki.com/wiki/Scroll_of_genocide"
+},
+"geryon": {
+"color": "clr-white",
+"glyph": "&",
+"image": "editor/monsters/Geryon.png",
+"source": "https://nethackwiki.com/wiki/Geryon"
+},
+"ghost": {
+"color": "clr-white",
+"glyph": "\u00a0",
+"image": "editor/monsters/Ghost.png",
+"source": "https://nethackwiki.com/wiki/Ghost"
+},
+"ghoul": {
+"color": "clr-white",
+"glyph": "Z",
+"image": "editor/monsters/Ghoul.png",
+"source": "https://nethackwiki.com/wiki/Ghoul"
+},
+"giant": {
+"color": "clr-white",
+"glyph": "H",
+"image": "editor/monsters/Giant.png",
+"source": "https://nethackwiki.com/wiki/Giant"
+},
+"giant_ant": {
+"color": "clr-white",
+"glyph": "a",
+"image": "editor/monsters/Giant ant.png",
+"source": "https://nethackwiki.com/wiki/Giant_ant"
+},
+"giant_bat": {
+"color": "clr-white",
+"glyph": "B",
+"image": "editor/monsters/Giant bat.png",
+"source": "https://nethackwiki.com/wiki/Giant_bat"
+},
+"giant_beetle": {
+"color": "clr-white",
+"glyph": "a",
+"image": "editor/monsters/Giant beetle.png",
+"source": "https://nethackwiki.com/wiki/Giant_beetle"
+},
+"giant_eel": {
+"color": "clr-white",
+"glyph": ";",
+"image": "editor/monsters/Giant eel.png",
+"source": "https://nethackwiki.com/wiki/Giant_eel"
+},
+"giant_mimic": {
+"color": "clr-white",
+"glyph": "m",
+"image": "editor/monsters/Giant mimic.png",
+"source": "https://nethackwiki.com/wiki/Giant_mimic"
+},
+"giant_mummy": {
+"color": "clr-white",
+"glyph": "M",
+"image": "editor/monsters/Giant mummy.png",
+"source": "https://nethackwiki.com/wiki/Giant_mummy"
+},
+"giant_rat": {
+"color": "clr-white",
+"glyph": "r",
+"image": "editor/monsters/Giant rat.png",
+"source": "https://nethackwiki.com/wiki/Giant_rat"
+},
+"giant_spider": {
+"color": "clr-white",
+"glyph": "s",
+"image": "editor/monsters/Giant spider.png",
+"source": "https://nethackwiki.com/wiki/Giant_spider"
+},
+"giant_zombie": {
+"color": "clr-white",
+"glyph": "Z",
+"image": "editor/monsters/Giant zombie.png",
+"source": "https://nethackwiki.com/wiki/Giant_zombie"
+},
+"glaive": {
+"color": "clr-cyan",
+"glyph": ")",
+"image": "editor/items/glaive.png",
+"source": "https://nethackwiki.com/wiki/Partisan"
+},
+"glass_golem": {
+"color": "clr-white",
+"glyph": "'",
+"image": "editor/monsters/Glass golem.png",
+"source": "https://nethackwiki.com/wiki/Glass_golem"
+},
+"glass_piercer": {
+"color": "clr-white",
+"glyph": "p",
+"image": "editor/monsters/Glass piercer.png",
+"source": "https://nethackwiki.com/wiki/Glass_piercer"
+},
+"gnome_king": {
+"color": "clr-white",
+"glyph": "G",
+"image": "editor/monsters/Gnome king.png",
+"source": "https://nethackwiki.com/wiki/Gnome_king"
+},
+"gnome_lord": {
+"color": "clr-white",
+"glyph": "G",
+"image": "editor/monsters/Gnome lord.png",
+"source": "https://nethackwiki.com/wiki/Gnome_lord"
+},
+"gnome_monster": {
+"color": "clr-white",
+"glyph": "G",
+"image": "editor/monsters/Gnome (monster).png",
+"source": "https://nethackwiki.com/wiki/Gnome_(monster)"
+},
+"gnome_mummy": {
+"color": "clr-white",
+"glyph": "M",
+"image": "editor/monsters/Gnome mummy.png",
+"source": "https://nethackwiki.com/wiki/Gnome_mummy"
+},
+"gnome_zombie": {
+"color": "clr-white",
+"glyph": "Z",
+"image": "editor/monsters/Gnome zombie.png",
+"source": "https://nethackwiki.com/wiki/Gnome_zombie"
+},
+"gnomish_wizard": {
+"color": "clr-white",
+"glyph": "G",
+"image": "editor/monsters/Gnomish wizard.png",
+"source": "https://nethackwiki.com/wiki/Gnomish_wizard"
+},
+"goblin": {
+"color": "clr-white",
+"glyph": "o",
+"image": "editor/monsters/Goblin.png",
+"source": "https://nethackwiki.com/wiki/Goblin"
+},
+"gold_detection": {
+"color": "clr-white",
+"glyph": "?",
+"image": "editor/items/gold detection.png",
+"source": "https://nethackwiki.com/wiki/Scroll_of_gold_detection"
+},
+"gold_golem": {
+"color": "clr-white",
+"glyph": "'",
+"image": "editor/monsters/Gold golem.png",
+"source": "https://nethackwiki.com/wiki/Gold_golem"
+},
+"gold_piece": {
+"color": "clr-yellow",
+"glyph": "$",
+"image": "editor/items/gold piece.png",
+"source": "https://nethackwiki.com/wiki/Coin"
+},
+"golden_naga": {
+"color": "clr-white",
+"glyph": "N",
+"image": "editor/monsters/Golden naga.png",
+"source": "https://nethackwiki.com/wiki/Golden_naga"
+},
+"golden_naga_hatchling": {
+"color": "clr-white",
+"glyph": "N",
+"image": "editor/monsters/Golden naga hatchling.png",
+"source": "https://nethackwiki.com/wiki/Golden_naga_hatchling"
+},
+"grand_master": {
+"color": "",
+"glyph": "",
+"image": "editor/monsters/Grand Master.png",
+"source": "https://nethackwiki.com/wiki/Grand_Master"
+},
+"grappling_hook": {
+"color": "clr-cyan",
+"glyph": "(",
+"image": "editor/items/grappling hook.png",
+"source": "https://nethackwiki.com/wiki/Grappling_hook"
+},
+"gray_dragon": {
+"color": "clr-white",
+"glyph": "D",
+"image": "editor/monsters/Gray dragon.png",
+"source": "https://nethackwiki.com/wiki/Gray_dragon"
+},
+"gray_ooze": {
+"color": "clr-white",
+"glyph": "P",
+"image": "editor/monsters/Gray ooze.png",
+"source": "https://nethackwiki.com/wiki/Gray_ooze"
+},
+"gray_unicorn": {
+"color": "clr-white",
+"glyph": "u",
+"image": "editor/monsters/Gray unicorn.png",
+"source": "https://nethackwiki.com/wiki/Gray_unicorn"
+},
+"great_dagger": {
+"color": "clr-darkgray",
+"glyph": ")",
+"image": "editor/items/great dagger.png",
+"source": "https://nethackwiki.com/wiki/Orcish_dagger"
+},
+"green_dragon": {
+"color": "clr-white",
+"glyph": "D",
+"image": "editor/monsters/Green dragon.png",
+"source": "https://nethackwiki.com/wiki/Green_dragon"
+},
+"green_elf": {
+"color": "clr-white",
+"glyph": "@",
+"image": "editor/monsters/Green-elf.png",
+"source": "https://nethackwiki.com/wiki/Green-elf"
+},
+"green_mold": {
+"color": "clr-white",
+"glyph": "F",
+"image": "editor/monsters/Green mold.png",
+"source": "https://nethackwiki.com/wiki/Green_mold"
+},
+"green_slime": {
+"color": "clr-white",
+"glyph": "P",
+"image": "editor/monsters/Green slime.png",
+"source": "https://nethackwiki.com/wiki/Green_slime"
+},
+"gremlin": {
+"color": "clr-white",
+"glyph": "g",
+"image": "editor/monsters/Gremlin.png",
+"source": "https://nethackwiki.com/wiki/Gremlin"
+},
+"grey_elf": {
+"color": "clr-white",
+"glyph": "@",
+"image": "editor/monsters/Grey-elf.png",
+"source": "https://nethackwiki.com/wiki/Grey-elf"
+},
+"grid_bug": {
+"color": "clr-white",
+"glyph": "x",
+"image": "editor/monsters/Grid bug.png",
+"source": "https://nethackwiki.com/wiki/Grid_bug"
+},
+"guard": {
+"color": "clr-white",
+"glyph": "@",
+"image": "editor/monsters/Guard.png",
+"source": "https://nethackwiki.com/wiki/Guard"
+},
+"guardian_naga": {
+"color": "clr-white",
+"glyph": "N",
+"image": "editor/monsters/Guardian naga.png",
+"source": "https://nethackwiki.com/wiki/Guardian_naga"
+},
+"guardian_naga_hatchling": {
+"color": "clr-white",
+"glyph": "N",
+"image": "editor/monsters/Guardian naga hatchling.png",
+"source": "https://nethackwiki.com/wiki/Guardian_naga_hatchling"
+},
+"guide": {
+"color": "",
+"glyph": "",
+"image": "editor/monsters/Guide.png",
+"source": "https://nethackwiki.com/wiki/Guide"
+},
+"guisarme": {
+"color": "clr-cyan",
+"glyph": ")",
+"image": "editor/items/guisarme.png",
+"source": "https://nethackwiki.com/wiki/Partisan"
+},
+"halberd": {
+"color": "clr-cyan",
+"glyph": ")",
+"image": "editor/items/halberd.png",
+"source": "https://nethackwiki.com/wiki/Partisan"
+},
+"hallucination": {
+"color": "clr-brightmagenta",
+"glyph": "!",
+"image": "editor/items/hallucination.png",
+"source": "https://nethackwiki.com/wiki/Potion_of_hallucination"
+},
+"hard_hat": {
+"color": "clr-cyan",
+"glyph": "[",
+"image": "editor/items/hard hat.png",
+"source": "https://nethackwiki.com/wiki/Dwarvish_iron_helm"
+},
+"hard_shoes": {
+"color": "clr-cyan",
+"glyph": "[",
+"image": "editor/items/hard shoes.png",
+"source": "https://nethackwiki.com/wiki/Iron_shoes"
+},
+"hawaiian_shirt": {
+"color": "clr-magenta",
+"glyph": "[",
+"image": "editor/items/Hawaiian shirt.png",
+"source": "https://nethackwiki.com/wiki/Hawaiian_shirt"
+},
+"healer_player_monster": {
+"color": "",
+"glyph": "@",
+"image": "editor/monsters/Healer (player monster).png",
+"source": "https://nethackwiki.com/wiki/Healer_(player_monster)"
+},
+"healing": {
+"color": "clr-brightmagenta",
+"glyph": "!",
+"image": "editor/items/healing.png",
+"source": "https://nethackwiki.com/wiki/Potion_of_healing"
+},
+"hell_hound": {
+"color": "clr-white",
+"glyph": "d",
+"image": "editor/monsters/Hell hound.png",
+"source": "https://nethackwiki.com/wiki/Hell_hound"
+},
+"hell_hound_pup": {
+"color": "clr-white",
+"glyph": "d",
+"image": "editor/monsters/Hell hound pup.png",
+"source": "https://nethackwiki.com/wiki/Hell_hound_pup"
+},
+"hezrou": {
+"color": "clr-white",
+"glyph": "&",
+"image": "editor/monsters/Hezrou.png",
+"source": "https://nethackwiki.com/wiki/Hezrou"
+},
+"high_priest": {
+"color": "clr-white",
+"glyph": "@",
+"image": "editor/monsters/High priest.png",
+"source": "https://nethackwiki.com/wiki/High_priest"
+},
+"hill_giant": {
+"color": "clr-white",
+"glyph": "H",
+"image": "editor/monsters/Hill giant.png",
+"source": "https://nethackwiki.com/wiki/Hill_giant"
+},
+"hill_orc": {
+"color": "clr-white",
+"glyph": "o",
+"image": "editor/monsters/Hill orc.png",
+"source": "https://nethackwiki.com/wiki/Hill_orc"
+},
+"hippocrates": {
+"color": "",
+"glyph": "",
+"image": "editor/monsters/Hippocrates.png",
+"source": "https://nethackwiki.com/wiki/Hippocrates"
+},
+"hobbit": {
+"color": "clr-white",
+"glyph": "h",
+"image": "editor/monsters/Hobbit.png",
+"source": "https://nethackwiki.com/wiki/Hobbit"
+},
+"hobgoblin": {
+"color": "clr-white",
+"glyph": "o",
+"image": "editor/monsters/Hobgoblin.png",
+"source": "https://nethackwiki.com/wiki/Hobgoblin"
+},
+"holy_wafer": {
+"color": "clr-yellow",
+"glyph": "%",
+"image": "editor/items/holy wafer.png",
+"source": "https://nethackwiki.com/wiki/Holy_wafer"
+},
+"holy_water": {
+"color": "clr-cyan",
+"glyph": "!",
+"image": "editor/items/holy water.png",
+"source": "https://nethackwiki.com/wiki/Potion_of_holy_water"
+},
+"homunculus": {
+"color": "clr-white",
+"glyph": "i",
+"image": "editor/monsters/Homunculus.png",
+"source": "https://nethackwiki.com/wiki/Homunculus"
+},
+"hooded_cloak": {
+"color": "clr-brown",
+"glyph": "[",
+"image": "editor/items/hooded cloak.png",
+"source": "https://nethackwiki.com/wiki/Dwarvish_cloak"
+},
+"horn_of_plenty": {
+"color": "clr-white",
+"glyph": "(",
+"image": "editor/items/horn of plenty.png",
+"source": "https://nethackwiki.com/wiki/Horn_of_plenty"
+},
+"horned_devil": {
+"color": "clr-white",
+"glyph": "&",
+"image": "editor/monsters/Horned devil.png",
+"source": "https://nethackwiki.com/wiki/Horned_devil"
+},
+"horse": {
+"color": "clr-white",
+"glyph": "u",
+"image": "editor/monsters/Horse.png",
+"source": "https://nethackwiki.com/wiki/Horse"
+},
+"housecat": {
+"color": "clr-white",
+"glyph": "f",
+"image": "editor/monsters/Housecat.png",
+"source": "https://nethackwiki.com/wiki/Housecat"
+},
+"huge_chunk_of_meat": {
+"color": "clr-brown",
+"glyph": "%",
+"image": "editor/items/huge chunk of meat.png",
+"source": "https://nethackwiki.com/wiki/Huge_chunk_of_meat"
+},
+"human_monster": {
+"color": "clr-white",
+"glyph": "@",
+"image": "editor/monsters/Human (monster).png",
+"source": "https://nethackwiki.com/wiki/Human_(monster)"
+},
+"human_mummy": {
+"color": "clr-white",
+"glyph": "M",
+"image": "editor/monsters/Human mummy.png",
+"source": "https://nethackwiki.com/wiki/Human_mummy"
+},
+"human_zombie": {
+"color": "clr-white",
+"glyph": "Z",
+"image": "editor/monsters/Human zombie.png",
+"source": "https://nethackwiki.com/wiki/Human_zombie"
+},
+"hunter": {
+"color": "",
+"glyph": "",
+"image": "editor/monsters/Hunter.png",
+"source": "https://nethackwiki.com/wiki/Hunter"
+},
+"ice_box": {
+"color": "clr-white",
+"glyph": "(",
+"image": "editor/items/ice box.png",
+"source": "https://nethackwiki.com/wiki/Ice_box"
+},
+"ice_devil": {
+"color": "clr-white",
+"glyph": "&",
+"image": "editor/monsters/Ice devil.png",
+"source": "https://nethackwiki.com/wiki/Ice_devil"
+},
+"ice_troll": {
+"color": "clr-white",
+"glyph": "T",
+"image": "editor/monsters/Ice troll.png",
+"source": "https://nethackwiki.com/wiki/Ice_troll"
+},
+"ice_vortex": {
+"color": "clr-white",
+"glyph": "v",
+"image": "editor/monsters/Ice vortex.png",
+"source": "https://nethackwiki.com/wiki/Ice_vortex"
+},
+"identify": {
+"color": "clr-white",
+"glyph": "?",
+"image": "editor/items/identify.png",
+"source": "https://nethackwiki.com/wiki/Scroll_of_identify"
+},
+"iguana": {
+"color": "clr-white",
+"glyph": ":",
+"image": "editor/monsters/Iguana.png",
+"source": "https://nethackwiki.com/wiki/Iguana"
+},
+"imp": {
+"color": "clr-white",
+"glyph": "i",
+"image": "editor/monsters/Imp.png",
+"source": "https://nethackwiki.com/wiki/Imp"
+},
+"incubus": {
+"color": "clr-white",
+"glyph": "&",
+"image": "editor/monsters/Incubus.png",
+"source": "https://nethackwiki.com/wiki/Incubus"
+},
+"invisibility": {
+"color": "clr-brightmagenta",
+"glyph": "!",
+"image": "editor/items/invisibility.png",
+"source": "https://nethackwiki.com/wiki/Potion_of_invisibility"
+},
+"iron_golem": {
+"color": "clr-white",
+"glyph": "'",
+"image": "editor/monsters/Iron golem.png",
+"source": "https://nethackwiki.com/wiki/Iron_golem"
+},
+"iron_piercer": {
+"color": "clr-white",
+"glyph": "p",
+"image": "editor/monsters/Iron piercer.png",
+"source": "https://nethackwiki.com/wiki/Iron_piercer"
+},
+"iron_skull_cap": {
+"color": "clr-darkgray",
+"glyph": "[",
+"image": "editor/items/iron skull cap.png",
+"source": "https://nethackwiki.com/wiki/Orcish_helm"
+},
+"ixoth": {
+"color": "",
+"glyph": "",
+"image": "editor/monsters/Ixoth.png",
+"source": "https://nethackwiki.com/wiki/Ixoth"
+},
+"jabberwock": {
+"color": "clr-white",
+"glyph": "J",
+"image": "editor/monsters/Jabberwock.png",
+"source": "https://nethackwiki.com/wiki/Jabberwock"
+},
+"jackal": {
+"color": "clr-white",
+"glyph": "d",
+"image": "editor/monsters/Jackal.png",
+"source": "https://nethackwiki.com/wiki/Jackal"
+},
+"jackboots": {
+"color": "clr-brown",
+"glyph": "[",
+"image": "editor/items/jackboots.png",
+"source": "https://nethackwiki.com/wiki/High_boots"
+},
+"jaguar": {
+"color": "clr-white",
+"glyph": "f",
+"image": "editor/monsters/Jaguar.png",
+"source": "https://nethackwiki.com/wiki/Jaguar"
+},
+"javelin": {
+"color": "clr-cyan",
+"glyph": ")",
+"image": "editor/items/javelin.png",
+"source": "https://nethackwiki.com/wiki/Javelin"
+},
+"jellyfish": {
+"color": "clr-white",
+"glyph": ";",
+"image": "editor/monsters/Jellyfish.png",
+"source": "https://nethackwiki.com/wiki/Jellyfish"
+},
+"juiblex": {
+"color": "clr-white",
+"glyph": "&",
+"image": "editor/monsters/Juiblex.png",
+"source": "https://nethackwiki.com/wiki/Juiblex"
+},
+"k_ration": {
+"color": "clr-brown",
+"glyph": "%",
+"image": "editor/items/K-ration.png",
+"source": "https://nethackwiki.com/wiki/K-ration"
+},
+"katana": {
+"color": "clr-cyan",
+"glyph": ")",
+"image": "editor/items/katana.png",
+"source": "https://nethackwiki.com/wiki/Katana"
+},
+"kelp_frond": {
+"color": "clr-green",
+"glyph": "%",
+"image": "editor/items/kelp frond.png",
+"source": "https://nethackwiki.com/wiki/Kelp_frond"
+},
+"keystone_kop": {
+"color": "clr-white",
+"glyph": "K",
+"image": "editor/monsters/Keystone Kop.png",
+"source": "https://nethackwiki.com/wiki/Keystone_Kop"
+},
+"ki_rin": {
+"color": "clr-white",
+"glyph": "A",
+"image": "editor/monsters/Ki-rin.png",
+"source": "https://nethackwiki.com/wiki/Ki-rin"
+},
+"killer_bee": {
+"color": "clr-white",
+"glyph": "a",
+"image": "editor/monsters/Killer bee.png",
+"source": "https://nethackwiki.com/wiki/Killer_bee"
+},
+"king_arthur": {
+"color": "",
+"glyph": "",
+"image": "editor/monsters/King Arthur.png",
+"source": "https://nethackwiki.com/wiki/King_Arthur"
+},
+"kitten": {
+"color": "clr-white",
+"glyph": "f",
+"image": "editor/monsters/Kitten.png",
+"source": "https://nethackwiki.com/wiki/Kitten"
+},
+"knife": {
+"color": "clr-cyan",
+"glyph": ")",
+"image": "editor/items/knife.png",
+"source": "https://nethackwiki.com/wiki/Knife"
+},
+"knight_player_monster": {
+"color": "",
+"glyph": "@",
+"image": "editor/monsters/Knight (player monster).png",
+"source": "https://nethackwiki.com/wiki/Knight_(player_monster)"
+},
+"kobold": {
+"color": "clr-white",
+"glyph": "k",
+"image": "editor/monsters/Kobold.png",
+"source": "https://nethackwiki.com/wiki/Kobold"
+},
+"kobold_lord": {
+"color": "clr-white",
+"glyph": "k",
+"image": "editor/monsters/Kobold lord.png",
+"source": "https://nethackwiki.com/wiki/Kobold_lord"
+},
+"kobold_mummy": {
+"color": "clr-white",
+"glyph": "M",
+"image": "editor/monsters/Kobold mummy.png",
+"source": "https://nethackwiki.com/wiki/Kobold_mummy"
+},
+"kobold_shaman": {
+"color": "clr-white",
+"glyph": "k",
+"image": "editor/monsters/Kobold shaman.png",
+"source": "https://nethackwiki.com/wiki/Kobold_shaman"
+},
+"kobold_zombie": {
+"color": "clr-white",
+"glyph": "Z",
+"image": "editor/monsters/Kobold zombie.png",
+"source": "https://nethackwiki.com/wiki/Kobold_zombie"
+},
+"kop_kaptain": {
+"color": "clr-white",
+"glyph": "K",
+"image": "editor/monsters/Kop Kaptain.png",
+"source": "https://nethackwiki.com/wiki/Kop_Kaptain"
+},
+"kop_lieutenant": {
+"color": "clr-white",
+"glyph": "K",
+"image": "editor/monsters/Kop Lieutenant.png",
+"source": "https://nethackwiki.com/wiki/Kop_Lieutenant"
+},
+"kop_sergeant": {
+"color": "clr-white",
+"glyph": "K",
+"image": "editor/monsters/Kop Sergeant.png",
+"source": "https://nethackwiki.com/wiki/Kop_Sergeant"
+},
+"kraken": {
+"color": "clr-white",
+"glyph": ";",
+"image": "editor/monsters/Kraken.png",
+"source": "https://nethackwiki.com/wiki/Kraken"
+},
+"land_mine": {
+"color": "clr-red",
+"glyph": "(",
+"image": "editor/items/land mine.png",
+"source": "https://nethackwiki.com/wiki/Land_mine"
+},
+"large_box": {
+"color": "clr-brown",
+"glyph": "(",
+"image": "editor/items/large box.png",
+"source": "https://nethackwiki.com/wiki/Large_box"
+},
+"large_cat": {
+"color": "clr-white",
+"glyph": "f",
+"image": "editor/monsters/Large cat.png",
+"source": "https://nethackwiki.com/wiki/Large_cat"
+},
+"large_dog": {
+"color": "clr-white",
+"glyph": "d",
+"image": "editor/monsters/Large dog.png",
+"source": "https://nethackwiki.com/wiki/Large_dog"
+},
+"large_kobold": {
+"color": "clr-white",
+"glyph": "k",
+"image": "editor/monsters/Large kobold.png",
+"source": "https://nethackwiki.com/wiki/Large_kobold"
+},
+"large_mimic": {
+"color": "clr-white",
+"glyph": "m",
+"image": "editor/monsters/Large mimic.png",
+"source": "https://nethackwiki.com/wiki/Large_mimic"
+},
+"large_round_shield": {
+"color": "clr-cyan",
+"glyph": "[",
+"image": "editor/items/large round shield.png",
+"source": "https://nethackwiki.com/wiki/Dwarvish_roundshield"
+},
+"large_shield": {
+"color": "clr-cyan",
+"glyph": "[",
+"image": "editor/items/large shield.png",
+"source": "https://nethackwiki.com/wiki/Large_shield"
+},
+"lava": {
+"color": "clr-cyan",
+"glyph": "}",
+"image": "editor/dungeon/lava1.png",
+"source": "https://nethackwiki.com/wiki/Lava"
+},
+"leash": {
+"color": "clr-brown",
+"glyph": "(",
+"image": "editor/items/leash.png",
+"source": "https://nethackwiki.com/wiki/Leash"
+},
+"leather_armor": {
+"color": "clr-brown",
+"glyph": "[",
+"image": "editor/items/leather armor.png",
+"source": "https://nethackwiki.com/wiki/Leather_armor"
+},
+"leather_cloak": {
+"color": "clr-brown",
+"glyph": "[",
+"image": "editor/items/leather cloak.png",
+"source": "https://nethackwiki.com/wiki/Leather_cloak"
+},
+"leather_drum": {
+"color": "clr-brown",
+"glyph": "(",
+"image": "editor/items/leather drum.png",
+"source": "https://nethackwiki.com/wiki/Leather_drum"
+},
+"leather_golem": {
+"color": "clr-white",
+"glyph": "'",
+"image": "editor/monsters/Leather golem.png",
+"source": "https://nethackwiki.com/wiki/Leather_golem"
+},
+"leather_hat": {
+"color": "clr-brown",
+"glyph": "[",
+"image": "editor/items/leather hat.png",
+"source": "https://nethackwiki.com/wiki/Elven_leather_helm"
+},
+"leather_jacket": {
+"color": "clr-darkgray",
+"glyph": "[",
+"image": "editor/items/leather jacket.png",
+"source": "https://nethackwiki.com/wiki/Leather_jacket"
+},
+"lembas_wafer": {
+"color": "clr-white",
+"glyph": "%",
+"image": "editor/items/lembas wafer.png",
+"source": "https://nethackwiki.com/wiki/Lembas_wafer"
+},
+"lemure": {
+"color": "clr-white",
+"glyph": "i",
+"image": "editor/monsters/Lemure.png",
+"source": "https://nethackwiki.com/wiki/Lemure"
+},
+"leocrotta": {
+"color": "clr-white",
+"glyph": "q",
+"image": "editor/monsters/Leocrotta.png",
+"source": "https://nethackwiki.com/wiki/Leocrotta"
+},
+"leprechaun": {
+"color": "clr-white",
+"glyph": "l",
+"image": "editor/monsters/Leprechaun.png",
+"source": "https://nethackwiki.com/wiki/Leprechaun"
+},
+"levitation": {
+"color": "clr-brightmagenta",
+"glyph": "!",
+"image": "editor/items/levitation.png",
+"source": "https://nethackwiki.com/wiki/Potion_of_levitation"
+},
+"lich": {
+"color": "clr-white",
+"glyph": "L",
+"image": "editor/monsters/Lich.png",
+"source": "https://nethackwiki.com/wiki/Lich"
+},
+"lichen": {
+"color": "clr-white",
+"glyph": "F",
+"image": "editor/monsters/Lichen.png",
+"source": "https://nethackwiki.com/wiki/Lichen"
+},
+"lieutenant": {
+"color": "clr-white",
+"glyph": "@",
+"image": "editor/monsters/Lieutenant.png",
+"source": "https://nethackwiki.com/wiki/Lieutenant"
+},
+"light": {
+"color": "clr-white",
+"glyph": "?",
+"image": "editor/items/light.png",
+"source": "https://nethackwiki.com/wiki/Scroll_of_light"
+},
+"little_dog": {
+"color": "clr-white",
+"glyph": "d",
+"image": "editor/monsters/Little dog.png",
+"source": "https://nethackwiki.com/wiki/Little_dog"
+},
+"lizard": {
+"color": "clr-white",
+"glyph": ":",
+"image": "editor/monsters/Lizard.png",
+"source": "https://nethackwiki.com/wiki/Lizard"
+},
+"lock_pick": {
+"color": "clr-cyan",
+"glyph": "(",
+"image": "editor/items/lock pick.png",
+"source": "https://nethackwiki.com/wiki/Credit_card"
+},
+"long_sword": {
+"color": "clr-cyan",
+"glyph": ")",
+"image": "editor/items/long sword.png",
+"source": "https://nethackwiki.com/wiki/Long_sword"
+},
+"long_worm": {
+"color": "clr-white",
+"glyph": "w",
+"image": "editor/monsters/Long worm.png",
+"source": "https://nethackwiki.com/wiki/Long_worm"
+},
+"lord_carnarvon": {
+"color": "",
+"glyph": "",
+"image": "editor/monsters/Lord Carnarvon.png",
+"source": "https://nethackwiki.com/wiki/Lord_Carnarvon"
+},
+"lord_sato": {
+"color": "",
+"glyph": "",
+"image": "editor/monsters/Lord Sato.png",
+"source": "https://nethackwiki.com/wiki/Lord_Sato"
+},
+"lord_surtur": {
+"color": "",
+"glyph": "",
+"image": "editor/monsters/Lord Surtur.png",
+"source": "https://nethackwiki.com/wiki/Lord_Surtur"
+},
+"lucern_hammer": {
+"color": "clr-cyan",
+"glyph": ")",
+"image": "editor/items/lucern hammer.png",
+"source": "https://nethackwiki.com/wiki/Partisan"
+},
+"lump_of_royal_jelly": {
+"color": "clr-yellow",
+"glyph": "%",
+"image": "editor/items/lump of royal jelly.png",
+"source": "https://nethackwiki.com/wiki/Lump_of_royal_jelly"
+},
+"lurker_above": {
+"color": "clr-white",
+"glyph": "t",
+"image": "editor/monsters/Lurker above.png",
+"source": "https://nethackwiki.com/wiki/Lurker_above"
+},
+"lynx": {
+"color": "clr-white",
+"glyph": "f",
+"image": "editor/monsters/Lynx.png",
+"source": "https://nethackwiki.com/wiki/Lynx"
+},
+"mace": {
+"color": "clr-cyan",
+"glyph": ")",
+"image": "editor/items/mace.png",
+"source": "https://nethackwiki.com/wiki/Mace"
+},
+"magic_flute": {
+"color": "clr-brown",
+"glyph": "(",
+"image": "editor/items/magic flute.png",
+"source": "https://nethackwiki.com/wiki/Magic_flute"
+},
+"magic_harp": {
+"color": "clr-brown",
+"glyph": "(",
+"image": "editor/items/magic harp.png",
+"source": "https://nethackwiki.com/wiki/Magic_harp"
+},
+"magic_lamp": {
+"color": "clr-yellow",
+"glyph": "(",
+"image": "editor/items/magic lamp.png",
+"source": "https://nethackwiki.com/wiki/Brass_lantern"
+},
+"magic_mapping": {
+"color": "clr-white",
+"glyph": "?",
+"image": "editor/items/magic mapping.png",
+"source": "https://nethackwiki.com/wiki/Scroll_of_magic_mapping"
+},
+"magic_marker": {
+"color": "clr-red",
+"glyph": "(",
+"image": "editor/items/magic marker.png",
+"source": "https://nethackwiki.com/wiki/Magic_marker"
+},
+"magic_whistle": {
+"color": "clr-cyan",
+"glyph": "(",
+"image": "editor/items/magic whistle.png",
+"source": "https://nethackwiki.com/wiki/Magic_whistle"
+},
+"mail_daemon": {
+"color": "clr-white",
+"glyph": "&",
+"image": "editor/monsters/Mail daemon.png",
+"source": "https://nethackwiki.com/wiki/Mail_daemon"
+},
+"manes": {
+"color": "clr-white",
+"glyph": "i",
+"image": "editor/monsters/Manes.png",
+"source": "https://nethackwiki.com/wiki/Manes"
+},
+"marilith": {
+"color": "clr-white",
+"glyph": "&",
+"image": "editor/monsters/Marilith.png",
+"source": "https://nethackwiki.com/wiki/Marilith"
+},
+"master_assassin": {
+"color": "",
+"glyph": "",
+"image": "editor/monsters/Master Assassin.png",
+"source": "https://nethackwiki.com/wiki/Master_Assassin"
+},
+"master_kaen": {
+"color": "",
+"glyph": "",
+"image": "editor/monsters/Master Kaen.png",
+"source": "https://nethackwiki.com/wiki/Master_Kaen"
+},
+"master_lich": {
+"color": "clr-white",
+"glyph": "L",
+"image": "editor/monsters/Master lich.png",
+"source": "https://nethackwiki.com/wiki/Master_lich"
+},
+"master_mind_flayer": {
+"color": "clr-white",
+"glyph": "h",
+"image": "editor/monsters/Master mind flayer.png",
+"source": "https://nethackwiki.com/wiki/Master_mind_flayer"
+},
+"master_of_thieves": {
+"color": "",
+"glyph": "",
+"image": "editor/monsters/Master of Thieves.png",
+"source": "https://nethackwiki.com/wiki/Master_of_Thieves"
+},
+"mastodon": {
+"color": "clr-white",
+"glyph": "q",
+"image": "editor/monsters/Mastodon.png",
+"source": "https://nethackwiki.com/wiki/Mastodon"
+},
+"meat_ring": {
+"color": "clr-brown",
+"glyph": "%",
+"image": "editor/items/meat ring.png",
+"source": "https://nethackwiki.com/wiki/Meat_ring"
+},
+"meat_stick": {
+"color": "clr-brown",
+"glyph": "%",
+"image": "editor/items/meat stick.png",
+"source": "https://nethackwiki.com/wiki/Meat_stick"
+},
+"meatball": {
+"color": "clr-brown",
+"glyph": "%",
+"image": "editor/items/meatball.png",
+"source": "https://nethackwiki.com/wiki/Meatball"
+},
+"medusa": {
+"color": "clr-white",
+"glyph": "@",
+"image": "editor/monsters/Medusa.png",
+"source": "https://nethackwiki.com/wiki/Medusa"
+},
+"melon": {
+"color": "clr-brightgreen",
+"glyph": "%",
+"image": "editor/items/melon.png",
+"source": "https://nethackwiki.com/wiki/Melon"
+},
+"mind_flayer": {
+"color": "clr-white",
+"glyph": "h",
+"image": "editor/monsters/Mind flayer.png",
+"source": "https://nethackwiki.com/wiki/Mind_flayer"
+},
+"minion_of_huhetotl": {
+"color": "",
+"glyph": "",
+"image": "editor/monsters/Minion of Huhetotl.png",
+"source": "https://nethackwiki.com/wiki/Minion_of_Huhetotl"
+},
+"minotaur": {
+"color": "clr-white",
+"glyph": "H",
+"image": "editor/monsters/Minotaur.png",
+"source": "https://nethackwiki.com/wiki/Minotaur"
+},
+"mirror": {
+"color": "clr-lightgray",
+"glyph": "(",
+"image": "editor/items/mirror.png",
+"source": "https://nethackwiki.com/wiki/Mirror"
+},
+"monk_player_monster": {
+"color": "",
+"glyph": "@",
+"image": "editor/monsters/Monk (player monster).png",
+"source": "https://nethackwiki.com/wiki/Monk_(player_monster)"
+},
+"monkey": {
+"color": "clr-white",
+"glyph": "Y",
+"image": "editor/monsters/Monkey.png",
+"source": "https://nethackwiki.com/wiki/Monkey"
+},
+"monster_detection": {
+"color": "clr-brightmagenta",
+"glyph": "!",
+"image": "editor/items/monster detection.png",
+"source": "https://nethackwiki.com/wiki/Potion_of_monster_detection"
+},
+"mordor_orc": {
+"color": "clr-white",
+"glyph": "o",
+"image": "editor/monsters/Mordor orc.png",
+"source": "https://nethackwiki.com/wiki/Mordor_orc"
+},
+"morning_star": {
+"color": "clr-cyan",
+"glyph": ")",
+"image": "editor/items/morning star.png",
+"source": "https://nethackwiki.com/wiki/Morning_star"
+},
+"mountain_centaur": {
+"color": "clr-white",
+"glyph": "C",
+"image": "editor/monsters/Mountain centaur.png",
+"source": "https://nethackwiki.com/wiki/Mountain_centaur"
+},
+"mountain_nymph": {
+"color": "clr-white",
+"glyph": "n",
+"image": "editor/monsters/Mountain nymph.png",
+"source": "https://nethackwiki.com/wiki/Mountain_nymph"
+},
+"mumak": {
+"color": "clr-white",
+"glyph": "q",
+"image": "editor/monsters/Mumak.png",
+"source": "https://nethackwiki.com/wiki/Mumak"
+},
+"mummy_wrapping": {
+"color": "clr-lightgray",
+"glyph": "[",
+"image": "editor/items/mummy wrapping.png",
+"source": "https://nethackwiki.com/wiki/Mummy_wrapping"
+},
+"mushroom": {
+"color": "clr-darkgray",
+"glyph": "%",
+"image": "editor/items/mushroom.png",
+"source": "https://nethackwiki.com/wiki/Mushroom"
+},
+"nalfeshnee": {
+"color": "clr-white",
+"glyph": "&",
+"image": "editor/monsters/Nalfeshnee.png",
+"source": "https://nethackwiki.com/wiki/Nalfeshnee"
+},
+"nalzok": {
+"color": "",
+"glyph": "",
+"image": "editor/monsters/Nalzok.png",
+"source": "https://nethackwiki.com/wiki/Nalzok"
+},
+"nazgul": {
+"color": "clr-white",
+"glyph": "W",
+"image": "editor/monsters/Nazgul.png",
+"source": "https://nethackwiki.com/wiki/Nazgul"
+},
+"neanderthal": {
+"color": "",
+"glyph": "",
+"image": "editor/monsters/Neanderthal.png",
+"source": "https://nethackwiki.com/wiki/Neanderthal"
+},
+"neferet_the_green": {
+"color": "",
+"glyph": "",
+"image": "editor/monsters/Neferet the Green.png",
+"source": "https://nethackwiki.com/wiki/Neferet_the_Green"
+},
+"newt": {
+"color": "clr-white",
+"glyph": ":",
+"image": "editor/monsters/Newt.png",
+"source": "https://nethackwiki.com/wiki/Newt"
+},
+"ninja": {
+"color": "",
+"glyph": "",
+"image": "editor/monsters/Ninja.png",
+"source": "https://nethackwiki.com/wiki/Ninja"
+},
+"norn": {
+"color": "",
+"glyph": "",
+"image": "editor/monsters/Norn.png",
+"source": "https://nethackwiki.com/wiki/Norn"
+},
+"nurse": {
+"color": "clr-white",
+"glyph": "@",
+"image": "editor/monsters/Nurse.png",
+"source": "https://nethackwiki.com/wiki/Nurse"
+},
+"object_detection": {
+"color": "clr-brightmagenta",
+"glyph": "!",
+"image": "editor/items/object detection.png",
+"source": "https://nethackwiki.com/wiki/Potion_of_object_detection"
+},
+"ochre_jelly": {
+"color": "clr-white",
+"glyph": "j",
+"image": "editor/monsters/Ochre jelly.png",
+"source": "https://nethackwiki.com/wiki/Ochre_jelly"
+},
+"ogre": {
+"color": "clr-white",
+"glyph": "O",
+"image": "editor/monsters/Ogre.png",
+"source": "https://nethackwiki.com/wiki/Ogre"
+},
+"ogre_king": {
+"color": "clr-white",
+"glyph": "O",
+"image": "editor/monsters/Ogre king.png",
+"source": "https://nethackwiki.com/wiki/Ogre_king"
+},
+"ogre_lord": {
+"color": "clr-white",
+"glyph": "O",
+"image": "editor/monsters/Ogre lord.png",
+"source": "https://nethackwiki.com/wiki/Ogre_lord"
+},
+"oil": {
+"color": "clr-brightmagenta",
+"glyph": "!",
+"image": "editor/items/oil.png",
+"source": "https://nethackwiki.com/wiki/Potion_of_oil"
+},
+"oil_lamp": {
+"color": "clr-yellow",
+"glyph": "(",
+"image": "editor/items/oil lamp.png",
+"source": "https://nethackwiki.com/wiki/Brass_lantern"
+},
+"oilskin_sack": {
+"color": "clr-brown",
+"glyph": "(",
+"image": "editor/items/oilskin sack.png",
+"source": "https://nethackwiki.com/wiki/Oilskin_sack"
+},
+"olog_hai": {
+"color": "clr-white",
+"glyph": "T",
+"image": "editor/monsters/Olog-hai.png",
+"source": "https://nethackwiki.com/wiki/Olog-hai"
+},
+"oracle": {
+"color": "clr-white",
+"glyph": "@",
+"image": "editor/monsters/Oracle.png",
+"source": "https://nethackwiki.com/wiki/Oracle"
+},
+"orange": {
+"color": "clr-orange",
+"glyph": "%",
+"image": "editor/items/orange.png",
+"source": "https://nethackwiki.com/wiki/Orange"
+},
+"orange_dragon": {
+"color": "clr-white",
+"glyph": "D",
+"image": "editor/monsters/Orange dragon.png",
+"source": "https://nethackwiki.com/wiki/Orange_dragon"
+},
+"orc": {
+"color": "clr-white",
+"glyph": "o",
+"image": "editor/monsters/Orc.png",
+"source": "https://nethackwiki.com/wiki/Orc"
+},
+"orc_captain": {
+"color": "clr-white",
+"glyph": "o",
+"image": "editor/monsters/Orc-captain.png",
+"source": "https://nethackwiki.com/wiki/Orc-captain"
+},
+"orc_mummy": {
+"color": "clr-white",
+"glyph": "M",
+"image": "editor/monsters/Orc mummy.png",
+"source": "https://nethackwiki.com/wiki/Orc_mummy"
+},
+"orc_shaman": {
+"color": "clr-white",
+"glyph": "o",
+"image": "editor/monsters/Orc shaman.png",
+"source": "https://nethackwiki.com/wiki/Orc_shaman"
+},
+"orc_zombie": {
+"color": "clr-white",
+"glyph": "Z",
+"image": "editor/monsters/Orc zombie.png",
+"source": "https://nethackwiki.com/wiki/Orc_zombie"
+},
+"orcish_arrow": {
+"color": "clr-darkgray",
+"glyph": ")",
+"image": "editor/items/orcish arrow.png",
+"source": "https://nethackwiki.com/wiki/Orcish_arrow"
+},
+"orcish_bow": {
+"color": "clr-darkgray",
+"glyph": ")",
+"image": "editor/items/orcish bow.png",
+"source": "https://nethackwiki.com/wiki/Orcish_bow"
+},
+"orcish_dagger": {
+"color": "clr-darkgray",
+"glyph": ")",
+"image": "editor/items/orcish dagger.png",
+"source": "https://nethackwiki.com/wiki/Orcish_dagger"
+},
+"orcish_short_sword": {
+"color": "clr-darkgray",
+"glyph": ")",
+"image": "editor/items/orcish short sword.png",
+"source": "https://nethackwiki.com/wiki/Orcish_short_sword"
+},
+"orcish_spear": {
+"color": "clr-darkgray",
+"glyph": ")",
+"image": "editor/items/orcish spear.png",
+"source": "https://nethackwiki.com/wiki/Orcish_spear"
+},
+"orcus": {
+"color": "clr-white",
+"glyph": "&",
+"image": "editor/monsters/Orcus.png",
+"source": "https://nethackwiki.com/wiki/Orcus"
+},
+"orion": {
+"color": "",
+"glyph": "",
+"image": "editor/monsters/Orion.png",
+"source": "https://nethackwiki.com/wiki/Orion"
+},
+"owlbear": {
+"color": "clr-white",
+"glyph": "Y",
+"image": "editor/monsters/Owlbear.png",
+"source": "https://nethackwiki.com/wiki/Owlbear"
+},
+"page": {
+"color": "",
+"glyph": "",
+"image": "editor/monsters/Page.png",
+"source": "https://nethackwiki.com/wiki/Page"
+},
+"pair_of_lenses": {
+"color": "clr-brightcyan",
+"glyph": "(",
+"image": "editor/items/pair of lenses.png",
+"source": "https://nethackwiki.com/wiki/Lenses"
+},
+"pancake": {
+"color": "clr-yellow",
+"glyph": "%",
+"image": "editor/items/pancake.png",
+"source": "https://nethackwiki.com/wiki/Pancake"
+},
+"panther": {
+"color": "clr-white",
+"glyph": "f",
+"image": "editor/monsters/Panther.png",
+"source": "https://nethackwiki.com/wiki/Panther"
+},
+"paper_golem": {
+"color": "clr-white",
+"glyph": "'",
+"image": "editor/monsters/Paper golem.png",
+"source": "https://nethackwiki.com/wiki/Paper_golem"
+},
+"paralysis": {
+"color": "clr-brightmagenta",
+"glyph": "!",
+"image": "editor/items/paralysis.png",
+"source": "https://nethackwiki.com/wiki/Potion_of_paralysis"
+},
+"partisan": {
+"color": "clr-cyan",
+"glyph": ")",
+"image": "editor/items/partisan.png",
+"source": "https://nethackwiki.com/wiki/Partisan"
+},
+"pear": {
+"color": "clr-brightgreen",
+"glyph": "%",
+"image": "editor/items/pear.png",
+"source": "https://nethackwiki.com/wiki/Pear"
+},
+"pelias": {
+"color": "",
+"glyph": "",
+"image": "editor/monsters/Pelias.png",
+"source": "https://nethackwiki.com/wiki/Pelias"
+},
+"pestilence": {
+"color": "clr-white",
+"glyph": "&",
+"image": "editor/monsters/Pestilence.png",
+"source": "https://nethackwiki.com/wiki/Pestilence"
+},
+"pick_axe": {
+"color": "clr-cyan",
+"glyph": "(",
+"image": "editor/items/pick-axe.png",
+"source": "https://nethackwiki.com/wiki/Pick-axe"
+},
+"piranha": {
+"color": "clr-white",
+"glyph": ";",
+"image": "editor/monsters/Piranha.png",
+"source": "https://nethackwiki.com/wiki/Piranha"
+},
+"pit_fiend": {
+"color": "clr-white",
+"glyph": "&",
+"image": "editor/monsters/Pit fiend.png",
+"source": "https://nethackwiki.com/wiki/Pit_fiend"
+},
+"pit_viper": {
+"color": "clr-white",
+"glyph": "S",
+"image": "editor/monsters/Pit viper.png",
+"source": "https://nethackwiki.com/wiki/Pit_viper"
+},
+"plains_centaur": {
+"color": "clr-white",
+"glyph": "C",
+"image": "editor/monsters/Plains centaur.png",
+"source": "https://nethackwiki.com/wiki/Plains_centaur"
+},
+"plate_mail": {
+"color": "clr-cyan",
+"glyph": "[",
+"image": "editor/items/plate mail.png",
+"source": "https://nethackwiki.com/wiki/Plate_mail"
+},
+"polished_silver_shield": {
+"color": "clr-lightgray",
+"glyph": "[",
+"image": "editor/items/polished silver shield.png",
+"source": "https://nethackwiki.com/wiki/Shield_of_reflection"
+},
+"polymorph": {
+"color": "clr-brightmagenta",
+"glyph": "!",
+"image": "editor/items/polymorph.png",
+"source": "https://nethackwiki.com/wiki/Potion_of_polymorph"
+},
+"pony": {
+"color": "clr-white",
+"glyph": "u",
+"image": "editor/monsters/Pony.png",
+"source": "https://nethackwiki.com/wiki/Pony"
+},
+"potion_of_restore_ability": {
+"color": "clr-brightmagenta",
+"glyph": "!",
+"image": "editor/items/potion of restore ability.png",
+"source": "https://nethackwiki.com/wiki/Potion_of_restore_ability"
+},
+"priest_player_monster": {
+"color": "",
+"glyph": "@",
+"image": "editor/monsters/Priest (player monster).png",
+"source": "https://nethackwiki.com/wiki/Priest_(player_monster)"
+},
+"priestess_player_monster": {
+"color": "",
+"glyph": "@",
+"image": "editor/monsters/Priestess (player monster).png",
+"source": "https://nethackwiki.com/wiki/Priestess_(player_monster)"
+},
+"prisoner": {
+"color": "clr-white",
+"glyph": "@",
+"image": "editor/monsters/Prisoner.png",
+"source": "https://nethackwiki.com/wiki/Prisoner"
+},
+"punishment": {
+"color": "clr-white",
+"glyph": "?",
+"image": "editor/items/punishment.png",
+"source": "https://nethackwiki.com/wiki/Scroll_of_punishment"
+},
+"purple_worm": {
+"color": "clr-white",
+"glyph": "w",
+"image": "editor/monsters/Purple worm.png",
+"source": "https://nethackwiki.com/wiki/Purple_worm"
+},
+"pyrolisk": {
+"color": "clr-white",
+"glyph": "c",
+"image": "editor/monsters/Pyrolisk.png",
+"source": "https://nethackwiki.com/wiki/Pyrolisk"
+},
+"python": {
+"color": "clr-white",
+"glyph": "S",
+"image": "editor/monsters/Python.png",
+"source": "https://nethackwiki.com/wiki/Python"
+},
+"quantum_mechanic": {
+"color": "clr-white",
+"glyph": "Q",
+"image": "editor/monsters/Quantum mechanic.png",
+"source": "https://nethackwiki.com/wiki/Quantum_mechanic"
+},
+"quarterstaff": {
+"color": "clr-brown",
+"glyph": ")",
+"image": "editor/items/quarterstaff.png",
+"source": "https://nethackwiki.com/wiki/Quarterstaff"
+},
+"quasit": {
+"color": "clr-white",
+"glyph": "i",
+"image": "editor/monsters/Quasit.png",
+"source": "https://nethackwiki.com/wiki/Quasit"
+},
+"queen_bee": {
+"color": "clr-white",
+"glyph": "a",
+"image": "editor/monsters/Queen bee.png",
+"source": "https://nethackwiki.com/wiki/Queen_bee"
+},
+"quivering_blob": {
+"color": "clr-white",
+"glyph": "b",
+"image": "editor/monsters/Quivering blob.png",
+"source": "https://nethackwiki.com/wiki/Quivering_blob"
+},
+"rabid_rat": {
+"color": "clr-white",
+"glyph": "r",
+"image": "editor/monsters/Rabid rat.png",
+"source": "https://nethackwiki.com/wiki/Rabid_rat"
+},
+"ranger_player_monster": {
+"color": "",
+"glyph": "@",
+"image": "editor/monsters/Ranger (player monster).png",
+"source": "https://nethackwiki.com/wiki/Ranger_(player_monster)"
+},
+"ranseur": {
+"color": "clr-cyan",
+"glyph": ")",
+"image": "editor/items/ranseur.png",
+"source": "https://nethackwiki.com/wiki/Partisan"
+},
+"raven": {
+"color": "clr-white",
+"glyph": "B",
+"image": "editor/monsters/Raven.png",
+"source": "https://nethackwiki.com/wiki/Raven"
+},
+"red_dragon": {
+"color": "clr-white",
+"glyph": "D",
+"image": "editor/monsters/Red dragon.png",
+"source": "https://nethackwiki.com/wiki/Red_dragon"
+},
+"red_eyed_shield": {
+"color": "clr-red",
+"glyph": "[",
+"image": "editor/items/red-eyed shield.png",
+"source": "https://nethackwiki.com/wiki/Orcish_shield"
+},
+"red_mold": {
+"color": "clr-white",
+"glyph": "F",
+"image": "editor/monsters/Red mold.png",
+"source": "https://nethackwiki.com/wiki/Red_mold"
+},
+"red_naga": {
+"color": "clr-white",
+"glyph": "N",
+"image": "editor/monsters/Red naga.png",
+"source": "https://nethackwiki.com/wiki/Red_naga"
+},
+"red_naga_hatchling": {
+"color": "clr-white",
+"glyph": "N",
+"image": "editor/monsters/Red naga hatchling.png",
+"source": "https://nethackwiki.com/wiki/Red_naga_hatchling"
+},
+"remove_curse": {
+"color": "clr-white",
+"glyph": "?",
+"image": "editor/items/remove curse.png",
+"source": "https://nethackwiki.com/wiki/Scroll_of_remove_curse"
+},
+"riders": {
+"color": "clr-white",
+"glyph": "&",
+"image": "editor/monsters/Riders.png",
+"source": "https://nethackwiki.com/wiki/Riders#Death"
+},
+"ring_mail": {
+"color": "clr-cyan",
+"glyph": "[",
+"image": "editor/items/ring mail.png",
+"source": "https://nethackwiki.com/wiki/Ring_mail"
+},
+"robe": {
+"color": "clr-red",
+"glyph": "[",
+"image": "editor/items/robe.png",
+"source": "https://nethackwiki.com/wiki/Robe"
+},
+"rock_mole": {
+"color": "clr-white",
+"glyph": "r",
+"image": "editor/monsters/Rock mole.png",
+"source": "https://nethackwiki.com/wiki/Rock_mole"
+},
+"rock_piercer": {
+"color": "clr-white",
+"glyph": "p",
+"image": "editor/monsters/Rock piercer.png",
+"source": "https://nethackwiki.com/wiki/Rock_piercer"
+},
+"rock_troll": {
+"color": "clr-white",
+"glyph": "T",
+"image": "editor/monsters/Rock troll.png",
+"source": "https://nethackwiki.com/wiki/Rock_troll"
+},
+"rogue_player_monster": {
+"color": "",
+"glyph": "@",
+"image": "editor/monsters/Rogue (player monster).png",
+"source": "https://nethackwiki.com/wiki/Rogue_(player_monster)"
+},
+"rope_golem": {
+"color": "clr-white",
+"glyph": "'",
+"image": "editor/monsters/Rope golem.png",
+"source": "https://nethackwiki.com/wiki/Rope_golem"
+},
+"roshi": {
+"color": "",
+"glyph": "",
+"image": "editor/monsters/Roshi.png",
+"source": "https://nethackwiki.com/wiki/Roshi"
+},
+"rothe": {
+"color": "clr-white",
+"glyph": "q",
+"image": "editor/monsters/Rothe.png",
+"source": "https://nethackwiki.com/wiki/Rothe"
+},
+"rubber_hose": {
+"color": "clr-brown",
+"glyph": ")",
+"image": "editor/items/rubber hose.png",
+"source": "https://nethackwiki.com/wiki/Rubber_hose"
+},
+"runesword": {
+"color": "clr-darkgray",
+"glyph": ")",
+"image": "editor/items/runesword.png",
+"source": "https://nethackwiki.com/wiki/Runesword"
+},
+"rust_monster": {
+"color": "clr-white",
+"glyph": "R",
+"image": "editor/monsters/Rust monster.png",
+"source": "https://nethackwiki.com/wiki/Rust_monster"
+},
+"sack": {
+"color": "clr-brown",
+"glyph": "(",
+"image": "editor/items/sack.png",
+"source": "https://nethackwiki.com/wiki/Sack"
+},
+"saddle": {
+"color": "clr-brown",
+"glyph": "(",
+"image": "editor/items/saddle.png",
+"source": "https://nethackwiki.com/wiki/Saddle"
+},
+"salamander": {
+"color": "clr-white",
+"glyph": ":",
+"image": "editor/monsters/Salamander.png",
+"source": "https://nethackwiki.com/wiki/Salamander"
+},
+"samurai_player_monster": {
+"color": "",
+"glyph": "@",
+"image": "editor/monsters/Samurai (player monster).png",
+"source": "https://nethackwiki.com/wiki/Samurai_(player_monster)"
+},
+"sandestin": {
+"color": "clr-white",
+"glyph": "&",
+"image": "editor/monsters/Sandestin.png",
+"source": "https://nethackwiki.com/wiki/Sandestin"
+},
+"sandwich": {
+"color": "clr-white",
+"glyph": "%",
+"image": "editor/items/sandwich.png",
+"source": "https://nethackwiki.com/wiki/Sandwich"
+},
+"sasquatch": {
+"color": "clr-white",
+"glyph": "Y",
+"image": "editor/monsters/Sasquatch.png",
+"source": "https://nethackwiki.com/wiki/Sasquatch"
+},
+"scale_mail": {
+"color": "clr-cyan",
+"glyph": "[",
+"image": "editor/items/scale mail.png",
+"source": "https://nethackwiki.com/wiki/Scale_mail"
+},
+"scalpel": {
+"color": "clr-cyan",
+"glyph": ")",
+"image": "editor/items/scalpel.png",
+"source": "https://nethackwiki.com/wiki/Scalpel"
+},
+"scare_monster": {
+"color": "clr-white",
+"glyph": "?",
+"image": "editor/items/scare monster.png",
+"source": "https://nethackwiki.com/wiki/Scroll_of_scare_monster"
+},
+"scimitar": {
+"color": "clr-cyan",
+"glyph": ")",
+"image": "editor/items/scimitar.png",
+"source": "https://nethackwiki.com/wiki/Scimitar"
+},
+"scorpion": {
+"color": "clr-white",
+"glyph": "s",
+"image": "editor/monsters/Scorpion.png",
+"source": "https://nethackwiki.com/wiki/Scorpion"
+},
+"scorpius": {
+"color": "",
+"glyph": "",
+"image": "editor/monsters/Scorpius.png",
+"source": "https://nethackwiki.com/wiki/Scorpius"
+},
+"scroll_of_mail": {
+"color": "clr-white",
+"glyph": "?",
+"image": "editor/items/scroll of mail.png",
+"source": "https://nethackwiki.com/wiki/Scroll_of_mail"
+},
+"see_invisible": {
+"color": "clr-brightmagenta",
+"glyph": "!",
+"image": "editor/items/see invisible.png",
+"source": "https://nethackwiki.com/wiki/Potion_of_see_invisible"
+},
+"sergeant": {
+"color": "clr-white",
+"glyph": "@",
+"image": "editor/monsters/Sergeant.png",
+"source": "https://nethackwiki.com/wiki/Sergeant"
+},
+"sewer_rat": {
+"color": "clr-white",
+"glyph": "r",
+"image": "editor/monsters/Sewer rat.png",
+"source": "https://nethackwiki.com/wiki/Sewer_rat"
+},
+"shade": {
+"color": "clr-white",
+"glyph": "\u00a0",
+"image": "editor/monsters/Shade.png",
+"source": "https://nethackwiki.com/wiki/Shade"
+},
+"shaman_karnov": {
+"color": "",
+"glyph": "",
+"image": "editor/monsters/Shaman Karnov.png",
+"source": "https://nethackwiki.com/wiki/Shaman_Karnov"
+},
+"shark": {
+"color": "clr-white",
+"glyph": ";",
+"image": "editor/monsters/Shark.png",
+"source": "https://nethackwiki.com/wiki/Shark"
+},
+"shocking_sphere": {
+"color": "clr-white",
+"glyph": "e",
+"image": "editor/monsters/Shocking sphere.png",
+"source": "https://nethackwiki.com/wiki/Shocking_sphere"
+},
+"shopkeeper": {
+"color": "clr-white",
+"glyph": "@",
+"image": "editor/monsters/Shopkeeper.png",
+"source": "https://nethackwiki.com/wiki/Shopkeeper"
+},
+"short_sword": {
+"color": "clr-cyan",
+"glyph": ")",
+"image": "editor/items/short sword.png",
+"source": "https://nethackwiki.com/wiki/Orcish_short_sword"
+},
+"shrieker": {
+"color": "clr-white",
+"glyph": "F",
+"image": "editor/monsters/Shrieker.png",
+"source": "https://nethackwiki.com/wiki/Shrieker"
+},
+"shuriken": {
+"color": "clr-cyan",
+"glyph": ")",
+"image": "editor/items/shuriken.png",
+"source": "https://nethackwiki.com/wiki/Shuriken"
+},
+"sickness": {
+"color": "clr-brightmagenta",
+"glyph": "!",
+"image": "editor/items/sickness.png",
+"source": "https://nethackwiki.com/wiki/Potion_of_sickness"
+},
+"silver_arrow": {
+"color": "clr-lightgray",
+"glyph": ")",
+"image": "editor/items/silver arrow.png",
+"source": "https://nethackwiki.com/wiki/Silver_arrow"
+},
+"silver_dagger": {
+"color": "clr-lightgray",
+"glyph": ")",
+"image": "editor/items/silver dagger.png",
+"source": "https://nethackwiki.com/wiki/Orcish_dagger"
+},
+"silver_dragon": {
+"color": "clr-white",
+"glyph": "D",
+"image": "editor/monsters/Silver dragon.png",
+"source": "https://nethackwiki.com/wiki/Silver_dragon"
+},
+"silver_saber": {
+"color": "clr-lightgray",
+"glyph": ")",
+"image": "editor/items/silver saber.png",
+"source": "https://nethackwiki.com/wiki/Silver_saber"
+},
+"silver_spear": {
+"color": "clr-lightgray",
+"glyph": ")",
+"image": "editor/items/silver spear.png",
+"source": "https://nethackwiki.com/wiki/Orcish_spear"
+},
+"skeleton": {
+"color": "clr-white",
+"glyph": "Z",
+"image": "editor/monsters/Skeleton.png",
+"source": "https://nethackwiki.com/wiki/Skeleton"
+},
+"skeleton_key": {
+"color": "clr-cyan",
+"glyph": "(",
+"image": "editor/items/skeleton key.png",
+"source": "https://nethackwiki.com/wiki/Credit_card"
+},
+"sleeping": {
+"color": "clr-brightmagenta",
+"glyph": "!",
+"image": "editor/items/sleeping.png",
+"source": "https://nethackwiki.com/wiki/Potion_of_sleeping"
+},
+"slime_mold": {
+"color": "clr-brown",
+"glyph": "%",
+"image": "editor/items/slime mold.png",
+"source": "https://nethackwiki.com/wiki/Slime_mold"
+},
+"sling": {
+"color": "clr-brown",
+"glyph": ")",
+"image": "editor/items/sling.png",
+"source": "https://nethackwiki.com/wiki/Sling"
+},
+"slippery_cloak": {
+"color": "clr-brown",
+"glyph": "[",
+"image": "editor/items/slippery cloak.png",
+"source": "https://nethackwiki.com/wiki/Oilskin_cloak"
+},
+"small_mimic": {
+"color": "clr-white",
+"glyph": "m",
+"image": "editor/monsters/Small mimic.png",
+"source": "https://nethackwiki.com/wiki/Small_mimic"
+},
+"small_shield": {
+"color": "clr-brown",
+"glyph": "[",
+"image": "editor/items/small shield.png",
+"source": "https://nethackwiki.com/wiki/Small_shield"
+},
+"snake": {
+"color": "clr-white",
+"glyph": "S",
+"image": "editor/monsters/Snake.png",
+"source": "https://nethackwiki.com/wiki/Snake"
+},
+"soldier": {
+"color": "clr-white",
+"glyph": "@",
+"image": "editor/monsters/Soldier.png",
+"source": "https://nethackwiki.com/wiki/Soldier"
+},
+"soldier_ant": {
+"color": "clr-white",
+"glyph": "a",
+"image": "editor/monsters/Soldier ant.png",
+"source": "https://nethackwiki.com/wiki/Soldier_ant"
+},
+"spear": {
+"color": "clr-cyan",
+"glyph": ")",
+"image": "editor/items/spear.png",
+"source": "https://nethackwiki.com/wiki/Orcish_spear"
+},
+"speed": {
+"color": "clr-brightmagenta",
+"glyph": "!",
+"image": "editor/items/speed.png",
+"source": "https://nethackwiki.com/wiki/Potion_of_speed"
+},
+"spetum": {
+"color": "clr-cyan",
+"glyph": ")",
+"image": "editor/items/spetum.png",
+"source": "https://nethackwiki.com/wiki/Partisan"
+},
+"splint_mail": {
+"color": "clr-cyan",
+"glyph": "[",
+"image": "editor/items/splint mail.png",
+"source": "https://nethackwiki.com/wiki/Splint_mail"
+},
+"spotted_jelly": {
+"color": "clr-white",
+"glyph": "j",
+"image": "editor/monsters/Spotted jelly.png",
+"source": "https://nethackwiki.com/wiki/Spotted_jelly"
+},
+"sprig_of_wolfsbane": {
+"color": "clr-green",
+"glyph": "%",
+"image": "editor/items/sprig of wolfsbane.png",
+"source": "https://nethackwiki.com/wiki/Sprig_of_wolfsbane"
+},
+"staircase_down": {
+"color": "clr-white",
+"glyph": ">",
+"image": "editor/dungeon/stairs_down.png",
+"source": "https://nethackwiki.com/wiki/Staircase"
+},
+"staircase_up": {
+"color": "clr-white",
+"glyph": "<",
+"image": "editor/dungeon/stairs_up.png",
+"source": "https://nethackwiki.com/wiki/Staircase"
+},
+"stalker": {
+"color": "clr-white",
+"glyph": "E",
+"image": "editor/monsters/Stalker.png",
+"source": "https://nethackwiki.com/wiki/Stalker"
+},
+"statue": {
+"color": "clr-white",
+"glyph": "`",
+"image": "editor/items/statue.png",
+"source": "https://nethackwiki.com/wiki/Statue"
+},
+"steam_vortex": {
+"color": "clr-white",
+"glyph": "v",
+"image": "editor/monsters/Steam vortex.png",
+"source": "https://nethackwiki.com/wiki/Steam_vortex"
+},
+"stethoscope": {
+"color": "clr-cyan",
+"glyph": "(",
+"image": "editor/items/stethoscope.png",
+"source": "https://nethackwiki.com/wiki/Stethoscope"
+},
+"stiletto": {
+"color": "clr-cyan",
+"glyph": ")",
+"image": "editor/items/stiletto.png",
+"source": "https://nethackwiki.com/wiki/Stiletto"
+},
+"stinking_cloud": {
+"color": "clr-white",
+"glyph": "?",
+"image": "editor/items/stinking cloud.png",
+"source": "https://nethackwiki.com/wiki/Scroll_of_stinking_cloud"
+},
+"stone_giant": {
+"color": "clr-white",
+"glyph": "H",
+"image": "editor/monsters/Stone giant.png",
+"source": "https://nethackwiki.com/wiki/Stone_giant"
+},
+"stone_golem": {
+"color": "clr-white",
+"glyph": "'",
+"image": "editor/monsters/Stone golem.png",
+"source": "https://nethackwiki.com/wiki/Stone_golem"
+},
+"storm_giant": {
+"color": "clr-white",
+"glyph": "H",
+"image": "editor/monsters/Storm giant.png",
+"source": "https://nethackwiki.com/wiki/Storm_giant"
+},
+"straw_golem": {
+"color": "clr-white",
+"glyph": "'",
+"image": "editor/monsters/Straw golem.png",
+"source": "https://nethackwiki.com/wiki/Straw_golem"
+},
+"studded_leather_armor": {
+"color": "clr-brown",
+"glyph": "[",
+"image": "editor/items/studded leather armor.png",
+"source": "https://nethackwiki.com/wiki/Studded_leather_armor"
+},
+"student": {
+"color": "",
+"glyph": "",
+"image": "editor/monsters/Student.png",
+"source": "https://nethackwiki.com/wiki/Student"
+},
+"succubus": {
+"color": "clr-white",
+"glyph": "&",
+"image": "editor/monsters/Succubus.png",
+"source": "https://nethackwiki.com/wiki/Succubus"
+},
+"t_shirt": {
+"color": "clr-white",
+"glyph": "[",
+"image": "editor/items/T-shirt.png",
+"source": "https://nethackwiki.com/wiki/Hawaiian_shirt"
+},
+"tallow_candle": {
+"color": "clr-white",
+"glyph": "(",
+"image": "editor/items/tallow candle.png",
+"source": "https://nethackwiki.com/wiki/Brass_lantern"
+},
+"taming": {
+"color": "clr-white",
+"glyph": "?",
+"image": "editor/items/taming.png",
+"source": "https://nethackwiki.com/wiki/Scroll_of_taming"
+},
+"teleportation": {
+"color": "clr-white",
+"glyph": "?",
+"image": "editor/items/teleportation.png",
+"source": "https://nethackwiki.com/wiki/Scroll_of_teleportation"
+},
+"tengu": {
+"color": "clr-white",
+"glyph": "i",
+"image": "editor/monsters/Tengu.png",
+"source": "https://nethackwiki.com/wiki/Tengu"
+},
+"thoth_amon": {
+"color": "",
+"glyph": "",
+"image": "editor/monsters/Thoth Amon.png",
+"source": "https://nethackwiki.com/wiki/Thoth_Amon"
+},
+"thug": {
+"color": "",
+"glyph": "",
+"image": "editor/monsters/Thug.png",
+"source": "https://nethackwiki.com/wiki/Thug"
+},
+"tiger": {
+"color": "clr-white",
+"glyph": "f",
+"image": "editor/monsters/Tiger.png",
+"source": "https://nethackwiki.com/wiki/Tiger"
+},
+"tin_opener": {
+"color": "clr-cyan",
+"glyph": "(",
+"image": "editor/items/tin opener.png",
+"source": "https://nethackwiki.com/wiki/Tin_opener"
+},
+"tin_whistle": {
+"color": "clr-cyan",
+"glyph": "(",
+"image": "editor/items/tin whistle.png",
+"source": "https://nethackwiki.com/wiki/Tin_whistle"
+},
+"tinning_kit": {
+"color": "clr-cyan",
+"glyph": "(",
+"image": "editor/items/tinning kit.png",
+"source": "https://nethackwiki.com/wiki/Tinning_kit"
+},
+"titan": {
+"color": "clr-white",
+"glyph": "H",
+"image": "editor/monsters/Titan.png",
+"source": "https://nethackwiki.com/wiki/Titan"
+},
+"titanothere": {
+"color": "clr-white",
+"glyph": "q",
+"image": "editor/monsters/Titanothere.png",
+"source": "https://nethackwiki.com/wiki/Titanothere"
+},
+"tooled_horn": {
+"color": "clr-white",
+"glyph": "(",
+"image": "editor/items/tooled horn.png",
+"source": "https://nethackwiki.com/wiki/Tooled_horn"
+},
+"tortilla": {
+"color": "clr-white",
+"glyph": "%",
+"image": "editor/items/tortilla.png",
+"source": "https://nethackwiki.com/wiki/Tortilla"
+},
+"tourist_player_monster": {
+"color": "",
+"glyph": "@",
+"image": "editor/monsters/Tourist (player monster).png",
+"source": "https://nethackwiki.com/wiki/Tourist_(player_monster)"
+},
+"towel": {
+"color": "clr-magenta",
+"glyph": "(",
+"image": "editor/items/towel.png",
+"source": "https://nethackwiki.com/wiki/Towel"
+},
+"trapper": {
+"color": "clr-white",
+"glyph": "t",
+"image": "editor/monsters/Trapper.png",
+"source": "https://nethackwiki.com/wiki/Trapper"
+},
+"trident": {
+"color": "clr-cyan",
+"glyph": ")",
+"image": "editor/items/trident.png",
+"source": "https://nethackwiki.com/wiki/Trident"
+},
+"tripe_ration": {
+"color": "clr-brown",
+"glyph": "%",
+"image": "editor/items/tripe ration.png",
+"source": "https://nethackwiki.com/wiki/Tripe_ration"
+},
+"troll": {
+"color": "clr-white",
+"glyph": "T",
+"image": "editor/monsters/Troll.png",
+"source": "https://nethackwiki.com/wiki/Troll"
+},
+"tsurugi": {
+"color": "clr-cyan",
+"glyph": ")",
+"image": "editor/items/tsurugi.png",
+"source": "https://nethackwiki.com/wiki/Tsurugi"
+},
+"two_handed_sword": {
+"color": "clr-cyan",
+"glyph": ")",
+"image": "editor/items/two-handed sword.png",
+"source": "https://nethackwiki.com/wiki/Two-handed_sword"
+},
+"twoflower": {
+"color": "",
+"glyph": "",
+"image": "editor/monsters/Twoflower.png",
+"source": "https://nethackwiki.com/wiki/Twoflower"
+},
+"umber_hulk": {
+"color": "clr-white",
+"glyph": "U",
+"image": "editor/monsters/Umber hulk.png",
+"source": "https://nethackwiki.com/wiki/Umber_hulk"
+},
+"unholy_water": {
+"color": "clr-cyan",
+"glyph": "!",
+"image": "editor/items/unholy water.png",
+"source": "https://nethackwiki.com/wiki/Potion_of_unholy_water"
+},
+"unicorn_horn": {
+"color": "clr-white",
+"glyph": "(",
+"image": "editor/items/unicorn horn.png",
+"source": "https://nethackwiki.com/wiki/Unicorn_horn"
+},
+"uruk_hai": {
+"color": "clr-white",
+"glyph": "o",
+"image": "editor/monsters/Uruk-hai.png",
+"source": "https://nethackwiki.com/wiki/Uruk-hai"
+},
+"valkyrie_player_monster": {
+"color": "",
+"glyph": "@",
+"image": "editor/monsters/Valkyrie (player monster).png",
+"source": "https://nethackwiki.com/wiki/Valkyrie_(player_monster)"
+},
+"vampire": {
+"color": "clr-white",
+"glyph": "V",
+"image": "editor/monsters/Vampire.png",
+"source": "https://nethackwiki.com/wiki/Vampire"
+},
+"vampire_bat": {
+"color": "clr-white",
+"glyph": "B",
+"image": "editor/monsters/Vampire bat.png",
+"source": "https://nethackwiki.com/wiki/Vampire_bat"
+},
+"vampire_lord": {
+"color": "clr-white",
+"glyph": "V",
+"image": "editor/monsters/Vampire lord.png",
+"source": "https://nethackwiki.com/wiki/Vampire_lord"
+},
+"violet_fungus": {
+"color": "clr-white",
+"glyph": "F",
+"image": "editor/monsters/Violet fungus.png",
+"source": "https://nethackwiki.com/wiki/Violet_fungus"
+},
+"vlad_the_impaler": {
+"color": "clr-white",
+"glyph": "V",
+"image": "editor/monsters/Vlad the Impaler.png",
+"source": "https://nethackwiki.com/wiki/Vlad_the_Impaler"
+},
+"voulge": {
+"color": "clr-cyan",
+"glyph": ")",
+"image": "editor/items/voulge.png",
+"source": "https://nethackwiki.com/wiki/Partisan"
+},
+"vrock": {
+"color": "clr-white",
+"glyph": "&",
+"image": "editor/monsters/Vrock.png",
+"source": "https://nethackwiki.com/wiki/Vrock"
+},
+"walking_shoes": {
+"color": "clr-brown",
+"glyph": "[",
+"image": "editor/items/walking shoes.png",
+"source": "https://nethackwiki.com/wiki/Low_boots"
+},
+"wall": {
+"color": "clr-cyan",
+"glyph": "-",
+"image": "editor/dungeon/wall1.png",
+"source": "https://nethackwiki.com/wiki/Wall"
+},
+"war_hammer": {
+"color": "clr-cyan",
+"glyph": ")",
+"image": "editor/items/war hammer.png",
+"source": "https://nethackwiki.com/wiki/War_hammer"
+},
+"warg": {
+"color": "clr-white",
+"glyph": "d",
+"image": "editor/monsters/Warg.png",
+"source": "https://nethackwiki.com/wiki/Warg"
+},
+"warhorse": {
+"color": "clr-white",
+"glyph": "u",
+"image": "editor/monsters/Warhorse.png",
+"source": "https://nethackwiki.com/wiki/Warhorse"
+},
+"warrior": {
+"color": "",
+"glyph": "",
+"image": "editor/monsters/Warrior.png",
+"source": "https://nethackwiki.com/wiki/Warrior"
+},
+"watch_captain": {
+"color": "clr-white",
+"glyph": "@",
+"image": "editor/monsters/Watch captain.png",
+"source": "https://nethackwiki.com/wiki/Watch_captain"
+},
+"watchman": {
+"color": "clr-white",
+"glyph": "@",
+"image": "editor/monsters/Watchman.png",
+"source": "https://nethackwiki.com/wiki/Watchman"
+},
+"water": {
+"color": "clr-cyan",
+"glyph": "}",
+"image": "editor/dungeon/water1.png",
+"source": "https://nethackwiki.com/wiki/Water"
+},
+"water_demon": {
+"color": "clr-white",
+"glyph": "&",
+"image": "editor/monsters/Water demon.png",
+"source": "https://nethackwiki.com/wiki/Water_demon"
+},
+"water_elemental": {
+"color": "clr-white",
+"glyph": "E",
+"image": "editor/monsters/Water elemental.png",
+"source": "https://nethackwiki.com/wiki/Water_elemental"
+},
+"water_moccasin": {
+"color": "clr-white",
+"glyph": "S",
+"image": "editor/monsters/Water moccasin.png",
+"source": "https://nethackwiki.com/wiki/Water_moccasin"
+},
+"water_nymph": {
+"color": "clr-white",
+"glyph": "n",
+"image": "editor/monsters/Water nymph.png",
+"source": "https://nethackwiki.com/wiki/Water_nymph"
+},
+"water_troll": {
+"color": "clr-white",
+"glyph": "T",
+"image": "editor/monsters/Water troll.png",
+"source": "https://nethackwiki.com/wiki/Water_troll"
+},
+"wax_candle": {
+"color": "clr-white",
+"glyph": "(",
+"image": "editor/items/wax candle.png",
+"source": "https://nethackwiki.com/wiki/Brass_lantern"
+},
+"werejackal": {
+"color": "clr-white",
+"glyph": "d",
+"image": "editor/monsters/Werejackal.png",
+"source": "https://nethackwiki.com/wiki/Werejackal"
+},
+"wererat": {
+"color": "clr-white",
+"glyph": "r",
+"image": "editor/monsters/Wererat.png",
+"source": "https://nethackwiki.com/wiki/Wererat"
+},
+"werewolf": {
+"color": "clr-white",
+"glyph": "d",
+"image": "editor/monsters/Werewolf.png",
+"source": "https://nethackwiki.com/wiki/Werewolf"
+},
+"white_dragon": {
+"color": "clr-white",
+"glyph": "D",
+"image": "editor/monsters/White dragon.png",
+"source": "https://nethackwiki.com/wiki/White_dragon"
+},
+"white_handed_shield": {
+"color": "clr-cyan",
+"glyph": "[",
+"image": "editor/items/white-handed shield.png",
+"source": "https://nethackwiki.com/wiki/Uruk-hai_shield"
+},
+"white_unicorn": {
+"color": "clr-white",
+"glyph": "u",
+"image": "editor/monsters/White unicorn.png",
+"source": "https://nethackwiki.com/wiki/White_unicorn"
+},
+"winged_gargoyle": {
+"color": "clr-white",
+"glyph": "g",
+"image": "editor/monsters/Winged gargoyle.png",
+"source": "https://nethackwiki.com/wiki/Winged_gargoyle"
+},
+"winter_wolf": {
+"color": "clr-white",
+"glyph": "d",
+"image": "editor/monsters/Winter wolf.png",
+"source": "https://nethackwiki.com/wiki/Winter_wolf"
+},
+"winter_wolf_cub": {
+"color": "clr-white",
+"glyph": "d",
+"image": "editor/monsters/Winter wolf cub.png",
+"source": "https://nethackwiki.com/wiki/Winter_wolf_cub"
+},
+"wizard_of_yendor": {
+"color": "clr-white",
+"glyph": "@",
+"image": "editor/monsters/Wizard of Yendor.png",
+"source": "https://nethackwiki.com/wiki/Wizard_of_Yendor"
+},
+"wizard_player_monster": {
+"color": "",
+"glyph": "@",
+"image": "editor/monsters/Wizard (player monster).png",
+"source": "https://nethackwiki.com/wiki/Wizard_(player_monster)"
+},
+"wolf": {
+"color": "clr-white",
+"glyph": "d",
+"image": "editor/monsters/Wolf.png",
+"source": "https://nethackwiki.com/wiki/Wolf"
+},
+"wood_golem": {
+"color": "clr-white",
+"glyph": "'",
+"image": "editor/monsters/Wood golem.png",
+"source": "https://nethackwiki.com/wiki/Wood_golem"
+},
+"wood_nymph": {
+"color": "clr-white",
+"glyph": "n",
+"image": "editor/monsters/Wood nymph.png",
+"source": "https://nethackwiki.com/wiki/Wood_nymph"
+},
+"woodchuck": {
+"color": "clr-white",
+"glyph": "r",
+"image": "editor/monsters/Woodchuck.png",
+"source": "https://nethackwiki.com/wiki/Woodchuck"
+},
+"wooden_flute": {
+"color": "clr-brown",
+"glyph": "(",
+"image": "editor/items/wooden flute.png",
+"source": "https://nethackwiki.com/wiki/Wooden_flute"
+},
+"wooden_harp": {
+"color": "clr-brown",
+"glyph": "(",
+"image": "editor/items/wooden harp.png",
+"source": "https://nethackwiki.com/wiki/Wooden_harp"
+},
+"woodland_elf": {
+"color": "clr-white",
+"glyph": "@",
+"image": "editor/monsters/Woodland-elf.png",
+"source": "https://nethackwiki.com/wiki/Woodland-elf"
+},
+"worm_tooth": {
+"color": "clr-white",
+"glyph": ")",
+"image": "editor/items/worm tooth.png",
+"source": "https://nethackwiki.com/wiki/Worm_tooth"
+},
+"wraith": {
+"color": "clr-white",
+"glyph": "W",
+"image": "editor/monsters/Wraith.png",
+"source": "https://nethackwiki.com/wiki/Wraith"
+},
+"wumpus": {
+"color": "clr-white",
+"glyph": "q",
+"image": "editor/monsters/Wumpus.png",
+"source": "https://nethackwiki.com/wiki/Wumpus"
+},
+"xan": {
+"color": "clr-white",
+"glyph": "x",
+"image": "editor/monsters/Xan.png",
+"source": "https://nethackwiki.com/wiki/Xan"
+},
+"xorn": {
+"color": "clr-white",
+"glyph": "X",
+"image": "editor/monsters/Xorn.png",
+"source": "https://nethackwiki.com/wiki/Xorn"
+},
+"ya": {
+"color": "clr-cyan",
+"glyph": ")",
+"image": "editor/items/ya.png",
+"source": "https://nethackwiki.com/wiki/Ya"
+},
+"yeenoghu": {
+"color": "clr-white",
+"glyph": "&",
+"image": "editor/monsters/Yeenoghu.png",
+"source": "https://nethackwiki.com/wiki/Yeenoghu"
+},
+"yellow_dragon": {
+"color": "clr-white",
+"glyph": "D",
+"image": "editor/monsters/Yellow dragon.png",
+"source": "https://nethackwiki.com/wiki/Yellow_dragon"
+},
+"yellow_light": {
+"color": "clr-white",
+"glyph": "y",
+"image": "editor/monsters/Yellow light.png",
+"source": "https://nethackwiki.com/wiki/Yellow_light"
+},
+"yellow_mold": {
+"color": "clr-white",
+"glyph": "F",
+"image": "editor/monsters/Yellow mold.png",
+"source": "https://nethackwiki.com/wiki/Yellow_mold"
+},
+"yeti": {
+"color": "clr-white",
+"glyph": "Y",
+"image": "editor/monsters/Yeti.png",
+"source": "https://nethackwiki.com/wiki/Yeti"
+},
+"yumi": {
+"color": "clr-brown",
+"glyph": ")",
+"image": "editor/items/yumi.png",
+"source": "https://nethackwiki.com/wiki/Yumi"
+},
+"zruty": {
+"color": "clr-white",
+"glyph": "z",
+"image": "editor/monsters/Zruty.png",
+"source": "https://nethackwiki.com/wiki/Zruty"
+}
+}

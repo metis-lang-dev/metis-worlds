@@ -171,3 +171,39 @@ def test_the_key_unlocks_the_door(tmp_path):
         assert h.done and h.won              # the level ends on the stairs: won
     finally:
         h.gym.close()
+
+
+def test_map_export_is_the_fixture():
+    """alf-demo step 3a: a level's first screen as web/map.js's grid — its glyphs and characters,
+    floor under what can move, the things named — is web/fixtures/'s, as written by map_export."""
+    import json
+    import map_export
+    pkg = os.path.join(ROOT, "domains", "room_medium_apple_newt_closed_none")
+    m = map_export.export(pkg)
+    assert (m["cols"], m["rows"]) == (8, 5) and m["agent"]["ch"] == "@"
+    assert {e["name"] for e in m["entities"]} == {"door (closed)", "newt", "apple"}
+    floor = {(c["t"], c["ch"]) for row in m["cells"] for c in row if c and c["ch"] == "."}
+    assert len(floor) == 1
+    for e in m["entities"] + [m["agent"]]:
+        if e is m["agent"] or e["kind"] in ("monster", "object"):
+            c = m["cells"][e["pos"][1]][e["pos"][0]]
+            assert (c["t"], c["ch"]) in floor, e
+    assert json.load(open(os.path.join(ROOT, "..", "web", "fixtures", "minihack_room_medium.json"))) == m, \
+        "web/fixtures/ is stale: rerun world/map_export.py"
+
+
+def test_tiles_export(tmp_path):
+    """alf-demo step 3a: MiniHack's tiles.pkl as a sprite sheet + the glyph → tile index, and the
+    committed sheet is what the exporter writes."""
+    import json
+    sys.path.insert(0, os.path.join(ROOT, "..", "tools"))
+    import tiles_export
+    n, g = tiles_export.glyph_sheet(str(tmp_path))
+    meta = json.load(open(tmp_path / "glyphs.json"))
+    assert (n, g) == (1082, 5976) and meta["size"] == 16 and meta["cols"] == 40
+    assert max(meta["glyph2tile"]) < n
+    head = (tmp_path / "glyphs.png").read_bytes()[:24]
+    assert head[:8] == b"\x89PNG\r\n\x1a\n" and int.from_bytes(head[16:20], "big") == 640 and int.from_bytes(head[20:24], "big") == 448
+    ref = os.path.join(ROOT, "..", "web", "assets", "nethack")
+    assert (tmp_path / "glyphs.png").read_bytes() == open(os.path.join(ref, "glyphs.png"), "rb").read()
+    assert meta == json.load(open(os.path.join(ref, "glyphs.json")))
