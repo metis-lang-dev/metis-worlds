@@ -399,13 +399,13 @@ def test_rule_names_map_by_their_first_token(package):
     pkg, _ = package
     h = AlfHost(pkg)
     try:
-        rec = next(a for a in sorted(h.static) if a.startswith("recat("))[6:-1].split(",")
-        r, loc = rec[0], rec[1]
+        o, r = next(a for a in sorted(h.dyn) if a.startswith("inrecep("))[8:-1].split(",")     # a real object in a real receptacle
+        loc = next(a for a in h.static if a.startswith("recat(%s," % r))[6:-1].split(",")[1]
         assert h.command_of("go_anywhere[R=%s]" % r, ()) == "go to " + h.name(r)                 # L2 from recat
         assert h.command_of("go_there[L2=%s,R=%s]" % (loc, r), ()) == "go to " + h.name(r)
         assert h.command_of("open_it_up[R=%s]" % r, ()) == "open " + h.name(r)
-        assert h.command_of("take_now[O=x,R=%s]" % r, ()) == "take x from " + h.name(r)
-        assert h.command_of("put_back[O=x,R=%s]" % r, ()) == "move x to " + h.name(r)
-        assert h.command_of("dance[O=x]", ()) is None
+        assert h.command_of("take_now[O=%s,R=%s]" % (o, r), ()) == "take %s from %s" % (h.name(o), h.name(r))
+        assert h.command_of("put_back[O=%s,R=%s]" % (o, r), ()) == "move %s to %s" % (h.name(o), h.name(r))
+        assert h.command_of("dance[O=%s]" % o, ()) is None
     finally:
         h.gym.close()
