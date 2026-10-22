@@ -15,9 +15,19 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import gen_hier  # noqa: E402
-from alf_host import AlfHost  # noqa: E402
+from alf_host import DYNAMIC_PREDS, AlfHost  # noqa: E402
 
 OUT = tuple(gen_hier.DIRECTOR_OUT)
+
+
+def own_tokens(domain, tokens, reading):
+    """The atoms D carries into its next activation: those it holds (a count > 0) that are neither
+    the world's (the reading, the dynamic predicates: the new instance reads them afresh) nor its
+    results (put out, the director's now) — the driver's tick tokens (alf_host.tick)."""
+    held = tokens.items() if isinstance(tokens, dict) else ((t, 1) for t in tokens)
+    out = set(gen_hier.SPECS[domain]["out"])
+    return sorted(a for a, n in held if a and n > 0 and a not in reading
+                  and a.split("(")[0] not in DYNAMIC_PREDS and a.split("(")[0] not in out)
 
 
 class DirectorHost:
@@ -86,7 +96,7 @@ class DirectorHost:
         finally:
             mirror.gym.close()
         self.k += 1
-        inits = [t for t in tokens if t] + ([goal] if goal else [])
+        inits = own_tokens(domain, tokens, reading) + ([goal] if goal else [])
         gen_hier.generate(self.meta["game_dir"], os.path.join(self.meta["root"], "domains", "hier"), domain, self.k, info, reading, inits,
                           self._log_commands(), intents=(domain == "task"), continues=True, fixed=True, commands_log=self.meta["commands_log"])
         return True

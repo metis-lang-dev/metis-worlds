@@ -129,6 +129,8 @@ class AlfHost:
         self.obs = out["obs"]
         self.won = bool(out.get("won"))
         self.done = bool(out.get("done")) or self.won
+        if self.won and self.continues:              # the agent's hierarchy: the game won is not the run's end — the planner
+            self.done = False                        # beats on to put out its own (done), the director ends the run
         self.changed = bool(out.get("changed", True))
 
     def reading(self):
