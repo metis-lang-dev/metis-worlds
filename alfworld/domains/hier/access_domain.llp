@@ -1,0 +1,34 @@
+% access_domain — opening things (alf-hierarchy step 1, the architect, 2026-10-22): the
+% receptacles that open as a specialist. Goal in: open(R); result out: accessible(R) when R
+% can be reached into (opened now, open already, or nothing to open), refused(R) when the agent
+% is not at R. The task domain never asks whether R opens: this domain answers either way.
+catalog access_domain 1.
+provenance text "ALFWorld receptacle access as a lifted specialist: open what is closed, answer at once for the rest" "2026-10-22".
+layers (dyn).
+stages (act).
+
+namespace access produce (dyn).
+
+bwd recat(receptacle, location).
+bwd openable(receptacle).
+bwd notopenable(receptacle).              % the complement, given by the instance
+
+pred at(location) : access.
+pred opened(receptacle) : access.
+pred closed(receptacle) : access.         % the complement for openable receptacles
+pred checked(receptacle) : access.
+pred open(receptacle) : access.           % the goal (in)
+pred accessible(receptacle) : access.     % the result (out)
+pred refused(receptacle) : access.        % the refusal (out): not here
+pred elsewhere(receptacle) : access.      % the refusal the director detours: I am not there
+
+stage act {
+  %% I open {R}.
+  open_closed [dyn] : open(R) * $at(L) * $recat(R, L) * $openable(R) * closed(R) -o opened(R) * checked(R) * accessible(R).
+  %% {R} is already open.
+  already_open [dyn] : open(R) * $at(L) * $recat(R, L) * $openable(R) * $opened(R) -o accessible(R).
+  %% {R} has nothing to open.
+  no_door [dyn] : open(R) * $at(L) * $recat(R, L) * $notopenable(R) -o accessible(R).
+  %% I am not at {R}.
+  not_here [dyn] : open(R) * $at(L) * $recat(R, L2) * L <> L2 -o elsewhere(R).
+}

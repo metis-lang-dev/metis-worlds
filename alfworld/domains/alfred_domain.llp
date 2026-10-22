@@ -1,0 +1,114 @@
+% alfred_domain — the household as the agent believes it (world-alfworld step 1, the
+% architect, 2026-10-21): ALFRED's PDDL actions as rules over ALFWorld's facts, LIFTED —
+% a generated instance (world/gen_instance.py) includes this file and adds the game's
+% types, its static facts as Horn facts, its task, and its start.
+%
+% Who acts. The program does (the nav pattern): a fired action rule is the command the
+% host sends to the game ("go to R", "take O from R", "put O in/on R", "open R", …), and
+% the game's facts after the step are the world's answer; observe() reads them back,
+% and the watch scores what the rules said against what the world did. A command the
+% game refuses ("Nothing happens.") leaves the facts as they were while the rule
+% produced its effect: a surprise — a precondition the rules do not know. That is the
+% learning signal (metis-agentic-loop docs/LEARNING.md).
+%
+% The policy is rules too: for a task (goal_put: an object of type T into a receptacle
+% of type RT, the pick_and_place_simple family) the rules choose the next action from
+% the state — one chosen object, go where it is, open its receptacle if closed, take it,
+% go to a target receptacle, open it if closed, put. No planner: a greedy, legible policy
+% whose gaps are what the loop learns.
+%
+% LL has no negation: the instance supplies the complements the rules need — closed(R)
+% for every openable receptacle not opened, notopenable(R) for the rest, handsfree.
+catalog alfred_domain 1.
+provenance text "ALFRED's household actions as the agent's beliefs, lifted over ALFWorld's PDDL facts; a greedy rule policy for pick-and-place" "2026-10-21".
+layers (dyn).
+stages (act).
+
+namespace alf produce (dyn).
+
+% ── the game's facts (the instance declares the types and gives the static ones) ──
+bwd recat(receptacle, location).          % the receptacle's location (static)
+bwd openable(receptacle).
+bwd notopenable(receptacle).              % the complement, given by the instance
+bwd rtype(receptacle, rtype).
+bwd otype(object, otype).
+bwd cancontain(rtype, otype).
+bwd pickupable(object).
+bwd cleanable(object).
+bwd heatable(object).
+bwd coolable(object).
+bwd toggleable(object).
+bwd sliceable(object).
+bwd recobj(object).
+bwd moveable(object).
+% the task (the instance's facts from the game's pddl_params, resolved to the game's things
+% by the generator so no rule carries a type variable: the grounding stays small)
+bwd target(object).                       % an object the task wants moved (of the target type, pickupable)
+bwd dest(receptacle).                     % a receptacle the task wants it in (of the parent type)
+
+% ── the dynamic facts: what the host reads back after every step ──
+pred at(location) : alf.                  % exactly one
+pred objat(object, location) : alf.
+pred inrecep(object, receptacle) : alf.
+pred opened(receptacle) : alf.
+pred closed(receptacle) : alf.            % the complement for openable receptacles
+pred holds(object) : alf.
+pred holding : alf.
+pred handsfree : alf.                     % the complement
+pred clean(object) : alf.
+pred hot(object) : alf.
+pred cool(object) : alf.
+pred on(object) : alf.
+pred toggled(object) : alf.
+pred sliced(object) : alf.
+pred checked(receptacle) : alf.
+pred examined(location) : alf.
+pred full(receptacle) : alf.
+pred inrecobj(object, object) : alf.
+pred recobjfull(object) : alf.
+pred wasin(object, receptacle) : alf.
+pred holdingrecobj : alf.
+
+% ── the policy's own tokens ──
+pred unchosen : alf.                      % no object chosen yet
+pred want(object) : alf.                  % the object the policy works on, while fetching it
+pred carrying : alf.                      % the policy holds its object: on the way to a destination
+pred arrived(receptacle) : alf.           % the destination the policy has reached: no more going (greedy, not wandering)
+pred seeking : alf.                       % not arrived yet (the complement)
+pred placed : alf.                        % the task's object is in its receptacle: done
+
+stage act {
+  % ── choosing ──
+  %% I'll take {O} for this.
+  choose [dyn] : unchosen * $target(O) -o want(O).
+
+  % ── going where the object is ──
+  %% I go to where {O} is.
+  go_obj [dyn] : want(O) * at(L) * $objat(O, L2) * L <> L2 * $handsfree -o want(O) * at(L2).
+
+  % ── opening the object's receptacle ──
+  %% I open {R}: {O} is inside.
+  open_obj [dyn] : want(O) * $at(L) * $recat(R, L) * $inrecep(O, R) * $openable(R) * closed(R) * $handsfree -o want(O) * opened(R) * checked(R).
+
+  % ── taking it ──
+  %% I take {O} from {R}.
+  take_open [dyn] : want(O) * $at(L) * $recat(R, L) * inrecep(O, R) * objat(O, L) * handsfree * $openable(R) * $opened(R) -o carrying * seeking * holds(O) * holding.
+  %% I take {O} from {R}.
+  take_plain [dyn] : want(O) * $at(L) * $recat(R, L) * inrecep(O, R) * objat(O, L) * handsfree * $notopenable(R) -o carrying * seeking * holds(O) * holding.
+
+  % ── going to the target receptacle ──
+  %% I carry {O} to {R}.
+  go_target [dyn] : carrying * seeking * at(L) * $dest(R) * $recat(R, L2) * L <> L2 -o carrying * arrived(R) * at(L2).
+  %% {R} is right here.
+  here_target [dyn] : carrying * seeking * $at(L) * $dest(R) * $recat(R, L) -o carrying * arrived(R).
+
+  % ── opening the target ──
+  %% I open {R} to put {O} in.
+  open_target [dyn] : carrying * $arrived(R) * $at(L) * $recat(R, L) * $openable(R) * closed(R) -o carrying * opened(R) * checked(R).
+
+  % ── putting it ──
+  %% I put {O} in {R}.
+  put_open [dyn] : carrying * arrived(R) * holds(O) * holding * $at(L) * $recat(R, L) * $openable(R) * $opened(R) -o inrecep(O, R) * objat(O, L) * handsfree * placed.
+  %% I put {O} on {R}.
+  put_plain [dyn] : carrying * arrived(R) * holds(O) * holding * $at(L) * $recat(R, L) * $notopenable(R) -o inrecep(O, R) * objat(O, L) * handsfree * placed.
+}

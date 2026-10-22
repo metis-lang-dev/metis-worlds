@@ -1,0 +1,39 @@
+% grasp_domain — taking things (alf-hierarchy step 1, the architect, 2026-10-22): picking an
+% object up as a specialist. Goal in: take(O); result out: taken(O), or refused(O) when the agent
+% is elsewhere, the receptacle is shut, or the hands are full (each with its reason line).
+catalog grasp_domain 1.
+provenance text "ALFWorld pick-up as a lifted specialist: take an object from where it is" "2026-10-22".
+layers (dyn).
+stages (act).
+
+namespace grasp produce (dyn).
+
+bwd recat(receptacle, location).
+bwd openable(receptacle).
+bwd notopenable(receptacle).
+
+pred at(location) : grasp.
+pred objat(object, location) : grasp.
+pred inrecep(object, receptacle) : grasp.
+pred opened(receptacle) : grasp.
+pred closed(receptacle) : grasp.
+pred holds(object) : grasp.
+pred holding : grasp.
+pred handsfree : grasp.
+pred take(object) : grasp.                % the goal (in)
+pred taken(object) : grasp.               % the result (out)
+pred refused(object) : grasp.             % the refusal (out)
+pred elsewhere(receptacle) : grasp.      % the refusal the director detours: I am not there
+
+stage act {
+  %% I take {O} from {R}.
+  take_open [dyn] : take(O) * $at(L) * $recat(R, L) * inrecep(O, R) * objat(O, L) * handsfree * $openable(R) * $opened(R) -o holds(O) * holding * taken(O).
+  %% I take {O} from {R}.
+  take_plain [dyn] : take(O) * $at(L) * $recat(R, L) * inrecep(O, R) * objat(O, L) * handsfree * $notopenable(R) -o holds(O) * holding * taken(O).
+  %% I am not where {O} is.
+  not_here [dyn] : take(O) * $at(L) * $inrecep(O, R) * $recat(R, L2) * L <> L2 -o elsewhere(R).
+  %% {R} is shut: I cannot reach {O}.
+  shut [dyn] : take(O) * $at(L) * $recat(R, L) * $inrecep(O, R) * $closed(R) -o refused(O).
+  %% My hands are full.
+  hands_full [dyn] : take(O) * $at(L) * $objat(O, L) * $holding -o refused(O).
+}
