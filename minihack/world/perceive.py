@@ -13,12 +13,15 @@ beside for the record.
 import re
 import numpy as np
 from nle import nethack
+# NetHack 3.6 cmap indices (rm.h; nle does not export the S_* names): doorway, open v/h door, closed v/h door
+S_NDOOR, DOORS_OPEN, DOORS_CLOSED = 12, {13, 14}, {15, 16}
+
 
 HUNGER = {0: "satiated", 1: "normal", 2: "hungry", 3: "weak", 4: "fainting", 5: "fainted", 6: "starved"}
 
 MESSAGES = [
     (r"solid stone", "blocked"), (r"you see here (an? |the )?(.+?)\.", "see_here"), (r"there is (an? )?(open|closed|broken) door", "door_here"),
-    (r"the door is closed", "door_closed"), (r"the door opens", "door_opened"), (r"this door is locked", "door_locked"),
+    (r"the door is closed", "door_closed"), (r"the door opens", "door_opened"), (r"this door is locked", "door_locked"), (r"you succeed in unlocking", "unlocked"), (r"you don't have anything to use", "nothing_to_apply"),
     (r"you kill (the )?(.+?)!", "killed"), (r"you (hit|miss) (the )?(.+?)[.!]", "hit"), (r"(bites|hits|kicks|stings)!?", "hurt"),
     (r"you fall into a pit", "fell_pit"), (r"a trap door opens", "trap_door"), (r"you (eat|finish eating)", "ate"),
     (r"(\w) - (.+?)\.", "picked"), (r"there is nothing here to pick up", "nothing_here"), (r"you can.?t (go|move) ", "cant"),
@@ -34,10 +37,16 @@ def cell(x, y):
 class Perceiver:
     """Fixed per level: the map's bounding box on the screen (so cells are level coordinates)."""
 
-    def __init__(self, chars):
+    def __init__(self, chars, size=None):
+        """The level's bounding box: its top-left from the first screen (the agent's lit room
+        starts at the map's edge), its size from the des MAP when the gym knows it — a room
+        behind a closed door is not on the first screen (M2), so the screen cannot say."""
         ys, xs = np.where(chars != 32)
         self.y0, self.x0 = int(ys.min()), int(xs.min())
         self.h, self.w = int(ys.max() - ys.min() + 1), int(xs.max() - xs.min() + 1)
+        if size:
+            self.w, self.h = max(self.w, int(size[0])), max(self.h, int(size[1]))
+        self.h, self.w = min(self.h, chars.shape[0] - self.y0), min(self.w, chars.shape[1] - self.x0)   # never past the screen
         self.seen_traps = {}
 
     def cells(self):
@@ -67,6 +76,12 @@ class Perceiver:
                     atoms.add("trap(%s,%s)" % (kind, C)); atoms.add("floor(%s)" % C)
                 elif ch in ".":
                     atoms.add("floor(%s)" % C)
+                elif nethack.glyph_is_cmap(gl) and gl - nethack.GLYPH_CMAP_OFF in DOORS_OPEN:
+                    atoms.add("door(%s,open)" % C)       # an open door draws as - or |, like a wall
+                elif nethack.glyph_is_cmap(gl) and gl - nethack.GLYPH_CMAP_OFF in DOORS_CLOSED:
+                    atoms.add("door(%s,closed)" % C)
+                elif nethack.glyph_is_cmap(gl) and gl - nethack.GLYPH_CMAP_OFF == S_NDOOR:
+                    atoms.add("floor(%s)" % C)           # a doorway (broken or empty)
                 elif ch in "-|":
                     atoms.add("wall(%s)" % C)
                 elif ch == "+":

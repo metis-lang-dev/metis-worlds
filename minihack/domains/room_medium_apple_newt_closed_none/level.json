@@ -1,5 +1,5 @@
 {
- "des": "\nMAZE: \"mylevel\", ' '\nFLAGS:hardfloor\nINIT_MAP: solidfill,' '\nGEOMETRY:center,center\nMAP\n.......\n.......\n.......\n.......\n.......\nENDMAP\nREGION:(0,0,7,5),lit,\"ordinary\"\nSTAIR:(1, 3),down\nOBJECT:('%',\"apple\"),(0, 4)\nMONSTER:\"newt\",(3, 1)\nDOOR:closed,(5, 0)\n",
+ "des": "\nMAZE: \"mylevel\", ' '\nFLAGS:hardfloor\nINIT_MAP: solidfill,' '\nGEOMETRY:center,center\nMAP\n...|....\n...+....\n...|....\n...|....\n...|....\nENDMAP\nREGION:(0,0,8,5),lit,\"ordinary\"\nDOOR:closed,(3, 1)\nBRANCH:(0,0,2,4),(0,0,0,0)\nSTAIR:(4, 0),down\nOBJECT:('%',\"apple\"),(1, 4)\nMONSTER:\"newt\",(2, 3)\n",
  "actions": [
   "N",
   "E",
@@ -36,6 +36,7 @@
   "c4_0",
   "c5_0",
   "c6_0",
+  "c7_0",
   "c0_1",
   "c1_1",
   "c2_1",
@@ -43,6 +44,7 @@
   "c4_1",
   "c5_1",
   "c6_1",
+  "c7_1",
   "c0_2",
   "c1_2",
   "c2_2",
@@ -50,6 +52,7 @@
   "c4_2",
   "c5_2",
   "c6_2",
+  "c7_2",
   "c0_3",
   "c1_3",
   "c2_3",
@@ -57,16 +60,18 @@
   "c4_3",
   "c5_3",
   "c6_3",
+  "c7_3",
   "c0_4",
   "c1_4",
   "c2_4",
   "c3_4",
   "c4_4",
   "c5_4",
-  "c6_4"
+  "c6_4",
+  "c7_4"
  ],
  "size": [
-  7,
+  8,
   5
  ]
 }

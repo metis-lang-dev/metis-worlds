@@ -18,7 +18,7 @@ verbs:
   - {verb: SEARCH, meaning: "search for hidden things around you"}
   - {verb: DOWN, meaning: "go down the stairs you stand on"}
   - {verb: WAIT, meaning: "wait one turn"}
-  - {verb: APPLY, meaning: "use a tool you carry (a key)"}
+  - {verb: APPLY, meaning: "use the key you carry on the door in a direction"}
   - {verb: UNKNOWN, meaning: "anything else"}
 
 slots:
@@ -44,7 +44,8 @@ examples:
   - ["go down the stairs", {"intent":"DOWN"}]
   - ["descend", {"intent":"DOWN"}]
   - ["wait", {"intent":"WAIT"}]
-  - ["use the key", {"intent":"APPLY"}]
+  - ["use the key on the door to the east", {"intent":"APPLY","direction":"E"}]
+  - ["unlock the door north", {"intent":"APPLY","direction":"N"}]
   - ["what time is it", {"intent":"UNKNOWN"}]
 
 spoken:
@@ -65,7 +66,7 @@ map:
   - {verb: SEARCH, atom: cmd_search, act: search}
   - {verb: DOWN, atom: cmd_down, act: down}
   - {verb: WAIT, atom: cmd_wait, act: wait}
-  - {verb: APPLY, atom: cmd_apply, act: apply}
+  - {verb: APPLY, atom: "cmd_apply({direction:dir})", act: apply}
   - {verb: UNKNOWN, atom: cmd_unknown, act: unknown}
 values:
   dir: {N: n, S: s, E: e, W: w, NE: ne, NW: nw, SE: se, SW: sw}

@@ -19,6 +19,15 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 
 
+def map_size(des):
+    """The MAP block's width and height, so the perceiver's grid covers rooms not yet seen."""
+    lines = des.split("\n")
+    if "MAP" not in lines:
+        return None
+    rows = lines[lines.index("MAP") + 1:lines.index("ENDMAP")]
+    return (max(len(r) for r in rows), len(rows))
+
+
 class World:
     def __init__(self):
         self.env, self.p, self.names = None, None, []
@@ -31,14 +40,20 @@ class World:
         kw = {"observation_keys": keys, "max_episode_steps": int(max_steps)}
         if actions:
             table = {m.name: m for m in list(nethack.CompassDirection) + list(nethack.Command) + list(nethack.MiscDirection) + list(nethack.MiscAction)}
-            kw["actions"] = tuple(table[a] for a in actions)
+            acts = [table[a] for a in actions]
+            by_code = {int(a): a for a in nethack.ACTIONS}
+            for c in "abcdefghijklmnopqrstuvwxyz":        # inventory letters and y/n answers, sent by key code
+                if ord(c) not in {int(a) for a in acts}:
+                    acts.append(by_code[ord(c)])
+            kw["actions"] = tuple(acts)
         if des:
             self.env = gym.make("MiniHack-Skill-Custom-v0", des_file=des, **kw)
         else:
             self.env = gym.make(env_id, **kw)
         self.names = [getattr(a, "name", str(a)) for a in self.env.unwrapped.actions]
+        self.codes = [int(a) for a in self.env.unwrapped.actions]
         obs, info = self._reset(seed)
-        self.p = Perceiver(obs["chars"])
+        self.p = Perceiver(obs["chars"], size=map_size(des) if des else None)
         per = self.p.perceive(obs)
         return {"cells": self.p.cells(), "size": [self.p.w, self.p.h], "actions": self.names, "init": per}
 
@@ -60,13 +75,31 @@ class World:
         out.update({"done": False, "won": False, "reward": 0.0})
         return out
 
-    def step(self, action):
-        i = self.names.index(action)
+    def _step(self, i):
         obs, r, term, trunc, info = self.env.step(i)
         out = self.p.perceive(obs)
         won = bool(term and r > 0)
         out.update({"reward": float(r), "done": bool(term or trunc), "won": won, "end_status": str(info.get("end_status", ""))})
         return out
+
+    def step(self, action):
+        """An action name; `KEY:c` sends the key c (an inventory letter, y/n); `UNLOCK:DIR` is the
+        macro NetHack's apply needs (M3): APPLY, the skeleton key's letter, the direction, y."""
+        if action.startswith("KEY:"):
+            return self._step(self.codes.index(ord(action[4:5])))
+        if action.startswith("UNLOCK:"):
+            out = self._step(self.names.index("APPLY"))
+            letter = self.env.unwrapped.key_in_inventory("key")   # unidentified, the inventory says "key"
+            if letter is None or out["done"]:                # "You don't have anything to use or apply."
+                return out
+            out = self._step(self.codes.index(ord(letter)))   # "In what direction?"
+            if out["done"]:
+                return out
+            out = self._step(self.names.index(action[7:]))    # "Unlock it? [yn]"
+            if out["done"]:
+                return out
+            return self._step(self.codes.index(ord("y")))
+        return self._step(self.names.index(action))
 
 
 def main():

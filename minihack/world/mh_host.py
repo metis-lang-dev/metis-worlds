@@ -27,7 +27,7 @@ COMMANDS = {
     "cmd_open": ("dir",),
     "cmd_kick": ("dir",),
     "cmd_search": (),
-    "cmd_apply": (),
+    "cmd_apply": ("dir",),           # cmd_apply(D): the key on the door in direction D (the gym's UNLOCK macro)
 }
 DIRS = {"n": "N", "e": "E", "s": "S", "w": "W", "ne": "NE", "se": "SE", "sw": "SW", "nw": "NW"}
 ACTIONS = ["N", "E", "S", "W", "NE", "SE", "SW", "NW", "PICKUP", "EAT", "DOWN", "WAIT", "OPEN", "KICK", "APPLY", "SEARCH", "MORE", "ESC"]
@@ -155,6 +155,8 @@ class MhHost:
                 return None
             if base == "cmd_move":
                 return [d]
+            if base == "cmd_apply":
+                return ["UNLOCK:" + d]                   # APPLY, the key's letter, the direction, y (mh_gym)
             return [base[4:].upper(), d]                 # OPEN then the direction
         return {"cmd_pickup": ["PICKUP"], "cmd_eat": ["EAT"], "cmd_down": ["DOWN"], "cmd_wait": ["WAIT"],
                 "cmd_search": ["SEARCH"], "cmd_apply": ["APPLY"]}.get(base)

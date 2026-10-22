@@ -13,6 +13,8 @@ import random
 
 SIZES = {"small": (5, 5), "medium": (7, 5), "large": (9, 7)}
 ITEMS = ["none", "apple", "key"]
+ITEM_NAMES = {"apple": "apple", "key": "skeleton key"}          # the variant word -> NetHack's object name (M1: no "key")
+MONSTER_NAMES = {"newt": "newt", "rat": "sewer rat", "jackal": "jackal"}   # … and monster name (no "rat" either)
 MONSTERS = ["none", "newt", "rat", "jackal"]
 DOORS = ["none", "closed"]
 TRAPS = ["none", "pit"]
@@ -39,24 +41,38 @@ def split(family="room", which="discovery"):
 
 
 def des_of(variant, seed=1):
+    """The room, w×h floor. With a door (M2): a wall column splits it, the door sits in the
+    wall, the stairs are BEHIND the wall and the agent starts in front of it — `locked` when
+    the variant has the key (the key opens it; KICK breaks it), `closed` otherwise (OPEN).
+    The key is NetHack's "skeleton key" (M1: there is no object called "key")."""
     from minihack import LevelGenerator
     size, item, monster, door, trap = variant
     w, h = SIZES[size]
     rng = random.Random(seed)
-    lvl = LevelGenerator(w=w, h=h, lit=True)
-    cells = [(x, y) for x in range(w) for y in range(h)]
-    rng.shuffle(cells)
-    take = lambda: cells.pop()
-    lvl.add_stair_down(place=take())
+    if door == "none":
+        lvl = LevelGenerator(w=w, h=h, lit=True)
+        front = [(x, y) for x in range(w) for y in range(h)]
+        back = front
+    else:
+        wx, dy = w // 2, rng.randrange(h)
+        rows = []
+        for y in range(h):
+            rows.append("." * wx + ("+" if y == dy else "|") + "." * (w - wx))
+        lvl = LevelGenerator(map="\n".join(rows) + "\n", lit=True)
+        front = [(x, y) for x in range(wx) for y in range(h)]
+        back = [(x, y) for x in range(wx + 1, w + 1) for y in range(h)]
+        lvl.add_door("locked" if item == "key" else "closed", place=(wx, dy))
+        lvl.set_start_rect((0, 0), (wx - 1, h - 1))
+    rng.shuffle(front)
+    rng.shuffle(back)
+    take = front.pop
+    lvl.add_stair_down(place=back.pop())
     if item != "none":
-        lvl.add_object(item, "%" if item == "apple" else "(", place=take())
+        lvl.add_object(ITEM_NAMES[item], "%" if item == "apple" else "(", place=take())
     if monster != "none":
-        lvl.add_monster(monster, place=take())
+        lvl.add_monster(MONSTER_NAMES[monster], place=take())
     if trap != "none":
         lvl.add_trap(trap, place=take())
-    if door != "none":
-        x = rng.randrange(1, w - 1)
-        lvl.add_door("closed", place=(x, 0))
     return lvl.get_des()
 
 

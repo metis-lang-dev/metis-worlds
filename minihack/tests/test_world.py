@@ -26,10 +26,10 @@ def test_perception_of_a_level():
     w = World()
     info = w.open(des=lv["des"], actions=ACTIONS, max_steps=20, seed=1)
     atoms = set(info["init"]["atoms"])
-    assert info["size"] == [7, 5] and len(info["cells"]) == 35
+    assert info["size"] == [8, 5] and len(info["cells"]) == 40     # 7 floor columns + the wall with the door (M2)
     assert any(a.startswith("agent_at(") for a in atoms) and any(a.startswith("obj(apple,") for a in atoms)
     assert any(a.startswith("monster(newt,") for a in atoms) and any(a.startswith("door(") for a in atoms)
-    assert any(a.startswith("stairs_down(") for a in atoms) and "hunger(normal)" in atoms
+    assert not any(a.startswith("stairs_down(") for a in atoms) and "hunger(normal)" in atoms   # behind the door (M2)
     s = w.step("WAIT")
     assert "atoms" in s and not s["done"]
 
@@ -77,3 +77,92 @@ def test_package_compiles(package):
     llp = next(f for f in os.listdir(package) if f.endswith(".llp"))
     out = subprocess.run([os.environ["METISC"], "--diagnostics-json", os.path.join(package, llp)], capture_output=True, text=True, timeout=120)
     assert out.returncode == 0 and "error" not in out.stdout.lower(), out.stdout[-400:] + out.stderr[-200:]
+
+
+def _xy(atom):
+    import re
+    m = re.search(r"\bc(\d+)_(\d+)\b", atom)
+    return (int(m.group(1)), int(m.group(2)))
+
+
+def _path(reading, src, dst):
+    """A BFS over the perceived walkable cells (floor, doors, stairs), 8-connected; the moves."""
+    walk = {_xy(a) for a in reading if a.split("(")[0] in ("floor", "door", "stairs_down", "agent_at", "obj", "monster", "trap")}
+    walk.add(dst)
+    steps = {(0, -1): "n", (0, 1): "s", (1, 0): "e", (-1, 0): "w", (1, -1): "ne", (-1, -1): "nw", (1, 1): "se", (-1, 1): "sw"}
+    prev, todo = {src: None}, [src]
+    while todo:
+        cur = todo.pop(0)
+        if cur == dst:
+            break
+        for (dx, dy), d in steps.items():
+            nxt = (cur[0] + dx, cur[1] + dy)
+            if nxt in walk and nxt not in prev:
+                prev[nxt] = (cur, d)
+                todo.append(nxt)
+    assert dst in prev, "no path %s -> %s" % (src, dst)
+    moves, cur = [], dst
+    while prev[cur]:
+        cur, d = prev[cur]
+        moves.append(d)
+    return moves[::-1]
+
+
+def _walk(h, dst):
+    at = _xy(next(a for a in h.reading() if a.startswith("agent_at(")))
+    for d in _path(h.reading(), at, dst):
+        h.on_event("cmd_move[D=%s]" % d, ())
+        if h.done:                       # the skill level ends on the stairs
+            return dst
+    return _xy(next(a for a in h.reading() if a.startswith("agent_at(")))
+
+
+def test_every_variant_opens_as_its_level():
+    """M1: every des compiles and the level has the stairs (a bad des makes NLE fall back to a
+    3x3 room without them); with a door the stairs are behind the wall (M2)."""
+    from mh_gym import World
+    from levels import all_variants, des_of, level
+    bad = []
+    for v in all_variants():
+        w = World()
+        try:
+            info = w.open(des=des_of(v), actions=level(v)["actions"], max_steps=10, seed=1)
+            atoms = set(info["init"]["atoms"])
+            stairs = any(a.startswith("stairs_down(") for a in atoms)
+            if v[3] != "none":   # the stairs are behind the wall: a door is seen, the stairs are not
+                ok = any(a.startswith("door(") for a in atoms) and not stairs
+            else:
+                ok = stairs and info["size"][0] >= 4
+            if v[1] == "key":
+                ok = ok and any(a.startswith("obj(skeleton_key,") for a in atoms)
+            if not ok:
+                bad.append(v)
+        finally:
+            w.env.close()
+    assert not bad, bad
+
+
+def test_the_key_unlocks_the_door(tmp_path):
+    """M3: a key variant: pick the skeleton key up, UNLOCK the locked door (APPLY, the letter,
+    the direction, y), OPEN it, walk through to the stairs, DOWN: won."""
+    v = ("small", "key", "none", "closed", "none")
+    pkg, _ = gen_level.generate(v, 1, str(tmp_path))
+    h = MhHost(pkg)
+    try:
+        r = h.reading()
+        key = _xy(next(a for a in r if a.startswith("obj(skeleton_key,")))
+        assert _walk(h, key) == key
+        h.on_event("cmd_pickup", ())
+        assert "holds(key)" in h.reading()          # on the floor it is the skeleton_key glyph; carried, "a key"
+        door = _xy(next(a for a in h.reading() if a.startswith("door(")))
+        front = (door[0] - 1, door[1])
+        assert _walk(h, front) == front
+        h.on_event("cmd_apply[D=e]", ())
+        assert any("unlock" in e for e in h.pending_events), h.pending_events
+        h.on_event("cmd_open[D=e]", ())
+        assert any(a == "door(c%d_%d,open)" % door for a in h.reading()), [a for a in h.reading() if a.startswith("door(")]
+        stairs = _xy(next(a for a in h.reading() if a.startswith("stairs_down(")))   # seen once the door is open
+        assert _walk(h, stairs) == stairs
+        assert h.done and h.won              # the level ends on the stairs: won
+    finally:
+        h.gym.close()
