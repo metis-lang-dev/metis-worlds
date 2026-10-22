@@ -10,7 +10,7 @@ the typed J's atom (default: the map's task goal), so a person's other goal
 the one before:
   {ev: world/map, url}                                the map (relative to this file)
   {ev: journal, rec: {kind: dlg-wake, what: person, person}}       the words
-  {ev: journal, rec: {kind: dlg-dispatch, domain: task, j}}         the typed intent
+  {ev: journal, rec: {kind: dlg-dispatch, cid, domain: task, j}}    the typed intent (j: its JSON, as the wire has it)
   {ev: world/hierarchy, beat, arrival, effects, state}  the director's beat: its state atoms
                                                         (active/inactive, attention, sent,
                                                         pending) and its effects
@@ -113,8 +113,9 @@ def record(game_dir, map_path, out_path, words, goal):
     o, rr = goal[goal.index("(") + 1:-1].split(",")
     frames = [{"ev": "world/map", "url": os.path.relpath(os.path.abspath(map_path), os.path.dirname(os.path.abspath(out_path)))},
               {"ev": "journal", "rec": {"kind": "dlg-wake", "what": "person", "person": words}},
-              {"ev": "journal", "rec": {"kind": "dlg-dispatch", "domain": "task",
-                                        "j": {"intent": "FETCH", "object": o.upper(), "receptacle": rr.upper()}}}]
+              {"ev": "journal", "rec": {"kind": "dlg-dispatch", "cid": "c1", "domain": "task",     # the wire's: j a JSON string
+                                        "j": json.dumps({"intent": "FETCH", "object": o.upper(), "receptacle": rr.upper()},
+                                                        separators=(",", ":"))}}]
     # the world, replayed command by command on a fresh host: the deltas
     flat, _, _ = gen_instance.generate(game_dir, os.path.join(work, "flat"))
     host = AlfHost(os.path.dirname(flat))

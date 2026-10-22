@@ -56,6 +56,9 @@ try {
   c.ok(end.said.some(s => s.includes('Tomato 1 is in microwave 1: done.')) && end.said.some(s => s.includes('I open microwave 1.')),
     'every result\'s own line spoken in the band', end.said.slice(-4));
   c.ok(end.journal.includes('activate nav') && end.journal.includes('deactivate place'), 'the journal has the activations', null);
+  const rows = await ev(`[...document.querySelectorAll('#jlog li')].map(l => l.textContent.replace(/\\s+/g, ' ').trim())`);
+  c.ok(rows.includes('· → c1 FETCH object=TOMATO1 receptacle=MICROWAVE1') && !rows.some(r => /undefined|\[object Object\]/.test(r)),
+    'the journal shows the typed intent as its name and args, nothing undefined', rows.slice(0, 3));
 
   // 6. the hierarchy's task row opens the task card: the words, the goal, the chain, the lines
   await page.mouse('#hlist li[data-domain="task"]');

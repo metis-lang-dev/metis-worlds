@@ -1,6 +1,6 @@
 {"ev": "world/map", "url": "alfworld_tomato_microwave_13.json", "dt": 0}
 {"ev": "journal", "rec": {"kind": "dlg-wake", "what": "person", "person": "put a tomato in the microwave"}, "dt": 400}
-{"ev": "journal", "rec": {"kind": "dlg-dispatch", "domain": "task", "j": {"intent": "FETCH", "object": "TOMATO1", "receptacle": "MICROWAVE1"}}, "dt": 400}
+{"ev": "journal", "rec": {"kind": "dlg-dispatch", "cid": "c1", "domain": "task", "j": "{\"intent\":\"FETCH\",\"object\":\"TOMATO1\",\"receptacle\":\"MICROWAVE1\"}"}, "dt": 400}
 {"ev": "world/hierarchy", "beat": 0, "arrival": "seen(fetch)", "effects": ["forward(task,fetch)"], "state": ["active(task)", "attention(task)", "fresh", "inactive(access)", "inactive(grasp)", "inactive(nav)", "inactive(place)"], "dt": 400}
 {"ev": "journal", "rec": {"kind": "dlg-trace", "domain": "task", "beat": 0, "fired": ["fetch[O=tomato1,R=microwave1]", "go_for[O=tomato1,R=countertop3]"]}, "dt": 400}
 {"ev": "world/delta", "task": {"chain": [], "results": ["Tomato 1 is in countertop 3: I go there."]}, "dt": 400}
