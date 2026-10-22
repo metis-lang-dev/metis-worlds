@@ -187,6 +187,86 @@ class MhHost:
     def world(self, lines):
         raise ValueError("world lines: the level is the world; set a scenario by choosing another level or seed")
 
+    # ── metis-agent's actor (world-minihack step 2a: act without a rule) ──
+    def act(self, atom):
+        """A command atom no rule took (`cmd_move(n)`, `cmd_pickup`), the package's manifest saying
+        actor: {...}: the world's action, as a rule named after the command would send it (action_of:
+        `cmd_move[D=n]`). → {acted, action, message, events, reward, done, won}: acted false when the
+        world did not take it (no such action, or nothing in the perception changed: a wall, nothing
+        to pick up, no stairs to go down; a wait or a search changes nothing by design)."""
+        pred, _, rest = atom.partition("(")
+        args = [x.strip() for x in rest.rstrip(")").split(",") if x.strip()] if rest else []
+        name = pred + ("[D=%s]" % args[0] if args else "")
+        acts = self.action_of(name, ())
+        if not acts:
+            return {"acted": False, "action": None, "message": "no action for %s" % atom, "events": [], "reward": 0.0,
+                    "done": self.done, "won": self.won}
+        before = {a for a in self.atoms if a.split("(")[0] not in ("turn", "hunger", "hp")}
+        self.on_event(name, ())
+        after = {a for a in self.atoms if a.split("(")[0] not in ("turn", "hunger", "hp")}
+        # refused: nothing in the perception changed, nothing won, and the action was not one that changes nothing by
+        # design (WAIT, SEARCH). NLE keeps a repeated message on the line, so the message alone cannot say it twice
+        acted = after != before or self.done or self.reward > 0 or acts[0] in ("WAIT", "SEARCH")
+        return {"acted": acted, "action": acts, "message": self.message, "events": list(self.events), "reward": self.reward,
+                "done": self.done, "won": self.won}
+
+    STEPS = {(0, -1): "north", (0, 1): "south", (1, 0): "east", (-1, 0): "west",
+             (1, -1): "northeast", (-1, -1): "northwest", (1, 1): "southeast", (-1, 1): "southwest"}
+
+    def describe(self):
+        """The perception in words, for metis-agent's actor: from the atoms only (never NLE's screen
+        or the des): where each perceived thing is from the agent, what is on the eight cells around
+        it, what it holds, its state, and the last message's events."""
+        xy = lambda c: tuple(int(v) for v in c[1:].split("_"))
+        args = lambda a: a[a.index("(") + 1:-1].split(",")
+        at = next((xy(args(a)[0]) for a in self.atoms if a.startswith("agent_at(")), None)
+        if at is None:
+            return "You do not see yourself on the map."
+
+        def where(c):
+            x, y = xy(c)
+            dx, dy = x - at[0], y - at[1]
+            if (dx, dy) == (0, 0):
+                return "here, on your cell"
+            parts = ([("%d %s" % (abs(dy), "north" if dy < 0 else "south"))] if dy else []) + \
+                    ([("%d %s" % (abs(dx), "west" if dx < 0 else "east"))] if dx else [])
+            return " and ".join(parts) + " of you"
+        things = []
+        for a in sorted(self.atoms):
+            pred = a.split("(")[0]
+            if pred in ("obj", "monster", "trap"):
+                n, c = args(a)
+                w = n.replace("_", " ")
+                art = "a trap:" if pred == "trap" else ("an" if w[:1] in "aeiou" else "a")
+                things.append("%s %s (%s) is %s" % (art, w, pred if pred != "obj" else "item", where(c)))
+            elif pred in ("stairs_down", "stairs_up"):
+                things.append("the %s is %s" % (pred.replace("_", " "), where(args(a)[0])))
+            elif pred == "door":
+                c, s = args(a)
+                things.append("a %s door is %s" % (s, where(c)))
+        around = []
+        cells = {}
+        for a in self.atoms:
+            pred = a.split("(")[0]
+            if pred in ("wall", "floor", "door", "stairs_down", "corridor"):
+                cells.setdefault(args(a)[0], pred)
+        for (dx, dy), word in self.STEPS.items():
+            c = "c%d_%d" % (at[0] + dx, at[1] + dy)
+            kind = cells.get(c)
+            if kind is None:
+                kind = "nothing you can see"
+            elif kind == "floor" and any(a.startswith(("monster(", "obj(")) and a.endswith("," + c + ")") for a in self.atoms):
+                kind = next(a.split("(")[1].split(",")[0].replace("_", " ") for a in self.atoms
+                            if a.startswith(("monster(", "obj(")) and a.endswith("," + c + ")"))
+            around.append("%s: %s" % (word, kind))
+        held = sorted(args(a)[0].replace("_", " ") for a in self.atoms if a.startswith("holds("))
+        state = [a for a in self.atoms if a.split("(")[0] in ("hp", "hunger")]
+        said = [e[5:-1] if e.startswith("said(") else e for e in self.events]
+        return ("You see: " + ("; ".join(things) if things else "nothing but the room") + ".\n"
+                "Around you: " + ", ".join(around) + ".\n"
+                "You carry: " + (", ".join(held) if held else "nothing") + ". " + " ".join(sorted(state)) + "\n"
+                "Last turn: " + (", ".join(said) if said else "nothing happened") + ".")
+
     def ports(self):
         return {"level": {"size": self.gym.info["size"], "seed": self.seed, "step": self.t, "done": self.done, "won": self.won},
                 "observed": sorted(PERCEIVED), "events": sorted({k for _, k in __import__("perceive").MESSAGES}),

@@ -54,3 +54,70 @@ agent acting from the card, the "act without a rule" mode, the records, the extr
 (`take` + formalize over the records as prose) into a lifted base for the family, the
 experimental gate on the held-out variants, the metrics. Step 3 (the architect): the
 measured runs and the comparison with ALFWorld's approach for the agent paper.
+
+
+## §2a — the small agent in the level (nina, 2026-10-22; world-minihack step 2a)
+
+Gemma E2B (local, 0 USD) acting from the card through metis-agent's domain agent: **act without a rule**.
+- **The manifest key:** `actor: {max_steps: 40, task: "find the stairs down and go down them"}`.
+- **The act:** the host's `act(atom)` runs a command no rule took.
+- **What the model is given:** the host's `describe()` of its perception atoms, the task line, and the last action with whether the world took it. Never the des, never the screen.
+- **The run:** the discovery split, all 75 variants, each once (seed 1), unattended, with a 40-step cap: `experiments/agent_run.py run`, 648 s.
+- **The journals:** `experiments/records/agent-2a-s1/` (gitignored), one plain JSONL per episode (README, "The journals").
+
+| measure | value |
+|---|---|
+| episodes | 75 |
+| won | **10** (13%) |
+| ends | cap 57, done 8, won 10 |
+| mean steps | 32.8 |
+| refusals per episode | 27.2 (the world did not take the command: nothing in the perception changed) |
+| intents typed | DOWN 2023, SEARCH 364, MOVE 71 |
+| cost | 0 |
+
+**Win rate per feature** (won / episodes):
+
+| feature | values |
+|---|---|
+| size | large 2/25 · medium 4/25 · small 4/25 |
+| item | apple 6/30 · key 2/15 · none 2/30 |
+| monster | jackal 1/15 · newt 1/15 · none 6/30 · rat 2/15 |
+| door | closed 0/30 · none 10/45 |
+| trap | none 8/60 · pit 2/15 |
+
+**The kinds of surprise** (`agent_run.py report`, one record per kind and episode: what step 2b's extraction must turn into rules):
+
+| kind | episodes | what it is | first |
+|---|---|---|---|
+| `repeats_a_refused_command` | 50 | the same command, refused three times in a row (DOWN off the stairs, a move into a wall) | room_large_apple_jackal_closed_none, step 3 |
+| `never_opens_the_door` | 30 | a door variant lost with no OPEN / KICK / APPLY typed at all | room_large_apple_jackal_closed_none, step 1 |
+| `walks_into_a_monster` | 4 | a move after which the world says it hit, or was hurt | room_large_apple_newt_closed_none, step 15 |
+| `killed_while_a_monster_bites` | 8 | the world ends the episode, the hp falling while a monster is in sight; the agent neither moves away nor fights | room_large_apple_newt_closed_none, step 26 |
+| `never_picks_up_the_key` | 15 | a key variant with the key never held | room_large_key_jackal_none_none, step None |
+| `falls_into_the_pit` | 1 | a move into the pit (said(fell_pit)) | room_medium_key_none_none_pit, step 4 |
+
+**One named surprise per failing feature value** (14 of 14; the feature's own kind where an episode shows it):
+
+- `size=large`: `repeats_a_refused_command` in room_large_apple_jackal_closed_none, step 3
+- `size=medium`: `killed_while_a_monster_bites` in room_medium_apple_jackal_closed_none, step 13
+- `size=small`: `repeats_a_refused_command` in room_small_apple_jackal_closed_none, step 3
+- `item=apple`: `repeats_a_refused_command` in room_large_apple_jackal_closed_none, step 3
+- `item=key`: `never_picks_up_the_key` in room_large_key_jackal_none_none, step None
+- `item=none`: `killed_while_a_monster_bites` in room_large_none_jackal_closed_none, step 12
+- `monster=jackal`: `killed_while_a_monster_bites` in room_large_none_jackal_closed_none, step 12
+- `monster=newt`: `walks_into_a_monster` in room_large_apple_newt_closed_none, step 15
+- `monster=none`: `never_opens_the_door` in room_large_apple_none_closed_none, step 1
+- `monster=rat`: `killed_while_a_monster_bites` in room_large_apple_rat_closed_none, step 12
+- `door=closed`: `never_opens_the_door` in room_large_apple_jackal_closed_none, step 1
+- `door=none`: `repeats_a_refused_command` in room_large_apple_jackal_none_none, step 5
+- `trap=none`: `repeats_a_refused_command` in room_large_apple_jackal_closed_none, step 3
+- `trap=pit`: `falls_into_the_pit` in room_medium_key_none_none_pit, step 4
+
+**Reading.**
+- **The card is a person's card, and E2B answers it like one.** DOWN is 82% of all intents: with no rule, the model reads "go down them" in the task and "the stairs down" in the reading as the verb.
+  - A framing probe before the run (3 readings × 3 framings) moved MOVE toward visible stairs, and DOWN onto them, only when the reading came first and the question was "what one action do you take now, from where you stand?" (the actor's framing).
+  - Even so, the agent typed DOWN one cell short of the stairs and repeated it: `repeats_a_refused_command` in 50 of 75. That's the first rule the extraction owes: DOWN is refused unless the stairs are here.
+- **The door is never touched.** 0 of 30 door variants were won, and no OPEN, KICK or APPLY was typed in any of them. Behind the wall the stairs are out of sight, so the reading never motivates the door: `never_opens_the_door`.
+- **Monsters kill a searching agent.** All 8 episodes the world ended were deaths: SEARCH typed while a newt, rat or jackal bit (hp falling). It's a rule about attack or flight to extract.
+- **The wins are the easy rooms:** no door, the stairs in sight, 2 to 4 moves.
+- This is the baseline step 2b's extracted rules are measured against, on the held-out split (step 3).

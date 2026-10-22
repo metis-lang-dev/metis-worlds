@@ -207,3 +207,30 @@ def test_tiles_export(tmp_path):
     ref = os.path.join(ROOT, "..", "web", "tiles", "nethack")
     assert (tmp_path / "glyphs.png").read_bytes() == open(os.path.join(ref, "glyphs.png"), "rb").read()
     assert meta == json.load(open(os.path.join(ref, "glyphs.json")))
+
+
+def test_the_actor_faces_act_and_describe(tmp_path):
+    """world-minihack step 2a: the host's faces for metis-agent's actor (act without a rule). act(atom)
+    runs a command atom no rule took as the world's action and says whether the world took it (a wall,
+    nothing to pick up: not taken; a wait: taken); describe() says the perception in words, from the
+    atoms only; the manifest carries actor: {max_steps, task}."""
+    import yaml
+    pkg, _ = gen_level.generate(("small", "apple", "none", "none", "none"), 1, str(tmp_path), max_steps=12)
+    m = yaml.safe_load(open(os.path.join(pkg, "domain.yaml")))
+    assert m["actor"] == {"max_steps": 12, "task": gen_level.TASK} and m["line"].startswith("a lit room: {")
+    h = MhHost(pkg)
+    try:
+        text = h.describe()
+        assert text.startswith("You see: ") and "Around you: north: " in text and "an apple (item) is" in text
+        at = next(a for a in h.reading() if a.startswith("agent_at("))
+        x, y = map(int, at[10:-1].split("_"))
+        wall = next(d for (dx, dy), d in [((-1, 0), "w"), ((0, -1), "n"), ((1, 0), "e"), ((0, 1), "s")]
+                    if not any(a in h.reading() for a in ("floor(c%d_%d)" % (x + dx, y + dy), "stairs_down(c%d_%d)" % (x + dx, y + dy))))
+        r = h.act("cmd_move(%s)" % wall)
+        assert r["acted"] is False and r["action"] == [wall.upper()]
+        assert h.act("cmd_pickup")["acted"] is False                        # nothing here (the apple is elsewhere)
+        assert h.act("cmd_wait")["acted"] is True                           # a wait changes nothing, by design
+        assert h.act("cmd_unknown") == {"acted": False, "action": None, "message": "no action for cmd_unknown", "events": [],
+                                        "reward": 0.0, "done": False, "won": False}
+    finally:
+        h.gym.close()
