@@ -129,8 +129,13 @@ def test_every_variant_opens_as_its_level():
             info = w.open(des=des_of(v), actions=level(v)["actions"], max_steps=10, seed=1)
             atoms = set(info["init"]["atoms"])
             stairs = any(a.startswith("stairs_down(") for a in atoms)
-            if v[3] != "none":   # the stairs are behind the wall: a door is seen, the stairs are not
-                ok = any(a.startswith("door(") for a in atoms) and not stairs
+            if v[3] != "none":   # the stairs are behind the wall: a door is seen, the stairs are not, and the des
+                import re        # places them past the wall column (N3)
+                des = des_of(v)
+                row0 = des.split("MAP\n")[1].split("\n")[0]
+                wall = row0.index("+") if "+" in row0 else row0.index("|")
+                sx = int(re.search(r"STAIR:\((\d+), ?(\d+)\),down", des).group(1))
+                ok = any(a.startswith("door(") for a in atoms) and not stairs and sx > wall
             else:
                 ok = stairs and info["size"][0] >= 4
             if v[1] == "key":

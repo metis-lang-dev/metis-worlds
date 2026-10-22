@@ -32,9 +32,19 @@ from pathlib import Path
 
 WORLD, GAME, RUN, WORDS = sys.argv[1:5]
 PORT = int(sys.argv[sys.argv.index("--port") + 1]) if "--port" in sys.argv else 8397
-SIB = Path(WORLD).resolve().parent
-AGENT_PY = Path(os.environ.get("METIS_AGENT_DIR") or SIB / "metis-agent") / "py"
-CATALOG_TOOLS = Path(os.environ.get("METIS_CATALOG_DIR") or SIB / "metis-catalog") / "tools" / "intents.py"
+def _sibling(name):
+    """The first parent of the world that holds a checkout NAME (metis-worlds/alfworld/world → the
+    checkouts beside metis-worlds; baseline.metis_py walks the same way)."""
+    d = Path(WORLD).resolve()
+    for _ in range(4):
+        d = d.parent
+        if (d / name).is_dir():
+            return d / name
+    return d / name
+
+
+AGENT_PY = Path(os.environ.get("METIS_AGENT_DIR") or _sibling("metis-agent")) / "py"
+CATALOG_TOOLS = Path(os.environ.get("METIS_CATALOG_DIR") or _sibling("metis-catalog")) / "tools" / "intents.py"
 sys.path.insert(0, os.path.join(WORLD, "world"))
 import base64  # noqa: E402
 import secrets  # noqa: E402

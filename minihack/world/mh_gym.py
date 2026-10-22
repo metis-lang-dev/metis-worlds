@@ -95,10 +95,12 @@ class World:
             out = self._step(self.codes.index(ord(letter)))   # "In what direction?"
             if out["done"]:
                 return out
-            out = self._step(self.names.index(action[7:]))    # "Unlock it? [yn]"
+            out = self._step(self.names.index(action[7:]))    # "Unlock it? [yn]" — or "Lock it?" on an unlocked door
             if out["done"]:
                 return out
-            return self._step(self.codes.index(ord("y")))
+            if "unlock it" in out.get("message", "").lower():
+                return self._step(self.codes.index(ord("y")))
+            return self._step(self.codes.index(ord("n")))     # never lock a door the agent could open (N2)
         return self._step(self.names.index(action))
 
 
