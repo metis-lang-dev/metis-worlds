@@ -103,6 +103,7 @@ class AlfHost:
         self.continues = bool(meta.get("continues"))          # the agent's hierarchy: a result is reported, the run goes on (the director sleeps the specialist)
         self.reported = set()
         self.things = set(meta["things"]) if meta.get("things") else None   # … and the things it declares
+        self.commands_log = meta.get("commands_log")           # the agent's hierarchy: the shared world state (every host's commands, replayed at reset)
         self.beat, self.due, self.script, self.last = 0, (), {}, None   # the AgentHost reads these
         self._reset()
 
@@ -113,9 +114,14 @@ class AlfHost:
         self.commands = []                           # (beat, rule, command, admissible, changed): the snapshot
         self.t, self.done, self.won = 0, False, False
         self.stepped = False
-        for c in self.replay:                        # the prefix another package's run sent
+        for c in self._replay():                     # the prefix another package's run sent
             self._take(self.gym.call("step", command=c))
             self.t += 1
+
+    def _replay(self):
+        if self.commands_log and os.path.exists(self.commands_log):
+            return [json.loads(l)["command"] for l in open(self.commands_log) if l.strip()]
+        return self.replay
 
     def _take(self, out):
         self.dyn = set(out["dynamic"])
@@ -186,6 +192,9 @@ class AlfHost:
         if not admissible:
             rec["admissible_were"] = before      # what the game would have taken instead
         self._log(rec)
+        if self.commands_log:
+            with open(self.commands_log, "a") as f:
+                f.write(json.dumps({"command": cmd, "rule": name, "admissible": admissible, "changed": self.changed}) + "\n")
 
     def _log(self, rec):
         """$METIS_ALF_LOG: one JSON line per command (the experiments' record of what the game said)."""

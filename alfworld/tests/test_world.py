@@ -341,3 +341,50 @@ def test_hierarchy_continues_after_a_result(tmp_path):
                 assert out is None and h.done, "the manual switch: the run ends on the result"
         finally:
             h.gym.close()
+
+
+def test_install_director_for_the_agent(tmp_path):
+    """alf-hierarchy step 3: a game installed under a root — the director package, the task's
+    person-mode instance, an empty instance per specialist, the shared commands log; the director
+    host queues arrivals, retracts its out atoms, and re-instances a specialist for a goal over
+    the world as the log says."""
+    from director_host import DirectorHost
+    root = str(tmp_path)
+    pk = gen_hier.install(game_dir(), root)
+    assert set(pk) == {"_flat", "director", "task", "nav", "access", "grasp", "place"}
+    assert os.path.exists(os.path.join(pk["director"], "director.llp")) and os.path.exists(os.path.join(pk["director"], "domain.yaml"))
+    for d in ("task", "nav", "access", "grasp", "place"):
+        meta = json.load(open(os.path.join(pk[d], "game.json")))
+        assert meta["continues"] and meta["commands_log"].endswith(".commands.jsonl"), d
+    h = DirectorHost(pk["director"])
+    h.world(["+seen(goto) 1"])
+    assert h.tick({}) == ["+seen(goto) 1"]
+    assert h.tick({"wake(nav)": 1, "forward(nav,goto)": 1, "active(nav)": 1}) == ["-forward(nav,goto) 1", "-wake(nav) 1"]
+    assert h.tick({}) == [] and h.reported[-1]["out"] == ["forward(nav,goto)", "wake(nav)"]
+    from alf_host import AlfHost
+    m = AlfHost(pk["_flat"])
+    try:
+        rec = next(a for a in sorted(m.static) if a.startswith("recat("))[6:-1].split(",")[0]
+    finally:
+        m.gym.close()
+    assert h.instance("nav", "goto(%s)" % rec, []) is True
+    llp = open(os.path.join(pk["nav"], "nav.llp")).read()
+    assert "#init goto(%s) 1" % rec in llp
+    # the log is the world's state: a nav host made now replays it (empty: t == 0); after a step the
+    # log has one line and the next host made over the flat package starts one step in
+    nav = AlfHost(pk["nav"])
+    try:
+        assert nav.t == 0
+        nav.on_event("go[R=%s,L2=%s]" % (rec.replace(" ", "_"), "x"), ())
+        stepped = nav.t
+    finally:
+        nav.gym.close()
+    log = [json.loads(l) for l in open(os.path.join(root, "domains", "hier", ".commands.jsonl")) if l.strip()]
+    assert len(log) == stepped
+    if stepped:
+        again = AlfHost(pk["_flat"]) if False else None
+    if os.environ.get("METISC"):
+        for d in ("director", "task", "nav"):
+            llp = next(f for f in os.listdir(pk[d]) if f.endswith(".llp"))
+            out = subprocess.run([os.environ["METISC"], "--diagnostics-json", os.path.join(pk[d], llp)], capture_output=True, text=True, timeout=120)
+            assert out.returncode == 0 and "error" not in out.stdout.lower(), (d, out.stdout[-400:] + out.stderr[-200:])

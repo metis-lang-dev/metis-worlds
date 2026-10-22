@@ -26,6 +26,7 @@ bwd result(kind).                         % a kind that is a specialist's answer
 bwd end(kind).                            % a kind that ends the episode (done, stuck, …)
 bwd detour(kind, kind).                   % a refusal of kind K1 is answered by a goal of kind K2 to another specialist, once
 bwd escalate(kind, kind).                 % … and a second time becomes K3 for the planner
+bwd rename(kind, kind, kind).             % the orchestrator's frames: an atom of K1 forwarded as K2 is sent under the name K3 (elsewhere(R) → goto(R)); the rules never read it
 bwd nohandler(kind).                      % the complement: a kind nobody handles
 
 % ── the state ──
