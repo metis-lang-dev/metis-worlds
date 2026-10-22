@@ -44,9 +44,9 @@ pred wrong_object(object) : task.         % … or an object it does not want (a
 stage act {
   %% I'll fetch {O} to {R}.
   fetch [dyn] : fetch(O, R) * $target(O) * $dest(R) -o want(O) * to(R) * start.
-  %% {R} is not where this task wants {O}: I stop and ask.
+  %% {R} is not where this task wants {O}. Put it there anyway, or leave {O} where it is?
   not_dest [dyn] : fetch(O, R) * $target(O) * $notdest(R) -o wrong_dest(R).
-  %% {O} is not what this task fetches: I stop and ask.
+  %% {O} is not what this task fetches. Did you mean another thing, or should I stop?
   not_target [dyn] : fetch(O, R) * $nottarget(O) -o wrong_object(O).
   %% {O} is in {R}: I go there.
   go_for [dyn] : want(O) * start * $inrecep(O, R) -o want(O) * goto(R).
