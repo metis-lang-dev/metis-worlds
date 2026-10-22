@@ -273,6 +273,8 @@ class AlfHost:
             return {"agent": {"at": h.get(command[6:], command[6:])}}
         if command.startswith("open "):
             return {"entities": [{"id": h.get(command[5:], command[5:]), "closed": False}]}
+        if command.startswith("close "):                   # nina's review N5: the map closes it again
+            return {"entities": [{"id": h.get(command[6:], command[6:]), "closed": True}]}
         if command.startswith("take ") and " from " in command:
             r = h.get(command[5:].split(" from ")[1], "")
             return {"agent": {"holding": spoken(holding[0]) if holding else None}, "entities": [{"id": r, "items": items(r)}]}
@@ -280,6 +282,13 @@ class AlfHost:
             r = h.get(command[5:].split(" to ")[1], "")
             return {"agent": {"holding": spoken(holding[0]) if holding else None}, "entities": [{"id": r, "items": items(r)}]}
         return {"note": command}
+
+    def speak(self, text):
+        """A line with the program's handles said as the game's things are named (fridge1 → "fridge 1"):
+        metis-agent's service says the director's lines with it (nina's alf-demo review N3)."""
+        import re
+        from semantic_map import spoken
+        return re.sub(r"\b[a-z]+\d+\b", lambda m: spoken(m.group(0)) if m.group(0) in self.to_name else m.group(0), text)
 
     def frames(self):
         """The world page's frames since the last call (metis-agent's service sends them on the wire)."""

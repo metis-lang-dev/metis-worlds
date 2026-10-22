@@ -433,5 +433,6 @@ def test_a_taken_command_is_the_maps_delta(package):
         assert fs == [{"agent": {"at": r}, "ev": "world/delta"}] and h.frames() == []
         h.on_event("put_plain[O=%s,R=%s]" % (next(iter(h.to_name)), r), ())        # nothing held: the game refuses
         assert h.frames() == []
+        assert h.speak("I go to %s, not to loc99." % r) == "I go to %s %s, not to loc99." % (r.rstrip("0123456789"), r[len(r.rstrip("0123456789")):])
     finally:
         h.gym.close()

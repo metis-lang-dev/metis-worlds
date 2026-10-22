@@ -197,7 +197,8 @@ def check(game, out_dir, port):
         log = root / "domains" / "hier" / ".commands.jsonl"
         rec["commands"] = [json.loads(x)["command"] for x in log.read_text().splitlines() if x.strip()] if log.exists() else []
         rec["replay"] = str(out_dir / ("%s.run.jsonl" % name))
-        as_replay(fs, rec["replay"], os.path.relpath(root / "world-map.json", out_dir))
+        shutil.copy(root / "world-map.json", out_dir / ("%s.map.json" % name))     # the map beside its recording (nina's N2)
+        as_replay(fs, rec["replay"], "%s.map.json" % name)
         report[name] = rec
         # the five turns, as DEMO.md §5 says them
         need = [(rec["map"], "1. the world's map named on hello (world/map)"),
