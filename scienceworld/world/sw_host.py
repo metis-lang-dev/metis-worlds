@@ -12,11 +12,14 @@ it spells referents one way, the game accepts several). The interpreter: $METIS_
 .venv, else .worlds/sw walking up."""
 import json
 import os
+import re
 import sys
 
 from metis.host import GymChild, find_interpreter
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, HERE)
+import perceive  # noqa: E402
 
 # a command atom -> the game's verb template, with its argument kinds (names with _ → spaces)
 COMMANDS = {
@@ -30,11 +33,13 @@ COMMANDS = {
     "cmd_move": ("move {O} to {C}", ("O", "C")),
     "cmd_activate": ("activate {O}", ("O",)),
     "cmd_deactivate": ("deactivate {O}", ("O",)),
+    "cmd_use": ("use {A} on {B}", ("A", "B")),  # cmd_use(A, B): a tool on a thing (the thermometer on a substance)
+    "cmd_examine": ("examine {O}", ("O",)),
     "cmd_wait": ("wait1", ()),
     "cmd_look": ("look around", ()),
 }
 # the perceived predicates the sync may retract (the agent's own tokens never)
-PERCEIVED = {"here", "door", "in", "state", "closed", "open", "reads", "holds", "focused", "connected"}
+PERCEIVED = {"here", "door", "in", "state", "closed", "open", "reads", "holds", "matter", "focused", "connected", "measured"}
 
 
 def interpreter():
@@ -89,7 +94,7 @@ class SwHost:
 
     def _reset(self):
         out = self.gym.call("reset")
-        self.focused, self.connected, self.labels = None, set(), {}
+        self.focused, self.connected, self.labels, self.measured = None, set(), {}, {}
         self._take(out)
         self.actions, self.t = [], 0
         self.pending_events = list(out.get("events", []))
@@ -100,19 +105,51 @@ class SwHost:
         self.message = out.get("message", "")
         self.events = list(out.get("events", []))
         self.valid = list(out.get("valid", []))
-        self.labels.update(out.get("labels") or {})              # the world's spelling of what was seen ("unknown substance B")
+        for n in out.get("names") or ():                         # the world's spelling as seen now ("unknown substance B";
+            self.labels.pop(n, None)                             # a melt respells "solid …" as "liquid …")
+        self.labels.update(out.get("labels") or {})
         self.done, self.won = bool(out.get("done")), bool(out.get("won"))
-        self.reward, self.score = float(out.get("reward", 0.0)), float(out.get("score", 0.0))
-        # what the look does not show: the focus, the connections (from the results; a move disconnects)
+        self.reward, self.score = float(out.get("reward", 0.0)), float(out.get("score", 0.0))   # the host's, never the brain's (ports)
+        # what the look does not show, from the RESULT line in the world's spelling (opus's step 1 N2), not
+        # the command's: the focus, the connections (a move disconnects), a thermometer's measurement
         if command:
-            if command.startswith("focus on ") and "said(focused)" in self.events:
-                self.focused = command[9:].replace(" ", "_")
-            if command.startswith("connect ") and "said(connected)" in self.events:
-                a, _, b = command[8:].partition(" to ")
-                self.connected.add((a.replace(" ", "_"), b.replace(" ", "_")))
-            if "(disconnecting" in self.message or command.startswith("disconnect "):
-                moved = self.message.split("(disconnecting ")[1].split(")")[0].replace(" ", "_") if "(disconnecting " in self.message else command[11:].replace(" ", "_")
+            m = re.match(r"you focus on (?:the )?(.+?)\.?$", self.message.strip(), re.I)
+            if m and "said(focused)" in self.events:
+                self.focused = perceive.name(m.group(1))
+            c = perceive.connection(self.message)
+            if c and "said(connected)" in self.events:
+                self.connected.add(c)
+            if "(disconnecting " in self.message or command.startswith("disconnect "):
+                moved = perceive.name(self.message.split("(disconnecting ")[1].split(")")[0] if "(disconnecting " in self.message else command[11:])
                 self.connected = {(a, b) for a, b in self.connected if not (a.startswith(moved) or b.startswith(moved))}
+            t = perceive.measured(self.message)
+            if t is not None and command.startswith("use ") and " on " in command:
+                self.measured[self.resolve(command[4:].partition(" on ")[2])] = perceive.temp(t)   # the result names no thing: the command's, resolved
+
+    def resolve(self, spelling):
+        """A command's referent as a perceived name: the name itself, else a qualified spelling resolved over
+        the perception ("substance in metal pot" → what the metal pot holds; "thermometer in inventory";
+        "cup containing mercury" → the cup that holds the mercury)."""
+        n = perceive.name(spelling)
+        ins = [tuple(a[3:-1].split(",")) for a in self.atoms if a.startswith("in(")]
+        ins += [(a[6:-1], "inventory") for a in self.atoms if a.startswith("holds(")]
+        if n in {o for o, _ in ins}:
+            return n
+        like = lambda o, w: o == w or o.endswith("_" + w)          # noqa: E731 — "cup" names the glass_cup
+        m = re.match(r"(.+?) in (.+)$", spelling.strip())
+        if m:
+            x, c = perceive.name(m.group(1)), perceive.name(m.group(2))
+            inside = sorted({o for o, k in ins if like(k, c)})
+            hit = [o for o in inside if like(o, x)] or (inside if len(inside) == 1 else [])
+            if hit:
+                return hit[0]
+        m = re.match(r"(.+?) containing (.+)$", spelling.strip())
+        if m:
+            x, y = perceive.name(m.group(1)), perceive.name(m.group(2))
+            hit = sorted({k for o, k in ins if o == y and like(k, x)})
+            if hit:
+                return hit[0]
+        return n
 
     def reading(self):
         r = {a: 1 for a in self.atoms}
@@ -122,6 +159,8 @@ class SwHost:
             r["focused(%s)" % self.focused] = 1
         for a, b in self.connected:
             r["connected(%s,%s)" % (a, b)] = 1
+        for o, t in self.measured.items():
+            r["measured(%s,%s)" % (o, t)] = 1
         return r
 
     def command_of(self, name, args):
@@ -148,7 +187,7 @@ class SwHost:
         self.t += 1
         self.actions.append(cmd)
         self._log({"beat": self.beat, "t": self.t, "rule": name, "command": cmd, "message": self.message,
-                   "events": self.events, "reward": self.reward, "score": self.score, "done": self.done, "won": self.won})
+                   "events": self.events, "done": self.done, "won": self.won})       # no score: a second channel (opus's step 1 N1)
         self.pending_events += self.events
 
     def _log(self, rec):
@@ -192,8 +231,10 @@ class SwHost:
         raise ValueError("world lines: the task is the world; choose another variation")
 
     def ports(self):
-        return {"task": dict(self.task, step=self.t, score=self.score, done=self.done, won=self.won),
-                "observed": sorted(PERCEIVED | {"task"}), "labels": dict(self.labels), "events": sorted({k for _, k in __import__("perceive").MESSAGES} | {"other"}),
+        # the task's outcome, never its score or reward: the score's increments are the task's own
+        # subgoals, a progress signal the text does not give (opus's step 1 N1)
+        return {"task": dict(self.task, step=self.t, done=self.done, won=self.won),
+                "observed": sorted(PERCEIVED | {"task", "threshold"}), "labels": dict(self.labels), "events": sorted({k for _, k in perceive.MESSAGES} | {"other"}),
                 "commands": sorted(COMMANDS)}
 
     def snapshot(self):

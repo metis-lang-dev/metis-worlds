@@ -32,6 +32,10 @@ def command_event(text):
     if m: return "cmd_move[O=%s,C=%s]" % (u(m.group(1)), u(m.group(2)))
     m = re.match(r"activate (.+)", text)
     if m: return "cmd_activate[O=%s]" % u(m.group(1))
+    m = re.match(r"use (.+?) on (.+)", text)
+    if m: return "cmd_use[A=%s,B=%s]" % (u(m.group(1)), u(m.group(2)))
+    m = re.match(r"examine (.+)", text)
+    if m: return "cmd_examine[O=%s]" % u(m.group(1))
     m = re.match(r"deactivate (.+)", text)
     if m: return "cmd_deactivate[O=%s]" % u(m.group(1))
     if text.startswith("wait"): return "cmd_wait"
