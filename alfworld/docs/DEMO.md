@@ -176,3 +176,34 @@ The parts that are world-neutral by construction and get lifted out when the sec
 That is the complement of the agentic loop: the loop discovers and formalizes a world into a
 hierarchy; this gives the formalized world its face and its ear. Both consume the same catalog
 root (cwd-root's rule), so a world repo is a domain root for both.
+
+## 8. Map rendering (the user's pointers, checked 2026-10-22)
+
+- **liujonathan24/NetHack-engine** is an engine, not a renderer: Python over a custom
+  NetHack C fork, "one canonical map model behind every encoding" (ASCII, JSON, tiles in a
+  harness layer). Its sibling **NetHack-console** draws the map as glyph TEXT into the page
+  (tty style, a WASM NetHack). **Neither repo has a license file**, so nothing of their code
+  is reusable; only the idea — one map model, several encodings — which §3 already is.
+- **minihack-editor/minihack-editor.github.io** (Apache-2.0, a React 17 CRA app) has what we
+  want: **664 named PNG icons** (13 dungeon, 273 items, 378 monsters) scraped from
+  NetHackWiki with JSON indexes `name → image → glyph char/colour → wiki link`, and a
+  des-file compiler in JS (grid → `MAP…ENDMAP` + `MONSTER`/`OBJECT` footer). The icons are
+  NOT Apache: NetHackWiki publishes NetHack-derived images under the NetHack General Public
+  License (others CC BY-SA 3.0), so they live in their own `assets/` folder with its own
+  NOTICE, never inside an Apache source tree. The React canvas itself is not worth lifting.
+- **Already in our venv:** MiniHack's `tiles.pkl` = 1082 glyphs × 16×16 RGB, the NetHack 3.6
+  tileset keyed by GLYPH ID — exactly what NLE's `glyphs` observation gives. Exported once to
+  a sprite sheet PNG + `glyph → index` JSON, the page draws a level from `glyphs` with no
+  mapping step. The editor's named icons serve the legend, hover and the places list
+  (readable at any size).
+
+**`map.js`, world-neutral by construction:** a grid renderer over one schema —
+`{cols, rows, cells: [[tile]], entities: [{id, name, pos, tile, frame?}], agent: {pos, yaw},
+tileset: {sheet, size, index}}` — plus a hover/attention frame slot. The tileset is the only
+world-specific part: MiniHack = the glyph sheet; ALFWorld = the semantic map's places on a
+coarse grid (THOR x,z quantized to 0.5 m), editor icons for the tiles (chest for an openable
+receptacle, a generic tile otherwise) and the THOR frame on hover; the agent as `@`. The
+ALFWorld → MiniHack export (world-minihack's note: a des-file per scene, `CONTAINER` for the
+openable receptacles) reads the same schema, so a scene renders identically before and after
+the export. That is the "check reuse for other worlds' maps": one renderer, one schema, a
+tileset per world.
