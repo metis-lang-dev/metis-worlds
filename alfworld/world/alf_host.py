@@ -102,6 +102,7 @@ class AlfHost:
         self.out = set(meta.get("out") or [])
         self.continues = bool(meta.get("continues"))          # the agent's hierarchy: a result is reported, the run goes on (the director sleeps the specialist)
         self.reported = set()
+        self.pending_frames = []                               # the world page's frames (alf-demo): frames() hands them over
         self.things = set(meta["things"]) if meta.get("things") else None   # … and the things it declares
         self.commands_log = meta.get("commands_log")           # the agent's hierarchy: the shared world state (every host's commands, replayed at reset)
         self.verbs = bool(meta.get("verbs"))                   # the loop's instances: a rule named verb_why is a command (opt-in: a hand domain's bookkeeping rule may start with a verb — go_for, open_dest)
@@ -203,6 +204,8 @@ class AlfHost:
         if not admissible:
             rec["admissible_were"] = before      # what the game would have taken instead
         self._log(rec)
+        if admissible and self.changed:
+            self.pending_frames.append(dict(self.delta(cmd), ev="world/delta"))
         if self.commands_log:
             with open(self.commands_log, "a") as f:
                 f.write(json.dumps({"command": cmd, "rule": name, "admissible": admissible, "changed": self.changed}) + "\n")
@@ -257,6 +260,31 @@ class AlfHost:
 
     def world(self, lines):
         raise ValueError("world lines: the game is the world; set a scenario by choosing another game")
+
+    # ── the world page (alf-demo step 2, DEMO.md §5): what a taken command changed, as the map's delta ──
+    def delta(self, command):
+        """The command's change in the map's terms (web/README.md's schema): the agent's place or
+        hand, a receptacle opened, what a receptacle holds now — read from the facts after it."""
+        from semantic_map import spoken
+        h = {v: k for k, v in self.to_name.items()}
+        holding = sorted(_args(a)[0] for a in self.dyn if a.startswith("holds("))
+        items = lambda r: sorted(spoken(_args(a)[0]) for a in self.dyn if a.startswith("inrecep(") and _args(a)[1] == r)
+        if command.startswith("go to "):
+            return {"agent": {"at": h.get(command[6:], command[6:])}}
+        if command.startswith("open "):
+            return {"entities": [{"id": h.get(command[5:], command[5:]), "closed": False}]}
+        if command.startswith("take ") and " from " in command:
+            r = h.get(command[5:].split(" from ")[1], "")
+            return {"agent": {"holding": spoken(holding[0]) if holding else None}, "entities": [{"id": r, "items": items(r)}]}
+        if command.startswith("move ") and " to " in command:
+            r = h.get(command[5:].split(" to ")[1], "")
+            return {"agent": {"holding": spoken(holding[0]) if holding else None}, "entities": [{"id": r, "items": items(r)}]}
+        return {"note": command}
+
+    def frames(self):
+        """The world page's frames since the last call (metis-agent's service sends them on the wire)."""
+        out, self.pending_frames = self.pending_frames, []
+        return out
 
     def ports(self):
         return {"game": {"path": self.game, "task": self.task, "params": self.params, "step": self.t,

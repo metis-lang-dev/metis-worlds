@@ -416,3 +416,22 @@ def test_rule_names_map_by_their_first_token(package):
         assert h.command_of("dance[O=%s]" % o, ()) is None
     finally:
         h.gym.close()
+
+
+def test_a_taken_command_is_the_maps_delta(package):
+    """alf-demo step 2: the host hands the world page one world/delta per command the game took
+    (frames(), drained by metis-agent's service): the agent's place after a go; nothing for a
+    command the game refused."""
+    from alf_host import AlfHost
+    pkg, _ = package
+    h = AlfHost(pkg)
+    try:
+        r = sorted(h.loc_of if hasattr(h, "loc_of") else {x for rs in h.recat.values() for x in rs})[0]
+        loc = next(l for l, rs in h.recat.items() if r in rs)
+        h.on_event("go[L2=%s,R=%s]" % (loc, r), ())
+        fs = h.frames()
+        assert fs == [{"agent": {"at": r}, "ev": "world/delta"}] and h.frames() == []
+        h.on_event("put_plain[O=%s,R=%s]" % (next(iter(h.to_name)), r), ())        # nothing held: the game refuses
+        assert h.frames() == []
+    finally:
+        h.gym.close()
