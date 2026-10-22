@@ -177,10 +177,43 @@ def check(game, out_dir, port):
             k = s.say(words, "p1")
             end = s.wait(ended, k)
             time.sleep(2.0)
+            turn = s.since(k)
+            log0 = root / "domains" / "hier" / ".commands.jsonl"
+            after = {"commands_at_end": sum(1 for x in log0.read_text().splitlines() if x.strip()) if log0.exists() else 0}
+            if name == "win":
+                # step 3b F7: the game is won and over — another task is refused in words, the status says over
+                k2 = s.say("put the %s in the fridge" % hda.words_of(o), "p2")
+                rep_ = s.wait(lambda f: f.get("ev") == "intent" and f.get("id") == "p2", k2, timeout=120)
+                time.sleep(2.0)
+                after["over_voice"] = " ".join(f.get("sentence", "") for f in s.since(k2) if f.get("ev") == "narration") or (rep_ or {}).get("voice")
+                after["over_status"] = [f.get("state") for f in s.since(k2) if f.get("ev") == "world/status"]
+                # the architect's AlfHost.new_episode as the demo's new game: the same room from its start, the task again
+                k4 = s.say("new game", "p4")
+                s.wait(lambda f: f.get("ev") == "world/status" and f.get("state") == "waiting", k4, timeout=120)
+                after["new_game_status"] = [f.get("state") for f in s.since(k4) if f.get("ev") == "world/status"]
+                k5 = s.say(words, "p5")
+                end5 = s.wait(ended, k5, timeout=300)
+                time.sleep(2.0)
+                after["again_outcome"] = end5["rec"]["outcome"] if end5 else "timeout"
+            else:
+                # step 3b F5: stop is answered and waits; then the ask's first answer, said back, is taken
+                ask = next((f for f in reversed(turn) if f.get("ev") == "world/ask"), None)
+                after["ask"] = ask
+                k2 = s.say("stop", "p2")
+                rep_ = s.wait(lambda f: f.get("ev") == "intent" and f.get("id") == "p2", k2, timeout=60)
+                time.sleep(1.0)
+                after["stop_voice"] = (rep_ or {}).get("voice")
+                after["stop_status"] = [f.get("state") for f in s.since(k2) if f.get("ev") == "world/status"]
+                if ask and ask.get("options"):
+                    k3 = s.say(ask["options"][0]["say"], "p3")
+                    end3 = s.wait(ended, k3, timeout=300)
+                    time.sleep(2.0)
+                    after["answer"] = ask["options"][0]["say"]
+                    after["answer_j"] = next((f.get("intent") for f in s.since(k3) if f.get("ev") == "intent" and f.get("id") == "p3"), None)
+                    after["answer_outcome"] = end3["rec"]["outcome"] if end3 else "timeout"
             fs = s.since(0)
         finally:
             s.close()
-        turn = s.since(k)
         rec = {"words": words, "map": bool(got)}
         rec["j"] = next((f.get("intent") for f in turn if f.get("ev") == "intent" and f.get("id") == "p1"), None)
         rec["outcome"] = end["rec"]["outcome"] if end else "timeout"
@@ -199,6 +232,8 @@ def check(game, out_dir, port):
         rec["replay"] = str(out_dir / ("%s.run.jsonl" % name))
         shutil.copy(root / "world-map.json", out_dir / ("%s.map.json" % name))     # the map beside its recording (nina's N2)
         as_replay(fs, rec["replay"], "%s.map.json" % name)
+        rec.update(after)
+        rec["statuses"] = [f.get("state") for f in fs if f.get("ev") == "world/status"]
         report[name] = rec
         # the five turns, as DEMO.md §5 says them
         need = [(rec["map"], "1. the world's map named on hello (world/map)"),
@@ -211,11 +246,27 @@ def check(game, out_dir, port):
                      (rec["outcome"] == "ended(done)", "the task ends done")]
         else:
             # the task refuses the destination at once (not_dest → wrong_dest): no specialist, no command
-            need.append((not rec["commands"], "4. nothing is sent to the world for a refused destination"))
+            need.append((rec["commands_at_end"] == 0, "4. nothing is sent to the world for a refused destination"))
             need.append((rec["asked"], "4. a wrong destination disengages: the director asks"))
             need.append((any(k == "v3-ask" for k, _ in rec["said"]), "4. the ask said through the band (v3-ask)"))
             need.append((rec["cornered"] is not None, "4. the map shows the cornered place"))
         need.append((Path(rec["replay"]).stat().st_size > 0, "5. the turn recorded, replayable without THOR (the page's ?replay=)"))
+        # step 3b: what the agent wants from the person, always said
+        need.append((rec["statuses"][:1] == ["waiting"], "3b. waiting for a task, on hello (world/status)"))
+        need.append(("working" in rec["statuses"] or name == "fridge", "3b. working, while a domain is on its goal"))
+        if name == "win":
+            need.append(("over" in rec["statuses"], "3b. over: the won game takes no other task"))
+            need.append(("over" in (rec.get("over_status") or []) and "game is over" in (rec.get("over_voice") or "").lower(),
+                         "3b. another task after the win is refused in words"))
+            need.append(("waiting" in (rec.get("new_game_status") or []), "3b. a new game: the same room, waiting for a task"))
+            need.append((rec.get("again_outcome") == "ended(done)", "3b. … and the task wins again in it"))
+        else:
+            a = rec.get("ask") or {}
+            need.append((bool(a.get("options")), "3b. the ask carries its answers (world/ask options)"))
+            need.append(("asking" in rec["statuses"], "3b. asking, while the question is open"))
+            need.append((rec.get("stop_voice") == "Stopped." and "waiting" in (rec.get("stop_status") or []), "3b. stop is answered and waits"))
+            need.append(((rec.get("answer_j") or {}).get("intent") not in (None, "UNKNOWN"), "3b. the ask's first answer, said back, is taken"))
+            need.append((rec.get("answer_outcome") == "ended(done)", "3b. … and it finishes the task"))
         rec["checks"] = [[bool(ok), what] for ok, what in need]
         problems += ["%s: %s" % (name, what) for ok, what in need if not ok]
     report["problems"] = problems
