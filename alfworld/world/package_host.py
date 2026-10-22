@@ -1,20 +1,13 @@
-# The shim a generated package carries as its own alf_host.py: the world's host, found by
-# walking up to world/alf_host.py, made with this package's directory (its game.json).
+# The shim a generated package carries as its own alf_host.py: the world's host (world/alf_host.py:
+# $METIS_ALF_WORLD, else the generator's path below, else a world/ directory above the package,
+# metis.host.world_host), made with this package's directory (its game.json).
 import os
-import sys
+
+from metis.host import world_host
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 WORLD = "__WORLD__"                      # the generator writes the world's absolute path here
-_cands = [os.environ.get("METIS_ALF_WORLD") or "", WORLD]
-_d = HERE
-for _ in range(6):
-    _d = os.path.dirname(_d)
-    _cands.append(os.path.join(_d, "world"))
-for _c in _cands:
-    if _c and os.path.exists(os.path.join(_c, "alf_host.py")):
-        sys.path.insert(0, _c)
-        break
-from alf_host import AlfHost  # noqa: E402
+AlfHost = world_host(HERE, "alf_host", env="METIS_ALF_WORLD", world=WORLD).AlfHost
 
 PAIRS = ()
 

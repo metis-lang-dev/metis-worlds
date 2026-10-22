@@ -12,6 +12,7 @@ if [ "${1:-}" = --check ]; then "$V/bin/python" -c "import alfworld, textworld; 
 mkdir -p "$V/pybin"; ln -sfn "$V/bin/python" "$V/pybin/python"
 PATH="$V/pybin:$PATH" "$V/bin/pip" install -q --upgrade pip
 PATH="$V/pybin:$PATH" "$V/bin/pip" install -q 'alfworld[full]==0.4.2'
+PATH="$V/pybin:$PATH" "$V/bin/pip" install -q 'metispy>=0.1.3'      # metis.host, metis.repl: the world's host and the experiments (metis-packages)
 mkdir -p "$ALFWORLD_DATA"
 "$V/bin/alfworld-download" --data-dir "$ALFWORLD_DATA" "$@"      # ~2.3 GB: the text games, the PDDL logic, a detector the text mode never loads
 "$V/bin/python" -c "import alfworld, textworld; print('alfworld ok, data at', '$ALFWORLD_DATA')"

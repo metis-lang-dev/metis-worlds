@@ -1,15 +1,13 @@
-# The shim a generated package carries as its own mh_host.py: the world's host, made with
-# this package's directory (its level.json).
+# The shim a generated package carries as its own mh_host.py: the world's host (world/mh_host.py:
+# $METIS_MH_WORLD, else the generator's path below, else a world/ directory above the package,
+# metis.host.world_host), made with this package's directory (its level.json).
 import os
-import sys
+
+from metis.host import world_host
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-WORLD = "__WORLD__"
-for _c in [os.environ.get("METIS_MH_WORLD") or "", WORLD] + [os.path.join(os.path.dirname(HERE) if i == 0 else "", "world") for i in range(1)]:
-    if _c and os.path.exists(os.path.join(_c, "mh_host.py")):
-        sys.path.insert(0, _c)
-        break
-from mh_host import MhHost  # noqa: E402
+WORLD = "__WORLD__"                      # the generator writes the world's absolute path here
+MhHost = world_host(HERE, "mh_host", env="METIS_MH_WORLD", world=WORLD).MhHost
 
 PAIRS = ()
 

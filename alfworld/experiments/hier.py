@@ -99,19 +99,15 @@ def run_game(game_dir, workdir, max_activations=16):
 
 def director_beat(out_dir, k, state, arrival):
     """One beat of the director (alf-hierarchy step 3): its carried state plus the arrival, one
-    kernel run (no host), the effects read from the final counts: wake/sleep/forward/ask/ended;
-    the state carried on is everything else."""
+    kernel run (no host, metis.repl: the counts as data, never the REPL's printed line), the
+    effects read from the final counts: wake/sleep/forward/ask/ended; the state carried on is
+    everything else."""
+    from metis import repl
     path = gen_hier.generate_director(out_dir, k, state + [arrival])
-    p = subprocess.run([metis_py(), path], input="run 6\nstate\n", capture_output=True, text=True, timeout=300)
-    counts = {}
-    for line in p.stdout.splitlines():
-        for tok in line.split():
-            if ":" in tok and "(" in tok or ":" in tok and tok.split(":")[0].isidentifier():
-                a, _, n = tok.rpartition(":")
-                if n.isdigit() and int(n) > 0:
-                    counts[a] = int(n)
-    if p.returncode != 0 or "Traceback" in p.stderr:
-        raise RuntimeError("director: " + (p.stderr.strip().splitlines() or ["rc %d" % p.returncode])[-1])
+    try:
+        counts = {a: n for a, n in repl.open(path).run(6)["counts"].items() if n > 0}
+    except Exception as e:  # noqa: BLE001 — the kernel's own words
+        raise RuntimeError("director: %s: %s" % (type(e).__name__, e)) from None
     effects = sorted(a for a in counts if a.split("(")[0] in gen_hier.DIRECTOR_OUT)
     state = sorted(a for a in counts if a.split("(")[0] not in gen_hier.DIRECTOR_OUT and a.split("(")[0] not in ("seen", "idle"))
     return effects, state

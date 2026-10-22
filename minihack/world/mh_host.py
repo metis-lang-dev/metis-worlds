@@ -12,8 +12,8 @@ seed. The gym's interpreter: $METIS_MH_PY, else the world repo's .venv/bin/pytho
 """
 import json
 import os
-import subprocess
-import sys
+
+from metis.host import GymChild, find_interpreter
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 
@@ -37,20 +37,14 @@ PERCEIVED = {"agent_at", "floor", "wall", "door", "corridor", "stairs_down", "st
 
 
 def interpreter():
-    p = os.environ.get("METIS_MH_PY")
-    if p:
-        return p
+    """$METIS_MH_PY, else the world repo's own venv (setup.sh), else a shared venv beside the world repos
+    (.worlds/mh; never a sibling .venv), else this interpreter (metis.host.find_interpreter)."""
     repo = os.path.dirname(HERE)
-    own = os.path.join(repo, ".venv", "bin", "python")  # the world repo's own venv (setup.sh)
-    if os.path.exists(own):
-        return own
-    d = repo
-    for _ in range(3):  # a shared venv beside the world repos (.worlds/mh); never a sibling .venv
+    cands, d = [os.path.join(repo, ".venv", "bin", "python")], repo
+    for _ in range(3):
         d = os.path.dirname(d)
-        c = os.path.join(d, ".worlds", "mh", "bin", "python")
-        if os.path.exists(c):
-            return c
-    return sys.executable
+        cands.append(os.path.join(d, ".worlds", "mh", "bin", "python"))
+    return find_interpreter("METIS_MH_PY", None, cands)
 
 
 def bindings(name):
@@ -63,40 +57,14 @@ def bindings(name):
     return base.split("-")[0], b
 
 
-class GymClient:
+class GymClient(GymChild):
+    """world/mh_gym.py as a child: one JSON request per line, one answer (metis.host.GymChild; the
+    level's `env` rides in open_args, beside the child's own environment)."""
+
     def __init__(self, level, max_steps, seed):
-        import tempfile
-        self.err = tempfile.TemporaryFile("w+")
-        self.proc = subprocess.Popen([interpreter(), os.path.join(HERE, "mh_gym.py")], stdin=subprocess.PIPE,
-                                     stdout=subprocess.PIPE, stderr=self.err, text=True)
-        self.info = self.call("open", des=level.get("des"), env=level.get("env"), actions=level.get("actions") or ACTIONS,
-                              max_steps=max_steps, seed=seed)
-
-    def call(self, op, **kw):
-        self.proc.stdin.write(json.dumps(dict(kw, op=op)) + "\n")
-        self.proc.stdin.flush()
-        line = self.proc.stdout.readline()
-        if not line:
-            self.err.seek(0)
-            tail = self.err.read().strip().splitlines()[-3:]
-            raise RuntimeError("the level process ended (%s): %s" % (self.proc.poll(), " | ".join(tail)))
-        out = json.loads(line)
-        if not out.pop("ok"):
-            raise RuntimeError("level %s: %s" % (op, out["error"]))
-        return out
-
-    def close(self):
-        try:
-            if self.proc.poll() is None:
-                self.proc.stdin.write('{"op": "close"}\n')
-                self.proc.stdin.flush()
-                self.proc.wait(timeout=10)
-        except (OSError, ValueError, subprocess.TimeoutExpired):
-            self.proc.kill()
-
-    def __del__(self):
-        if getattr(self, "proc", None) is not None:
-            self.close()
+        super().__init__(os.path.join(HERE, "mh_gym.py"), interpreter(), "level",
+                         open_args={"des": level.get("des"), "env": level.get("env"),
+                                    "actions": level.get("actions") or ACTIONS, "max_steps": max_steps, "seed": seed})
 
 
 class MhHost:

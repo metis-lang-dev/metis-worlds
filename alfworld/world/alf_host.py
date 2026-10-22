@@ -13,8 +13,9 @@ world/gen_instance.py). The gym's interpreter: $METIS_ALF_PY, else the world rep
 """
 import json
 import os
-import subprocess
 import sys
+
+from metis.host import GymChild, find_interpreter
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
@@ -37,20 +38,14 @@ COMMANDS = {
 
 
 def interpreter():
-    p = os.environ.get("METIS_ALF_PY")
-    if p:
-        return p
+    """$METIS_ALF_PY, else the world repo's own venv (setup.sh), else a shared venv beside the world repos
+    (.worlds/alf; never a sibling .venv), else this interpreter (metis.host.find_interpreter)."""
     repo = os.path.dirname(HERE)
-    own = os.path.join(repo, ".venv", "bin", "python")  # the world repo's own venv (setup.sh)
-    if os.path.exists(own):
-        return own
-    d = repo
-    for _ in range(3):  # a shared venv beside the world repos (.worlds/alf); never a sibling .venv
+    cands, d = [os.path.join(repo, ".venv", "bin", "python")], repo
+    for _ in range(3):
         d = os.path.dirname(d)
-        c = os.path.join(d, ".worlds", "alf", "bin", "python")
-        if os.path.exists(c):
-            return c
-    return sys.executable
+        cands.append(os.path.join(d, ".worlds", "alf", "bin", "python"))
+    return find_interpreter("METIS_ALF_PY", None, cands)
 
 
 def _args(atom):
@@ -69,40 +64,12 @@ def bindings(name):
     return base.split("-")[0], b
 
 
-class GymClient:
+class GymClient(GymChild):
+    """world/alf_gym.py as a child: one JSON request per line, one answer (metis.host.GymChild)."""
+
     def __init__(self, game, max_steps=60, handles=None):
-        import tempfile
-        self.err = tempfile.TemporaryFile("w+")
-        env = dict(os.environ)
-        self.proc = subprocess.Popen([interpreter(), os.path.join(HERE, "alf_gym.py")], stdin=subprocess.PIPE,
-                                     stdout=subprocess.PIPE, stderr=self.err, text=True, env=env)
-        self.info = self.call("open", game=game, max_steps=max_steps, handles=handles)
-
-    def call(self, op, **kw):
-        self.proc.stdin.write(json.dumps(dict(kw, op=op)) + "\n")
-        self.proc.stdin.flush()
-        line = self.proc.stdout.readline()
-        if not line:
-            self.err.seek(0)
-            tail = self.err.read().strip().splitlines()[-3:]
-            raise RuntimeError("the game process ended (%s): %s" % (self.proc.poll(), " | ".join(tail)))
-        out = json.loads(line)
-        if not out.pop("ok"):
-            raise RuntimeError("game %s: %s" % (op, out["error"]))
-        return out
-
-    def close(self):
-        try:
-            if self.proc.poll() is None:
-                self.proc.stdin.write('{"op": "close"}\n')
-                self.proc.stdin.flush()
-                self.proc.wait(timeout=10)
-        except (OSError, ValueError, subprocess.TimeoutExpired):
-            self.proc.kill()
-
-    def __del__(self):
-        if getattr(self, "proc", None) is not None:
-            self.close()
+        super().__init__(os.path.join(HERE, "alf_gym.py"), interpreter(), "game", env=dict(os.environ),
+                         game=game, max_steps=max_steps, handles=handles)
 
 
 class AlfHost:
