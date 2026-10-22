@@ -436,3 +436,20 @@ def test_a_taken_command_is_the_maps_delta(package):
         assert h.speak("I go to %s, not to loc99." % r) == "I go to %s %s, not to loc99." % (r.rstrip("0123456789"), r[len(r.rstrip("0123456789")):])
     finally:
         h.gym.close()
+
+
+def test_the_director_copy_matches_the_catalogs():
+    """The lifted director base's canonical home is metis-catalog domains/director (loop-policy 2b G5);
+    this world carries a copy (copies, not dependencies). Skipped without the catalog checkout beside."""
+    d = ROOT
+    cat = None
+    for _ in range(5):
+        d = os.path.dirname(d)
+        c = os.path.join(d, "metis-catalog", "domains", "director", "director_domain.llp")
+        if os.path.exists(c):
+            cat = c
+            break
+    if cat is None:
+        pytest.skip("no metis-catalog checkout beside the worlds")
+    mine = os.path.join(ROOT, "domains", "director_domain.llp")
+    assert open(mine).read() == open(cat).read(), "the copy drifted from metis-catalog domains/director/director_domain.llp"
