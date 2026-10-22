@@ -41,8 +41,8 @@ path through the host, as in §1 (`baseline.py --family melting`).
 
 | split | n | won | gold steps | host steps (mean) | atoms per reading (mean) | atoms max | s per variation | predicates |
 |---|---|---|---|---|---|---|---|---|
-| train (discovery) | 20 | **20** | 19–94 | 48.2 | 43.9 | 52 | 1.4 | 13: closed door focused here holds in matter measured open reads state task threshold |
-| test (held out) | 10 | **10** | 18–96 | 55.5 | 40.9 | 50 | 1.4 | the same 13 |
+| train (discovery) | 20 | **20** | 19–94 | 48.2 | 43.3 | 51 | 1.4 | 13: closed door focused here holds in matter measured open reads state task threshold |
+| test (held out) | 10 | **10** | 18–96 | 55.5 | 40.3 | 49 | 1.5 | the same 13 |
 
 There was one refusal in 30 runs: known-substance v=2's gold opens the cupboard twice, and the
 second time the game answers "The cupboard is already open." (`said(cant)`; nothing moved).
@@ -59,9 +59,11 @@ the same 10 predicates as §1.
   substance C", "liquid chocolate"). S keeps one name through the melt, so
   `matter(unknown_substance_c, solid)` → `matter(unknown_substance_c, liquid)` is the
   observation the rule rests on.
-- `measured(S, nN)`: a thermometer used on S. The result line says only the temperature; S is
-  the command's referent resolved over the perception ("substance in metal pot" → what the pot
-  holds).
+- `measured(S, nN)`: a thermometer used on S, an EVENT handed in for one beat, as `said/1` is: the
+  reading at the beat it was taken, never a stale value; a program that wants a number measures.
+  The result line says only the temperature, so S is the command's referent, resolved over the
+  perception: "substance in metal pot" → what the pot holds, and "cup containing mercury" → the
+  mercury, since a thermometer measures what is in the cup.
 - The verbs USE(thing, target) and EXAMINE join the card. The gold paths heat on the stove or in
   the blast furnace (activate) and cool in the freezer (move), so no other new verb is needed.
 
@@ -79,3 +81,16 @@ the thermometer at every step, and note `measured(S, T)` the step `matter(S, …
 compare T with the threshold and focus on that side's box. Water is the exception: freezing
 replaces "water" with "ice" (a new name, no prefix), so the change is a thing appearing in the
 cup, not `matter/2` (README, findings).
+
+**opus's step 1b review (PASS) and the architect's rulings:**
+- **N1, the renaming trap.** Test variations 329 and 330 are water. Freezing replaces "water"
+  with "ice", so they never show a `matter/2` change, and a train rule over matter changes cannot
+  reach them. That is 20% of this held-out set measuring something train never shows. **Ruling:**
+  it's instance knowledge the world hides. 329/330 stay in the held-out split but are reported as
+  their own row ("the renaming trap"), and the generalization number is given with and without
+  them. The hand hierarchy gets no `freezes_to` fact. If the loop finds it from the text, that is
+  a result to report, not a given.
+- **N2:** a use on "X containing Y" measures Y (`resolve(…, contents=True)`). No gold path spells
+  it so (0 of 1,282), but an agent may.
+- **N3:** `measured/2` lasts one beat (above). It is not in the reading, so the per-reading atom
+  counts in the table are 0.6 lower than at the step's first run.

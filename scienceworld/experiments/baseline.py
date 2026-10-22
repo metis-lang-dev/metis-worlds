@@ -58,7 +58,7 @@ def run_variation(task, variation, workdir):
             if any(e in ("said(unknown)", "said(cant)", "said(ambiguous)") for e in h.events):
                 refused += 1
             r = h.reading()
-            preds |= {k.split("(")[0] for k in r}
+            preds |= {k.split("(")[0] for k in r} | {e.split("(")[0] for e in h.events if e.startswith("measured(")}   # one beat
             sizes.append(len(r))
             if h.done:
                 break

@@ -141,24 +141,31 @@ def test_package_compiles(package):
 def test_a_melting_gold_path_wins_through_the_host(tmp_path):
     """measure-melting-point-unknown-substance 0: the substance keeps its name through the melt, its
     matter turns solid → liquid, each thermometer use is measured(S, nN) on the perceived name (the
-    command says "solid unknown substance c"), and the verdict is a focus on the task's box."""
+    command says "solid unknown substance c") for ONE beat, as said/1 (the architect's ruling on opus's
+    step 1b N3: no stale value), and the verdict is a focus on the task's box."""
     from baseline import command_event
     pkg, _ = gen_instance.generate("measure-melting-point-unknown-substance", 0, str(tmp_path))
     h = SwHost(pkg)
     try:
         r = h.reading()
         assert "task(melting,unknown_substance_c,orange_box,yellow_box)" in r and "threshold(n150)" in r
-        seen, temps = set(), []
+        seen, temps, counts, beats = set(), [], {}, []
         for a in h.gym.call("gold")["gold"]:
             h.on_event(command_event(a), ())
             r = h.reading()
             seen |= {k for k in r if k.startswith("matter(unknown_substance_c")}
-            temps += [k for k in r if k.startswith("measured(") and k not in temps]
+            temps += [e for e in h.events if e.startswith("measured(")]
+            assert not any(k.startswith("measured(") for k in r)          # never a standing atom
             if h.done:
                 break
+            for line in h.tick(counts) or []:                             # the beat hands it in, the next takes it back
+                atom, n = line[1:].rsplit(" ", 1)
+                counts[atom] = counts.get(atom, 0) + (int(n) if line[0] == "+" else -int(n))
+            beats.append({k for k, n in counts.items() if n > 0 and k.startswith("measured(")})
         assert h.won and h.score >= 100, (h.score, h.message)
         assert seen == {"matter(unknown_substance_c,solid)", "matter(unknown_substance_c,liquid)"}
         assert temps and all(t.startswith("measured(unknown_substance_c,n") for t in temps)
+        assert all(len(b) <= 1 for b in beats) and sum(1 for b in beats if b) == len(temps)   # each one beat, one at a time
         assert "focused(yellow_box)" in r and h.labels["unknown_substance_c"] == "liquid unknown substance C"
     finally:
         h.gym.close()
@@ -169,4 +176,5 @@ def test_a_qualified_referent_resolves_over_the_perception():
     h.atoms = {"in(metal_pot,stove)", "in(tin,metal_pot)", "in(glass_cup,table)", "in(water,glass_cup)", "holds(thermometer)"}
     assert h.resolve("substance in metal pot") == "tin" and h.resolve("substance in cup") == "water"
     assert h.resolve("thermometer in inventory") == "thermometer" and h.resolve("cup containing water") == "glass_cup"
+    assert h.resolve("cup containing water", contents=True) == "water"     # a thermometer used on it measures the water (opus's step 1b N2)
     assert h.resolve("liquid tin") == "tin" and h.resolve("lead") == "lead"

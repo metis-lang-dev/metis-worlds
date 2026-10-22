@@ -39,7 +39,7 @@ COMMANDS = {
     "cmd_look": ("look around", ()),
 }
 # the perceived predicates the sync may retract (the agent's own tokens never)
-PERCEIVED = {"here", "door", "in", "state", "closed", "open", "reads", "holds", "matter", "focused", "connected", "measured"}
+PERCEIVED = {"here", "door", "in", "state", "closed", "open", "reads", "holds", "matter", "focused", "connected"}
 
 
 def interpreter():
@@ -94,7 +94,7 @@ class SwHost:
 
     def _reset(self):
         out = self.gym.call("reset")
-        self.focused, self.connected, self.labels, self.measured = None, set(), {}, {}
+        self.focused, self.connected, self.labels = None, set(), {}
         self._take(out)
         self.actions, self.t = [], 0
         self.pending_events = list(out.get("events", []))
@@ -111,7 +111,9 @@ class SwHost:
         self.done, self.won = bool(out.get("done")), bool(out.get("won"))
         self.reward, self.score = float(out.get("reward", 0.0)), float(out.get("score", 0.0))   # the host's, never the brain's (ports)
         # what the look does not show, from the RESULT line in the world's spelling (opus's step 1 N2), not
-        # the command's: the focus, the connections (a move disconnects), a thermometer's measurement
+        # the command's: the focus, the connections (a move disconnects); a thermometer's measurement is an
+        # event, the reading at the beat it was taken (one beat, as said/1: no stale value — a program that
+        # wants a number measures; the architect's ruling on opus's step 1b N3)
         if command:
             m = re.match(r"you focus on (?:the )?(.+?)\.?$", self.message.strip(), re.I)
             if m and "said(focused)" in self.events:
@@ -124,12 +126,14 @@ class SwHost:
                 self.connected = {(a, b) for a, b in self.connected if not (a.startswith(moved) or b.startswith(moved))}
             t = perceive.measured(self.message)
             if t is not None and command.startswith("use ") and " on " in command:
-                self.measured[self.resolve(command[4:].partition(" on ")[2])] = perceive.temp(t)   # the result names no thing: the command's, resolved
+                s = self.resolve(command[4:].partition(" on ")[2], contents=True)   # the result names no thing: the command's, resolved
+                self.events.append("measured(%s,%s)" % (s, perceive.temp(t)))
 
-    def resolve(self, spelling):
+    def resolve(self, spelling, contents=False):
         """A command's referent as a perceived name: the name itself, else a qualified spelling resolved over
         the perception ("substance in metal pot" → what the metal pot holds; "thermometer in inventory";
-        "cup containing mercury" → the cup that holds the mercury)."""
+        "cup containing mercury" → the cup that holds the mercury, or with CONTENTS — a thermometer used
+        on it, which measures what is in the cup — the mercury: opus's step 1b N2)."""
         n = perceive.name(spelling)
         ins = [tuple(a[3:-1].split(",")) for a in self.atoms if a.startswith("in(")]
         ins += [(a[6:-1], "inventory") for a in self.atoms if a.startswith("holds(")]
@@ -148,7 +152,7 @@ class SwHost:
             x, y = perceive.name(m.group(1)), perceive.name(m.group(2))
             hit = sorted({k for o, k in ins if o == y and like(k, x)})
             if hit:
-                return hit[0]
+                return y if contents else hit[0]
         return n
 
     def reading(self):
@@ -159,8 +163,6 @@ class SwHost:
             r["focused(%s)" % self.focused] = 1
         for a, b in self.connected:
             r["connected(%s,%s)" % (a, b)] = 1
-        for o, t in self.measured.items():
-            r["measured(%s,%s)" % (o, t)] = 1
         return r
 
     def command_of(self, name, args):
