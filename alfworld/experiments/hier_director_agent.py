@@ -54,14 +54,14 @@ def words_of(h):
     return "%s %s" % (m.group(1), m.group(2)) if m else h
 
 
-def person_mode(task_dir):
-    """The installed task carries the seed's fetch in its start; the person's words give it instead:
-    the line goes. → the seed's (object, receptacle)."""
-    p = next(Path(task_dir).glob("*.llp"))
-    lines = p.read_text().splitlines()
-    seed = next(l for l in lines if l.startswith("#init fetch("))
-    p.write_text("\n".join(l for l in lines if l != seed) + "\n")
-    return gen_hier.args_of(seed.split()[1])
+def fetch_of(flat):
+    """The game's own fetch (the driver's seed, gen_hier.seed): → (object, receptacle) the person names."""
+    mirror = AlfHost(flat)
+    try:
+        info = dict(json.load(open(os.path.join(flat, "game.json"))), static=sorted(mirror.static), task_type=mirror.task, params=mirror.params)
+    finally:
+        mirror.gym.close()
+    return gen_hier.args_of(gen_hier.seed(info)[0])
 
 
 def card_files(root, task_dir):
@@ -92,8 +92,8 @@ def config(run, port):
 
 def run_game(game, run, port, timeout):
     run.mkdir(parents=True, exist_ok=True)
-    out = gen_hier.install(game, str(run / "root"))
-    o, r = person_mode(out["task"])
+    out = gen_hier.install(game, str(run / "root"), person=True)      # the task seeds no fetch: the person's words are its goal
+    o, r = fetch_of(out["_flat"])
     for spec in NAMES[1:]:                     # the agent looks for <name>_host.py (the manifest's host: file, metis-agent minihack-acts, not yet)
         shutil.copy(Path(out[spec]) / "alf_host.py", Path(out[spec]) / ("%s_host.py" % spec))
     card_files(run / "root", out["task"])
