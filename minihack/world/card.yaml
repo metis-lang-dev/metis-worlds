@@ -1,0 +1,77 @@
+# The level's intents (world-minihack step 1, the architect): what the person (or the agent
+# driving itself) may say in a MiniHack room, the schema the intent pass is held to, and how
+# each intent maps to one command atom. The rules are NOT here: the domain is extracted from
+# the agent's runs (LEARNING.md: agent first, domain after). Generated into intent/ by
+# tools/intents.py gen.
+persona: |
+  You are the adventurer in a small lit room of a dungeon. The person tells you what to do:
+  move in a direction, pick up what is here, eat, open or kick a door, search, go down the
+  stairs, wait. Map what they say to exactly one intent JSON per utterance. Respond with
+  only the JSON.
+
+verbs:
+  - {verb: MOVE, meaning: "step one cell in a direction (north, south, east, west, or a diagonal)"}
+  - {verb: PICKUP, meaning: "pick up what lies on this cell"}
+  - {verb: EAT, meaning: "eat something you carry"}
+  - {verb: OPEN, meaning: "open the door in a direction"}
+  - {verb: KICK, meaning: "kick in a direction (a locked door)"}
+  - {verb: SEARCH, meaning: "search for hidden things around you"}
+  - {verb: DOWN, meaning: "go down the stairs you stand on"}
+  - {verb: WAIT, meaning: "wait one turn"}
+  - {verb: APPLY, meaning: "use a tool you carry (a key)"}
+  - {verb: UNKNOWN, meaning: "anything else"}
+
+slots:
+  direction: {enum: [N, S, E, W, NE, NW, SE, SW]}
+
+guidance: |
+  Directions: north is up, south down, east right, west left; "up" and "down" as directions
+  mean north and south unless the stairs are meant ("go down the stairs", "descend" are DOWN).
+  "take", "grab", "get" are PICKUP. Omit fields you don't need.
+
+examples:
+  - ["go north", {"intent":"MOVE","direction":"N"}]
+  - ["move east", {"intent":"MOVE","direction":"E"}]
+  - ["step left", {"intent":"MOVE","direction":"W"}]
+  - ["go up", {"intent":"MOVE","direction":"N"}]
+  - ["northeast", {"intent":"MOVE","direction":"NE"}]
+  - ["pick it up", {"intent":"PICKUP"}]
+  - ["take the apple", {"intent":"PICKUP"}]
+  - ["eat the apple", {"intent":"EAT"}]
+  - ["open the door to the north", {"intent":"OPEN","direction":"N"}]
+  - ["kick the door east", {"intent":"KICK","direction":"E"}]
+  - ["search", {"intent":"SEARCH"}]
+  - ["go down the stairs", {"intent":"DOWN"}]
+  - ["descend", {"intent":"DOWN"}]
+  - ["wait", {"intent":"WAIT"}]
+  - ["use the key", {"intent":"APPLY"}]
+  - ["what time is it", {"intent":"UNKNOWN"}]
+
+spoken:
+  heading: Spoken response (after the JSON)
+  text: |
+    After the JSON comes "Spoken response:" and one short sentence the adventurer says, in
+    the first person. Never JSON, never an intent name.
+  examples:
+    - ["go north", {"intent":"MOVE","direction":"N"}, "Going north."]
+    - ["eat the apple", {"intent":"EAT"}, "Eating."]
+
+map:
+  - {verb: MOVE, atom: "cmd_move({direction:dir})", act: move}
+  - {verb: PICKUP, atom: cmd_pickup, act: pickup}
+  - {verb: EAT, atom: cmd_eat, act: eat}
+  - {verb: OPEN, atom: "cmd_open({direction:dir})", act: open}
+  - {verb: KICK, atom: "cmd_kick({direction:dir})", act: kick}
+  - {verb: SEARCH, atom: cmd_search, act: search}
+  - {verb: DOWN, atom: cmd_down, act: down}
+  - {verb: WAIT, atom: cmd_wait, act: wait}
+  - {verb: APPLY, atom: cmd_apply, act: apply}
+  - {verb: UNKNOWN, atom: cmd_unknown, act: unknown}
+values:
+  dir: {N: n, S: s, E: e, W: w, NE: ne, NW: nw, SE: se, SW: sw}
+
+asks: []
+outcomes: {done: done, refused: refused, progress: progress}
+alternatives:
+  max: 0
+  rules: {}
