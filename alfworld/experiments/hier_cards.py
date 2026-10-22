@@ -3,7 +3,7 @@ examples and grammar, as metis_agent.intent_check serves one domain) and the fiv
 (the orchestrator's intent_turn + intent_grammar, as it serves several domains), every corpus
 row; a row is right when its verb is AND its mapped atom is the corpus's expected goal atom.
 
-    cd metis-agent/py && PYTHONPATH=$PWD .venv/bin/python …/experiments/hier_cards.py DOMAINS_ROOT CORPORA_DIR OUT_PREFIX [alone|union|both]
+    cd metis-agent/py && PYTHONPATH=$PWD .venv/bin/python …/experiments/hier_cards.py DOMAINS_ROOT CORPORA_DIR OUT_PREFIX [alone|union|both|attended]
 
 Runs under metis-agent's venv (the orchestrator's intent_turn/intent_grammar, the mapper, the
 model). DOMAINS_ROOT/<spec>/{<spec>.llp, intent.yaml, domain.yaml}: the reference game's
@@ -129,5 +129,32 @@ if mode in ("union", "both"):
     print("union: domain+verb %d/%d; +atom strict %d/%d (%.3f, miss rate %.3f); either reading of the %d ambiguous rows %d/%d (%.3f)" % (
         u["verb"], u["rows"], u["strict"], u["rows"], u["strict"] / u["rows"], 1 - u["strict"] / u["rows"],
         u["ambiguous_rows"], u["lenient"], u["rows"], u["lenient"] / u["rows"]), flush=True)
+if mode == "attended":
+    # alf-hierarchy step 3: the director wakes the specialist a goal is for and the turn serves the
+    # attended card only (metis-agent v3.serve: active; the director has no card), so a row meets its
+    # own card — in the orchestrator's turn and grammar, as the agent serves it, not intent_check's
+    recs = []
+    for n in NAMES:
+        disp = yaml.safe_load((root / n / "domain.yaml").read_text()).get("display", n)
+        ds = [IntentDomain(n, disp, gen.prompt(specs[n]), gen.grammar(specs[n]), specs[n].get("asks") or ())]
+        persona, gbnf = intent_turn(ds) + gen.spoken(specs[n]), intent_grammar(ds)
+        llm = load_llm(persona)
+        for r in ROWS[n]:
+            j, res, ms = answer(llm, persona, r["utt"], gbnf)
+            dom, verb = j.pop("domain", "") or n, j.get("intent", "")     # one card served: the grammar has no domain (the service's intents_domain)
+            atom, err = in_program(*mapped(maps[n][0], json.dumps(j)), maps[n][1]) if dom == n else (None, "no such domain")
+            verb_ok = verb == r["want"] and (err is None or r["want"] == "UNKNOWN")
+            ok = verb_ok and (r["want"] == "UNKNOWN" or norm(atom) == norm(r["atom_want"]))
+            recs.append(dict(r, card=n, got=[dom, verb], json=res["json"], atom=atom, error=err, verb_ok=verb_ok, ok=ok, ms=ms))
+            print("attended %-6s %s %-46r want %-7s %-26s got %s/%s %s" % (n, "ok  " if ok else ("VERB" if verb_ok else "MISS"), r["utt"],
+                                                                       r["want"], r["atom_want"] or "", dom, verb, atom or err), flush=True)
+        llm.close()
+    with open("%s-attended.jsonl" % prefix, "w") as f:
+        for x in recs:
+            f.write(json.dumps(x) + "\n")
+    a = summary["attended"] = {"rows": len(recs), "verb": sum(x["verb_ok"] for x in recs), "strict": sum(x["ok"] for x in recs),
+                               "per_card": {n: [sum(x["ok"] for x in recs if x["card"] == n), sum(x["card"] == n for x in recs)] for n in NAMES}}
+    print("attended: verb %d/%d; +atom %d/%d (%.3f, miss rate %.3f); %s" % (
+        a["verb"], a["rows"], a["strict"], a["rows"], a["strict"] / a["rows"], 1 - a["strict"] / a["rows"], a["per_card"]), flush=True)
 json.dump(summary, open("%s-summary.json" % prefix, "w"), indent=1)
 print(json.dumps(summary))

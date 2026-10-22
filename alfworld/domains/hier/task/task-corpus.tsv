@@ -17,9 +17,9 @@ bring a tomato over to the stove	FETCH	hand	fetch(tomato1, stoveburner1)
 put the tomato on the third counter	FETCH	hand	fetch(tomato1, countertop3)	task/FETCH/fetch(tomato1, countertop3) | place/PUT/put(tomato1, countertop3)
 get me the tomato to the toaster	FETCH	hand	fetch(tomato1, toaster1)	
 move the tomato into cabinet 4	FETCH	hand	fetch(tomato1, cabinet4)	task/FETCH/fetch(tomato1, cabinet4) | place/PUT/put(tomato1, cabinet4)
-fetch the apple to the fridge	UNKNOWN	hand		
-bring the mug to the sink	UNKNOWN	hand		
-put the egg in the microwave	UNKNOWN	hand		place/PUT/put(egg1, microwave1)
+fetch the apple to the fridge	FETCH	hand	fetch(apple1, fridge1)	
+bring the mug to the sink	FETCH	hand	fetch(mug1, sink1)	
+put the egg in the microwave	FETCH	hand	fetch(egg1, microwave1)	task/FETCH/fetch(egg1, microwave1) | place/PUT/put(egg1, microwave1)
 go to the microwave	UNKNOWN	hand		nav/GO/goto(microwave1)
 pick up the tomato	UNKNOWN	hand		grasp/TAKE/take(tomato1)
 open the microwave	UNKNOWN	hand		access/OPEN/open(microwave1)
