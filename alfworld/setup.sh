@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# metis-world-alfworld — the world's venv: ALFWorld (text mode) pinned, its game data.
+# metis-worlds/alfworld — the world's venv: ALFWorld (text mode) pinned, its game data.
 #   ./setup.sh            install the venv and download the text games into data/
 #   ./setup.sh --check    say what is installed
 # The planner dependency (fast-downward-textworld) builds with a bare `python` on PATH,

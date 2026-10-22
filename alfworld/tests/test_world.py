@@ -127,11 +127,20 @@ def test_program_reaches_placed_alone(package):
 import gen_hier  # noqa: E402
 
 
+def _metis_cli():
+    sys.path.insert(0, os.path.join(ROOT, "experiments"))
+    from baseline import metis_py  # noqa: E402
+    try:
+        return metis_py()
+    except SystemExit:
+        return None
+
+
 def test_hierarchy_wins_by_manual_switch(tmp_path):
     """The task domain emits sub-goals, the driver activates the specialist that handles each,
     the game is won; every activation ends in a result atom; no command refused."""
-    if not os.path.exists(os.path.join(os.path.dirname(ROOT), ".venv", "bin", "metis")):
-        pytest.skip("no metispy `metis` beside the world repos")
+    if not _metis_cli():
+        pytest.skip("no metispy `metis` beside the worlds repo (set METIS_PY)")
     sys.path.insert(0, os.path.join(ROOT, "experiments"))
     import hier
     wd = str(tmp_path)
@@ -216,8 +225,8 @@ def _hier_workdir(tmp_path):
 def test_director_makes_the_switch(tmp_path):
     """The director's rules wake, route and sleep the specialists from the kinds that arrive: the same
     game, the same six activations as the manual switch, won; every specialist slept after its result."""
-    if not os.path.exists(os.path.join(os.path.dirname(ROOT), ".venv", "bin", "metis")):
-        pytest.skip("no metispy `metis` beside the world repos")
+    if not _metis_cli():
+        pytest.skip("no metispy `metis` beside the worlds repo (set METIS_PY)")
     sys.path.insert(0, os.path.join(ROOT, "experiments"))
     import hier
     r = hier.run_game_director(game_dir(), _hier_workdir(tmp_path))
@@ -231,8 +240,8 @@ def test_director_makes_the_switch(tmp_path):
 def test_director_detours_a_goal_from_elsewhere(tmp_path):
     """A person's open(R) while the agent stands elsewhere: access answers elsewhere(R), the director
     puts the goal aside, sends nav, and on reached(R) gives access its goal back; R ends up open."""
-    if not os.path.exists(os.path.join(os.path.dirname(ROOT), ".venv", "bin", "metis")):
-        pytest.skip("no metispy `metis` beside the world repos")
+    if not _metis_cli():
+        pytest.skip("no metispy `metis` beside the worlds repo (set METIS_PY)")
     sys.path.insert(0, os.path.join(ROOT, "experiments"))
     import hier
     wd = _hier_workdir(tmp_path)

@@ -1,4 +1,4 @@
-# metis-world-minihack — a small world for learning, with the small model in the loop
+# minihack — a small world for learning, with the small model in the loop (metis-worlds)
 
 [MiniHack](https://github.com/samvelyan/minihack) (NLE: NetHack's engine, configurable
 levels) under the metis agentic loop with the small LLM agent (Gemma E2B, metis-agent) IN

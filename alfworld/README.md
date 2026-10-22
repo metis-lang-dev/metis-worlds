@@ -1,4 +1,4 @@
-# metis-world-alfworld — a small world for learning
+# alfworld — a small world for learning (metis-worlds)
 
 [ALFWorld](https://github.com/alfworld/alfworld) (text-mode, TextWorld over ALFRED's
 household tasks) under the metis agentic loop: the kernel's program acts through a host,

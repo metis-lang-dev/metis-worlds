@@ -4,7 +4,7 @@ import os
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-WORLD = "/home/axadmin/repo/perotheia-packages/metis-world-minihack/world"
+WORLD = "/home/axadmin/repo/perotheia-packages/metis-worlds/minihack/world"
 for _c in [os.environ.get("METIS_MH_WORLD") or "", WORLD] + [os.path.join(os.path.dirname(HERE) if i == 0 else "", "world") for i in range(1)]:
     if _c and os.path.exists(os.path.join(_c, "mh_host.py")):
         sys.path.insert(0, _c)

@@ -1,5 +1,5 @@
 """mh_host.py — one MiniHack level as a catalog host (world-minihack step 1), the shape of
-metis-catalog's tools/rddl_host.py and metis-world-alfworld's alf_host.py. The small LLM
+metis-catalog's tools/rddl_host.py and alfworld/world/alf_host.py. The small LLM
 agent acts: the person's or the agent's words become the card's intents, the harness maps
 them to `cmd_*` atoms, the host turns a fired command rule's event into an NLE action
 (through mh_gym.py, a child under the world's venv), and the level's perception after the

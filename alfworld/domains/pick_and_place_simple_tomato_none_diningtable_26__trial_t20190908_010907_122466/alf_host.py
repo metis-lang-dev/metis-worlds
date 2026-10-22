@@ -4,7 +4,7 @@ import os
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-WORLD = "/home/axadmin/repo/perotheia-packages/metis-world-alfworld/world"                      # the generator writes the world's absolute path here
+WORLD = "/home/axadmin/repo/perotheia-packages/metis-worlds/alfworld/world"                      # the generator writes the world's absolute path here
 _cands = [os.environ.get("METIS_ALF_WORLD") or "", WORLD]
 _d = HERE
 for _ in range(6):

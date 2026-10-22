@@ -94,7 +94,7 @@ and read by the UI, the agent and the tests:
  │ map pane ─ plan from map.json, the agent │ ◄──────► │ console backend (wire v1 + world/*)  │
  │   dot, frames on attention, highlights   │          ├──────────────────────────────────────┤
  │ dialog band ─ fsttm-web lib (copied):    │          │ director (rules) + task + specialists│
- │   mic · floor · TTS · panel              │          │   served from metis-world-alfworld/  │
+ │   mic · floor · TTS · panel              │          │   served from metis-worlds/alfworld/  │
  │ hierarchy pane ─ active/attention/pending│          │   domains/ (cwd-root: cd = root)     │
  │ journal ─ journal.js (copied)            │          │ E2B types words → task card          │
  │ voice nav ─ ui_domain.llp + world_ui.llp │          ├──────────────────────────────────────┤
@@ -113,7 +113,7 @@ and read by the UI, the agent and the tests:
 | wire | metis-agent WIRE.md v1 (`say_text` → `intent`/`narration`, `activate`/`deactivate`, journal `dlg-*`) | one frame family `world/*`: `world/map` (the file's URL), `world/delta` (pose/at/holding/closed), `world/frame` (png) |
 | voice navigation of the page | console-nav's lifted `ui_domain.llp` base (focus tree, activation ports, JUMP/held modes) | `world_ui.llp`: the instance for the page's widgets (map, places, dialog, hierarchy, journal); the map's places are jumpable by name ("show the drawer") |
 | page shell | metis-agent `console/` (index, shell.css/js, journal.js) | `world.html` + `map.js` (SVG plan, ≤ 300 lines) |
-| run script | `run.sh` pattern (metis-agent, metis-loop) | `metis-world-alfworld/demo.sh`: starts THOR + the agent from the world root; `--tw` for text mode |
+| run script | `run.sh` pattern (metis-agent, metis-loop) | `alfworld/demo.sh`: starts THOR + the agent from the world root; `--tw` for text mode |
 
 Nothing of this goes into metis-catalog; the world repo owns its map builder and page; the
 Metis stack is used as it is, with two additions it needs anyway (the world frame family on

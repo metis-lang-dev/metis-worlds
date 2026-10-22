@@ -22,7 +22,10 @@ def metis_py():
     p = os.environ.get("METIS_PY")
     if p:
         return p
-    for c in (os.path.join(os.path.dirname(ROOT), ".venv", "bin", "metis"),):
+    d = ROOT
+    for _ in range(3):  # a metispy venv beside the worlds repo (perotheia-packages/.venv), walking up
+        d = os.path.dirname(d)
+        c = os.path.join(d, ".venv", "bin", "metis")
         if os.path.exists(c):
             return c
     raise SystemExit("set METIS_PY to a metispy `metis` CLI")
