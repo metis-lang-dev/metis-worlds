@@ -137,3 +137,10 @@ This family wins on ARRIVAL: stepping onto the stairs ends the episode won, and 
   - The deaths (searching while bitten) are the **exploitation phase's surprise kind**.
   - `never_opens_the_door` is the one the **held-out door+key family** will measure: discovery has no locked door, so it tests a new skill from known parts (N1's ruling).
 - This table is **the baseline the loop must beat**: step 2b's extracted rules are measured against it, on the held-out split (step 3).
+- **Caveats (opus's v2 review):**
+  - N5: the baseline is one framing, chosen by a probe. The loop, and the held-out door+key family, are compared
+    under the same `describe()` and the same task line.
+  - N6: "the goal" is task knowledge inside the perception's words. Step 2b's extraction reads the reading's atoms
+    (`stairs_down`), never the text.
+  - N7: the root cause is the card's own stairs→DOWN examples. Whether the loop may refine a card is
+    loop-policy's question.
