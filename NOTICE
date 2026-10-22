@@ -1,0 +1,6 @@
+metis-worlds
+Copyright (c) 2026 the metis-lang-dev contributors. Licensed under the Apache License, Version 2.0 (see LICENSE).
+
+alfworld/configs/base_config.yaml is ALFWorld's (https://github.com/alfworld/alfworld, MIT License,
+Copyright (c) 2020 Mohit Shridhar et al.), unchanged; ALFWorld, TextWorld and AI2-THOR are their own licenses.
+minihack/ builds on MiniHack (https://github.com/facebookresearch/minihack, Apache-2.0) and NLE (NetHack General Public License).

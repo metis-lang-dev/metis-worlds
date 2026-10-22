@@ -1,0 +1,9 @@
+build/
+data/
+dist/
+*.egg-info/
+.metis/
+__pycache__/
+records/
+.venv/
+.worlds/
