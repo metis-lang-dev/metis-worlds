@@ -218,6 +218,7 @@ def test_the_actor_faces_act_and_describe(tmp_path):
     pkg, _ = gen_level.generate(("small", "apple", "none", "none", "none"), 1, str(tmp_path), max_steps=12)
     m = yaml.safe_load(open(os.path.join(pkg, "domain.yaml")))
     assert m["actor"] == {"max_steps": 12, "task": gen_level.TASK} and m["line"].startswith("a lit room: {")
+    assert "down" not in gen_level.TASK and "stairs" not in gen_level.TASK   # opus's R1: the world wins on arrival
     h = MhHost(pkg)
     try:
         text = h.describe()
@@ -230,6 +231,12 @@ def test_the_actor_faces_act_and_describe(tmp_path):
         assert r["acted"] is False and r["action"] == [wall.upper()]
         assert h.act("cmd_pickup")["acted"] is False                        # nothing here (the apple is elsewhere)
         assert h.act("cmd_wait")["acted"] is True                           # a wait changes nothing, by design
+        # opus's R2: a cell that is both floor and stairs reads as the stairs, whatever the set's order
+        keep = h.atoms
+        h.atoms = {"agent_at(c1_1)", "floor(c1_1)", "floor(c2_1)", "stairs_down(c2_1)", "wall(c1_0)", "door(c0_1,closed)"}
+        text = h.describe()
+        assert "east: the goal" in text and "north: a wall" in text and "west: a closed door" in text, text
+        h.atoms = keep
         assert h.act("cmd_unknown") == {"acted": False, "action": None, "message": "no action for cmd_unknown", "events": [],
                                         "reward": 0.0, "done": False, "won": False}
     finally:

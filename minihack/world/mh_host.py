@@ -206,7 +206,8 @@ class MhHost:
         after = {a for a in self.atoms if a.split("(")[0] not in ("turn", "hunger", "hp")}
         # refused: nothing in the perception changed, nothing won, and the action was not one that changes nothing by
         # design (WAIT, SEARCH). NLE keeps a repeated message on the line, so the message alone cannot say it twice
-        acted = after != before or self.done or self.reward > 0 or acts[0] in ("WAIT", "SEARCH")
+        acted = after != before or self.done or self.reward > 0 or acts[0] in ("WAIT", "SEARCH") \
+            or bool(set(self.events) & {"said(hit)", "said(killed)", "said(hurt)"})   # a fight is taken (opus's N4)
         return {"acted": acted, "action": acts, "message": self.message, "events": list(self.events), "reward": self.reward,
                 "done": self.done, "won": self.won}
 
@@ -239,20 +240,26 @@ class MhHost:
                 w = n.replace("_", " ")
                 art = "a trap:" if pred == "trap" else ("an" if w[:1] in "aeiou" else "a")
                 things.append("%s %s (%s) is %s" % (art, w, pred if pred != "obj" else "item", where(c)))
-            elif pred in ("stairs_down", "stairs_up"):
-                things.append("the %s is %s" % (pred.replace("_", " "), where(args(a)[0])))
+            elif pred in ("stairs_down", "stairs_up"):                      # the stairs down are the room's goal (gen_level.TASK)
+                things.append("%s is %s" % ("the goal (a staircase)" if pred == "stairs_down" else "a staircase up (not the goal)",
+                                            where(args(a)[0])))
             elif pred == "door":
                 c, s = args(a)
                 things.append("a %s door is %s" % (s, where(c)))
         around = []
-        cells = {}
-        for a in self.atoms:
+        cells = {}                                 # the cell's most specific kind (a stairs cell is also floor: opus's R2)
+        RANK = {"stairs_down": 0, "door": 1, "corridor": 2, "wall": 3, "floor": 4}
+        WORD = {"stairs_down": "the goal", "corridor": "a corridor", "wall": "a wall", "floor": "floor"}
+        for a in sorted(self.atoms):
             pred = a.split("(")[0]
-            if pred in ("wall", "floor", "door", "stairs_down", "corridor"):
-                cells.setdefault(args(a)[0], pred)
+            if pred in RANK:
+                c = args(a)[0]
+                word = "a %s door" % args(a)[1] if pred == "door" else WORD[pred]
+                if c not in cells or RANK[pred] < cells[c][0]:
+                    cells[c] = (RANK[pred], word)
         for (dx, dy), word in self.STEPS.items():
             c = "c%d_%d" % (at[0] + dx, at[1] + dy)
-            kind = cells.get(c)
+            kind = cells.get(c, (None, None))[1]
             if kind is None:
                 kind = "nothing you can see"
             elif kind == "floor" and any(a.startswith(("monster(", "obj(")) and a.endswith("," + c + ")") for a in self.atoms):

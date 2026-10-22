@@ -135,10 +135,10 @@ def surprises(e):
     if v["trap"] != "none" and any("said(fell_pit)" in ((s.get("result") or {}).get("events") or []) for s in steps):
         s = next(s for s in steps if "said(fell_pit)" in ((s.get("result") or {}).get("events") or []))
         out.append({"kind": "falls_into_the_pit", "step": s["step"], "command": cmd(s)})
-    if not e["ep"]["won"] and e["ep"]["end"] == "cap" and not any("stairs down" in (s.get("text") or "") for s in steps):
+    if not e["ep"]["won"] and e["ep"]["end"] == "cap" and not any(("stairs down" in (s.get("text") or "") or "the goal" in (s.get("text") or "")) for s in steps):
         out.append({"kind": "never_sees_the_stairs", "step": None})
-    if not e["ep"]["won"] and any("the stairs down is here" in (s.get("text") or "") for s in steps) and "DOWN" not in intents:
-        s = next(s for s in steps if "the stairs down is here" in (s.get("text") or ""))
+    if not e["ep"]["won"] and any(("the stairs down is here" in (s.get("text") or "") or "the goal (a staircase) is here" in (s.get("text") or "")) for s in steps) and "DOWN" not in intents:
+        s = next(s for s in steps if "is here" in (s.get("text") or "") and ("stairs down" in s["text"] or "the goal" in s["text"]))
         out.append({"kind": "on_the_stairs_never_descends", "step": s["step"]})
     return out
 

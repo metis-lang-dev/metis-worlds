@@ -14,8 +14,12 @@ from mh_gym import World  # noqa: E402
 CARD = open(os.path.join(HERE, "card.yaml")).read()
 
 
-# the room family's task (the actor's task line: the model is told it, never the des)
-TASK = "find the stairs down and go down them"
+# the room family's task (the actor's task line: the model is told it, never the des). The world wins on ARRIVAL:
+# stepping onto the stairs ends the episode won, so the line names the step, not a descent (opus's 2a review R1:
+# "go down them" made DOWN 82% of all intents, and DOWN can never win here). Not "the stairs" either: the card
+# maps any stairs to DOWN ("go down the stairs", and "down" means south "unless the stairs are meant"), so a
+# rerun with "walk onto the stairs" typed DOWN 92%; the host's describe() names the stairs down "the goal"
+TASK = "walk onto the goal: standing on it wins"
 
 
 def generate(variant, seed, out_dir, max_steps=40):

@@ -7,4 +7,4 @@ records: records/
 display: MiniHack room_medium_apple_newt_closed_none
 line: "a lit room: {\"size\": \"medium\", \"item\": \"apple\", \"monster\": \"newt\", \"door\": \"closed\", \"trap\": \"none\"}"
 voice: own
-actor: {max_steps: 40, task: "find the stairs down and go down them"}
+actor: {max_steps: 40, task: "walk onto the goal: standing on it wins"}
