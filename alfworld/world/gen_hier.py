@@ -173,9 +173,10 @@ def generate_director_package(root, game_dir, flat_pkg, commands_log, domain_rel
     return pkg
 
 
-def install(game_dir, root):
+def install(game_dir, root, person=True):
     """A game installed for the agent under ROOT: domains/hier/_flat (the mirror's package), the
-    director, the task's person-mode instance (continues), and an empty instance of every
+    director, the task's person-mode instance (continues; `person`: no seeded fetch — the FETCH the
+    person types is its goal; False seeds the driver's fetch), and an empty instance of every
     specialist (no goal: the director's forward re-instances it through the director host's
     instance()). Every host appends its commands to domains/hier/.commands.jsonl, the shared world
     state the re-instancing reads. → {name: package dir}."""
@@ -200,7 +201,8 @@ def install(game_dir, root):
         mirror.gym.close()
     out = {"_flat": flat_pkg, "director": generate_director_package(root, game_dir, flat_pkg, log)}
     for spec in SPECS:
-        inits = seed(info) if spec == "task" else []
+        # the task's goal: a person's FETCH arrives by intent (person=True: no seed), else the driver's seed
+        inits = seed(info) if spec == "task" and not person else []
         path = generate(game_dir, hier, spec, 0, info, reading, inits, [], intents=(spec == "task"), continues=True, fixed=True, commands_log=log)
         out[spec] = os.path.dirname(path)
     return out

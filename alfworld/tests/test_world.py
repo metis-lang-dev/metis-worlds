@@ -356,6 +356,7 @@ def test_install_director_for_the_agent(tmp_path):
     for d in ("task", "nav", "access", "grasp", "place"):
         meta = json.load(open(os.path.join(pk[d], "game.json")))
         assert meta["continues"] and meta["commands_log"].endswith(".commands.jsonl"), d
+    assert "#init fetch(" not in open(os.path.join(pk["task"], "task.llp")).read()      # person=True: the FETCH is typed, not seeded (W6)
     h = DirectorHost(pk["director"])
     h.world(["+seen(goto) 1"])
     assert h.tick({}) == ["+seen(goto) 1"]
