@@ -241,3 +241,33 @@ def test_the_actor_faces_act_and_describe(tmp_path):
                                         "reward": 0.0, "done": False, "won": False}
     finally:
         h.gym.close()
+
+
+def test_the_policy_drivers_base_instance_and_splits(tmp_path):
+    """gen_level for metis-loop's policy driver: the lifted base (every level's predicates, no rule, no
+    level type), an instance over it (the level's types, the grid as next/3 facts, the perceived start;
+    the starting kit typed), and levels.sample's three splits (seeded; the gate discovery's variants at
+    other layouts; room_quiet without a monster)."""
+    base = gen_level.base_source("mh")
+    assert "bwd next(cell, dir, cell)." in base and "pred agent_at(cell) : mh." in base and "type cell" not in base
+    (tmp_path / "base").mkdir()
+    (tmp_path / "base" / "mh.llp").write_text(base)
+    pkg, n = gen_level.generate(VARIANT, 1, str(tmp_path), domain_rel="../base/mh.llp", name="lvl_s1")
+    text = open(os.path.join(pkg, "lvl_s1.llp")).read()
+    assert 'include "../base/mh.llp".' in text and "next(c0_0, e, c1_0)." in text and "next(c0_0, w," not in text
+    held = [l[len("#init holds("):-3] for l in text.splitlines() if l.startswith("#init holds(")]
+    things = next(l for l in text.splitlines() if l.startswith("type thing {"))[len("type thing {"):-2].split()
+    assert held and all(h in things for h in held)                          # the kit is in the type (flint_stone, rock)
+    assert any(l.startswith("#init hp(n") for l in text.splitlines()) and "stage act" not in text
+    assert sorted(gen_level.geometry(["c0_0", "c1_0", "c1_1"])) == [
+        "next(c0_0, e, c1_0).", "next(c0_0, se, c1_1).", "next(c1_0, s, c1_1).", "next(c1_0, w, c0_0).", "next(c1_1, n, c1_0).", "next(c1_1, nw, c0_0)."]
+    if os.environ.get("METISC"):
+        out = subprocess.run([os.environ["METISC"], "--diagnostics-json", os.path.join(pkg, "lvl_s1.llp")], capture_output=True, text=True, timeout=120)
+        assert out.returncode == 0, out.stdout[-400:] + out.stderr[-200:]
+    d, g, h = (levels.sample(s, "room", 200, 1) for s in ("discovery", "gate", "held_out"))
+    assert {v for v, _ in d} == {v for v, _ in g} == set(levels.split("room", "discovery")) and {v for v, _ in h} == set(levels.split("room", "held_out"))
+    assert {s for _, s in d} == {1} and {s for _, s in g} == {levels.GATE_SEED + 1} and levels.sample("gate", "room", 3, 1) != [(v, 1001) for v, _ in d[:3]]
+    q = levels.sample("discovery", "room_quiet", 200, 1)
+    assert q and all(v[2] == "none" for v, _ in q) and levels.sample("discovery", "room", 5, 1) == d[:5]
+    with pytest.raises(ValueError, match="family"):
+        levels.sample("discovery", "maze", 1, 1)
