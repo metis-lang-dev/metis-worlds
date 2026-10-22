@@ -1,13 +1,15 @@
 // map_e2e.mjs — web/map.html end to end (alf-demo step 3a): headless Chrome over the DevTools
 // protocol with real mouse and key events, the repo served by this script. No network, no model.
 //
-//   node web/tests/map_e2e.mjs            (node >= 22; CHROME=… else google-chrome; exit 1 on a failure)
+//   node web/tests/map_e2e.mjs            (node >= 22, for its WebSocket: metis-loop's pi/node after pi/setup.sh;
+//                                          CHROME=… else google-chrome; exit 1 on a failure)
 //
 // The checks: both fixtures render (the MiniHack level from its glyphs, the ALFWorld scene from
 // its text-mode semantic map); the agent moves on a delta and leaves floor behind; hover shows a
 // thing in the attention slot; a click (and Enter) opens the task card with the original words; a
 // world's own index entry draws (an icon, and a glyph-only entry); an unknown tile name draws as
 // its glyph character; the arrow keys move between things.
+if (typeof WebSocket === 'undefined') { console.log('FAIL node >= 22 is needed (its WebSocket): metis-loop pi/node after pi/setup.sh'); process.exit(1); }
 import { spawn } from 'node:child_process';
 import { createReadStream, existsSync, mkdtempSync, rmSync, statSync } from 'node:fs';
 import { createServer } from 'node:http';
@@ -119,7 +121,9 @@ try {
 } catch (e) {
   fails.push(String(e)); console.log('FAIL', e);
 } finally {
-  chrome.kill(); server.close(); rmSync(prof, { recursive: true, force: true });
+  // Chrome's exit first: removing its profile while it still writes there races it
+  await new Promise(r => { if (chrome.exitCode !== null) return r(); chrome.once('exit', r); chrome.kill(); setTimeout(r, 5000); });
+  server.close(); rmSync(prof, { recursive: true, force: true });
 }
 console.log(fails.length ? `${fails.length} failed` : 'all passed');
 process.exit(fails.length ? 1 : 0);

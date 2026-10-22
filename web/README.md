@@ -6,7 +6,7 @@ console copies fsttm-web's lib (copies, not dependencies).
 
 | path | what |
 |---|---|
-| `map.js` | `WorldMap(el, {base, onTask, onAttend})`: `load(url or map)`, `delta({agent, entities, cells, hot, task})`, `showTask(id)`, `entries()`; `toGrid(semanticMap)` puts a §3 map (places with metric positions) on a grid |
+| `map.js` | `WorldMap(el, {base, onTask, onAttend})`: `load(url or map)`, `delta({agent, entities, cells, hot, task})`, `showTask(id)`, `entries()`; `toGrid(semanticMap)` puts a §3 map (places with metric positions) on a grid of the map's `cell` metres (default 0.5; ALFWorld's maps say 0.25) |
 | `map.css` | the look; theme tokens (`--wm-*`), light and dark |
 | `map.html` | a static page with both fixtures (`?theme=light|dark`, `?mh=` / `?alf=` another map) |
 | `fixtures/minihack_room_medium.json` | a MiniHack level's first screen from its `glyphs` observation (`minihack/world/map_export.py`) |
@@ -45,7 +45,11 @@ atom formalization made of them, the specialist chain so far, and the result lin
 .worlds/mh/bin/python tools/tiles_export.py EDITOR_CHECKOUT    # assets/ (EDITOR_CHECKOUT: minihack-editor.github.io)
 cd minihack && ../../.worlds/mh/bin/python world/map_export.py domains/room_medium_apple_newt_closed_none ../web/fixtures/minihack_room_medium.json
 cd alfworld && ALFWORLD_DATA=… ../../.worlds/alf/bin/python world/semantic_map.py GAME_DIR ../web/fixtures/alfworld_tomato_microwave_13.json ../../alfworld/tiles/index.json
-node web/tests/map_e2e.mjs                                      # node >= 22, google-chrome (or CHROME=)
+node web/tests/map_e2e.mjs                                      # node >= 22 (see below), google-chrome (or CHROME=)
 ```
 
 The worlds' suites check that the committed fixtures and the sheet are what these write.
+
+**Node:** the e2e test needs node ≥ 22 (its global `WebSocket`); the system's node is older.
+Use the pinned one from metis-loop, `pi/node/bin/node` once `pi/setup.sh` has run there
+(`NODE=…/metis-loop/pi/node/bin/node $NODE web/tests/map_e2e.mjs`).

@@ -3,6 +3,7 @@
  "scene": "FloorPlan13",
  "units": "m",
  "mode": "text",
+ "cell": 0.25,
  "game": "train/pick_and_place_simple-Tomato-None-Microwave-13/trial_T20190908_125158_098734",
  "places": [
   {

@@ -18,6 +18,8 @@ alf_host.py, as the driver does) and traj_data.json:
   `Pan_94f6c891`, so they do not join the PDDL ids; the id's coordinates are the same pose);
 - agent = traj_data's `init_action` (TeleportFull x, z, rotation), at nowhere yet, empty-handed;
 - edges = every pair (ALFWorld's `go to` reaches any place);
+- cell = 0.25: the grid a reader puts the places on, in metres (a kitchen's drawers sit 0.3 m
+  apart: at 0.5 they share cells; the architect's ruling);
 - task = the annotators' words (`turk_annotations`, the first `task_desc`) and the goal the
   generator resolves (`target(O)` / `dest(R)`): fetch(O, R).
 Ids are the program's handles (`countertop3`), names the game's spoken form ("countertop 3").
@@ -33,6 +35,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 
 _WORD = {"_bar_": "|", "_minus_": "-", "_plus_": "+", "_dot_": "."}
+CELL = 0.25                                        # metres per grid cell, for the map's readers (web/map.js)
 
 
 def thor_id(name):
@@ -101,7 +104,7 @@ def text_map(game_dir, index=None):
     dests = re.findall(r"^dest\((\w+)\)\.", facts, re.M)
     words = [a["task_desc"].strip() for a in traj.get("turk_annotations", {}).get("anns", []) if a.get("task_desc")]
     ids = [p["id"] for p in places]
-    return {"world": "alfworld", "scene": traj["scene"]["floor_plan"], "units": "m", "mode": "text",
+    return {"world": "alfworld", "scene": traj["scene"]["floor_plan"], "units": "m", "mode": "text", "cell": CELL,
             "game": os.path.relpath(game_dir, os.path.dirname(os.path.dirname(os.path.dirname(game_dir)))),
             "places": places, "things": things,
             "agent": {"pos": [round(ia.get("x", 0.0), 2), round(ia.get("z", 0.0), 2)], "yaw": ia.get("rotation", 0),

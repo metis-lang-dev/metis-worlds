@@ -26,9 +26,9 @@ const json = async u => { const r = await fetch(u); if (!r.ok) throw new Error(`
 const nameOf = t => String(t).toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
 
 // a semantic map (places with metric positions, things at places) as the grid: x and z quantized to
-// `cell` metres, a place that lands on a taken cell moved to the nearest free one, things listed in
+// `cell` metres (the map's own `cell`, else 0.5), a place that lands on a taken cell moved to the nearest free one, things listed in
 // their place (the ones the task names make it hot); the agent quantized the same way
-export function toGrid(sem, { cell = 0.5, margin = 1 } = {}) {
+export function toGrid(sem, { cell = sem.cell ?? 0.5, margin = 1 } = {}) {
   const ps = sem.places || [], xs = ps.map(p => p.pos[0]), zs = ps.map(p => p.pos[1]);
   const x0 = Math.min(...xs), z0 = Math.min(...zs);
   const q = ([x, z]) => [Math.round((x - x0) / cell) + margin, Math.round((z - z0) / cell) + margin];
