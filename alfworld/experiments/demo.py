@@ -1,0 +1,305 @@
+"""demo.py — the exploitation demo's agent side in TEXT mode (alf-demo step 2, docs/DEMO.md §4–§5).
+
+    ALFWORLD_DATA=… .worlds/alf/bin/python experiments/demo.py setup GAME_DIR ROOT [--nav] [--port P]
+    ALFWORLD_DATA=… .worlds/alf/bin/python experiments/demo.py check [--game GAME_DIR] [--out DIR] [--port P]
+    ALFWORLD_DATA=… .worlds/alf/bin/python experiments/demo.py games [--n 10] [--split train] [--out DIR]
+
+setup: ROOT becomes the agent's catalog (cwd-root): the game's hierarchy installed for a person
+(gen_hier.install, person=True: the director, the task, the specialists, one commands log), the task
+card's generated grammar and prompts, the map in text mode (world/semantic_map.py → ROOT/world-map.json),
+with --nav the page's voice navigation (web/domains/world_ui), and ROOT/config.yaml for metis-agent's
+service: the director (v3.director), the turn serving the active cards (v3.serve: active), the map
+(v3.world_map: /world/map.json, named on every hello as world/map). demo.sh runs it with the page
+(web/world.html?live=1).
+
+check: the five-turn script of §5 through the service, with no browser — the person's words by say_text
+(E2B types the FETCH into the task card), the director's chain, the world's world/delta per command,
+the result lines said, the end; then a person's goal the task refuses (the tomato into the fridge: a
+wrong destination), the ask through the band and the cornered place. Asserts each turn's frames, and
+writes them as the page's replay (OUT/<name>.run.jsonl: the same frames world.html?replay= plays).
+
+games: N train games by say_text (the step's acceptance): won, the director's beats, every command a
+world/delta."""
+import argparse
+import json
+import os
+import shutil
+import subprocess
+import sys
+import threading
+import time
+from pathlib import Path
+
+HERE = Path(__file__).resolve().parent
+WORLD = HERE.parent
+sys.path.insert(0, str(WORLD / "world"))
+sys.path.insert(0, str(HERE))
+import families  # noqa: E402
+import gen_hier  # noqa: E402
+import hier_director_agent as hda  # noqa: E402
+from wire import Wire  # noqa: E402
+
+WEB = WORLD.parent / "web"
+GAME = "train/pick_and_place_simple-Tomato-None-Microwave-13"        # the fixtures' kitchen (web/fixtures)
+
+
+def setup(game, root, nav=False, port=8398):
+    """ROOT as the demo's catalog; → (config path, the map, the task's fetch)."""
+    root = Path(root)
+    if root.exists():
+        shutil.rmtree(root)
+    out = gen_hier.install(str(game), str(root), person=True)
+    for spec in hda.NAMES[1:]:                 # metis-agent loads a host from <name>_host.py, or the manifest's host: file
+        shutil.copy(Path(out[spec]) / "alf_host.py", Path(out[spec]) / ("%s_host.py" % spec))
+    hda.card_files(root, out["task"])
+    from semantic_map import text_map
+    m = text_map(str(game))
+    (root / "world-map.json").write_text(json.dumps(m, indent=1))
+    names = list(hda.NAMES)
+    if nav:
+        shutil.copytree(WEB / "domains" / "world_ui", root / "domains" / "world_ui")
+        names.append("world_ui")
+    run = root / ".run"
+    run.mkdir()
+    c = hda.config_dict(run, port)
+    c["v3"]["world_map"] = str(root / "world-map.json")
+    c["v3"]["catalog"] = names
+    c["v3"]["loaded"] = ["director", "task"] + (["world_ui"] if nav else [])
+    c["domains"]["names"] = names
+    c["domains"]["clocks"] = [{"domain": n, "n": 1} for n in names]
+    c["ws"]["ui"] = str(WEB)
+    import yaml
+    (run / "config.yaml").write_text(yaml.safe_dump(c, sort_keys=False))
+    return run / "config.yaml", m, hda.fetch_of(out["_flat"]), out
+
+
+class Session:
+    """metis-agent's service over ROOT, its frames collected."""
+
+    def __init__(self, root, cfg, port):
+        env = dict(os.environ, METIS_CATALOG=str(root), PYTHONPATH=str(hda.AGENT_PY), METIS_ALF_PY=os.environ.get("METIS_ALF_PY", sys.executable))
+        self.svc = subprocess.Popen(["systemd-run", "--user", "--scope", "-q", "-p", "MemoryMax=6G", "nice",
+                                     str(hda.AGENT_HOME / "py" / ".venv" / "bin" / "python"), "-m", "metis_agent.service",
+                                     "--config", str(cfg), "--no-wait-viewer", "--ui-dir", str(WEB), "--lib-dir", str(WEB / "vendor")],
+                                    cwd=str(hda.AGENT_PY), env=env, stdout=open(Path(cfg).parent / "service.log", "w"), stderr=subprocess.STDOUT)
+        self.frames, self.lock, self.w = [], threading.Lock(), None
+        for _ in range(400):
+            try:
+                self.w = Wire("ws://127.0.0.1:%d/ws" % port)
+                break
+            except OSError:
+                if self.svc.poll() is not None:
+                    raise RuntimeError("the service exited: see %s" % (Path(cfg).parent / "service.log"))
+                time.sleep(0.5)
+        threading.Thread(target=self._read, daemon=True).start()
+        self.w.send({"ev": "hello", "since": 1e15})
+
+    def _read(self):
+        while True:
+            m = self.w.recv()
+            if m is None:
+                return
+            with self.lock:
+                self.frames.append(dict(m, at=time.time()))
+
+    def mark(self):
+        with self.lock:
+            return len(self.frames)
+
+    def since(self, k):
+        with self.lock:
+            return list(self.frames[k:])
+
+    def wait(self, pred, k=0, timeout=240):
+        t0 = time.time()
+        while time.time() - t0 < timeout:
+            for f in self.since(k):
+                if pred(f):
+                    return f
+            if self.svc.poll() is not None:
+                raise RuntimeError("the service exited")
+            time.sleep(0.3)
+        return None
+
+    def say(self, words, tid):
+        k = self.mark()
+        self.w.send({"ev": "say_text", "id": tid, "text": words})
+        return k
+
+    def close(self):
+        if self.w:
+            self.w.close()
+        self.svc.terminate()
+        try:
+            self.svc.wait(20)
+        except subprocess.TimeoutExpired:
+            self.svc.kill()
+
+
+def journal(fs, kind):
+    return [f["rec"] for f in fs if f.get("ev") == "journal" and f["rec"].get("kind") == kind]
+
+
+def ended(f):
+    return f.get("ev") == "journal" and f["rec"].get("kind") == "dlg-director" and f["rec"].get("outcome")
+
+
+def as_replay(fs, path, map_url):
+    """The frames as the page's replay (world.html?replay=): the wire's frames whose events it plays,
+    the map named relative to the file, dt the ms between them."""
+    keep = [f for f in fs if f.get("ev", "").startswith("world/") or (f.get("ev") == "journal" and f["rec"].get("kind") in
+            ("dlg-wake", "dlg-dispatch", "dlg-domain", "dlg-trace", "dlg-say", "dlg-director"))]
+    out, prev = [{"ev": "world/map", "url": map_url, "dt": 0}], None
+    for f in keep:
+        if f.get("ev") == "world/map":
+            continue
+        g = {k: v for k, v in f.items() if k not in ("at", "t")}
+        g["dt"] = 0 if prev is None else int((f["at"] - prev) * 1000)
+        prev = f["at"]
+        out.append(g)
+    Path(path).write_text("".join(json.dumps(x) + "\n" for x in out))
+    return out
+
+
+def check(game, out_dir, port):
+    """The five-turn script (DEMO.md §5), twice: the win, and the disengagement. → the report."""
+    out_dir = Path(out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    report, problems = {}, []
+    o, r = None, None
+    for name, words_of_fetch in (("win", None), ("fridge", ("tomato 1", "fridge 1"))):
+        root = out_dir / ("root-" + name)
+        cfg, m, (o, r), inst = setup(game, root, port=port)
+        words = "put the %s in the %s" % (words_of_fetch or (hda.words_of(o), hda.words_of(r)))
+        s = Session(root, cfg, port)
+        try:
+            got = s.wait(lambda f: f.get("ev") == "world/map", timeout=60)
+            k = s.say(words, "p1")
+            end = s.wait(ended, k)
+            time.sleep(2.0)
+            fs = s.since(0)
+        finally:
+            s.close()
+        turn = s.since(k)
+        rec = {"words": words, "map": bool(got)}
+        rec["j"] = next((f.get("intent") for f in turn if f.get("ev") == "intent" and f.get("id") == "p1"), None)
+        rec["outcome"] = end["rec"]["outcome"] if end else "timeout"
+        rec["asked"] = bool(end and any(e.startswith("ask(") for e in end["rec"].get("effects") or ()))
+        rec["hierarchy"] = sum(1 for f in turn if f.get("ev") == "world/hierarchy")
+        deltas = [f for f in turn if f.get("ev") == "world/delta"]
+        rec["moves"] = [f["agent"]["at"] for f in deltas if (f.get("agent") or {}).get("at")]
+        rec["world_deltas"] = sum(1 for f in deltas if "task" not in f)
+        rec["task_views"] = sum(1 for f in deltas if "task" in f)
+        rec["cornered"] = next((f["cornered"] for f in deltas if f.get("cornered")), None)
+        rec["chain"] = next((f["task"]["chain"] for f in reversed(deltas) if "task" in f), [])
+        rec["said"] = [(f.get("kind"), f.get("sentence")) for f in turn if f.get("ev") == "narration"]
+        rec["wakes"] = [x["domain"] for x in journal(turn, "dlg-domain") if x.get("by") == "director" and x.get("verb") == "activate"]
+        log = root / "domains" / "hier" / ".commands.jsonl"
+        rec["commands"] = [json.loads(x)["command"] for x in log.read_text().splitlines() if x.strip()] if log.exists() else []
+        rec["replay"] = str(out_dir / ("%s.run.jsonl" % name))
+        as_replay(fs, rec["replay"], os.path.relpath(root / "world-map.json", out_dir))
+        report[name] = rec
+        # the five turns, as DEMO.md §5 says them
+        need = [(rec["map"], "1. the world's map named on hello (world/map)"),
+                (rec["j"] and rec["j"].get("intent") == "FETCH", "2. E2B typed the person's words into the task card (FETCH)"),
+                (rec["hierarchy"] > 0, "3. the director's beats on the wire (world/hierarchy)")]
+        if name == "win":
+            need += [(rec["wakes"], "3. the director woke the specialists (dlg-domain by director)"),
+                     (rec["world_deltas"] >= len(rec["commands"]) > 0, "3. every world command a world/delta (the map's agent moves)"),
+                     (any(k == "v3-line" for k, _ in rec["said"]), "3. the results' lines said through the band"),
+                     (rec["outcome"] == "ended(done)", "the task ends done")]
+        else:
+            # the task refuses the destination at once (not_dest → wrong_dest): no specialist, no command
+            need.append((not rec["commands"], "4. nothing is sent to the world for a refused destination"))
+            need.append((rec["asked"], "4. a wrong destination disengages: the director asks"))
+            need.append((any(k == "v3-ask" for k, _ in rec["said"]), "4. the ask said through the band (v3-ask)"))
+            need.append((rec["cornered"] is not None, "4. the map shows the cornered place"))
+        need.append((Path(rec["replay"]).stat().st_size > 0, "5. the turn recorded, replayable without THOR (the page's ?replay=)"))
+        rec["checks"] = [[bool(ok), what] for ok, what in need]
+        problems += ["%s: %s" % (name, what) for ok, what in need if not ok]
+    report["problems"] = problems
+    (out_dir / "check.json").write_text(json.dumps(report, indent=1))
+    return report
+
+
+def games(n, split, out_dir, port, seed=1):
+    out_dir = Path(out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    recs = []
+    for i, g in enumerate(families.sample(split, "pick_and_place_simple", n, seed)):
+        root = out_dir / ("g%02d" % i)
+        cfg, m, (o, r), inst = setup(g, root, port=port)
+        words = "bring the %s to the %s" % (hda.words_of(o), hda.words_of(r))
+        s = Session(root, cfg, port)
+        t0 = time.time()
+        try:
+            k = s.say(words, "p1")
+            end = s.wait(ended, k, timeout=300)
+            time.sleep(1.0)
+            turn = s.since(k)
+        finally:
+            s.close()
+        log = root / "domains" / "hier" / ".commands.jsonl"
+        cmds = [json.loads(x)["command"] for x in log.read_text().splitlines() if x.strip()] if log.exists() else []
+        from alf_host import AlfHost
+        mirror = AlfHost(inst["_flat"])
+        try:
+            for c in cmds:
+                mirror._take(mirror.gym.call("step", command=c))
+            won = bool(mirror.won)
+        finally:
+            mirror.gym.close()
+        deltas = [f for f in turn if f.get("ev") == "world/delta" and "task" not in f]
+        rec = {"game": os.path.relpath(g, families.data_root()), "words": words, "won": won,
+               "outcome": end["rec"]["outcome"] if end else "timeout", "commands": len(cmds), "world_deltas": len(deltas),
+               "hierarchy": sum(1 for f in turn if f.get("ev") == "world/hierarchy"),
+               "lines": sum(1 for f in turn if f.get("ev") == "narration" and f.get("kind") == "v3-line"),
+               "seconds": round(time.time() - t0, 1)}
+        recs.append(rec)
+        print("%2d %-60s %s %-12s %d commands, %d world/delta, %d beats, %d lines, %ss" % (
+            i + 1, rec["game"][-60:], "WON " if won else "lost", rec["outcome"], rec["commands"], rec["world_deltas"],
+            rec["hierarchy"], rec["lines"], rec["seconds"]), flush=True)
+    summary = {"split": split, "n": len(recs), "won": sum(r["won"] for r in recs), "games": recs}
+    (out_dir / ("games-%s.json" % split)).write_text(json.dumps(summary, indent=1))
+    print("won %d/%d" % (summary["won"], len(recs)))
+    return summary
+
+
+def main(argv=None):
+    ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
+    sub = ap.add_subparsers(dest="cmd", required=True)
+    s = sub.add_parser("setup")
+    s.add_argument("game")
+    s.add_argument("root")
+    s.add_argument("--nav", action="store_true")
+    s.add_argument("--port", type=int, default=8398)
+    c = sub.add_parser("check")
+    c.add_argument("--game", default=None)
+    c.add_argument("--out", default=str(HERE / "records" / "demo-check"))
+    c.add_argument("--port", type=int, default=8398)
+    g = sub.add_parser("games")
+    g.add_argument("--n", type=int, default=10)
+    g.add_argument("--split", default="train")
+    g.add_argument("--out", default=str(HERE / "records" / "demo-games"))
+    g.add_argument("--port", type=int, default=8398)
+    a = ap.parse_args(argv)
+    if a.cmd == "setup":
+        cfg, m, fetch, _ = setup(a.game, a.root, a.nav, a.port)
+        print(json.dumps({"config": str(cfg), "task": m["task"]["text"], "fetch": fetch}))
+        return 0
+    if a.cmd == "check":
+        game = a.game or str(Path(families.data_root()) / GAME / sorted(os.listdir(Path(families.data_root()) / GAME))[0])
+        rep = check(game, a.out, a.port)
+        for name in ("win", "fridge"):
+            r = rep[name]
+            print("%s: %r → %s; %s; %d world/delta, %d beats; said %d; cornered %s" % (
+                name, r["words"], json.dumps(r["j"]), r["outcome"], r["world_deltas"], r["hierarchy"], len(r["said"]), r["cornered"]))
+            for ok, what in r["checks"]:
+                print("   %s %s" % ("ok " if ok else "NO ", what))
+        return 1 if rep["problems"] else 0
+    games(a.n, a.split, a.out, a.port)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

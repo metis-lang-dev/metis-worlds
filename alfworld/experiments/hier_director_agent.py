@@ -76,8 +76,9 @@ def card_files(root, task_dir):
         (d / fn).write_text(text)
 
 
-def config(run, port):
-    c = {"model": str(AGENT_HOME / "go/models/gemma4/gemma-4-E2B-it-Q4_K_M.gguf"), "template": "gemma4",
+def config_dict(run, port):
+    """The service's config for the installed hierarchy (the director, serve: active)."""
+    return {"model": str(AGENT_HOME / "go/models/gemma4/gemma-4-E2B-it-Q4_K_M.gguf"), "template": "gemma4",
          "stop_words": ["stop", "halt", "freeze", "quiet"],
          "v3": {"prompt": ["../go/grammar/v3-orchestrator.txt"], "catalog": list(NAMES), "loaded": ["director", "task"],
                 "serve": "active", "director": "director", "n_ctx": 16384, "tick_ms": 300,
@@ -85,6 +86,10 @@ def config(run, port):
          "domains": {"names": list(NAMES), "case": "live", "seed": 1, "clocks": [{"domain": n, "n": 1} for n in NAMES],
                      "trace": True, "records": str(run / "records"), "narrator_n_ctx": 8192, "seat_n_ctx": 8192},
          "ws": {"addr": "127.0.0.1:%d" % port}}
+
+
+def config(run, port):
+    c = config_dict(run, port)
     import yaml
     (run / "config.yaml").write_text(yaml.safe_dump(c, sort_keys=False))
     return run / "config.yaml"
