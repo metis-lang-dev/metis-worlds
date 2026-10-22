@@ -121,6 +121,34 @@ world-driven source of activation (a world fact alone waking a specialist, HIERA
 second source) needs reactive specialists — the flat rules partitioned by activity, no
 planner — and is a later measurement, not this step's.
 
+### Step 3, measured in the agent (opus, metis-agent main 9021409; the architect's note, 2026-10-22)
+
+The director runs inside metis-agent: a game is installed (`gen_hier.install(game_dir, root)`:
+the director package with its host, the task's person-mode instance, an empty instance per
+specialist, a shared commands log every host replays), then only the person's words — "bring
+the X to the Y" — and the rules make every switch.
+
+| games through the agent | won | director beats | activations | commands per game |
+|---|---|---|---|---|
+| train | 10/10 | 19 | 6 | 4.4 |
+| valid_unseen | 10/10 | 19 | 6 | 4.6 |
+
+The same specialist goals and command counts as `hier.py --director`, game for game. The model's
+turn holds the director's card and the attended card only (F3, `v3.serve: active`): ~3.9k tokens,
+not growing (step 2's union reached 15,360 and overflowed at the twelfth activation).
+
+**The measured answer to F3.** On nina's relabeled corpus the UNION of every specialist's card
+scores 132/143 = **0.923**; ATTENDED — each row meets its own card alone in the orchestrator's
+turn and grammar — scores 142/143 = **0.993**. The routing the small model cannot do (E12) is the
+director's rules; the model only types the person's words into the one card that is up.
+
+What the wire needed from the world, found in the run and fixed (opus's W1–W7): a shim named
+like the world module imported itself (metis.host.world_host puts the world directory first;
+the agent keys its shims apart); a won game under `continues` is not the run's end (the planner
+puts out `done`, the director ends the run); re-instancing takes a domain's HELD tokens only, not
+the world's facts or its results (`director_host.own_tokens`); an installed task seeds no fetch
+(`install(person=True)`): the person's FETCH is its goal. Step 4 is the user's gate.
+
 ## What it gives the agent paper
 
 The same family, three programs: flat (step 1 of world-alfworld), hierarchical by hand
