@@ -389,3 +389,23 @@ def test_install_director_for_the_agent(tmp_path):
             llp = next(f for f in os.listdir(pk[d]) if f.endswith(".llp"))
             out = subprocess.run([os.environ["METISC"], "--diagnostics-json", os.path.join(pk[d], llp)], capture_output=True, text=True, timeout=120)
             assert out.returncode == 0 and "error" not in out.stdout.lower(), (d, out.stdout[-400:] + out.stderr[-200:])
+
+
+def test_rule_names_map_by_their_first_token(package):
+    """loop-policy step 2 F2: a rule the loop names `verb_why` maps to the game's verb by its first
+    token with the variable convention (go: R [L2], open: R, take: O R, put: O R); the table's own
+    keys keep their meaning."""
+    from alf_host import AlfHost
+    pkg, _ = package
+    h = AlfHost(pkg)
+    try:
+        rec = next(a for a in sorted(h.static) if a.startswith("recat("))[6:-1].split(",")
+        r, loc = rec[0], rec[1]
+        assert h.command_of("go_anywhere[R=%s]" % r, ()) == "go to " + h.name(r)                 # L2 from recat
+        assert h.command_of("go_there[L2=%s,R=%s]" % (loc, r), ()) == "go to " + h.name(r)
+        assert h.command_of("open_it_up[R=%s]" % r, ()) == "open " + h.name(r)
+        assert h.command_of("take_now[O=x,R=%s]" % r, ()) == "take x from " + h.name(r)
+        assert h.command_of("put_back[O=x,R=%s]" % r, ()) == "move x to " + h.name(r)
+        assert h.command_of("dance[O=x]", ()) is None
+    finally:
+        h.gym.close()

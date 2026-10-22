@@ -151,14 +151,22 @@ class AlfHost:
     def name(self, handle):
         return self.to_name[handle]
 
+    # a rule named `verb` or `verb_why` that is not a COMMANDS key (the loop's own rules, loop-policy
+    # step 2 F2): the first token is the verb, its variables by this convention
+    VERBS = {"go": ("go", "L2", "R"), "open": ("open", "R"), "take": ("take", "O", "R"), "put": ("put", "O", "R")}
+
     def command_of(self, name, args):
         base, b = bindings(name)
         spec = COMMANDS.get(base)
         if spec is None:
-            return None
+            spec = self.VERBS.get(base.split("_")[0])
+            if spec is None:
+                return None
+            if spec[0] == "go" and "L2" not in b and b.get("R"):       # go by the receptacle alone: its location from recat
+                b = dict(b, L2=next((l for l, rs in self.recat.items() if b["R"] in rs), ""))
         kind = spec[0]
         if kind == "go":
-            l2 = b[spec[1]]
+            l2 = b.get(spec[1], "")
             recs = self.recat.get(l2, [])
             if not recs:
                 return None
