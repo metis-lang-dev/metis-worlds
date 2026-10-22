@@ -7,6 +7,7 @@ seen in discovery (the compositional test: a monster AND a trap, a door AND a ke
     families()                    every family name
     level(name, variant, seed)    {"name", "des", "actions", "seed", "features"}
     split(family, which)          the variants of a family in "discovery" or "held_out"
+    sample(split, family, n, seed)  n GAMES (variant, seed) of a split, seeded: the policy driver's
 """
 import itertools
 import random
@@ -38,6 +39,27 @@ def is_held_out(v):
 
 def split(family="room", which="discovery"):
     return [v for v in all_variants() if is_held_out(v) == (which == "held_out")]
+
+
+# the policy driver's splits (metis-loop pi/policy/minihack.py): discovery's variants at their first layout seeds;
+# the GATE's are discovery's variants at other seeds (seen kinds, unseen layouts: ALFWorld's valid_seen); held_out
+# the compositions discovery never shows (valid_unseen). A family narrows them: room_quiet has no monster
+# (a monster moves on its own, so a record of it is not the command's alone)
+GATE_SEED = 1000
+
+
+def sample(which="discovery", family="room", n=10, seed=1):
+    """n games [(variant, level seed)] of the split WHICH (discovery | gate | held_out) of FAMILY (room |
+    room_quiet), in a seeded order; the level seeds of discovery and held_out are SEED, the gate's
+    GATE_SEED + SEED (and its own order, so its first games are not discovery's first variants)."""
+    if family not in ("room", "room_quiet"):
+        raise ValueError("family: room | room_quiet, not %r" % family)
+    if which not in ("discovery", "gate", "held_out"):
+        raise ValueError("split: discovery | gate | held_out, not %r" % which)
+    vs = [v for v in split("room", "held_out" if which == "held_out" else "discovery") if family == "room" or v[2] == "none"]
+    s = GATE_SEED + seed if which == "gate" else seed
+    random.Random(s).shuffle(vs)
+    return [(v, s) for v in vs[:n]]
 
 
 def des_of(variant, seed=1):

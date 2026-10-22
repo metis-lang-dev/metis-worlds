@@ -5,7 +5,7 @@ provenance text "generated MiniHack level room_medium_apple_newt_closed_none see
 layers (dyn).
 stages (act).
 type cell {c0_0 c1_0 c2_0 c3_0 c4_0 c5_0 c6_0 c7_0 c0_1 c1_1 c2_1 c3_1 c4_1 c5_1 c6_1 c7_1 c0_2 c1_2 c2_2 c3_2 c4_2 c5_2 c6_2 c7_2 c0_3 c1_3 c2_3 c3_3 c4_3 c5_3 c6_3 c7_3 c0_4 c1_4 c2_4 c3_4 c4_4 c5_4 c6_4 c7_4}.
-type thing {apple club flint_stones key leather_armor rocks sling}.
+type thing {apple club flint_stone flint_stones key leather_armor rock rocks sling}.
 type beast {jackal newt rat}.
 type dir {n e s w ne se sw nw}.
 type doorstate {open closed}.

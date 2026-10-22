@@ -4,6 +4,12 @@
 cells and names as types, the perceived start as `#init`, the card, the host shim. The
 program holds the declarations only — no rules: the domain is what the agent's runs extract
 (LEARNING.md: agent first, domain after).
+
+With `domain_rel` the package is an INSTANCE over a lifted base instead (the policy driver's: metis-loop
+pi/policy/minihack.py): `base_source(name)` is the base — the perception's, the commands' and the
+outcomes' predicates over the level's types, no rule — and the instance declares the level's types
+(cell, thing, beast), the grid's geometry as static facts (`next(C, D, C2)`: the cell one step in
+direction D; the cells are the level's own, named by their coordinates) and the perceived start.
 """
 import argparse, json, os, shutil, sys
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -22,45 +28,93 @@ CARD = open(os.path.join(HERE, "card.yaml")).read()
 TASK = "walk onto the goal: standing on it wins"
 
 
-def generate(variant, seed, out_dir, max_steps=40):
+# the eight directions as the host's cmd_move(D) names them, and their steps on the grid (x east, y south)
+STEPS = {"n": (0, -1), "e": (1, 0), "s": (0, 1), "w": (-1, 0), "ne": (1, -1), "se": (1, 1), "sw": (-1, 1), "nw": (-1, -1)}
+
+
+def _declarations():
+    """The predicates every level shares (the types cell, thing and beast are the level's)."""
+    return ["layers (dyn).", "stages (act).",
+            "type dir {n e s w ne se sw nw}.",
+            "type doorstate {open closed}.",
+            "type hungerstate {satiated normal hungry weak fainting fainted starved}.",
+            "type said_kind {%s}." % " ".join(sorted({k for _, k in __import__("perceive").MESSAGES} | {"other"})),
+            "type num {n0 .. n40}.",
+            "namespace mh produce (dyn).",
+            "% the grid (static: the instance's facts)", "bwd next(cell, dir, cell).",
+            "% the perception", "pred agent_at(cell) : mh.", "pred floor(cell) : mh.", "pred wall(cell) : mh.", "pred corridor(cell) : mh.",
+            "pred door(cell, doorstate) : mh.", "pred stairs_down(cell) : mh.", "pred stairs_up(cell) : mh.", "pred obj(thing, cell) : mh.",
+            "pred monster(beast, cell) : mh.", "pred trap(said_kind, cell) : mh.", "pred unknown(cell) : mh.",
+            "pred hp(num) : mh.", "pred hpmax(num) : mh.", "pred hunger(hungerstate) : mh.", "pred turn(num) : mh.", "pred holds(thing) : mh.",
+            "pred said(said_kind) : mh.",
+            "% the commands, one per intent", "pred cmd_move(dir) : mh.", "pred cmd_pickup : mh.", "pred cmd_eat : mh.", "pred cmd_down : mh.",
+            "pred cmd_wait : mh.", "pred cmd_open(dir) : mh.", "pred cmd_kick(dir) : mh.", "pred cmd_search : mh.", "pred cmd_apply : mh.", "pred cmd_unknown : mh.",
+            "% the outcomes (the extracted rules will produce them)", "type act {move pickup eat down wait open kick search apply unknown}.",
+            "pred done(act) : mh.", "pred refused(act) : mh.", "pred progress(act) : mh."]
+
+
+def base_source(name="mh"):
+    """The lifted base the policy driver builds (its empty start): every level's predicates, no rule."""
+    return "\n".join(["% " + name + " — the loop's base over MiniHack's room family (world/gen_level.py base_source): the",
+                      "% perception's, the commands' and the outcomes' predicates; the level's types and the grid are the",
+                      "% instance's. No rule: the loop writes them.",
+                      "catalog %s 1." % name,
+                      'provenance text "the loop\'s base: the empty domain over MiniHack\'s facts (loop-policy)" "2026-10-22".']
+                     + _declarations() + ["stage act {", "}", ""])
+
+
+def num_atom(a):
+    """hp(16) → hp(n16): the perception's numbers as the `num` type's values (clamped to n40)."""
+    pred = a.split("(")[0]
+    if pred in ("hp", "hpmax", "turn"):
+        return "%s(n%d)" % (pred, min(int(a[a.index("(") + 1:-1]), 40))
+    return a
+
+
+def geometry(cells):
+    """`next(C, D, C2).` for every cell of the level and every direction whose step stays on a cell."""
+    have = set(cells)
+    out = []
+    for c in cells:
+        x, y = (int(v) for v in c[1:].split("_"))
+        for d, (dx, dy) in STEPS.items():
+            c2 = "c%d_%d" % (x + dx, y + dy)
+            if c2 in have:
+                out.append("next(%s, %s, %s)." % (c, d, c2))
+    return out
+
+
+def generate(variant, seed, out_dir, max_steps=40, domain_rel=None, name=None):
     lv = levels.level(variant, seed)
     w = World()
-    info = w.open(des=lv["des"], actions=lv["actions"], max_steps=100, seed=seed)
+    try:
+        info = w.open(des=lv["des"], actions=lv["actions"], max_steps=100, seed=seed)
+    finally:
+        if w.env is not None:                       # in-process NetHack: the policy driver generates many levels
+            w.env.close()
     per = info["init"]
     names = per["names"]
-    objs = sorted(set(names["objects"]) | {"apple", "key", "club", "sling", "flint_stones", "rocks", "leather_armor"})
+    held = {a[6:-1] for a in per["atoms"] if a.startswith("holds(")}          # the starting kit is perceived too (flint_stone, rock)
+    objs = sorted(set(names["objects"]) | held | {"apple", "key", "club", "sling", "flint_stones", "rocks", "leather_armor"})
     mons = sorted(set(names["monsters"]) | {"newt", "rat", "jackal"})
-    name = lv["name"]
-    lines = ["% " + name + " — a MiniHack level as a package (generated by world/gen_level.py): its cells and names",
-             "% as types, the perceived start as #init; declarations only — the rules are what the agent's runs extract.",
-             "catalog " + name + " 1.",
-             'provenance text "generated MiniHack level %s seed %d" "2026-10-21".' % (name, seed),
-             "layers (dyn).", "stages (act).",
-             "type cell {%s}." % " ".join(info["cells"]),
-             "type thing {%s}." % " ".join(objs),
-             "type beast {%s}." % " ".join(mons),
-             "type dir {n e s w ne se sw nw}.",
-             "type doorstate {open closed}.",
-             "type hungerstate {satiated normal hungry weak fainting fainted starved}.",
-             "type said_kind {%s}." % " ".join(sorted({k for _, k in __import__("perceive").MESSAGES} | {"other"})),
-             "type num {n0 .. n40}.",
-             "namespace mh produce (dyn).",
-             "% the perception", "pred agent_at(cell) : mh.", "pred floor(cell) : mh.", "pred wall(cell) : mh.", "pred corridor(cell) : mh.",
-             "pred door(cell, doorstate) : mh.", "pred stairs_down(cell) : mh.", "pred stairs_up(cell) : mh.", "pred obj(thing, cell) : mh.",
-             "pred monster(beast, cell) : mh.", "pred trap(said_kind, cell) : mh.", "pred unknown(cell) : mh.",
-             "pred hp(num) : mh.", "pred hpmax(num) : mh.", "pred hunger(hungerstate) : mh.", "pred turn(num) : mh.", "pred holds(thing) : mh.",
-             "pred said(said_kind) : mh.",
-             "% the commands, one per intent", "pred cmd_move(dir) : mh.", "pred cmd_pickup : mh.", "pred cmd_eat : mh.", "pred cmd_down : mh.",
-             "pred cmd_wait : mh.", "pred cmd_open(dir) : mh.", "pred cmd_kick(dir) : mh.", "pred cmd_search : mh.", "pred cmd_apply : mh.", "pred cmd_unknown : mh.",
-             "% the outcomes (the extracted rules will produce them)", "type act {move pickup eat down wait open kick search apply unknown}.",
-             "pred done(act) : mh.", "pred refused(act) : mh.", "pred progress(act) : mh.",
-             "stage act {", "  %% I can't do that here.", "  unknown [dyn] : cmd_unknown -o refused(unknown).", "}", ""]
+    name = name or lv["name"]
+    types = ["type cell {%s}." % " ".join(info["cells"]), "type thing {%s}." % " ".join(objs), "type beast {%s}." % " ".join(mons)]
+    if domain_rel:                                  # an INSTANCE over the lifted base (the policy driver's)
+        lines = ["% " + name + " — MiniHack level " + lv["name"] + " seed %d, generated by world/gen_level.py: the level's types," % seed,
+                 "% the grid as static facts and the perceived start, over the lifted base.",
+                 "catalog " + name + " 1.",
+                 'provenance text "generated MiniHack level %s seed %d" "2026-10-22".' % (lv["name"], seed),
+                 'include "%s".' % domain_rel] + types + ["", "% the grid"] + geometry(info["cells"]) + ["", "% the start"]
+    else:
+        lines = ["% " + name + " — a MiniHack level as a package (generated by world/gen_level.py): its cells and names",
+                 "% as types, the perceived start as #init; declarations only — the rules are what the agent's runs extract.",
+                 "catalog " + name + " 1.",
+                 'provenance text "generated MiniHack level %s seed %d" "2026-10-21".' % (name, seed)]
+        decl = _declarations()
+        lines += decl[:2] + types + [l for l in decl[2:] if not l.startswith(("bwd next", "% the grid"))] + [
+            "stage act {", "  %% I can't do that here.", "  unknown [dyn] : cmd_unknown -o refused(unknown).", "}", ""]
     for a in per["atoms"]:
-        pred = a.split("(")[0]
-        if pred in ("hp", "hpmax", "turn"):
-            n = int(a[a.index("(") + 1:-1])
-            a = "%s(n%d)" % (pred, min(n, 40))
-        lines.append("#init %s 1" % a)
+        lines.append("#init %s 1" % num_atom(a))
     lines += ["#steps 20", "#seeds 1"]
     pkg = os.path.join(out_dir, name)
     os.makedirs(pkg, exist_ok=True)
