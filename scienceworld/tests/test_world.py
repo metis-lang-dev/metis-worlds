@@ -44,6 +44,42 @@ def test_perceiver_reads_the_room():
     assert perceive.task_atoms("Your task is to determine if aluminum foil is electrically conductive. The aluminum foil is located around the workshop. First, focus on the aluminum foil. If it is electrically conductive, place it in the red box. If it is electrically nonconductive, place it in the green box.") == ["task(conductivity,aluminum_foil,red_box,green_box)"]
 
 
+KITCHEN = """This room is called the kitchen. In it, you see: 
+\tthe agent
+\ta substance called air
+\ta stove, which is turned on. On the stove is: a metal pot (containing liquid chocolate).
+\ta freezer. The freezer door is open. In the freezer is: a tin cup (containing solid unknown substance C).
+\ta blast furnace, which is turned off. The blast furnace door is closed. 
+\ta glass cup (containing a substance called ice)
+\ta blue box (containing nothing)
+You also see:
+\tA door to the outside (that is open)"""
+MELTING = ("Your task is to measure the melting point of solid unknown substance C, which is located around the kitchen. "
+           "First, focus on the thermometer. Next, focus on the solid unknown substance C. If the melting point of solid "
+           "unknown substance C is above -10.0 degrees celsius, focus on the orange box. If the melting point of solid "
+           "unknown substance C is below -10.0 degrees celsius, focus on the yellow box. The boxes are located around the kitchen.")
+
+
+def test_perceiver_reads_the_melt():
+    """world-scienceworld step 1b: the state of matter the text says, one name through the melt, the
+    task's threshold; a thermometer's measurement typed; parts and connections one spelling."""
+    p = perceive.perceive(KITCHEN, "In your inventory, you see:\n\ta thermometer, currently reading a temperature of 10 degrees celsius",
+                          "the thermometer measures a temperature of 35 degrees celsius")
+    a = set(p["atoms"])
+    assert "state(stove,on)" in a and "in(metal_pot,stove)" in a and "in(chocolate,metal_pot)" in a and "matter(chocolate,liquid)" in a
+    assert "in(unknown_substance_c,tin_cup)" in a and "matter(unknown_substance_c,solid)" in a and "open(freezer)" in a
+    assert "state(blast_furnace,off)" in a and "closed(blast_furnace)" in a and "in(ice,glass_cup)" in a and not any(x.startswith("matter(ice") for x in a)
+    assert "reads(thermometer,n10)" in a and p["events"] == ["said(measured)"] and perceive.measured(p["message"]) == 35
+    assert p["labels"]["unknown_substance_c"] == "solid unknown substance C" and p["labels"]["chocolate"] == "liquid chocolate"
+    assert perceive.task_atoms(MELTING) == ["task(melting,unknown_substance_c,orange_box,yellow_box)", "threshold(m10)"]
+    flipped = MELTING.replace("above -10.0", "BELOW").replace("below -10.0", "above 150.0").replace("BELOW", "below 150.0")
+    assert perceive.task_atoms(flipped) == ["task(melting,unknown_substance_c,yellow_box,orange_box)", "threshold(n150)"]   # the text's order
+    assert perceive.connection("anode on battery is now connected to terminal 1 on blue wire") == ("battery_anode", "blue_wire_terminal_1")
+    assert perceive.name("cathode in red light bulb") == perceive.name("red light bulb cathode") == "red_light_bulb_cathode"
+    assert perceive.vocabulary(["anode on battery", "battery anode", "cup containing mercury", "substance in cup", "tin cup", "liquid chocolate", "chocolate"]) == [
+        "battery_anode", "chocolate", "tin_cup"]
+
+
 def test_bindings():
     assert bindings("cmd_connect[A=battery_anode,B=blue_wire_terminal_1]") == ("cmd_connect", {"A": "battery_anode", "B": "blue_wire_terminal_1"})
 
@@ -70,6 +106,8 @@ def test_gold_path_wins_through_the_host(package):
         assert h.won and h.score >= 100, (h.score, h.message)
         r = h.reading()
         assert "focused(aluminum_foil)" in r                      # kept from the result line (the look never says it)
+        assert "connected(battery_anode,blue_wire_terminal_1)" in r   # the result line's spelling, owner-first (opus's step 1 N2)
+        assert "score" not in h.ports()["task"]                    # a second channel, kept from the brain (opus's step 1 N1)
         assert any(k.startswith("state(red_light_bulb,on)") for k in r) or h.done   # the experiment's answer was seen before the verdict
         assert any(k.startswith("said(") for k in h.pending_events)
     finally:
@@ -98,3 +136,37 @@ def test_package_compiles(package):
     llp = next(f for f in os.listdir(package) if f.endswith(".llp"))
     out = subprocess.run([os.environ["METISC"], "--diagnostics-json", os.path.join(package, llp)], capture_output=True, text=True, timeout=120)
     assert out.returncode == 0 and "error" not in out.stdout.lower(), out.stdout[-400:] + out.stderr[-200:]
+
+
+def test_a_melting_gold_path_wins_through_the_host(tmp_path):
+    """measure-melting-point-unknown-substance 0: the substance keeps its name through the melt, its
+    matter turns solid → liquid, each thermometer use is measured(S, nN) on the perceived name (the
+    command says "solid unknown substance c"), and the verdict is a focus on the task's box."""
+    from baseline import command_event
+    pkg, _ = gen_instance.generate("measure-melting-point-unknown-substance", 0, str(tmp_path))
+    h = SwHost(pkg)
+    try:
+        r = h.reading()
+        assert "task(melting,unknown_substance_c,orange_box,yellow_box)" in r and "threshold(n150)" in r
+        seen, temps = set(), []
+        for a in h.gym.call("gold")["gold"]:
+            h.on_event(command_event(a), ())
+            r = h.reading()
+            seen |= {k for k in r if k.startswith("matter(unknown_substance_c")}
+            temps += [k for k in r if k.startswith("measured(") and k not in temps]
+            if h.done:
+                break
+        assert h.won and h.score >= 100, (h.score, h.message)
+        assert seen == {"matter(unknown_substance_c,solid)", "matter(unknown_substance_c,liquid)"}
+        assert temps and all(t.startswith("measured(unknown_substance_c,n") for t in temps)
+        assert "focused(yellow_box)" in r and h.labels["unknown_substance_c"] == "liquid unknown substance C"
+    finally:
+        h.gym.close()
+
+
+def test_a_qualified_referent_resolves_over_the_perception():
+    h = SwHost.__new__(SwHost)
+    h.atoms = {"in(metal_pot,stove)", "in(tin,metal_pot)", "in(glass_cup,table)", "in(water,glass_cup)", "holds(thermometer)"}
+    assert h.resolve("substance in metal pot") == "tin" and h.resolve("substance in cup") == "water"
+    assert h.resolve("thermometer in inventory") == "thermometer" and h.resolve("cup containing water") == "glass_cup"
+    assert h.resolve("liquid tin") == "tin" and h.resolve("lead") == "lead"

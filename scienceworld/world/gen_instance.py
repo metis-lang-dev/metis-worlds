@@ -33,7 +33,7 @@ def generate(task, variation, out_dir, simplification="easy"):
              'provenance text "generated ScienceWorld %s variation %d (%s)" "2026-10-22".' % (task, variation, simplification),
              "layers (dyn).", "stages (act).",
              "type thing {%s}." % " ".join(things),
-             "type doorstate {open closed}.", "type onoff {on off}.",
+             "type doorstate {open closed}.", "type onoff {on off}.", "type phase {solid liquid gas}.",
              "type said_kind {%s}." % " ".join(kinds),
              "type kind {conductivity melting boiling}.",
              "type temp {%s}." % " ".join(TEMPS),
@@ -41,21 +41,25 @@ def generate(task, variation, out_dir, simplification="easy"):
              "% the perception (the text; never the simulator's hidden properties)",
              "pred here(thing) : sw.", "pred door(thing, doorstate) : sw.", "pred in(thing, thing) : sw.", "pred state(thing, onoff) : sw.",
              "pred closed(thing) : sw.", "pred open(thing) : sw.", "pred reads(thing, temp) : sw.", "pred holds(thing) : sw.",
-             "pred focused(thing) : sw.", "pred connected(thing, thing) : sw.", "pred task(kind, thing, thing, thing) : sw.", "pred said(said_kind) : sw.",
+             "pred matter(thing, phase) : sw.", "pred measured(thing, temp) : sw.",
+             "pred focused(thing) : sw.", "pred connected(thing, thing) : sw.", "pred task(kind, thing, thing, thing) : sw.", "pred threshold(temp) : sw.",
+             "pred said(said_kind) : sw.",
              "% the commands, one per intent",
              "pred cmd_go(thing) : sw.", "pred cmd_open(thing) : sw.", "pred cmd_close(thing) : sw.", "pred cmd_take(thing) : sw.", "pred cmd_drop(thing) : sw.",
              "pred cmd_focus(thing) : sw.", "pred cmd_connect(thing, thing) : sw.", "pred cmd_move(thing, thing) : sw.", "pred cmd_activate(thing) : sw.",
-             "pred cmd_deactivate(thing) : sw.", "pred cmd_wait : sw.", "pred cmd_look : sw.", "pred cmd_unknown : sw.",
-             "% the outcomes", "type act {go open close take drop focus connect move activate deactivate wait look unknown}.",
+             "pred cmd_deactivate(thing) : sw.", "pred cmd_use(thing, thing) : sw.", "pred cmd_examine(thing) : sw.",
+             "pred cmd_wait : sw.", "pred cmd_look : sw.", "pred cmd_unknown : sw.",
+             "% the outcomes", "type act {go open close take drop focus connect move activate deactivate use examine wait look unknown}.",
              "pred done(act) : sw.", "pred refused(act) : sw.", "pred progress(act) : sw.",
              "stage act {", "  %% I can't do that here.", "  unknown [dyn] : cmd_unknown -o refused(unknown).", "}", ""]
     kept = 0
     for a in atoms:
         args = re.findall(r"[a-z0-9_]+", a[a.index("(") + 1:-1]) if "(" in a else []
         pred = a.split("(")[0]
-        if pred in ("here", "door", "in", "state", "closed", "open", "holds", "focused", "connected", "task") and all(x in things or x in ("open", "closed", "on", "off", "conductivity", "melting", "boiling") for x in args):
+        if pred in ("here", "door", "in", "state", "closed", "open", "holds", "matter", "focused", "connected", "task") and all(
+                x in things or x in ("open", "closed", "on", "off", "solid", "liquid", "gas", "conductivity", "melting", "boiling") for x in args):
             lines.append("#init %s 1" % a); kept += 1
-        elif pred == "reads" and args[0] in things:
+        elif pred in ("reads", "measured") and args[0] in things or pred == "threshold":
             lines.append("#init %s 1" % a); kept += 1
     lines += ["#steps 20", "#seeds 1"]
     pkg = os.path.join(out_dir, name)

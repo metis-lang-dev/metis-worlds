@@ -38,17 +38,14 @@ class World:
 
     def _names(self):
         """Every referent the simulator knows, as the perceiver would name it: the vocabulary for a
-        package's `thing` type (names only — nothing of the tree's properties leaves this process)."""
-        from perceive import name
+        package's `thing` type (names only — nothing of the tree's properties leaves this process), one
+        name per thing (perceive.vocabulary: no qualified spellings, a part owner-first)."""
+        from perceive import vocabulary
         try:
             lut = self.env.get_all_object_ids_types_referents_LUTJSON()
             if isinstance(lut, (str, bytes)):
                 lut = json.loads(lut)
-            refs = set()
-            for v in lut.values():
-                for r in (v.get("referents") or []):
-                    refs.add(name(r))
-            return sorted(refs)
+            return vocabulary(r for v in lut.values() for r in (v.get("referents") or []))
         except Exception:
             return []
 

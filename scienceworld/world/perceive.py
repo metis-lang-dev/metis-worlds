@@ -10,13 +10,21 @@ which carries the hidden properties (the oracle, tests only).
   closed(C) / open(C)     "The cupboard door is closed." — a container with a door
   reads(O, nN)            a thermometer's reading (degrees, rounded, clamped to n-50..n300)
   holds(O)                the inventory
+  matter(O, solid|liquid|gas)  the state of matter when the text says it: "liquid chocolate", "solid
+                          unknown substance C" (the name is the substance's, the prefix dropped)
   said(KIND)              the result line, typed (the events: one beat)
 Names: lower case, spaces → `_`, articles dropped ("a red light bulb" → red_light_bulb; "a substance
-called air" → air)."""
+called air" → air); a state of matter dropped ("liquid chocolate" → chocolate: one name through the
+melt); a part owner-first ("anode on battery", "cathode in red light bulb" → battery_anode,
+red_light_bulb_cathode: one spelling per terminal). `label` keeps the world's spelling, the referent a
+command must use ("solid unknown substance C")."""
 import re
 
 ARTICLE = re.compile(r"^(?:a|an|the|A|An|The)\s+")
+MATTER = re.compile(r"^(solid|liquid|gaseous)\s+(?=\S)", re.I)
+PART = re.compile(r"^(anode|cathode|terminal \d+) (?:on|in) (.+)$", re.I)
 MESSAGES = [
+    (r"^the thermometer measures a temperature of", "measured"), (r"must disconnect entire objects", "cant"),
     (r"^you move to the (.+)\.", "moved"), (r"^the door is already open", "already_open"),
     (r"^the (.+) is now open\.", "opened"), (r"^the (.+) is now closed\.", "closed_it"),
     (r"you move the (.+) to the inventory", "picked"), (r"^you move the (.+) to the (.+)\.", "moved_obj"),
@@ -46,8 +54,20 @@ def name(s):
     s = re.sub(r",? which is .*$", "", s)
     s = re.sub(r",? currently reading .*$", "", s)
     s = re.sub(r"\s*\(containing .*\)$", "", s)
+    s = MATTER.sub("", s.strip())
+    m = PART.match(s)
+    if m:
+        s = "%s %s" % (m.group(2), m.group(1))
     s = re.sub(r"\s+", "_", s.strip().lower())
     return s or "thing"
+
+
+def matter(s):
+    """The state of matter a phrase says ("liquid chocolate" → liquid), else None."""
+    s = ARTICLE.sub("", s.strip().strip(".,"))
+    s = re.sub(r"^substance called ", "", s)
+    m = MATTER.match(s)
+    return None if not m else ("gas" if m.group(1).lower() == "gaseous" else m.group(1).lower())
 
 
 def _items(s):
@@ -86,6 +106,8 @@ def _item_atoms(text, container, atoms, names):
     names.add(n)
     LABELS[n] = label(text)
     atoms.add("in(%s,%s)" % (n, container))
+    if matter(text):
+        atoms.add("matter(%s,%s)" % (n, matter(text)))
     m = re.search(r"which is (?:turned )?(on|off|activated|deactivated)", text)
     if m:
         atoms.add("state(%s,%s)" % (n, "on" if m.group(1) in ("on", "activated") else "off"))
@@ -136,6 +158,11 @@ def perceive_inv(inv, atoms, names):
         line = raw.strip()
         if line and line != "nothing":
             n = name(line); names.add(n); LABELS[n] = label(line); atoms.add("holds(%s)" % n)
+            if matter(line):
+                atoms.add("matter(%s,%s)" % (n, matter(line)))
+            m = re.search(r"currently reading a temperature of (-?\d+)", line)
+            if m:                                   # a held thermometer reads too
+                atoms.add("reads(%s,%s)" % (n, temp(m.group(1))))
             m = re.search(r"\(containing (.+)\)$", line)
             if m:
                 for it in _items(m.group(1)):
@@ -160,9 +187,47 @@ def perceive(look, inv, result=""):
             "names": sorted(names), "labels": {n: LABELS[n] for n in names if n in LABELS and LABELS[n].lower().replace(" ", "_") != n}}
 
 
+def measured(text):
+    """A thermometer used on a thing: "the thermometer measures a temperature of N degrees celsius" → N."""
+    m = re.search(r"measures a temperature of (-?\d+)", text or "")
+    return int(m.group(1)) if m else None
+
+
+def temp(t):
+    """Degrees as a `temp` value: n0..n300, m1..m50 (clamped)."""
+    t = max(-50, min(300, int(round(float(t)))))
+    return ("n%d" % t) if t >= 0 else ("m%d" % -t)
+
+
+def connection(text):
+    """The result line of a connect: "anode on battery is now connected to terminal 1 on blue wire" →
+    (battery_anode, blue_wire_terminal_1) — the world's one spelling, whatever the command said."""
+    m = re.search(r"^(.+?) is now connected to (.+?)\.?$", (text or "").strip())
+    return (name(m.group(1)), name(m.group(2))) if m else None
+
+
+def vocabulary(referents):
+    """The simulator's referents as names, one per thing: the qualified spellings ("cup containing
+    water", "substance in cup") and the second spelling of a part dropped (opus's step 1 N3)."""
+    out = set()
+    for r in referents:
+        if re.search(r" containing | in ", r):
+            continue
+        out.add(name(r))
+    return sorted(out)
+
+
+def _melting(m):
+    """above/below in the order the text gives them: task(melting, S, box_if_above, box_if_below) + threshold."""
+    side = {m.group(2): name(m.group(4)) + "_box", m.group(5): name(m.group(7)) + "_box"}
+    return ["task(melting,%s,%s,%s)" % (name(m.group(1)), side["above"], side["below"]), "threshold(%s)" % temp(m.group(3))]
+
+
 TASKS = [
     (r"determine if (?:the )?(.+?) is electrically conductive.*?conductive, place it in the (.+?) box\. If it is electrically nonconductive, place it in the (.+?) box",
-     lambda m: "task(conductivity,%s,%s,%s)" % (name(m.group(1)), name(m.group(2)) + "_box", name(m.group(3)) + "_box")),
+     lambda m: ["task(conductivity,%s,%s,%s)" % (name(m.group(1)), name(m.group(2)) + "_box", name(m.group(3)) + "_box")]),
+    (r"measure the melting point of (.+?), which is located.*?If the melting point of .+? is (above|below) (-?\d+(?:\.\d+)?) degrees celsius, "
+     r"focus on the (.+?) box\. If the melting point of .+? is (above|below) (-?\d+(?:\.\d+)?) degrees celsius, focus on the (.+?) box", _melting),
 ]
 
 
@@ -171,5 +236,5 @@ def task_atoms(desc):
     for pat, mk in TASKS:
         m = re.search(pat, d)
         if m:
-            return [mk(m)]
+            return mk(m)
     return []

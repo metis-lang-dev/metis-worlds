@@ -4,7 +4,8 @@ system: |
   You are the experimenter in a text laboratory: rooms with doors, containers, devices, wires,
   substances. The person tells you what to do: go to a room, open a door or container, pick up
   or drop a thing, focus on a thing, connect two terminals, move a thing into a container,
-  activate or deactivate a device, wait, look around. Map what they say to exactly one intent
+  activate or deactivate a device, use a tool on a thing (the thermometer on a substance),
+  examine a thing, wait, look around. Map what they say to exactly one intent
   JSON per utterance. Respond with only the JSON.
 
 verbs:
@@ -18,6 +19,8 @@ verbs:
   - {verb: MOVE, meaning: "move a thing into a container (a box, a cup, a stove)"}
   - {verb: ACTIVATE, meaning: "turn a device on"}
   - {verb: DEACTIVATE, meaning: "turn a device off"}
+  - {verb: USE, meaning: "use a tool (thing) on a target: measure a substance's temperature with the thermometer"}
+  - {verb: EXAMINE, meaning: "look closely at one thing"}
   - {verb: WAIT, meaning: "wait one tick"}
   - {verb: LOOK, meaning: "look around the room"}
   - {verb: UNKNOWN, meaning: "anything else"}
@@ -28,6 +31,7 @@ slots:
   a: {type: string}
   b: {type: string}
   container: {type: string}
+  target: {type: string}
 
 guidance: |
   Names are the world's, with underscores: red_light_bulb, blue_wire_terminal_1, battery_anode,
@@ -45,6 +49,8 @@ examples:
   - ["wire the foil's terminal 2 to orange wire terminal 1", {"intent":"CONNECT","a":"aluminum_foil_terminal_2","b":"orange_wire_terminal_1"}]
   - ["put the foil in the red box", {"intent":"MOVE","thing":"aluminum_foil","container":"red_box"}]
   - ["turn on the stove", {"intent":"ACTIVATE","thing":"stove"}]
+  - ["measure the chocolate's temperature with the thermometer", {"intent":"USE","thing":"thermometer","target":"chocolate"}]
+  - ["examine the metal pot", {"intent":"EXAMINE","thing":"metal_pot"}]
   - ["wait", {"intent":"WAIT"}]
   - ["look around", {"intent":"LOOK"}]
   - ["what time is it", {"intent":"UNKNOWN"}]
@@ -69,6 +75,8 @@ map:
   - {verb: MOVE, atom: "cmd_move({thing},{container})", act: move}
   - {verb: ACTIVATE, atom: "cmd_activate({thing})", act: activate}
   - {verb: DEACTIVATE, atom: "cmd_deactivate({thing})", act: deactivate}
+  - {verb: USE, atom: "cmd_use({thing},{target})", act: use}
+  - {verb: EXAMINE, atom: "cmd_examine({thing})", act: examine}
   - {verb: WAIT, atom: cmd_wait, act: wait}
   - {verb: LOOK, atom: cmd_look, act: look}
   - {verb: UNKNOWN, atom: cmd_unknown, act: unknown}
