@@ -15,7 +15,41 @@ CARD = open(os.path.join(HERE, "card.yaml")).read()
 TEMPS = ["n%d" % t for t in range(0, 301, 1)] + ["m%d" % t for t in range(1, 51)]
 
 
-def generate(task, variation, out_dir, simplification="easy"):
+PERCEPTION = ["% the perception (the text; never the simulator's hidden properties)",
+              "pred here(thing) : sw.", "pred door(thing, doorstate) : sw.", "pred in(thing, thing) : sw.", "pred state(thing, onoff) : sw.",
+              "pred closed(thing) : sw.", "pred open(thing) : sw.", "pred reads(thing, temp) : sw.", "pred holds(thing) : sw.",
+              "pred matter(thing, phase) : sw.", "pred measured(thing, temp) : sw.",
+              "pred focused(thing) : sw.", "pred connected(thing, thing) : sw.", "pred task(kind, thing, thing, thing) : sw.", "pred where(thing, thing) : sw.",
+              "pred threshold(temp) : sw.", "pred said(said_kind) : sw."]
+COMMAND_PREDS = ["% the commands, one per intent",
+                 "pred cmd_go(thing) : sw.", "pred cmd_open(thing) : sw.", "pred cmd_close(thing) : sw.", "pred cmd_take(thing) : sw.", "pred cmd_drop(thing) : sw.",
+                 "pred cmd_focus(thing) : sw.", "pred cmd_connect(thing, thing) : sw.", "pred cmd_move(thing, thing) : sw.", "pred cmd_activate(thing) : sw.",
+                 "pred cmd_deactivate(thing) : sw.", "pred cmd_use(thing, thing) : sw.", "pred cmd_examine(thing) : sw.",
+                 "pred cmd_wait : sw.", "pred cmd_look : sw.", "pred cmd_unknown : sw."]
+OUTCOMES = ["% the outcomes", "type act {go open close take drop focus connect move activate deactivate use examine wait look unknown}.",
+            "pred done(act) : sw.", "pred refused(act) : sw.", "pred progress(act) : sw."]
+FIXED_TYPES = ["type doorstate {open closed}.", "type onoff {on off}.", "type phase {solid liquid gas}.",
+               "type said_kind {%s}." % " ".join(sorted({k for _, k in MESSAGES} | {"other"})),
+               "type kind {conductivity melting boiling}.", "type temp {%s}." % " ".join(TEMPS)]
+DYNAMIC_PREDS = ("here", "door", "in", "state", "closed", "open", "reads", "holds", "matter", "measured", "focused", "connected", "task", "where", "threshold", "said")
+
+
+def base_source(name="sw"):
+    """The loop's EMPTY base (loop-policy): the perception's predicates over ScienceWorld's text, the
+    namespace, an empty stage — no rule. The instance (generate with domain_rel) includes it and
+    declares the types (the variation's vocabulary) and the start."""
+    lines = ["% " + name + " — the loop's base over ScienceWorld's text (world-scienceworld step 3): the perception's",
+             "% predicates, no rule. The loop writes the rules: from the transitions (explore), the surprises",
+             "% (exploit), the hierarchy (refactor), each through the experimental gate.",
+             "catalog " + name + " 1.",
+             'provenance text "the loop\'s base: the empty domain over ScienceWorld\'s perceived facts" "2026-10-23".',
+             "layers (dyn).", "stages (act).", "namespace sw produce (dyn)."] + PERCEPTION + ["stage act {", "}", ""]
+    return "\n".join(lines)
+
+
+def generate(task, variation, out_dir, simplification="easy", domain_rel=None):
+    """A variation as a package. With DOMAIN_REL the instance INCLUDES that base (the loop's: its
+    predicates and rules) and declares only the types and the start; else it is self-contained."""
     w = World()
     try:
         info = w.open(task, variation, simplification)
@@ -30,33 +64,17 @@ def generate(task, variation, out_dir, simplification="easy"):
              "% the world's names as types (its referents: a vocabulary), the perceived start and the task as #init;",
              "% declarations only — the rules are the hierarchy's (step 2) or what the loop extracts (step 3).",
              "catalog " + name + " 1.",
-             'provenance text "generated ScienceWorld %s variation %d (%s)" "2026-10-22".' % (task, variation, simplification),
-             "layers (dyn).", "stages (act).",
-             "type thing {%s}." % " ".join(things),
-             "type doorstate {open closed}.", "type onoff {on off}.", "type phase {solid liquid gas}.",
-             "type said_kind {%s}." % " ".join(kinds),
-             "type kind {conductivity melting boiling}.",
-             "type temp {%s}." % " ".join(TEMPS),
-             "namespace sw produce (dyn).",
-             "% the perception (the text; never the simulator's hidden properties)",
-             "pred here(thing) : sw.", "pred door(thing, doorstate) : sw.", "pred in(thing, thing) : sw.", "pred state(thing, onoff) : sw.",
-             "pred closed(thing) : sw.", "pred open(thing) : sw.", "pred reads(thing, temp) : sw.", "pred holds(thing) : sw.",
-             "pred matter(thing, phase) : sw.", "pred measured(thing, temp) : sw.",
-             "pred focused(thing) : sw.", "pred connected(thing, thing) : sw.", "pred task(kind, thing, thing, thing) : sw.", "pred threshold(temp) : sw.",
-             "pred said(said_kind) : sw.",
-             "% the commands, one per intent",
-             "pred cmd_go(thing) : sw.", "pred cmd_open(thing) : sw.", "pred cmd_close(thing) : sw.", "pred cmd_take(thing) : sw.", "pred cmd_drop(thing) : sw.",
-             "pred cmd_focus(thing) : sw.", "pred cmd_connect(thing, thing) : sw.", "pred cmd_move(thing, thing) : sw.", "pred cmd_activate(thing) : sw.",
-             "pred cmd_deactivate(thing) : sw.", "pred cmd_use(thing, thing) : sw.", "pred cmd_examine(thing) : sw.",
-             "pred cmd_wait : sw.", "pred cmd_look : sw.", "pred cmd_unknown : sw.",
-             "% the outcomes", "type act {go open close take drop focus connect move activate deactivate use examine wait look unknown}.",
-             "pred done(act) : sw.", "pred refused(act) : sw.", "pred progress(act) : sw.",
-             "stage act {", "  %% I can't do that here.", "  unknown [dyn] : cmd_unknown -o refused(unknown).", "}", ""]
+             'provenance text "generated ScienceWorld %s variation %d (%s)" "2026-10-22".' % (task, variation, simplification)]
+    if domain_rel:
+        lines += ['include "%s".' % domain_rel, "type thing {%s}." % " ".join(things)] + FIXED_TYPES + [""]
+    else:
+        lines += ["layers (dyn).", "stages (act).", "type thing {%s}." % " ".join(things)] + FIXED_TYPES + ["namespace sw produce (dyn)."] + PERCEPTION + COMMAND_PREDS + OUTCOMES + [
+            "stage act {", "  %% I can't do that here.", "  unknown [dyn] : cmd_unknown -o refused(unknown).", "}", ""]
     kept = 0
     for a in atoms:
         args = re.findall(r"[a-z0-9_]+", a[a.index("(") + 1:-1]) if "(" in a else []
         pred = a.split("(")[0]
-        if pred in ("here", "door", "in", "state", "closed", "open", "holds", "matter", "focused", "connected", "task") and all(
+        if pred in ("here", "door", "in", "state", "closed", "open", "holds", "matter", "focused", "connected", "task", "where") and all(
                 x in things or x in ("open", "closed", "on", "off", "solid", "liquid", "gas", "conductivity", "melting", "boiling") for x in args):
             lines.append("#init %s 1" % a); kept += 1
         elif pred in ("reads", "measured") and args[0] in things or pred == "threshold":
@@ -66,7 +84,7 @@ def generate(task, variation, out_dir, simplification="easy"):
     os.makedirs(pkg, exist_ok=True)
     open(os.path.join(pkg, name + ".llp"), "w").write("\n".join(lines) + "\n")
     json.dump({"task": task, "variation": variation, "simplification": simplification, "desc": info["desc"],
-               "task_atoms": info["task_atoms"]}, open(os.path.join(pkg, "task.json"), "w"), indent=1)
+               "task_atoms": info["task_atoms"], "names": things}, open(os.path.join(pkg, "task.json"), "w"), indent=1)
     open(os.path.join(pkg, "intent.yaml"), "w").write(CARD)
     open(os.path.join(pkg, "domain.yaml"), "w").write(
         "# %s — a ScienceWorld task variation as a package (generated by world/gen_instance.py).\n"

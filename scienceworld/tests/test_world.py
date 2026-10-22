@@ -40,6 +40,7 @@ def test_perceiver_reads_the_room():
     assert "holds(orange)" in a and "in(air,kitchen)" in a and not any(x.startswith("in(agent") for x in a)
     assert p["events"] == ["said(moved)"]
     assert perceive.events_of("The door is already open.") == ["already_open"]
+    assert perceive.events_of("(disconnecting aluminum foil)You move the aluminum foil to the red box.") == ["moved_obj"]
     assert perceive.events_of("terminal 1 on aluminum foil is now connected to terminal 2 on black wire") == ["connected"]
     assert perceive.task_atoms("Your task is to determine if aluminum foil is electrically conductive. The aluminum foil is located around the workshop. First, focus on the aluminum foil. If it is electrically conductive, place it in the red box. If it is electrically nonconductive, place it in the green box.") == ["task(conductivity,aluminum_foil,red_box,green_box)", "where(aluminum_foil,workshop)"]
 

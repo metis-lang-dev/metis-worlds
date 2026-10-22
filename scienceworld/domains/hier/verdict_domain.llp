@@ -1,16 +1,20 @@
 % verdict_domain — the answer given to the world (world-scienceworld step 2): goal in put(O, C);
-% result out placed(O). Moving O into the box is the task's verdict; the game disconnects it.
+% result out placed(O) once the world says "You move the X to the Y" (said(moved_obj)).
 catalog verdict_domain 1.
-provenance text "ScienceWorld's verdict as a lifted specialist: move the thing into the box the task names" "2026-10-23".
+provenance text "ScienceWorld's verdict as a lifted specialist: move the thing into the box the task names; the world's answer, not the rule's claim" "2026-10-23".
 layers (dyn).
 stages (act).
 
 namespace verdict produce (dyn).
 
+pred said(said_kind) : verdict.
 pred put(thing, thing) : verdict.         % the goal (in)
 pred placed(thing) : verdict.             % the result (out)
+pred placing(thing) : verdict.            % a move sent, its answer awaited
 
 stage act {
   %% I move {O} to {C}.
-  move [dyn] : put(O, C) -o placed(O).
+  move [dyn] : put(O, C) -o placing(O).
+  %% {O} is in its box.
+  after_move [dyn] : placing(O) * said(moved_obj) -o placed(O).
 }

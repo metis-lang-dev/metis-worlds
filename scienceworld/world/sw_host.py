@@ -241,7 +241,9 @@ class SwHost:
 
     def tick(self, counts):
         if self.done:
-            return None
+            if getattr(self, "_final", False):
+                return None
+            self._final = True                        # one last beat: the ending step's events and sync reach the program (a result rule reads them)
         self.beat += 1
         dos = self.sync(counts)
         for e in self.handed:

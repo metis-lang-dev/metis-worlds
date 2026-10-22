@@ -171,6 +171,7 @@ def perceive_inv(inv, atoms, names):
 
 def events_of(text):
     t = (text or "").strip().lower()
+    t = re.sub(r"^\((?:dis)?connecting [^)]*\)\s*", "", t)    # "(disconnecting aluminum foil)You move the …": the move's own line follows
     kinds = []
     for pat, kind in MESSAGES:
         if re.search(pat, t):

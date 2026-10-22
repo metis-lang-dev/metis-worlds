@@ -27,3 +27,20 @@ def variations(family, which="train", per_task=None):
 
 def package_name(task, variation):
     return "%s_%d" % (task.replace("-", "_"), variation)
+
+
+SPLITS = {"discovery": "train", "gate": "dev", "heldout": "test"}     # the loop's names for the environment's splits
+
+
+def sample(split, family, n, seed=1):
+    """N variations of FAMILY from SPLIT (the loop's name or the environment's), spread over the
+    family's task types, as (task, variation) pairs — the policy driver's listing."""
+    which = SPLITS.get(split, split)
+    import random
+    out = []
+    per = max(1, -(-n // len(FAMILIES[family])))
+    for task in FAMILIES[family]:
+        vs = list(splits(task)[which])
+        random.Random(seed).shuffle(vs)
+        out += [(task, v) for v in vs[:per]]
+    return out[:n]

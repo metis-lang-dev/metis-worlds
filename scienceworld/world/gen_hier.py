@@ -27,10 +27,10 @@ ROOMS = sorted(HOUSE)
 
 # one specialist = the types it declares, the world predicates it sees, its goal kind, its results
 SPECS = {
-    "nav": {"types": ("room", "doorstate"), "dyn": ("here", "door"), "goal": "goto", "out": ("reached",), "takes": ()},
-    "grasp": {"types": ("thing", "room"), "dyn": ("here", "in", "holds", "focused"), "goal": "get", "out": ("got", "elsewhere"), "takes": ()},
+    "nav": {"types": ("room", "doorstate", "said_kind"), "dyn": ("here", "door"), "goal": "goto", "out": ("reached",), "takes": (), "init": ("ready",)},
+    "grasp": {"types": ("thing", "room", "said_kind"), "dyn": ("here", "in", "holds", "focused"), "goal": "get", "out": ("got", "elsewhere"), "takes": ()},
     "circuit": {"types": ("thing", "part", "term", "onoff", "said_kind"), "dyn": ("holds", "state"), "goal": "test", "out": ("conducts", "insulates"), "takes": ()},
-    "verdict": {"types": ("thing",), "dyn": (), "goal": "put", "out": ("placed",), "takes": ()},
+    "verdict": {"types": ("thing", "said_kind"), "dyn": (), "goal": "put", "out": ("placed",), "takes": ()},
     "task": {"types": ("kind", "thing", "room"), "dyn": ("task", "where"), "goal": "task", "out": ("goto", "get", "test", "put", "done", "stuck"),
              "takes": ("reached", "got", "conducts", "insulates", "placed", "elsewhere", "refused")},
 }
@@ -119,10 +119,10 @@ def generate(out_dir, spec, k, task_atoms, reading, init, replay, names, domain_
     for a in sorted(reading):
         if a.split("(")[0] in sp["dyn"] and all(x in members for x in args_of(a)) and a not in seen:
             lines.append("#init %s 1" % a); seen.add(a)
-    for a in init:
+    for a in list(init) + list(sp.get("init", ())):
         if a not in seen:
             lines.append("#init %s 1" % a); seen.add(a)
-    lines += ["#steps 16", "#seeds 1"]
+    lines += ["#steps 40", "#seeds 1"]
     pkg = os.path.join(out_dir, "%s-%d" % (spec, k))
     os.makedirs(pkg, exist_ok=True)
     path = os.path.join(pkg, spec + ".llp")

@@ -38,7 +38,7 @@ stage act {
   %% At {R}: I get {O}.
   get_it [dyn] : want(O) * reached(R) * $where(O, R) -o want(O) * get(O).
   %% {O} is in {R}: I go there first.
-  go_there [dyn] : want(O) * elsewhere(R) -o want(O) * goto(R).
+  after_elsewhere [dyn] : want(O) * elsewhere(R) -o want(O) * goto(R).
   %% I have {O}: I test it.
   test_it [dyn] : want(O) * got(O) -o want(O) * test(O).
   %% {O} conducts: into {Y}.

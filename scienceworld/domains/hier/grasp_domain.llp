@@ -1,9 +1,10 @@
 % grasp_domain — taking a thing and attending to it (world-scienceworld step 2): goal in get(O);
-% result out got(O) (in hand and focused: ScienceWorld's tasks score the focus), or elsewhere(R)
-% when the thing is in another room (the task's text says where). It sees where the agent is,
-% what is in the room, what it holds.
+% result out got(O) (in hand and focused: the tasks score the focus), or elsewhere(R) when the
+% thing is in another room (the task's text says where). Each action waits for the world's
+% answer: "You move the X to the inventory" (said(picked)) and the next beat's holds(O); "You
+% focus on the X" (said(focused)).
 catalog grasp_domain 1.
-provenance text "ScienceWorld grasp as a lifted specialist: pick up and focus; the task asks, the result answers" "2026-10-23".
+provenance text "ScienceWorld grasp as a lifted specialist: pick up and focus; the world's answer, not the rule's claim" "2026-10-23".
 layers (dyn).
 stages (act).
 
@@ -15,16 +16,20 @@ pred here(room) : grasp.
 pred in(thing, thing) : grasp.            % the world: what is in what
 pred holds(thing) : grasp.
 pred focused(thing) : grasp.
+pred said(said_kind) : grasp.
 pred get(thing) : grasp.                  % the goal (in)
 pred got(thing) : grasp.                  % the result (out)
 pred elsewhere(room) : grasp.             % the refusal: it is in R
-pred taking(thing) : grasp.               % the token between the two steps
+pred taking(thing) : grasp.               % a pick-up sent, its answer awaited
+pred focusing(thing) : grasp.             % a focus sent, its answer awaited
 
 stage act {
   %% I pick up {O}.
-  take [dyn] : get(O) * $here(R) * $where(O, R) -o holds(O) * taking(O).
-  %% I focus on {O}.
-  focus [dyn] : taking(O) * $holds(O) -o focused(O) * got(O).
+  take [dyn] : get(O) * $here(R) * $where(O, R) -o taking(O).
+  %% I have {O}: I focus on it.
+  focus [dyn] : taking(O) * said(picked) * $holds(O) -o focusing(O).
+  %% I am focused on {O}.
+  after_focus [dyn] : focusing(O) * said(focused) * $focused(O) -o got(O).
   %% {O} is in {R}, not here.
   not_here [dyn] : get(O) * $here(L) * $where(O, R) * L <> R -o elsewhere(R).
 }

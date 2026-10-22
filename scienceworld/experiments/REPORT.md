@@ -100,35 +100,45 @@ cup, not `matter/2` (README, findings).
 Five lifted specialists (`domains/hier/*_domain.llp`), instances generated per activation
 (`world/gen_hier.py`), the manual switch (`experiments/hier.py`): the task domain plans — goto(R)
 to nav, get(O) to grasp, test(O) to the circuit, put(O, Box) to the verdict — and the specialists
-act. Nothing of the simulator's hidden properties is read: the answer is the bulb.
+act. Nothing of the simulator's hidden properties is read: the answer is the bulb. **Every action
+waits for the world's answer** (v2, opus's review N1): a rule sends a command and a second rule
+consumes the world's own line for it — said(moved), said(picked), said(focused), said(connected),
+said(waited), said(moved_obj), said(looked) — with the next beat's sync, before the chain goes on
+or a result goes out. A result is never the rule's word.
 
 | split | n | won | activations per variation | commands per variation | refused | s per variation |
 |---|---|---|---|---|---|---|
-| train (discovery) | 20 | 20 | 4 | 14.7 | 0 | 27.1 |
-| test (held out) | 10 | 10 | 4 | 14.8 | 0 | 26.7 |
+| train (discovery) | 20 | 20 | 4 | 14.7 | 0 | 29.0 |
+| test (held out) | 10 | 10 | 4 | 14.8 | 0 | 27.4 |
 
-**The vector** (rules / predicates per specialist's base): nav 4/6, grasp 3/9, circuit 12/25, verdict 1/2, task 8/17.
-The circuit is the big one: six connect rules carry the three wires and the bulb in tokens.
+**The vector** (rules / predicates per specialist's base): nav 8/11, grasp 4/11, circuit 21/34, verdict 2/4, task 8/17.
+The gating doubles the acting rules (v1 had nav 4, grasp 3, circuit 12, verdict 1): each action is
+two rules, the sending and the hearing. That is the honest price of a rule that never claims what
+the world has not said; the loop's refactor will meet the same shape (a send/hear pair is one
+"action with its answer" to lift).
 
 **What the hierarchy knows that the loop must find** (instance knowledge, declared in gen_hier.py):
-the HOUSE graph and its routes (walked once with the gym; nav's `next/3`); the circuit's parts —
-a wire has two terminals, a battery and a bulb have an anode and a cathode, the thing under test
-has two terminals (the referents the game accepts); where the task's text puts the thing
-(`where/2`, read by the perceiver). The one CAUSAL rule, nowhere in the text: a thing wired in
-series with a battery and a bulb CONDUCTS iff the bulb is lit after a wait (`circuit_domain.llp`
-`lit`/`dark`).
+the HOUSE graph and its routes (one constant per family, walked once with the gym; nav's `next/3`);
+the circuit's parts — a wire has two terminals, a battery and a bulb have an anode and a cathode,
+the thing under test has two terminals (the referents the game accepts); where the task's text
+puts the thing (`where/2`, read by the perceiver). The one CAUSAL rule, nowhere in the text: a
+thing wired in series with a battery and a bulb CONDUCTS iff the bulb is lit after a wait
+(`circuit_domain.llp` `lit`/`dark`).
 
-**Two findings while writing the rules:**
+**Findings while writing the rules:**
 - **The verdict must wait for the world.** A chain of acting rules runs inside one kernel beat;
   the host sends each command as its rule fires, but the perception is synced only at the next
   tick. A `lit`/`dark` rule reading `state(bulb, …)` right after `look` reads the bulb as it was
-  before the wiring and answers wrong (the first run: 14/20, every loss a wrong box). The verdict
-  rules consume the look's own event, `said(looked)`, which arrives with the next beat's sync.
-  Any rule that reads the world's ANSWER to an action must be gated this way; the loop's
-  exploration will meet the same trap.
+  before the wiring and answers wrong (the first run: 14/20, every loss a wrong box). Hence the
+  send/hear pairs above, for every action.
 - **Wire a bulb whose state the room shows.** Some variations have a plain "light bulb" beside
   the coloured ones, with no state in the text; a circuit through it never answers (the second
   run: 6 silent variations). `connect_3` picks a bulb with `state(L, off)`.
+- **The ending step's events must reach the program.** The move into the box ends the episode;
+  a host that answers `None` at once loses the move's line, and `placed` never fires. The host
+  gives one last beat after the end.
+- **"(disconnecting X)You move …"** hid the move's event behind a parenthesis; the perceiver
+  strips it.
 
 Baseline against it: §1's gold paths (the simulator's own solution) use 15–43 steps; the
 hierarchy's 13–16 commands win the same variations. The empty-domain loop (step 3) must reach this

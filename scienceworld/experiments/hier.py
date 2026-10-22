@@ -22,7 +22,7 @@ from sw_host import SwHost  # noqa: E402
 from metis.repl import Repl  # noqa: E402
 
 
-def run_package(path, steps=16):
+def run_package(path, steps=40):
     """One kernel run over a generated package, in process (metis.repl): the commands its host sent
     (the host's log) and the counts at the end — the out atoms of its kind, the rest as tokens."""
     pkg = os.path.dirname(path)
@@ -52,7 +52,7 @@ def run_package(path, steps=16):
     meta = json.load(open(os.path.join(pkg, "task.json")))
     out = sorted(a for a, n in counts.items() if n > 0 and a.split("(")[0] in meta["out"])
     tokens = sorted(a for a, n in counts.items() if n > 0 and a.split("(")[0] not in meta["out"] and a.split("(")[0] not in meta["observe"]
-                    and a.split("(")[0] not in ("task", "where", "here", "door", "in", "holds", "focused", "state", "connected", "reads", "closed", "open", "matter", "measured", "threshold", "said"))
+                    and a.split("(")[0] not in ("task", "where", "here", "door", "in", "holds", "focused", "state", "connected", "reads", "closed", "open", "matter", "measured", "threshold", "said", "ready"))
     return {"commands": cmds, "out": out, "tokens": tokens, "fired": fired, "error": err}
 
 

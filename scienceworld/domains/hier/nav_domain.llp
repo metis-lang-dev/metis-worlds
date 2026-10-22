@@ -1,10 +1,11 @@
 % nav_domain — going places in the house (world-scienceworld step 2, the architect, 2026-10-23):
 % rooms behind doors, walked. Goal in: goto(G); result out: reached(G). It sees where the agent is
-% and the doors of that room (open or closed), and knows the house's routes as an instance fact:
-% next(L, G, R) = from L, to reach G, step into R. An instance (world/gen_hier.py) includes this
-% file and adds the rooms, the routes, the current room and the goal.
+% and the doors of that room, and knows the house's routes as an instance fact: next(L, G, R) =
+% from L, to reach G, step into R. Every action WAITS for the world's answer (opus's step 2 N1):
+% a move is done when the world says "You move to …" (said(moved)) and the next beat's sync shows
+% here(R); an open when it says "is now open" (or "already open"). A rule never claims a result.
 catalog nav_domain 1.
-provenance text "ScienceWorld navigation as a lifted specialist: rooms by doors, a route table; the task asks, the result answers" "2026-10-23".
+provenance text "ScienceWorld navigation as a lifted specialist: rooms by doors, a route table; the world's answer, not the rule's claim" "2026-10-23".
 layers (dyn).
 stages (act).
 
@@ -15,16 +16,29 @@ bwd same(room, room).                     % static: same(R, R) for every room
 
 pred here(room) : nav.                    % the world: exactly one
 pred door(room, doorstate) : nav.         % the world: this room's doors
+pred said(said_kind) : nav.               % the world's result line, one beat
 pred goto(room) : nav.                    % the goal (in)
 pred reached(room) : nav.                 % the result (out)
+pred ready : nav.                         % the token: no action in flight
+pred opening(room) : nav.                 % an open sent, its answer awaited
+pred moving(room) : nav.                  % a move sent, its answer awaited
+pred last(room) : nav.                    % … the move into the goal itself
 
 stage act {
   %% {G} is right here.
-  here_already [dyn] : goto(G) * $here(G) -o reached(G).
+  here_already [dyn] : goto(G) * ready * $here(G) -o reached(G).
   %% The door to {D} is closed: I open it.
-  open [dyn] : goto(G) * $here(L) * $next(L, G, D) * door(D, closed) -o goto(G) * door(D, open).
+  open [dyn] : goto(G) * ready * $here(L) * $next(L, G, D) * $door(D, closed) -o goto(G) * opening(D).
+  %% The door to {D} is open now.
+  after_open [dyn] : opening(D) * said(opened) -o ready.
+  %% The door to {D} was open already.
+  after_open_already [dyn] : opening(D) * said(already_open) -o ready.
   %% I step into {R} on the way to {G}.
-  go [dyn] : goto(G) * here(L) * $next(L, G, R) * $door(R, open) * R <> G -o here(R) * goto(G).
-  %% I step into {R}: there.
-  go_last [dyn] : goto(G) * here(L) * $next(L, G, R) * $door(R, open) * $same(R, G) -o here(R) * reached(G).
+  go [dyn] : goto(G) * ready * $here(L) * $next(L, G, R) * $door(R, open) * R <> G -o goto(G) * moving(R).
+  %% I am in {R} now.
+  after_go [dyn] : moving(R) * said(moved) * $here(R) -o ready.
+  %% I step into {G}: there.
+  go_last [dyn] : goto(G) * ready * $here(L) * $next(L, G, R) * $door(R, open) * $same(R, G) -o last(G).
+  %% I am in {G}: reached.
+  after_go_last [dyn] : last(G) * said(moved) * $here(G) -o reached(G).
 }
