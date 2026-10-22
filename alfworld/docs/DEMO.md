@@ -207,3 +207,24 @@ ALFWorld → MiniHack export (world-minihack's note: a des-file per scene, `CONT
 openable receptacles) reads the same schema, so a scene renders identically before and after
 the export. That is the "check reuse for other worlds' maps": one renderer, one schema, a
 tileset per world.
+
+**The user (2026-10-22): "reuse tiles and get the mapping; the real task is to add objects from
+a new world; clicking an object should show the task description — we see the trace and the
+narration, but the original task is consumed by formalization."** So:
+
+- **The tileset is extensible per world, and the mapping is the world's.** A tileset is a JSON
+  index `{name: {image, glyph?, source}}` plus images. The base index is the editor's (664
+  named icons) and the glyph sheet; a world ADDS entries for its own objects in its map
+  folder (`alfworld/tiles/index.json`: `mug`, `desk`, `drawer`, … → an icon where NetHack has
+  one — `chest` for an openable receptacle, `apple` — or a crop from the THOR frame of the
+  place where the object was first seen, written by `semantic_map.py` at discovery). The
+  page merges the world's index over the base; a name with no entry draws as its glyph
+  character, never fails. Adding a world = adding an index, no renderer change.
+- **The original task travels with the instance and is shown on click.** Formalization turns
+  "Pick up the alarm clock and turn on the lamp" into `fetch(alarmclock 1, desklamp 1)` and
+  the words are gone from the trace. So `game.json`/`map.json` keep `task: {text, goal,
+  source}` (the world's own description: ALFWorld's `task_desc`; for a person's task, their
+  utterance as said), and the page shows it: a click on the agent, on a highlighted entity or
+  on the hierarchy pane's task row opens the task card — the words, the goal atom, the
+  specialist chain so far, the result lines. The journal keeps the person's utterance beside
+  the typed intent for the same reason (metis-agent already journals `say_text`).
