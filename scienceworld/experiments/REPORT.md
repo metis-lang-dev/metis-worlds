@@ -94,3 +94,42 @@ cup, not `matter/2` (README, findings).
   it so (0 of 1,282), but an agent may.
 - **N3:** `measured/2` lasts one beat (above). It is not in the reading, so the per-reading atom
   counts in the table are 0.6 lower than at the step's first run.
+
+## §2 The hand hierarchy for conductivity (world-scienceworld step 2, 2026-10-23): the formalization target
+
+Five lifted specialists (`domains/hier/*_domain.llp`), instances generated per activation
+(`world/gen_hier.py`), the manual switch (`experiments/hier.py`): the task domain plans — goto(R)
+to nav, get(O) to grasp, test(O) to the circuit, put(O, Box) to the verdict — and the specialists
+act. Nothing of the simulator's hidden properties is read: the answer is the bulb.
+
+| split | n | won | activations per variation | commands per variation | refused | s per variation |
+|---|---|---|---|---|---|---|
+| train (discovery) | 20 | 20 | 4 | 14.7 | 0 | 27.1 |
+| test (held out) | 10 | 10 | 4 | 14.8 | 0 | 26.7 |
+
+**The vector** (rules / predicates per specialist's base): nav 4/6, grasp 3/9, circuit 12/25, verdict 1/2, task 8/17.
+The circuit is the big one: six connect rules carry the three wires and the bulb in tokens.
+
+**What the hierarchy knows that the loop must find** (instance knowledge, declared in gen_hier.py):
+the HOUSE graph and its routes (walked once with the gym; nav's `next/3`); the circuit's parts —
+a wire has two terminals, a battery and a bulb have an anode and a cathode, the thing under test
+has two terminals (the referents the game accepts); where the task's text puts the thing
+(`where/2`, read by the perceiver). The one CAUSAL rule, nowhere in the text: a thing wired in
+series with a battery and a bulb CONDUCTS iff the bulb is lit after a wait (`circuit_domain.llp`
+`lit`/`dark`).
+
+**Two findings while writing the rules:**
+- **The verdict must wait for the world.** A chain of acting rules runs inside one kernel beat;
+  the host sends each command as its rule fires, but the perception is synced only at the next
+  tick. A `lit`/`dark` rule reading `state(bulb, …)` right after `look` reads the bulb as it was
+  before the wiring and answers wrong (the first run: 14/20, every loss a wrong box). The verdict
+  rules consume the look's own event, `said(looked)`, which arrives with the next beat's sync.
+  Any rule that reads the world's ANSWER to an action must be gated this way; the loop's
+  exploration will meet the same trap.
+- **Wire a bulb whose state the room shows.** Some variations have a plain "light bulb" beside
+  the coloured ones, with no state in the text; a circuit through it never answers (the second
+  run: 6 silent variations). `connect_3` picks a bulb with `state(L, off)`.
+
+Baseline against it: §1's gold paths (the simulator's own solution) use 15–43 steps; the
+hierarchy's 13–16 commands win the same variations. The empty-domain loop (step 3) must reach this
+table: 20/20 and 10/10, with this vector or less, and say what it cost.

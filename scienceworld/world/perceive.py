@@ -124,7 +124,7 @@ def _item_atoms(text, container, atoms, names):
 def perceive_look(look, atoms, names):
     """The room description, line by line."""
     here = None
-    m = re.search(r"This room is called the (.+?)\.", look)
+    m = re.search(r"This (?:room|outside location) is called the (.+?)\.", look)   # "This outside location is called the outside."
     if m:
         here = name(m.group(1))
         atoms.add("here(%s)" % here)
@@ -231,10 +231,17 @@ TASKS = [
 ]
 
 
+WHERE = re.compile(r"The (.+?) is located around the (.+?)\.")   # "The aluminum foil is located around the workshop."
+
+
 def task_atoms(desc):
     d = (desc or "").replace("\n", " ")
     for pat, mk in TASKS:
         m = re.search(pat, d)
         if m:
-            return mk(m)
+            out = list(mk(m))
+            w = WHERE.search(d)
+            if w:
+                out.append("where(%s,%s)" % (name(w.group(1)), name(w.group(2))))
+            return out
     return []

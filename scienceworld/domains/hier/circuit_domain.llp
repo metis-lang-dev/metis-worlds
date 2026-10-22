@@ -1,0 +1,70 @@
+% circuit_domain — the EXPERIMENT (world-scienceworld step 2): is O electrically conductive? The
+% only way to know is to wire it in series with a battery and a bulb and look: lit, it conducts;
+% dark, it insulates. Goal in: test(O) (O in hand); results out: conducts(O) | insulates(O). The
+% instance names the parts the room has — the battery and its poles, the wires and their two
+% terminals, the bulbs and their poles, O's own terminals — as facts; the rules pick three
+% distinct wires and one bulb and keep them in tokens through the chain. Each connect rule's two
+% terminals are its variables A and B (the host's `connect A to B`).
+catalog circuit_domain 1.
+provenance text "ScienceWorld's conductivity test as a lifted specialist: wire, wait, look; the bulb's state is the answer" "2026-10-23".
+layers (dyn).
+stages (act).
+
+namespace circuit produce (dyn).
+
+bwd battery(part).                        % static: the parts and their terminals (names)
+bwd anode(part, term).
+bwd cathode(part, term).
+bwd wire(part).
+bwd term1(part, term).
+bwd term2(part, term).
+bwd bulb(part).
+bwd oterm1(thing, term).                  % O's own terminals
+bwd oterm2(thing, term).
+
+pred holds(thing) : circuit.
+pred state(part, onoff) : circuit.        % the world: a bulb on or off
+pred said(said_kind) : circuit.           % the world's result line, one beat: the look's answer arrives with it
+pred test(thing) : circuit.               % the goal (in)
+pred conducts(thing) : circuit.           % the results (out)
+pred insulates(thing) : circuit.
+% the chain's tokens: which wires and bulb this circuit uses
+pred wiring(thing) : circuit.
+pred w1(thing, part) : circuit.
+pred w2(thing, part, part) : circuit.
+pred w3(thing, part, part, part) : circuit.
+pred w4(thing, part, part, part, part) : circuit.
+pred w5(thing, part, part, part, part) : circuit.
+pred w6(thing, part) : circuit.
+pred w7(thing, part) : circuit.
+pred w8(thing, part) : circuit.
+pred testing(thing, part) : circuit.
+
+stage act {
+  %% I put {O} down to wire it.
+  drop [dyn] : test(O) * holds(O) -o wiring(O).
+  %% The battery's anode to {W1}.
+  connect_1 [dyn] : wiring(O) * $battery(P) * $anode(P, A) * $wire(W1) * $term1(W1, B) -o w1(O, W1).
+  %% The battery's cathode to {W2}.
+  connect_2 [dyn] : w1(O, W1) * $battery(P) * $cathode(P, A) * $wire(W2) * $term1(W2, B) * W2 <> W1 -o w2(O, W1, W2).
+  %% {W1} to the bulb {L} (one whose state the room shows: dark now).
+  connect_3 [dyn] : w2(O, W1, W2) * $term2(W1, A) * $bulb(L) * $state(L, off) * $cathode(L, B) -o w3(O, W1, W2, L).
+  %% A third wire {W3} to the bulb's anode.
+  connect_4 [dyn] : w3(O, W1, W2, L) * $wire(W3) * W3 <> W1 * W3 <> W2 * $term2(W3, A) * $anode(L, B) -o w4(O, W1, W2, W3, L).
+  %% {O} into the circuit, one side.
+  connect_5 [dyn] : w4(O, W1, W2, W3, L) * $oterm1(O, A) * $term2(W2, B) -o w5(O, W1, W2, W3, L).
+  %% {O} into the circuit, the other side.
+  connect_6 [dyn] : w5(O, W1, W2, W3, L) * $oterm2(O, A) * $term1(W3, B) -o w6(O, L).
+  %% I wait.
+  wait_1 [dyn] : w6(O, L) -o w7(O, L).
+  %% I wait once more.
+  wait_2 [dyn] : w7(O, L) -o w8(O, L).
+  %% I look at the bulb.
+  look [dyn] : w8(O, L) -o testing(O, L).
+  % the verdict waits for the look's answer: the world's state is read at the next beat, with
+  % the look's own event — a rule that read the bulb now would read it as it was before the wiring
+  %% {L} is lit: {O} conducts.
+  lit [dyn] : testing(O, L) * said(looked) * $state(L, on) -o conducts(O).
+  %% {L} stays dark: {O} does not conduct.
+  dark [dyn] : testing(O, L) * said(looked) * $state(L, off) -o insulates(O).
+}

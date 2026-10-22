@@ -23,7 +23,8 @@ agent's input never. A package's `thing` type is the simulator's referent list (
 | `world/families.py` | `conductivity` (test-conductivity, …-of-unknown-substances), `melting` (measure-melting-point-known-substance, …-unknown-substance); the env's train (discovery) / dev / test (held-out) variations |
 | `world/gen_instance.py` + `world/card.yaml` | a variation as a PACKAGE `domains/<task>_<n>/`: declarations + the perceived start + the task, NO rules; the card: GO, OPEN, CLOSE, TAKE, DROP, FOCUS, CONNECT(a, b), MOVE(o, c), ACTIVATE, DEACTIVATE, USE(thing, target), EXAMINE, WAIT, LOOK, UNKNOWN |
 | `experiments/baseline.py` | the gold paths through the host, command by command: score 100 reproduced, the perception vector per step |
-| `tests/` | the perceiver on fixed texts, the gold path winning through the host, a refusal and a restore, the package compiling |
+| `tests/` | the perceiver on fixed texts, the gold path winning through the host, a refusal and a restore, the package compiling; the hierarchy's routes and parts, one variation won by the manual switch |
+| `domains/hier/*_domain.llp` + `world/gen_hier.py` + `experiments/hier.py` | **step 2, the hand hierarchy**: nav (rooms by doors, a route table), grasp (pick up + focus), circuit (the experiment: wire, wait, look; the bulb answers), verdict (the box), task (the planner); instances per activation; the manual switch; `experiments/REPORT.md` §2 |
 
 ```
 METISC=../metis-lang/src/metisc ../.worlds/sw/bin/python -m pytest scienceworld/tests -q      # from the metis-worlds root

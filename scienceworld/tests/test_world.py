@@ -41,7 +41,7 @@ def test_perceiver_reads_the_room():
     assert p["events"] == ["said(moved)"]
     assert perceive.events_of("The door is already open.") == ["already_open"]
     assert perceive.events_of("terminal 1 on aluminum foil is now connected to terminal 2 on black wire") == ["connected"]
-    assert perceive.task_atoms("Your task is to determine if aluminum foil is electrically conductive. The aluminum foil is located around the workshop. First, focus on the aluminum foil. If it is electrically conductive, place it in the red box. If it is electrically nonconductive, place it in the green box.") == ["task(conductivity,aluminum_foil,red_box,green_box)"]
+    assert perceive.task_atoms("Your task is to determine if aluminum foil is electrically conductive. The aluminum foil is located around the workshop. First, focus on the aluminum foil. If it is electrically conductive, place it in the red box. If it is electrically nonconductive, place it in the green box.") == ["task(conductivity,aluminum_foil,red_box,green_box)", "where(aluminum_foil,workshop)"]
 
 
 KITCHEN = """This room is called the kitchen. In it, you see: 
@@ -178,3 +178,32 @@ def test_a_qualified_referent_resolves_over_the_perception():
     assert h.resolve("thermometer in inventory") == "thermometer" and h.resolve("cup containing water") == "glass_cup"
     assert h.resolve("cup containing water", contents=True) == "water"     # a thermometer used on it measures the water (opus's step 1b N2)
     assert h.resolve("liquid tin") == "tin" and h.resolve("lead") == "lead"
+
+
+def test_hierarchy_routes_and_parts():
+    import gen_hier
+    nx = {a for a in gen_hier.routes()}
+    assert "next(hallway, workshop, workshop)" in nx and "next(foundry, workshop, outside)" in nx and "next(bathroom, workshop, kitchen)" in nx
+    parts = gen_hier.parts_of({"blue_wire", "black_wire", "orange_wire", "red_light_bulb", "green_light_bulb", "battery", "table", "aluminum_foil"})
+    assert set(parts["parts"]) == {"battery", "black_wire", "blue_wire", "orange_wire", "green_light_bulb", "red_light_bulb"}
+    assert "term1(blue_wire, blue_wire_terminal_1)" in parts["facts"] and "cathode(red_light_bulb, cathode_in_red_light_bulb)" in parts["facts"]
+    assert perceive.task_atoms("Your task is to determine if aluminum foil is electrically conductive. The aluminum foil is located around the workshop. First, focus on the aluminum foil. If it is electrically conductive, place it in the red box. If it is electrically nonconductive, place it in the green box.")[-1] == "where(aluminum_foil,workshop)"
+    from sw_host import words
+    assert words("unknown_substance_b_terminal_1", {"unknown_substance_b": "unknown substance B"}) == "unknown substance B terminal 1"
+    assert words("anode_in_red_light_bulb") == "anode in red light bulb"
+
+
+@pytest.mark.skipif(not os.environ.get("METISC"), reason="METISC is not set")
+def test_hierarchy_wins_by_manual_switch(tmp_path):
+    """The task domain asks, the specialists act, the circuit's bulb answers, the verdict is placed: won."""
+    import shutil, gen_hier
+    import hier
+    wd = str(tmp_path)
+    os.makedirs(os.path.join(wd, "hier"))
+    for s in gen_hier.SPECS:
+        shutil.copy(os.path.join(ROOT, "domains", "hier", s + "_domain.llp"), os.path.join(wd, "hier", s + "_domain.llp"))
+    r = hier.run_variation("test-conductivity", 0, wd)
+    assert r["error"] is None, r
+    assert r["won"] and r["outcome"] == "done", r
+    assert [a["spec"] for a in r["activations"]] == ["nav", "grasp", "circuit", "verdict"], [a["spec"] for a in r["activations"]]
+    assert r["refused"] == 0

@@ -64,8 +64,19 @@ def bindings(name):
     return base.split("-")[0], b
 
 
+ROOMS = {"art_studio", "bathroom", "bedroom", "foundry", "greenhouse", "hallway", "kitchen", "living_room", "outside", "workshop", "sewer"}
+
+
 def words(n, labels=None):
-    return (labels or {}).get(n) or n.replace("_", " ")
+    """A name as the game spells it: its label when the world gave one ("unknown substance B"),
+    a labeled prefix kept for a composite ("unknown substance B terminal 1"), else spaces for _."""
+    labels = labels or {}
+    if n in labels:
+        return labels[n]
+    for k in sorted(labels, key=len, reverse=True):
+        if n.startswith(k + "_"):
+            return labels[k] + " " + n[len(k) + 1:].replace("_", " ")
+    return n.replace("_", " ")
 
 
 class GymClient(GymChild):
@@ -99,6 +110,25 @@ class SwHost:
         self.actions, self.t = [], 0
         self.pending_events = list(out.get("events", []))
         self.handed = []
+        for c in self._replay():                     # the hierarchy: the commands other packages' runs sent (world-scienceworld step 2)
+            self._take(self.gym.call("step", command=c), c)
+            self.t += 1
+        self.pending_events = []
+
+    def _replay(self):
+        log = self.task.get("commands_log")
+        if log and os.path.exists(log):
+            return [json.loads(l)["command"] for l in open(log) if l.strip()]
+        return list(self.task.get("replay") or [])
+
+    def send(self, cmd):
+        """A command's text straight to the game (the driver's mirror): the perception after it."""
+        out = self.gym.call("step", command=cmd)
+        self._take(out, cmd)
+        self.t += 1
+        self.actions.append(cmd)
+        self.pending_events += self.events
+        return out
 
     def _take(self, out, command=None):
         self.atoms = set(out["atoms"])
@@ -173,6 +203,8 @@ class SwHost:
             return None
         tpl, keys = spec
         try:
+            if key == "cmd_open" and b.get("D") in ROOMS:        # a room's door, from the room's name (the nav specialist)
+                return "open door to " + words(b["D"], self.labels)
             return tpl.format(**{k: words(b[k], self.labels) for k in keys})
         except KeyError:
             return None
@@ -190,6 +222,10 @@ class SwHost:
         self.actions.append(cmd)
         self._log({"beat": self.beat, "t": self.t, "rule": name, "command": cmd, "message": self.message,
                    "events": self.events, "done": self.done, "won": self.won})       # no score: a second channel (opus's step 1 N1)
+        log = self.task.get("commands_log")
+        if log:
+            with open(log, "a") as f:
+                f.write(json.dumps({"command": cmd, "rule": name}) + "\n")
         self.pending_events += self.events
 
     def _log(self, rec):

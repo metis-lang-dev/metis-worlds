@@ -1,0 +1,52 @@
+% task_domain — the conductivity task as the planner (world-scienceworld step 2): it knows WHAT
+% (the thing, the two boxes, the room the text names) and asks the specialists HOW — goto(R) to
+% nav, get(O) to grasp, test(O) to the circuit, put(O, Box) to the verdict — and waits for each
+% result. It never acts in the world. A refusal it has no rule for ends in stuck: the
+% disengagement point (POLICY.md). The way in: the task's text, read as task(conductivity, O,
+% box_if_yes, box_if_no) and where(O, R) by the perceiver; `start` is the instance's one token.
+catalog task_domain 1.
+provenance text "ScienceWorld's conductivity task as the planner over four specialists: sub-goals out, results in" "2026-10-23".
+layers (dyn).
+stages (act).
+
+namespace task produce (dyn).
+
+pred task(kind, thing, thing, thing) : task.   % the world (the text): the task, the thing, the box if yes, the box if no
+pred where(thing, room) : task.                % the world (the text): where the thing is
+% the sub-goals (out)
+pred goto(room) : task.
+pred get(thing) : task.
+pred test(thing) : task.
+pred put(thing, thing) : task.
+% the results (in)
+pred reached(room) : task.
+pred got(thing) : task.
+pred conducts(thing) : task.
+pred insulates(thing) : task.
+pred placed(thing) : task.
+pred elsewhere(room) : task.
+pred refused(thing) : task.
+% the task's own tokens
+pred start : task.
+pred want(thing) : task.
+pred done : task.
+pred stuck(thing) : task.
+
+stage act {
+  %% The task: is {O} conductive? It is in {R}: I go there.
+  plan [dyn] : start * $task(conductivity, O, Y, N) * $where(O, R) -o want(O) * goto(R).
+  %% At {R}: I get {O}.
+  get_it [dyn] : want(O) * reached(R) * $where(O, R) -o want(O) * get(O).
+  %% {O} is in {R}: I go there first.
+  go_there [dyn] : want(O) * elsewhere(R) -o want(O) * goto(R).
+  %% I have {O}: I test it.
+  test_it [dyn] : want(O) * got(O) -o want(O) * test(O).
+  %% {O} conducts: into {Y}.
+  yes [dyn] : want(O) * conducts(O) * $task(conductivity, O, Y, N) -o want(O) * put(O, Y).
+  %% {O} does not conduct: into {N}.
+  no [dyn] : want(O) * insulates(O) * $task(conductivity, O, Y, N) -o want(O) * put(O, N).
+  %% {O} is in its box: done.
+  finish [dyn] : want(O) * placed(O) -o done.
+  %% A specialist refused {X} and I have no rule for it: I stop and ask.
+  stuck_on [dyn] : want(O) * refused(X) -o stuck(X).
+}
