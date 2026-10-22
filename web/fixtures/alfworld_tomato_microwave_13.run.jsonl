@@ -76,5 +76,5 @@
 {"ev": "journal", "rec": {"kind": "dlg-say", "what": "voice", "text": "Tomato 1 is in microwave 1: done.", "src": {"by": "harness", "domain": "task", "what": "result"}}, "dt": 400}
 {"ev": "world/hierarchy", "beat": 18, "arrival": "idle(place)", "effects": ["sleep(place)"], "state": ["active(task)", "attention(task)", "fresh", "inactive(access)", "inactive(grasp)", "inactive(nav)", "inactive(place)"], "dt": 400}
 {"ev": "journal", "rec": {"kind": "dlg-domain", "verb": "deactivate", "domain": "place", "by": "director"}, "dt": 400}
-{"ev": "world/hierarchy", "beat": 19, "arrival": "seen(done)", "effects": ["ask(done)", "ended(done)"], "state": ["active(task)", "attention(task)", "fresh", "inactive(access)", "inactive(grasp)", "inactive(nav)", "inactive(place)"], "dt": 400}
+{"ev": "world/hierarchy", "beat": 19, "arrival": "seen(done)", "effects": ["ended(done)"], "state": ["active(task)", "attention(task)", "fresh", "inactive(access)", "inactive(grasp)", "inactive(nav)", "inactive(place)"], "dt": 400}
 {"ev": "journal", "rec": {"kind": "dlg-say", "what": "voice", "text": "The task is done.", "src": {"by": "harness", "domain": "director", "what": "ended"}}, "dt": 400}

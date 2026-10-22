@@ -90,7 +90,7 @@ try {
   await ev(`world.stepAll()`);
   const d = await ev(`({ said: [...document.querySelectorAll('#talkpanel .fw-log li')].map(l => l.textContent),
     red: document.querySelector('#map [data-id="fridge1"]').classList.contains('wm-cornered'), hstate: document.getElementById('hstate').textContent })`);
-  c.ok(d.said.some(s => s.includes('Fridge 1 is not where this task wants tomato 1: I stop and ask.')) && d.red && d.hstate === 'ended: wrong_dest',
+  c.ok(d.said.some(s => s.includes('Fridge 1 is not where this task wants tomato 1. Put it there anyway, or leave tomato 1 where it is?')) && d.red && d.hstate === 'ended: wrong_dest',
     'the disengagement: the band asks, the fridge in red, the hierarchy ended on wrong_dest', d);
 
   // 9. at phone width the page does not scroll sideways

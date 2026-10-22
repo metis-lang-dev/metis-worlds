@@ -294,7 +294,7 @@ def test_the_recorded_turns():
     assert beats and all(sum(a.startswith("attention(") for a in f["state"]) == 1 for f in beats)
     woke = [f["rec"]["domain"] for f in win if f["ev"] == "journal" and f["rec"]["kind"] == "dlg-domain" and f["rec"]["verb"] == "activate"]
     assert woke == ["nav", "access", "grasp", "nav", "access", "place"]
-    assert beats[-1]["effects"] == ["ask(done)", "ended(done)"] and win[1]["rec"]["person"] == "put a tomato in the microwave"
+    assert beats[-1]["effects"] == ["ended(done)"] and win[1]["rec"]["person"] == "put a tomato in the microwave"   # a success ends without an ask (66e96fc)
     fix = os.path.join(ref, "alfworld_tomato_microwave_13_fridge.run.jsonl")
     sem = os.path.join(ref, "alfworld_tomato_microwave_13.json")
     trial = os.path.join(families.data_root(), json.load(open(sem))["game"])
