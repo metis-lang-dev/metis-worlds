@@ -1,0 +1,80 @@
+# The intent card of a ScienceWorld package (world-scienceworld step 1): the person's (or the
+# agent's) words → one command atom. Slots are the world's names (underscored).
+system: |
+  You are the experimenter in a text laboratory: rooms with doors, containers, devices, wires,
+  substances. The person tells you what to do: go to a room, open a door or container, pick up
+  or drop a thing, focus on a thing, connect two terminals, move a thing into a container,
+  activate or deactivate a device, wait, look around. Map what they say to exactly one intent
+  JSON per utterance. Respond with only the JSON.
+
+verbs:
+  - {verb: GO, meaning: "go to a room through a door of this room"}
+  - {verb: OPEN, meaning: "open a door (door_to_<room>) or a container"}
+  - {verb: CLOSE, meaning: "close a door or a container"}
+  - {verb: TAKE, meaning: "pick up a thing into the inventory"}
+  - {verb: DROP, meaning: "drop a thing you hold"}
+  - {verb: FOCUS, meaning: "focus on a thing (the task's object, a box)"}
+  - {verb: CONNECT, meaning: "connect terminal a to terminal b (battery anode, a wire's terminal, a bulb's cathode, a thing's terminal)"}
+  - {verb: MOVE, meaning: "move a thing into a container (a box, a cup, a stove)"}
+  - {verb: ACTIVATE, meaning: "turn a device on"}
+  - {verb: DEACTIVATE, meaning: "turn a device off"}
+  - {verb: WAIT, meaning: "wait one tick"}
+  - {verb: LOOK, meaning: "look around the room"}
+  - {verb: UNKNOWN, meaning: "anything else"}
+
+slots:
+  room: {type: string}
+  thing: {type: string}
+  a: {type: string}
+  b: {type: string}
+  container: {type: string}
+
+guidance: |
+  Names are the world's, with underscores: red_light_bulb, blue_wire_terminal_1, battery_anode,
+  aluminum_foil, red_box, door_to_workshop. "put X in Y" and "place X in Y" are MOVE. "wire X to
+  Y" and "attach X to Y" are CONNECT. Omit fields you don't need.
+
+examples:
+  - ["go to the workshop", {"intent":"GO","room":"workshop"}]
+  - ["open the door to the kitchen", {"intent":"OPEN","thing":"door_to_kitchen"}]
+  - ["open the cupboard", {"intent":"OPEN","thing":"cupboard"}]
+  - ["pick up the aluminum foil", {"intent":"TAKE","thing":"aluminum_foil"}]
+  - ["drop the foil", {"intent":"DROP","thing":"aluminum_foil"}]
+  - ["focus on the aluminum foil", {"intent":"FOCUS","thing":"aluminum_foil"}]
+  - ["connect the battery anode to blue wire terminal 1", {"intent":"CONNECT","a":"battery_anode","b":"blue_wire_terminal_1"}]
+  - ["wire the foil's terminal 2 to orange wire terminal 1", {"intent":"CONNECT","a":"aluminum_foil_terminal_2","b":"orange_wire_terminal_1"}]
+  - ["put the foil in the red box", {"intent":"MOVE","thing":"aluminum_foil","container":"red_box"}]
+  - ["turn on the stove", {"intent":"ACTIVATE","thing":"stove"}]
+  - ["wait", {"intent":"WAIT"}]
+  - ["look around", {"intent":"LOOK"}]
+  - ["what time is it", {"intent":"UNKNOWN"}]
+
+spoken:
+  heading: Spoken response (after the JSON)
+  text: |
+    After the JSON comes "Spoken response:" and one short sentence the experimenter says, in
+    the first person. Never JSON, never an intent name.
+  examples:
+    - ["go to the workshop", {"intent":"GO","room":"workshop"}, "Going to the workshop."]
+    - ["wait", {"intent":"WAIT"}, "Waiting."]
+
+map:
+  - {verb: GO, atom: "cmd_go({room})", act: go}
+  - {verb: OPEN, atom: "cmd_open({thing})", act: open}
+  - {verb: CLOSE, atom: "cmd_close({thing})", act: close}
+  - {verb: TAKE, atom: "cmd_take({thing})", act: take}
+  - {verb: DROP, atom: "cmd_drop({thing})", act: drop}
+  - {verb: FOCUS, atom: "cmd_focus({thing})", act: focus}
+  - {verb: CONNECT, atom: "cmd_connect({a},{b})", act: connect}
+  - {verb: MOVE, atom: "cmd_move({thing},{container})", act: move}
+  - {verb: ACTIVATE, atom: "cmd_activate({thing})", act: activate}
+  - {verb: DEACTIVATE, atom: "cmd_deactivate({thing})", act: deactivate}
+  - {verb: WAIT, atom: cmd_wait, act: wait}
+  - {verb: LOOK, atom: cmd_look, act: look}
+  - {verb: UNKNOWN, atom: cmd_unknown, act: unknown}
+
+asks: []
+outcomes: {done: done, refused: refused, progress: progress}
+alternatives:
+  max: 0
+  rules: {}

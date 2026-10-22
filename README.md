@@ -8,6 +8,7 @@ which move to `metis.host` / `metis.repl` in metispy under the metis-packages su
 |---|---|---|
 | [`alfworld/`](alfworld/README.md) | ALFWorld 0.4.2 (TextWorld games; AI2-THOR for frames) | the kernel acts, surprises become rules; the domain hierarchy with a director (`alfworld/docs/HIERARCHY.md`); the exploitation demo (`alfworld/docs/DEMO.md`) |
 | [`minihack/`](minihack/README.md) | MiniHack 1.0.2 on NLE 1.3.0 | the small LLM agent in the loop, the domain extracted after |
+| [`scienceworld/`](scienceworld/README.md) | ScienceWorld 1.2.3 (a text laboratory; Java) | hidden properties: the loop must run the experiment that reveals them (`scienceworld/experiments/REPORT.md`) |
 | [`web/`](web/README.md) | (every world) | the world map: one renderer and schema, a tileset per world (`web/tiles/` is NetHack's art, its own NOTICE) |
 
 Each world has its own `setup.sh` (a venv at `<world>/.venv`, or `.worlds/<alf|mh>` found by
@@ -18,6 +19,7 @@ venv and `METISC` pointing at metis-lang's compiler, e.g.
 ```
 METISC=../metis-lang/src/metisc ALFWORLD_DATA=../.worlds/alfworld-data ../.worlds/alf/bin/python -m pytest alfworld/tests -q
 ../.worlds/mh/bin/python -m pytest minihack/tests -q
+METISC=../metis-lang/src/metisc ../.worlds/sw/bin/python -m pytest scienceworld/tests -q
 ```
 
 Nothing here goes into metis-catalog: a world's plug code is the world's own.
