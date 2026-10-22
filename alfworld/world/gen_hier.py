@@ -159,7 +159,7 @@ def seed(info):
     return ["fetch(%s,%s)" % (o, r)]
 
 
-def generate(game_dir, out_dir, spec, k, info, reading, init, replay, domain_rel=None, intents=False):
+def generate(game_dir, out_dir, spec, k, info, reading, init, replay, domain_rel=None, intents=False, continues=False):
     sp = SPECS[spec]
     iid = gen_instance.instance_id(game_dir)
     kinds = {}
@@ -204,7 +204,7 @@ def generate(game_dir, out_dir, spec, k, info, reading, init, replay, domain_rel
     path = os.path.join(pkg, spec + ".llp")
     open(path, "w").write("\n".join(lines) + "\n")
     json.dump({"game": os.path.join(game_dir, "game.tw-pddl"), "task_type": info["task_type"], "params": info["params"],
-               "handles": info["handles"], "replay": list(replay), "observe": list(sp["dyn"]), "out": list(sp["out"]),
+               "handles": info["handles"], "replay": list(replay), "observe": list(sp["dyn"]), "out": list(sp["out"]), "continues": bool(continues),
                "things": things},
               open(os.path.join(pkg, "game.json"), "w"), indent=1)
     open(os.path.join(pkg, "domain.yaml"), "w").write(

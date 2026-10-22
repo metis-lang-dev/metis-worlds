@@ -306,3 +306,38 @@ def test_the_recorded_turns():
         got = [json.loads(x) for x in open(out)]
         got[0]["url"] = json.loads(open(fix).readline())["url"]          # relative to where it was written
         assert got == [json.loads(x) for x in open(fix)], "web/fixtures/ is stale: rerun record_run.py"
+
+
+def test_hierarchy_continues_after_a_result(tmp_path):
+    """alf-hierarchy step 3 (the agent's director): a specialist package generated with
+    continues=True reports its result atom once and keeps stepping (tick returns do-lines, not
+    None); without it the run ends on the result, as the manual-switch driver expects."""
+    from alf_host import AlfHost
+    wd = str(tmp_path)
+    flat, _, _ = gen_instance.generate(game_dir(), wd)
+    flat_pkg = os.path.dirname(flat)
+    import json
+    info = json.load(open(os.path.join(flat_pkg, "game.json")))
+    mirror = AlfHost(flat_pkg)
+    try:
+        info = dict(info, static=sorted(mirror.static), task_type=mirror.task, params=mirror.params)
+        rec = next(a for a in mirror.static if a.startswith("recat("))[6:-1].split(",")[0]
+        reading = mirror.reading()
+    finally:
+        mirror.gym.close()
+    for continues in (False, True):
+        out_dir = os.path.join(wd, "c%d" % continues)
+        path = gen_hier.generate(game_dir(), out_dir, "nav", 0, info, reading, gen_hier.seed(info) + ["goto(%s)" % rec], [],
+                                 domain_rel=os.path.join(ROOT, "domains", "hier", "nav_domain.llp"), continues=continues)
+        h = AlfHost(os.path.dirname(path))
+        try:
+            counts = {a: 1 for a in h.reading()}
+            counts["reached(%s)" % rec] = 1                               # the nav specialist's result atom
+            out = h.tick(counts)
+            if continues:
+                assert out is not None and not h.done, "continues: the run goes on after the result"
+                assert h.tick(counts) is not None and "reached(%s)" % rec in h.reported, "the result is reported once, the world keeps stepping"
+            else:
+                assert out is None and h.done, "the manual switch: the run ends on the result"
+        finally:
+            h.gym.close()

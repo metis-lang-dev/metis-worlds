@@ -100,6 +100,8 @@ class AlfHost:
         self.replay = list(meta.get("replay") or [])
         self.observed = set(meta["observe"]) if meta.get("observe") else None
         self.out = set(meta.get("out") or [])
+        self.continues = bool(meta.get("continues"))          # the agent's hierarchy: a result is reported, the run goes on (the director sleeps the specialist)
+        self.reported = set()
         self.things = set(meta["things"]) if meta.get("things") else None   # … and the things it declares
         self.beat, self.due, self.script, self.last = 0, (), {}, None   # the AgentHost reads these
         self._reset()
@@ -204,14 +206,18 @@ class AlfHost:
         self.stepped = False
         reading = self.reading()
         own = sorted(a for a, n in counts.items() if n > 0 and a not in reading and a.split("(")[0] not in DYNAMIC_PREDS)
-        out = [a for a in own if a.split("(")[0] in self.out]
+        out = [a for a in own if a.split("(")[0] in self.out and a not in self.reported]
         tokens = [a for a in own if a not in out]
         dos = self.sync(counts)
         self._log({"beat": self.beat, "tick": True, "counts": len(counts), "sync": dos[:12], "n_sync": len(dos),
                    "tokens": tokens, "out": out})
-        if out or self.done:                         # a result is out (or the game ended): the run is over
+        if self.done:                                # the game ended: the run is over
+            return None
+        if out and not self.continues:               # a result is out: the run is over (the driver's manual switch)
             self.done = True
             return None
+        if out:                                      # continues: the result is reported once, the world keeps stepping
+            self.reported |= set(out)
         return dos
 
     def sync(self, counts):
