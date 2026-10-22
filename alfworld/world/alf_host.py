@@ -104,6 +104,7 @@ class AlfHost:
         self.reported = set()
         self.things = set(meta["things"]) if meta.get("things") else None   # … and the things it declares
         self.commands_log = meta.get("commands_log")           # the agent's hierarchy: the shared world state (every host's commands, replayed at reset)
+        self.verbs = bool(meta.get("verbs"))                   # the loop's instances: a rule named verb_why is a command (opt-in: a hand domain's bookkeeping rule may start with a verb — go_for, open_dest)
         self.beat, self.due, self.script, self.last = 0, (), {}, None   # the AgentHost reads these
         self._reset()
 
@@ -159,7 +160,7 @@ class AlfHost:
         base, b = bindings(name)
         spec = COMMANDS.get(base)
         if spec is None:
-            spec = self.VERBS.get(base.split("_")[0])
+            spec = self.VERBS.get(base.split("_")[0]) if self.verbs else None
             if spec is None:
                 return None
             if spec[0] == "go" and "L2" not in b and b.get("R"):       # go by the receptacle alone: its location from recat

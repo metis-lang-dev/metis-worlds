@@ -120,7 +120,7 @@ def director_facts():
             facts.append("handles(%s, %s)" % (d, k))
     handled = {k for d, sp in SPECS.items() for k in (sp["goal"],) + tuple(sp.get("takes", ()))}
     facts += ["result(%s)" % k for k in SPECS["task"]["takes"] if k != "refused"]
-    facts += ["end(%s)" % k for k in ENDS]
+    facts += ["end(%s)" % k for k in ENDS if k != "done"] + ["finished(done)"]   # done ends without an ask (opus, the demo)
     facts += ["detour(elsewhere, goto)", "escalate(elsewhere, refused)"]
     facts += ["rename(elsewhere, goto, goto)", "rename(elsewhere, refused, refused)"]   # the orchestrator's frames (metis-agent director.py)
     facts += ["nohandler(%s)" % k for k in kinds if k not in handled and k not in ENDS and k != "elsewhere"]

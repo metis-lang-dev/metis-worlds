@@ -399,6 +399,13 @@ def test_rule_names_map_by_their_first_token(package):
     pkg, _ = package
     h = AlfHost(pkg)
     try:
+        assert h.command_of("go_for[R=x]", ()) is None            # without the opt-in a hand domain's go_for is bookkeeping, not a command (opus)
+    finally:
+        h.gym.close()
+    meta = json.load(open(os.path.join(pkg, "game.json"))); meta["verbs"] = True
+    json.dump(meta, open(os.path.join(pkg, "game.json"), "w"))
+    h = AlfHost(pkg)
+    try:
         o, r = next(a for a in sorted(h.dyn) if a.startswith("inrecep("))[8:-1].split(",")     # a real object in a real receptacle
         loc = next(a for a in h.static if a.startswith("recat(%s," % r))[6:-1].split(",")[1]
         assert h.command_of("go_anywhere[R=%s]" % r, ()) == "go to " + h.name(r)                 # L2 from recat

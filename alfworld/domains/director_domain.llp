@@ -24,6 +24,7 @@ bwd planner(domain).                      % the domain that is active throughout
 bwd handles(domain, kind).                % D consumes atoms of kind K
 bwd result(kind).                         % a kind that is a specialist's answer
 bwd end(kind).                            % a kind that ends the episode (done, stuck, …)
+bwd finished(kind).                       % … of which the ones that are success: ended, no ask (the instance: done)
 bwd detour(kind, kind).                   % a refusal of kind K1 is answered by a goal of kind K2 to another specialist, once
 bwd escalate(kind, kind).                 % … and a second time becomes K3 for the planner
 bwd rename(kind, kind, kind).             % the orchestrator's frames: an atom of K1 forwarded as K2 is sent under the name K3 (elsewhere(R) → goto(R)); the rules never read it
@@ -73,8 +74,10 @@ stage act {
   escalate [dyn] : seen(K1) * $detour(K1, K2) * $escalate(K1, K3) * $planner(P) * sent(S, K0) * active(S) * rerouted * attention(S) -o forward(P, K3) * fresh * attention(P).
 
   % ── the ends ──
-  %% {K}: the episode is over.
-  ended [dyn] : seen(K) * $end(K) -o ended(K) * ask(K).
+  %% {K}: the task is done.
+  finished [dyn] : seen(K) * $finished(K) -o ended(K).
+  %% {K}: the episode is over without the task done. I ask.
+  cornered [dyn] : seen(K) * $end(K) -o ended(K) * ask(K).
   %% Nobody handles {K}: I ask.
   unknown [dyn] : seen(K) * $nohandler(K) -o ask(K).
 }
