@@ -81,7 +81,7 @@ COPIES = [  # (this file, the source in a sibling checkout)
     (WEB / "vendor" / "ui-port.js", "metis-loop/console/lib/ui-port.js"),
     (WEB / "vendor" / "journal.js", "metis-agent/console/journal.js"),
 ] + [(WEB / "vendor" / f, "fsttm-web/lib/" + f) for f in
-     ("attention.js", "dialog.js", "fsttm.js", "fsttm.json", "panel.css", "panel.js", "tts.js", "ws.js")]
+     ("attention.js", "dialog.js", "fsttm.js", "fsttm.json", "narrator.css", "narrator.js", "panel.css", "panel.js", "tts.js", "ws.js")]
 
 
 @pytest.mark.parametrize("mine, src", COPIES, ids=[c[0].name for c in COPIES])

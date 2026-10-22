@@ -19,6 +19,7 @@ import { Panel } from './vendor/panel.js';
 import { connect } from './vendor/ws.js';
 import { UiPort } from './vendor/ui-port.js';
 import { Journal } from './vendor/journal.js';
+import { Narrator, attachSelection, attachKey, narratorView } from './vendor/narrator.js';
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -177,6 +178,10 @@ panel = world.panel = new Panel($('#talkpanel'), {
 });
 window.say = text => panel.say(text);
 if (backend) hello(backend);
+// the narrator (fsttm-web 0.6): the page's selected text read aloud on F8 (the task card's words, the journal), never
+// taking the floor: it wraps the band's own TTS and yields while the dialog speaks
+const narrator = world.narrator = new Narrator({ tts: panel.core.tts });
+attachSelection(narrator, document); attachKey(narrator, document, { key: 'F8' }); narratorView($('#narrator'), narrator);
 $('#hlist').addEventListener('click', e => { const li = e.target.closest('li'); if (li?.dataset.domain === 'task') world.map.showTask('@agent'); });
 $('#hlist').addEventListener('keydown', e => { const li = e.target.closest('li'); if (e.key === 'Enter' && li?.dataset.domain === 'task') world.map.showTask('@agent'); });
 if (!agentUrl) await replay(q.get('replay') || 'fixtures/alfworld_tomato_microwave_13.run.jsonl');

@@ -6,6 +6,7 @@
 <title>World Page</title>
 <link rel="stylesheet" href="map.css">
 <link rel="stylesheet" href="vendor/panel.css">
+<link rel="stylesheet" href="vendor/narrator.css">
 <script type="importmap">{"imports":{"fsttm-web/tts":"./vendor/tts.js","fsttm-web/ws":"./vendor/ws.js","fsttm-web/panel":"./vendor/panel.js"}}</script>
 <style>
   :root { --w-bg: #f4f1ea; --w-fg: #1d1d1b; --w-mute: #6b6760; --w-line: #d6d0c4; --w-card: #fff; --w-on: #2d8a4e; --w-att: #d4632a; }
@@ -52,6 +53,7 @@
       <button id="step" data-w="step" data-role="item" type="button">step</button>
     </div>
     <span id="conn"></span>
+    <span id="narrator" data-port-off aria-live="polite"></span>
   </header>
   <main>
     <section id="map" data-w="map" data-role="list" tabindex="-1" aria-label="the map"></section>
