@@ -6,7 +6,8 @@
 % disengagement point (metis-loop pi docs/POLICY.md). A question to the person (alf-demo step 3b, F3)
 % ends its doc line with the answers it takes, `| answer | answer`: each a sentence the agent maps
 % to an intent the card has (a fetch, or stop); the wire carries them as the ask's options. A fetch
-% whose target is already in its destination is done at once (F8: it must not be undone). One way in: fetch(O, R) — the FETCH
+% whose target is already in its destination is done at once (F8: it must not be undone); one whose
+% target the agent holds (a stop after the take, F12) carries it to the destination. One way in: fetch(O, R) — the FETCH
 % intent a person types, or the driver's seed (the first target, the first destination).
 catalog task_domain 1.
 provenance text "ALFWorld pick-and-place as the task domain over four specialists: sub-goals out, results in" "2026-10-22".
@@ -21,6 +22,7 @@ bwd notdest(receptacle).                  % the complements, given by the instan
 bwd nottarget(object).
 
 pred inrecep(object, receptacle) : task.  % the world: where the target is
+pred holds(object) : task.                % … or that the agent holds it (a stop after the take: opus's F12)
 % the sub-goals (out)
 pred goto(receptacle) : task.
 pred open(receptacle) : task.
@@ -49,6 +51,8 @@ stage act {
   fetch [dyn] : fetch(O, R) * $target(O) * $dest(R) * $inrecep(O, R0) * R0 <> R -o want(O) * to(R) * start.
   %% {O} is already in {R}: nothing to do.
   already [dyn] : fetch(O, R) * $target(O) * $dest(R) * $inrecep(O, R) -o done.
+  %% I have {O}: to {R}.
+  held [dyn] : fetch(O, R) * $target(O) * $dest(R) * $holds(O) -o carry(O) * to(R) * goto(R).
   %% {R} is not where this task wants {O}. | put {O} in {D} | stop
   not_dest [dyn] : fetch(O, R) * $target(O) * $notdest(R) * $dest(D) -o wrong_dest(R).
   %% {O} is not what this task fetches. | put {T} in {R} | stop

@@ -171,7 +171,7 @@ def test_hierarchy_instances_see_less(tmp_path):
         p = gen_hier.generate(game_dir(), str(tmp_path / "pk"), spec, 0, info, reading, gen_hier.seed(info), [])
         init = sum(1 for l in open(p) if l.startswith("#init"))
         assert init < flat_init, (spec, init, flat_init)
-        assert gen_hier.vector(spec)["rules"] <= 13          # the task domain: 13 with `already` (alf-demo step 3b, F8)
+        assert gen_hier.vector(spec)["rules"] <= 14          # the task domain: 14 with `already` and `held` (alf-demo step 3b, F8/F12)
 
 
 def test_activation_cards(tmp_path):
@@ -501,6 +501,12 @@ def test_a_fetch_already_in_place_is_done_at_once(tmp_path):
     assert fired == ["already"] and " done:1" in final and "goto(" not in final, (fired, final)
     fired, final = _task_instance(str(tmp_path), "fresh", lambda info, world: world, seed)
     assert fired[0] == "fetch" and "goto(" in final and " done:" not in final, (fired, final)
+    # F12: a stop after the take leaves the agent holding the target — the next fetch carries it
+    def held(info, world):
+        o = seed(info)[0][6:-1].split(",")[0]
+        return [a for a in world if not a.startswith("inrecep(%s," % o)] + ["holds(%s)" % o]
+    fired, final = _task_instance(str(tmp_path), "held", held, seed)
+    assert fired == ["held"] and "goto(" in final and "carry(" in final, (fired, final)
 
 
 @pytest.mark.skipif(not os.environ.get("METISC"), reason="METISC is not set")

@@ -28,7 +28,7 @@ SPECS = {
     "place":  dict(types=("location", "receptacle", "object"), static=("recat", "openable", "notopenable"),
                    dyn=("at", "objat", "inrecep", "opened", "closed", "holds", "holding", "handsfree"), goal="put",
                    out=("placed", "refused", "elsewhere")),
-    "task":   dict(types=("object", "receptacle", "thing"), static=("target", "dest", "notdest", "nottarget"), dyn=("inrecep",),
+    "task":   dict(types=("object", "receptacle", "thing"), static=("target", "dest", "notdest", "nottarget"), dyn=("inrecep", "holds"),
                    goal="fetch", takes=("reached", "accessible", "taken", "placed", "refused"),
                    out=("goto", "open", "take", "put", "done", "stuck", "wrong_dest", "wrong_object")),
 }
