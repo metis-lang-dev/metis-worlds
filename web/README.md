@@ -27,6 +27,11 @@ console copies fsttm-web's lib (copies, not dependencies).
                "frame": null, "items": [], "hot": false}],
  "agent": {"pos": [0, 3], "yaw": null, "tile": 329, "ch": "@"},
  "task": {"text": "the words the task was given in", "goal": "fetch(tomato1, microwave1)",
+ "card": {"title": "ALFWorld kitchen FloorPlan13", "about": ["what this world is", "…"],
+          "room": [{"type": "cabinet", "n": 26, "ids": ["cabinet1", "…"], "openable": true}],
+          "things": [{"type": "tomato", "n": 2, "ids": ["tomato1", "tomato2"]}],
+          "asks": [{"say": "put a tomato in the microwave", "what": "this game's task: the one that wins the game"}, {"say": "stop", "what": "…"}],
+          "cannot": ["a single step on its own …"], "source": "generated from the game's facts by world/semantic_map.py"},
           "chain": [{"domain": "nav", "goal": "goto(countertop3)", "result": "reached(countertop3)"}],
           "results": ["I go to countertop3."], "source": "…"},
  "tileset": {"index": ["the world's own index, relative to this file"]}}

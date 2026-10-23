@@ -6246,10 +6246,360 @@
   },
   "source": "ALFWorld traj_data.json: turk_annotations (the annotators' words)"
  },
+ "card": {
+  "title": "ALFWorld kitchen FloorPlan13",
+  "about": [
+   "ALFWorld: a household scene from ALFRED, in text mode (TextWorld): one game is one room and one task.",
+   "The agent moves between places, opens what is closed, takes one thing at a time and puts it in or on a place.",
+   "51 places of 10 kinds, 45 things you can ask for (24 kinds)."
+  ],
+  "room": [
+   {
+    "type": "cabinet",
+    "n": 26,
+    "ids": [
+     "cabinet1",
+     "cabinet10",
+     "cabinet11",
+     "cabinet12",
+     "cabinet13",
+     "cabinet14",
+     "cabinet15",
+     "cabinet16",
+     "cabinet17",
+     "cabinet18",
+     "cabinet19",
+     "cabinet2",
+     "cabinet20",
+     "cabinet21",
+     "cabinet22",
+     "cabinet23",
+     "cabinet24",
+     "cabinet25",
+     "cabinet26",
+     "cabinet3",
+     "cabinet4",
+     "cabinet5",
+     "cabinet6",
+     "cabinet7",
+     "cabinet8",
+     "cabinet9"
+    ],
+    "openable": true
+   },
+   {
+    "type": "coffeemachine",
+    "n": 1,
+    "ids": [
+     "coffeemachine1"
+    ],
+    "openable": false
+   },
+   {
+    "type": "countertop",
+    "n": 3,
+    "ids": [
+     "countertop1",
+     "countertop2",
+     "countertop3"
+    ],
+    "openable": false
+   },
+   {
+    "type": "drawer",
+    "n": 12,
+    "ids": [
+     "drawer1",
+     "drawer10",
+     "drawer11",
+     "drawer12",
+     "drawer2",
+     "drawer3",
+     "drawer4",
+     "drawer5",
+     "drawer6",
+     "drawer7",
+     "drawer8",
+     "drawer9"
+    ],
+    "openable": true
+   },
+   {
+    "type": "fridge",
+    "n": 1,
+    "ids": [
+     "fridge1"
+    ],
+    "openable": true
+   },
+   {
+    "type": "garbagecan",
+    "n": 1,
+    "ids": [
+     "garbagecan1"
+    ],
+    "openable": false
+   },
+   {
+    "type": "microwave",
+    "n": 1,
+    "ids": [
+     "microwave1"
+    ],
+    "openable": true
+   },
+   {
+    "type": "sink",
+    "n": 1,
+    "ids": [
+     "sink1"
+    ],
+    "openable": false
+   },
+   {
+    "type": "stoveburner",
+    "n": 4,
+    "ids": [
+     "stoveburner1",
+     "stoveburner2",
+     "stoveburner3",
+     "stoveburner4"
+    ],
+    "openable": false
+   },
+   {
+    "type": "toaster",
+    "n": 1,
+    "ids": [
+     "toaster1"
+    ],
+    "openable": false
+   }
+  ],
+  "things": [
+   {
+    "type": "apple",
+    "n": 2,
+    "ids": [
+     "apple1",
+     "apple2"
+    ]
+   },
+   {
+    "type": "bowl",
+    "n": 3,
+    "ids": [
+     "bowl1",
+     "bowl2",
+     "bowl3"
+    ]
+   },
+   {
+    "type": "bread",
+    "n": 1,
+    "ids": [
+     "bread1"
+    ]
+   },
+   {
+    "type": "butterknife",
+    "n": 2,
+    "ids": [
+     "butterknife1",
+     "butterknife2"
+    ]
+   },
+   {
+    "type": "cup",
+    "n": 3,
+    "ids": [
+     "cup1",
+     "cup2",
+     "cup3"
+    ]
+   },
+   {
+    "type": "dishsponge",
+    "n": 1,
+    "ids": [
+     "dishsponge1"
+    ]
+   },
+   {
+    "type": "egg",
+    "n": 1,
+    "ids": [
+     "egg1"
+    ]
+   },
+   {
+    "type": "fork",
+    "n": 2,
+    "ids": [
+     "fork1",
+     "fork2"
+    ]
+   },
+   {
+    "type": "knife",
+    "n": 2,
+    "ids": [
+     "knife1",
+     "knife2"
+    ]
+   },
+   {
+    "type": "lettuce",
+    "n": 1,
+    "ids": [
+     "lettuce1"
+    ]
+   },
+   {
+    "type": "mug",
+    "n": 1,
+    "ids": [
+     "mug1"
+    ]
+   },
+   {
+    "type": "pan",
+    "n": 3,
+    "ids": [
+     "pan1",
+     "pan2",
+     "pan2"
+    ]
+   },
+   {
+    "type": "papertowelroll",
+    "n": 1,
+    "ids": [
+     "papertowelroll1"
+    ]
+   },
+   {
+    "type": "pencil",
+    "n": 3,
+    "ids": [
+     "pencil1",
+     "pencil2",
+     "pencil3"
+    ]
+   },
+   {
+    "type": "peppershaker",
+    "n": 3,
+    "ids": [
+     "peppershaker1",
+     "peppershaker2",
+     "peppershaker3"
+    ]
+   },
+   {
+    "type": "plate",
+    "n": 3,
+    "ids": [
+     "plate1",
+     "plate2",
+     "plate3"
+    ]
+   },
+   {
+    "type": "pot",
+    "n": 1,
+    "ids": [
+     "pot1"
+    ]
+   },
+   {
+    "type": "potato",
+    "n": 2,
+    "ids": [
+     "potato1",
+     "potato2"
+    ]
+   },
+   {
+    "type": "saltshaker",
+    "n": 2,
+    "ids": [
+     "saltshaker1",
+     "saltshaker2"
+    ]
+   },
+   {
+    "type": "soapbottle",
+    "n": 2,
+    "ids": [
+     "soapbottle1",
+     "soapbottle2"
+    ]
+   },
+   {
+    "type": "spatula",
+    "n": 2,
+    "ids": [
+     "spatula1",
+     "spatula2"
+    ]
+   },
+   {
+    "type": "spoon",
+    "n": 1,
+    "ids": [
+     "spoon1"
+    ]
+   },
+   {
+    "type": "tomato",
+    "n": 2,
+    "ids": [
+     "tomato1",
+     "tomato2"
+    ]
+   },
+   {
+    "type": "winebottle",
+    "n": 1,
+    "ids": [
+     "winebottle1"
+    ]
+   }
+  ],
+  "asks": [
+   {
+    "say": "put a tomato in the microwave",
+    "what": "this game's task: the one that wins the game"
+   },
+   {
+    "say": "put the tomato in the microwave",
+    "what": "the same task in your words: things by kind, a number when the room has several (\"tomato 2\")"
+   },
+   {
+    "say": "put the apple on the countertop",
+    "what": "any thing of the room to any place: the agent does it, or asks first when the task wants something else"
+   },
+   {
+    "say": "stop",
+    "what": "the agent stops what it is doing and waits"
+   },
+   {
+    "say": "new game",
+    "what": "the same room from its start, the task again"
+   }
+  ],
+  "cannot": [
+   "a single step on its own (just go, just open, just pick up): the agent takes whole errands",
+   "a thing that is not in this room, or a place that is not",
+   "another task after the game is won: say \"new game\" first"
+  ],
+  "source": "generated from the game's facts by world/semantic_map.py"
+ },
  "overview": null,
  "tileset": {
   "index": [
-   "../../alfworld/tiles/index.json"
+   "tiles/alfworld.json"
   ]
  }
 }

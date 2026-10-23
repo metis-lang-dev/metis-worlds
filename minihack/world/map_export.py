@@ -21,6 +21,22 @@ TASK = {"text": "Find the stairs down and go down them.", "goal": "down",
 NAMES = {"stairs_down": "staircase down", "stairs_up": "staircase up"}
 
 
+def world_card(ents):
+    """The world card (the same keys as alfworld's semantic_map.world_card): what this level is and
+    what can be asked of it."""
+    kinds = {}
+    for e in ents:
+        kinds.setdefault(e.get("type") or e.get("kind") or "thing", []).append(e.get("id") or e.get("name") or "")
+    things = [{"type": k, "n": len(v), "ids": v} for k, v in sorted(kinds.items())]
+    return {"title": "MiniHack room", "about": ["MiniHack: a NetHack level on a grid; the agent walks, picks up, opens and unlocks, and goes down the stairs.",
+                                                "%d things on the level (%d kinds)." % (sum(t["n"] for t in things), len(things))],
+            "room": [], "things": things,
+            "asks": [{"say": TASK.get("text", "go down the stairs").rstrip(".").lower(), "what": "the level's task: the one that wins"},
+                     {"say": "stop", "what": "the agent stops and waits"}, {"say": "new game", "what": "the level from its start"}],
+            "cannot": ["a single step on its own", "a thing that is not on this level"],
+            "source": "generated from the level by world/map_export.py"}
+
+
 def export(package_dir):
     from mh_gym import World
     lv = json.load(open(os.path.join(package_dir, "level.json")))
@@ -58,7 +74,7 @@ def export(package_dir):
             if e is agent or e["kind"] in ("monster", "object"):
                 cells[e["pos"][1]][e["pos"][0]] = floor
         return {"world": "minihack", "level": lv.get("name") or os.path.basename(package_dir), "cols": p.w, "rows": p.h,
-                "cells": cells, "entities": ents, "agent": agent, "task": dict(TASK),
+                "cells": cells, "entities": ents, "agent": agent, "task": dict(TASK), "card": world_card(ents),
                 "tileset": {"index": []}}             # the page's base tileset (the glyph sheet) is the level's
     finally:
         w.env.close()

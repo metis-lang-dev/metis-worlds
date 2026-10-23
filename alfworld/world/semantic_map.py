@@ -100,20 +100,70 @@ def text_map(game_dir, index=None):
         things.append({"id": o, "name": spoken(o), "type": re.sub(r"\d+$", "", o), "at": r, "pos": pos(o),
                        "pickupable": "pickupable(%s)" % o in static})
     ia = traj["scene"].get("init_action") or {}
+    ann = traj.get("turk_annotations", {}).get("anns", [])
+    words = [a["task_desc"].strip() for a in ann if a.get("task_desc")]
     targets = re.findall(r"^target\((\w+)\)\.", facts, re.M)
     dests = re.findall(r"^dest\((\w+)\)\.", facts, re.M)
-    words = [a["task_desc"].strip() for a in traj.get("turk_annotations", {}).get("anns", []) if a.get("task_desc")]
     ids = [p["id"] for p in places]
+    task = {"text": words[0] if words else "", "goal": "fetch(%s, %s)" % (targets[0], dests[0]) if targets and dests else "",
+            "targets": targets, "dests": dests, "params": params,
+            "source": "ALFWorld traj_data.json: turk_annotations (the annotators' words)"}
     return {"world": "alfworld", "scene": traj["scene"]["floor_plan"], "units": "m", "mode": "text", "cell": CELL,
             "game": os.path.relpath(game_dir, os.path.dirname(os.path.dirname(os.path.dirname(game_dir)))),
             "places": places, "things": things,
             "agent": {"pos": [round(ia.get("x", 0.0), 2), round(ia.get("z", 0.0), 2)], "yaw": ia.get("rotation", 0),
                       "at": None, "holding": None},
             "edges": [[a, b] for i, a in enumerate(ids) for b in ids[i + 1:]],
-            "task": {"text": words[0] if words else "", "goal": "fetch(%s, %s)" % (targets[0], dests[0]) if targets and dests else "",
-                     "targets": targets, "dests": dests, "params": params,
-                     "source": "ALFWorld traj_data.json: turk_annotations (the annotators' words)"},
+            "task": task, "card": world_card(traj["scene"]["floor_plan"], places, things, task),
             "overview": None, "tileset": {"index": [index] if index else []}}
+
+
+def _kinds(items, key="type"):
+    out = {}
+    for it in items:
+        out.setdefault(it[key], []).append(it["id"])
+    return [{"type": k, "n": len(v), "ids": v} for k, v in sorted(out.items())]
+
+
+ON = ("countertop", "diningtable", "stoveburner", "shelf", "sidetable", "coffeetable", "sofa", "bed", "desk", "dresser", "toilet", "plate", "ottoman")
+
+
+def prep(place_type):
+    return "on" if place_type in ON else "in"
+
+
+def world_card(scene, places, things, task):
+    """The world card (alf-demo step 3b, the user's ask: a model-card-like page of what this world is
+    and what can be asked of it, a dock beside TALK / HIERARCHY / JOURNAL): world-neutral keys —
+    title, about (lines), room (place kinds with counts), things (thing kinds with counts), asks
+    (say, what), cannot (lines), source — generated from the game's own facts, never typed."""
+    pick = [t for t in things if t.get("pickupable")]
+    rooms = _kinds(places)
+    for r in rooms:
+        r["openable"] = any(p["openable"] for p in places if p["type"] == r["type"])
+    tk = _kinds(pick)
+    target = next((t for t in things if t["id"] in task.get("targets", [])), None)
+    dest = next((p for p in places if p["id"] in task.get("dests", [])), None)
+    other = next((t for t in pick if t["type"] != (target or {}).get("type")), None)
+    elsewhere = next((p for p in places if p["id"] != (dest or {}).get("id") and p["type"] in ("fridge", "countertop", "sinkbasin", "diningtable")), None) or (places[0] if places else None)
+    asks = []
+    if task.get("text"):
+        asks.append({"say": task["text"].rstrip(".").lower() if task["text"] else "", "what": "this game's task: the one that wins the game"})
+    if target and dest:
+        asks.append({"say": "put the %s %s the %s" % (target["type"], prep(dest["type"]), dest["type"]), "what": "the same task in your words: things by kind, a number when the room has several (\"tomato 2\")"})
+    if other and elsewhere:
+        asks.append({"say": "put the %s %s the %s" % (other["type"], prep(elsewhere["type"]), elsewhere["type"]), "what": "any thing of the room to any place: the agent does it, or asks first when the task wants something else"})
+    asks += [{"say": "stop", "what": "the agent stops what it is doing and waits"},
+             {"say": "new game", "what": "the same room from its start, the task again"}]
+    return {"title": "ALFWorld kitchen %s" % scene,
+            "about": ["ALFWorld: a household scene from ALFRED, in text mode (TextWorld): one game is one room and one task.",
+                      "The agent moves between places, opens what is closed, takes one thing at a time and puts it in or on a place.",
+                      "%d places of %d kinds, %d things you can ask for (%d kinds)." % (len(places), len(rooms), len(pick), len(tk))],
+            "room": rooms, "things": tk, "asks": asks,
+            "cannot": ["a single step on its own (just go, just open, just pick up): the agent takes whole errands",
+                       "a thing that is not in this room, or a place that is not",
+                       "another task after the game is won: say \"new game\" first"],
+            "source": "generated from the game's facts by world/semantic_map.py"}
 
 
 if __name__ == "__main__":

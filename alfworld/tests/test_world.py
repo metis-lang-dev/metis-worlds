@@ -276,6 +276,10 @@ def test_semantic_map_text_mode():
     assert m["things"] and all(t["at"] in ids for t in m["things"])
     assert m["task"]["text"] and m["task"]["goal"].startswith("fetch(") and m["tileset"] == {"index": ["idx.json"]}
     assert len(m["edges"]) == len(ids) * (len(ids) - 1) // 2
+    card = m["card"]                                   # the world card (3b): generated from the game's facts
+    assert card["title"].startswith("ALFWorld kitchen") and len(card["about"]) == 3 and card["room"] and card["things"]
+    assert [a["say"] for a in card["asks"]][:1] == [m["task"]["text"].rstrip(".").lower()] and card["asks"][-2:][0]["say"] == "stop"
+    assert sum(t["n"] for t in card["things"]) == sum(1 for t in m["things"] if t["pickupable"]) and card["cannot"]
     ref = os.path.join(ROOT, "..", "web", "fixtures", "alfworld_tomato_microwave_13.json")
     fix = json.load(open(ref))
     trial = os.path.join(families.data_root(), fix["game"])
