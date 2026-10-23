@@ -231,10 +231,11 @@ def generate(game_dir, out_dir, spec, k, info, reading, init, replay, domain_rel
     # the activation sees only the things its goal names: grasp and place the one object, the task
     # its targets (the receptacles stay whole: where a target is, is the world's to say)
     goal_objs = sorted({a[a.index("(") + 1:-1].split(",")[0] for a in init if a.split("(")[0] in ("take", "put")})
-    if spec in ("grasp", "place"):
-        # no goal yet (the agent's startup instance, re-instanced by the director at its first forward):
-        # no object at all — the full room grounded to 160k events, 14 s each in the grounder (the demo's
-        # 50 s start); `none` is the empty type's constant
+    if spec in ("grasp", "place") and (goal_objs or not intents):
+        # no goal yet and no card (the agent's startup instance, re-instanced by the director at its
+        # first forward): no object at all — the full room grounded to 160k events, 14 s each in the
+        # grounder (the demo's 50 s start); `none` is the empty type's constant. A card (intents=True)
+        # with no goal keeps every pickupable: a person may name any of them
         kinds["object"] = goal_objs
     if spec == "task":
         # the driver's task sees its targets and the object its goal names; a person's task (intents=True)
