@@ -28,8 +28,8 @@ try {
     && world.intentWords('{"intent":"GO","domain":"world_ui","widget":"MAP"}') === 'go: the map'`),
     'the typed intent in words, its handles as the map names them', null);
 
-  // a map without a card (this older recording): the dock says so, the waiting line offers none
-  c.ok(await ev(`document.getElementById('wcard').textContent.includes('This world has no card')`), 'an older map without a card: the WORLD CARD dock says so', null);
+  // the live maps carry the world card; the card's line comes first on hello (v3-card)
+  c.ok(await ev(`document.querySelector('#wcard .wc-title')?.textContent.length > 0 && document.querySelectorAll('#wcasks .chip').length > 0`), 'the live map carries the world card', null);
 
   // waiting: the page says what it wants first
   c.ok(await stepTo(`document.getElementById('status').dataset.state === 'waiting'`), 'waiting on hello', await st());
@@ -50,7 +50,7 @@ try {
   const slot = await ev(`document.querySelector('#map .wm-attn, #map [data-id="microwave1"].wm-attn, #map .wm-slot')?.textContent || world.map.attn.textContent`);
   c.ok(slot.includes('microwave 1') && !slot.includes('closed') && slot.includes('tomato 1'), 'the attention slot follows the world (no longer closed, the tomato in it)', slot.slice(0, 160));
   const o = await st();
-  c.ok(o.chips.join() === 'new game' && o.text.startsWith('Done.'), 'over: "new game" offered as a chip', o);
+  c.ok(o.chips.join() === 'new game' && o.text.startsWith('The game is over'), 'over: "new game" offered as a chip', o);
   const rows = await band();
   c.ok(rows.some(r => r === 'agent: Done: the task is done.') && !rows.some(r => r.startsWith('unasked')), 'result lines are the agent\'s, never "unasked"', rows.slice(-4));
 
@@ -94,6 +94,12 @@ try {
   c.ok(await ev(`!document.querySelector('#map .wm-cornered')`), 'after stop: no place in red', null);
   await ev(`world.stepAll()`);
   c.ok((await st()).state === 'over', 'fridge: the first answer finishes the task (over)', await st());
+
+  // an older map without a card (fixtures/live/nocard.map.json: the recordings before the card): the dock says so, the waiting line offers none
+  await ev(`world.frame({ ev: 'world/map', url: 'nocard.map.json' })`);
+  await ev(`world.frame({ ev: 'world/status', state: 'waiting', text: 'Tell me a task.' })`);
+  c.ok(await ev(`document.getElementById('wcard').textContent.includes('This world has no card')
+    && ![...document.querySelectorAll('#sopts .chip')].some(b => b.textContent === 'what can I ask?')`), 'an older map without a card: the WORLD CARD dock says so, no "what can I ask?"', null);
 
   // the phone width
   await page.goto('web/world.html?replay=fixtures/live/fridge.run.jsonl&w=390');

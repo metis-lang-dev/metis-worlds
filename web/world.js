@@ -221,7 +221,7 @@ function rowLook(r) {
   if (r.who === 'agent' && r.narration) {
     const asks = r.narration === 'v3-ask';
     if (asks) text.textContent = asked(r.text)[0] ?? r.text;            // the answers are the ask box's chips
-    who.textContent = asks ? 'asks' : 'agent';
+    who.textContent = asks ? 'asks' : r.narration === 'v3-card' ? 'world' : 'agent';   // v3-card: the world card's line (hello, an unknown)
     li.classList.toggle('fw-ask', asks);
   } else if (r.who === 'intent') { text.textContent = intentWords(r.text); who.textContent = 'meant'; }
   else if (r.who === 'note' && r.status) { who.textContent = r.status; li.classList.add('fw-status'); }
