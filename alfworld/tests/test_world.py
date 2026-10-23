@@ -171,7 +171,7 @@ def test_hierarchy_instances_see_less(tmp_path):
         p = gen_hier.generate(game_dir(), str(tmp_path / "pk"), spec, 0, info, reading, gen_hier.seed(info), [])
         init = sum(1 for l in open(p) if l.startswith("#init"))
         assert init < flat_init, (spec, init, flat_init)
-        assert gen_hier.vector(spec)["rules"] <= 12
+        assert gen_hier.vector(spec)["rules"] <= 13          # the task domain: 13 with `already` (alf-demo step 3b, F8)
 
 
 def test_activation_cards(tmp_path):
@@ -488,6 +488,7 @@ def _task_instance(wd, name, reading, init):
     return fired, final
 
 
+@pytest.mark.skipif(not os.environ.get("METISC"), reason="METISC is not set")
 def test_a_fetch_already_in_place_is_done_at_once(tmp_path):
     """F8: asking for a task that is done must not undo it — the planner sees the target in its
     destination and is done without a sub-goal (no goto, nothing taken out again)."""
@@ -502,6 +503,7 @@ def test_a_fetch_already_in_place_is_done_at_once(tmp_path):
     assert fired[0] == "fetch" and "goto(" in final and " done:" not in final, (fired, final)
 
 
+@pytest.mark.skipif(not os.environ.get("METISC"), reason="METISC is not set")
 def test_the_asks_carry_their_answers(tmp_path):
     """F3: a question to the person ends its doc line with the answers the card takes, `| put O in D
     | stop`, every placeholder bound by the rule (the destination this task wants, the object it fetches)."""
