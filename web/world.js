@@ -176,7 +176,8 @@ function intentWords(text) {
   try {
     const o = JSON.parse(text);
     const verb = spoken(o.intent ?? '').trim();
-    const slots = Object.entries(o).filter(([k]) => k !== 'intent' && k !== 'domain').map(([k, v]) => `${k.replace(/_/g, ' ')} ${spoken(v)}`);
+    const slots = Object.entries(o).filter(([k]) => k !== 'intent' && k !== 'domain')    // a page widget is "the map" (opus's P6)
+      .map(([k, v]) => k === 'widget' ? `the ${spoken(v)}` : `${k.replace(/_/g, ' ')} ${spoken(v)}`);
     return slots.length ? `${verb}: ${slots.join(', ')}` : verb;
   } catch { return text; }
 }
