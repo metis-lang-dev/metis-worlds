@@ -24,7 +24,8 @@ try {
   const lg = await ev(`document.getElementById('legend').textContent`);
   c.ok(/c\s[^@]*cabinet[^@]*countertop/.test(lg) && lg.includes('@ the agent'), 'the map\'s letters: a legend (c is a cabinet, a countertop …)', lg.slice(0, 160));
   c.ok(await ev(`world.intentWords('{"intent":"FETCH","object":"TOMATO1","receptacle":"MICROWAVE1"}') === 'fetch: object tomato 1, receptacle microwave 1'
-    && world.intentWords('{"intent":"NEW_GAME"}') === 'new game' && world.intentWords('{"intent":"PICK","domain":"world_ui","name":"microwave"}') === 'pick: name microwave'`),
+    && world.intentWords('{"intent":"NEW_GAME"}') === 'new game' && world.intentWords('{"intent":"PICK","domain":"world_ui","name":"microwave"}') === 'pick: name microwave'
+    && world.intentWords('{"intent":"GO","domain":"world_ui","widget":"MAP"}') === 'go: the map'`),
     'the typed intent in words, its handles as the map names them', null);
 
   // waiting: the page says what it wants first
@@ -41,7 +42,10 @@ try {
     'the task row says the game\'s task, labelled (not the person\'s request)', await ev(`document.querySelector('#hlist li[data-domain="task"]').textContent`));
 
   // done → over: the chip for a new game
+  await ev(`world.map.attend('microwave1')`);       // the slot follows the world: the microwave opens and fills while attended (opus's P5)
   c.ok(await stepTo(`document.getElementById('status').dataset.state === 'over'`), 'over after the win', await st());
+  const slot = await ev(`document.querySelector('#map .wm-attn, #map [data-id="microwave1"].wm-attn, #map .wm-slot')?.textContent || world.map.attn.textContent`);
+  c.ok(slot.includes('microwave 1') && !slot.includes('closed') && slot.includes('tomato 1'), 'the attention slot follows the world (no longer closed, the tomato in it)', slot.slice(0, 160));
   const o = await st();
   c.ok(o.chips.join() === 'new game' && o.text.startsWith('Done.'), 'over: "new game" offered as a chip', o);
   const rows = await band();

@@ -166,6 +166,8 @@ export class WorldMap {
     }
     if (d.task) Object.assign(m.task, d.task);
     if (this.card.open && this.cardFor) this.showTask(this.cardFor);
+    const a = this.attn?.dataset.id;                  // the attention slot follows the world: its thing changed (opened, filled, moved)
+    if (a && ((a === '@agent' && d.agent) || (d.entities || []).some(u => u.id === a))) this.attend(a);
   }
 
   attend(id) {
