@@ -174,6 +174,17 @@ def check(game, out_dir, port):
         s = Session(root, cfg, port)
         try:
             got = s.wait(lambda f: f.get("ev") == "world/map", timeout=60)
+            time.sleep(1.0)
+            hello_card = next((f.get("sentence") for f in s.since(0) if f.get("ev") == "narration" and f.get("kind") == "v3-card"), None)
+            card_voice, card_status = None, None
+            if name == "fridge":
+                # the user's "put the pencil in microwave" → unknown with nothing to go on: words the agent
+                # takes no task from get the world's card — what it is and what to ask — and it still waits
+                k0 = s.say("what can you do?", "p0")
+                rep0 = s.wait(lambda f: f.get("ev") == "intent" and f.get("id") == "p0", k0, timeout=120)
+                time.sleep(1.0)
+                card_voice = (rep0 or {}).get("voice")
+                card_status = [f.get("state") for f in s.since(k0) if f.get("ev") == "world/status"]
             k = s.say(words, "p1")
             end = s.wait(ended, k)
             time.sleep(2.0)
@@ -235,7 +246,7 @@ def check(game, out_dir, port):
             fs = s.since(0)
         finally:
             s.close()
-        rec = {"words": words, "map": bool(got)}
+        rec = {"words": words, "map": bool(got), "hello_card": hello_card, "card_voice": card_voice, "card_status": card_status}
         rec["j"] = next((f.get("intent") for f in turn if f.get("ev") == "intent" and f.get("id") == "p1"), None)
         rec["outcome"] = end["rec"]["outcome"] if end else "timeout"
         rec["asked"] = bool(end and any(e.startswith("ask(") for e in end["rec"].get("effects") or ()))
@@ -274,6 +285,10 @@ def check(game, out_dir, port):
         need.append((Path(rec["replay"]).stat().st_size > 0, "5. the turn recorded, replayable without THOR (the page's ?replay=)"))
         # step 3b: what the agent wants from the person, always said
         need.append((rec["statuses"][:1] == ["waiting"], "3b. waiting for a task, on hello (world/status)"))
+        need.append(("Ask me, for example" in (rec.get("hello_card") or ""), "3b. the world's card said on hello (what it is, what to ask)"))
+        if name == "fridge":
+            need.append(("Ask me, for example" in (rec.get("card_voice") or "") and not (rec.get("card_status") or []),
+                         "3b. words with no task get the card, and the agent still waits"))
         need.append(("working" in rec["statuses"] or name == "fridge", "3b. working, while a domain is on its goal"))
         if name == "win":
             need.append(("over" in rec["statuses"], "3b. over: the won game takes no other task"))
