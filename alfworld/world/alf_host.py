@@ -160,6 +160,15 @@ class AlfHost:
             self._take(self.gym.call("step", command=c))
             self.t += 1
 
+    def refresh(self):
+        """This host's view of the world taken from the shared process as it stands now (another host on
+        the log stepped it): no reset, no replay. A planner kept live between its activations (the
+        director host's deliver, the agent's take) reads the world its specialists changed; a host of
+        its own process has nothing to refresh."""
+        if getattr(self.gym, "shared", False) and self.gym.last is not None:
+            self._take(self.gym.last)
+            self.t = len(self.gym.history)
+
     def new_episode(self):
         """The same game from its start (alf-demo step 3b, F7: a won game accepts commands that change
         nothing): the shared commands log truncated, the reported results and the pending frames

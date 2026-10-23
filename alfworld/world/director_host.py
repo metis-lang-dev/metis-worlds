@@ -7,9 +7,14 @@ acts in the world, so this host has no gym. Its faces:
   instance(D, goal, tokens) -> bool   D's installed package rewritten for GOAL from the world as it is
                  now (the shared commands log replayed on the flat package's mirror; `tokens` = D's own
                  counts carried between activations); the agent then reloads D
+  deliver(D, goal, tokens) -> lines | None   for the planner: the do-lines that bring its live
+                 session to what that new instance would start at (the agent takes them as one row,
+                 no reload); None for a specialist (its instance is narrowed to its goal's things)
 The package's game.json names the game, the flat package, the root and the commands log."""
+import collections
 import json
 import os
+import re
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -100,6 +105,42 @@ class DirectorHost:
         gen_hier.generate(self.meta["game_dir"], os.path.join(self.meta["root"], "domains", "hier"), domain, self.k, info, reading, inits,
                           self._log_commands(), intents=(domain == "task"), continues=True, fixed=True, commands_log=self.meta["commands_log"])
         return True
+
+    def deliver(self, domain, goal, tokens=()):
+        """The planner's next activation as do-lines on its live session (alf-demo 3b timing: the
+        task's six reloads were 0.2 s each of a 4 s turn): the counts a new instance's #init would give
+        it — the world's facts it sees, its own tokens, the goal, one each, as instance() writes them —
+        less the counts it holds. Only a planner (its types are the game's, the same in every
+        instance: a person's task sees every pickupable); None for any other domain, or when its
+        installed instance cannot be read (the agent re-instances and reloads it then)."""
+        sp = gen_hier.SPECS.get(domain)
+        if sp is None or "takes" not in sp:
+            return None
+        try:
+            text = open(os.path.join(self.meta["root"], "domains", "hier", domain, domain + ".llp")).read()
+        except OSError:
+            return None
+        things = set()
+        for kind in sp["types"]:
+            m = re.search(r"^type %s \{([^}]*)\}\." % kind, text, re.M)
+            if m is None:
+                return None
+            things |= set(m.group(1).split())
+        mirror = AlfHost(self.meta["flat"], commands_log=self.meta["commands_log"])
+        try:
+            reading = mirror.reading()
+        finally:
+            mirror.gym.close()
+        held = {a: n for a, n in (tokens.items() if isinstance(tokens, dict) else ((t, 1) for t in tokens)) if a and n > 0}
+        want = collections.Counter(a for a in sorted(reading) if a.split("(")[0] in sp["dyn"]
+                                   and all(x in things for x in gen_hier.args_of(a)))
+        want.update(own_tokens(domain, held, reading) + ([goal] if goal else []))
+        lines = []
+        for a in sorted(set(want) | set(held)):
+            d = want.get(a, 0) - held.get(a, 0)
+            if d:
+                lines.append("%s%s %d" % ("+" if d > 0 else "-", a, abs(d)))
+        return lines
 
 
 def make(case=None, package_dir=None):

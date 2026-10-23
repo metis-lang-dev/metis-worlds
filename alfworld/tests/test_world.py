@@ -395,6 +395,49 @@ def test_install_director_for_the_agent(tmp_path):
             assert out.returncode == 0 and "error" not in out.stdout.lower(), (d, out.stdout[-400:] + out.stderr[-200:])
 
 
+def test_a_planners_delivery_is_its_new_instance(tmp_path):
+    """alf-demo 3b timing: deliver(task, goal, tokens) brings the live planner's counts to exactly
+    what instance(task, goal, tokens) would start it at — its put-out sub-goals and stale world facts
+    gone, its own tokens one each, the goal in, the world's facts as the log says — so the agent
+    takes them as one row instead of a reload; a specialist is not delivered."""
+    import collections
+    from director_host import DirectorHost
+    root = str(tmp_path)
+    pk = gen_hier.install(game_dir(), root)
+    h = DirectorHost(pk["director"])
+    task = open(os.path.join(pk["task"], "task.llp")).read()
+    obj = next(a for a in task.splitlines() if a.startswith("#init inrecep("))[len("#init inrecep("):].split(",")[0]
+    rec = next(a for a in task.splitlines() if a.startswith("#init inrecep(%s," % obj)).split(",")[1].split(")")[0]
+    tokens = {"want(%s)" % obj: 1, "to(%s)" % rec: 2, "goto(%s)" % rec: 1, "done": 1,     # a put-out sub-goal, an out, a count of 2
+              "holds(%s)" % obj: 1,                                                    # a stale world fact (the log says it is in rec)
+              "inrecep(%s,%s)" % (obj, rec): 1}
+    goal = "reached(%s)" % rec
+    lines = h.deliver("task", goal, tokens)
+    got = collections.Counter(tokens)
+    for l in lines:
+        atom, n = l[1:].split()
+        got[atom] += int(n) if l[0] == "+" else -int(n)
+    got = {a: n for a, n in got.items() if n > 0}
+    assert h.instance("task", goal, tokens) is True
+    want = collections.Counter(l.split()[1] for l in open(os.path.join(pk["task"], "task.llp")).read().splitlines() if l.startswith("#init "))
+    assert got == dict(want), (sorted(set(got.items()) ^ set(want.items())))[:10]
+    assert "-goto(%s) 1" % rec in lines and "-holds(%s) 1" % obj in lines and "+%s 1" % goal in lines
+    assert h.deliver("nav", "goto(%s)" % rec, {}) is None
+    # the live planner's own host follows the shared world when refreshed: a specialist's command on the
+    # same log moves the world, and the task's host reads it after refresh() (no reset, no replay)
+    from alf_host import AlfHost
+    th, nav = AlfHost(pk["task"]), AlfHost(pk["nav"])
+    try:
+        loc = next(a for a in sorted(nav.static) if a.startswith("recat(%s," % rec))[6:-1].split(",")[1]
+        nav.on_event("go[R=%s,L2=%s]" % (rec, loc), ())
+        assert nav.t == 1 and th.t == 0
+        th.refresh()
+        assert th.t == 1 and th.dyn == nav.dyn            # each reading is its package's predicates: the world view is dyn
+    finally:
+        nav.gym.close()
+        th.gym.close()
+
+
 def test_rule_names_map_by_their_first_token(package):
     """loop-policy step 2 F2: a rule the loop names `verb_why` maps to the game's verb by its first
     token with the variable convention (go: R [L2], open: R, take: O R, put: O R); the table's own
