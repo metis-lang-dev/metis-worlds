@@ -82,7 +82,7 @@ function drawHierarchy() {
     ${r.sent ? `<span class="k">on ${esc(r.sent)}</span>` : ''}${r.pending ? `<span class="k">· put aside: ${esc(r.pending)}</span>` : ''}
     ${hier.goal && hier.goal.domain === r.name ? `<span class="goal">goal: ${esc(hier.goal.text)}</span>` : ''}
     ${r.last ? `<span class="g">${esc(r.last.goal)} → ${esc(r.last.result || '…')}</span>` : ''}
-    ${r.name === 'task' && world.map?.map?.task?.goal ? `<span class="g">${esc(world.map.map.task.goal)}</span>` : ''}</li>`).join('');
+    ${r.name === 'task' && (world.map?.map?.task?.text || world.map?.map?.task?.goal) ? `<span class="g">this game's task: ${esc(world.map.map.task.text || world.map.map.task.goal)}</span>` : ''}</li>`).join('');
   $('#hstate').textContent = hier.ended ? `ended: ${hier.ended.slice(6, -1)}` : hier.attention ? `attention: ${hier.attention}` : '';
 }
 
@@ -111,6 +111,20 @@ function answer(o) {                                 // a chip is the person say
   if (o.ev) send({ ev: o.ev }); else panel.say(o.say ?? o.label);
 }
 let lastStatus = '', lastStatusRow = '';
+// the map's letters (text mode: a letter is a kind's first, shared — c is a cabinet, a countertop and a coffee machine):
+// a legend under the map, read off the drawn entries (opus's P3); none when the tiles are pictures
+function legend() {
+  const by = new Map();
+  for (const b of document.querySelectorAll('#map .wm-ent')) {
+    if (b.classList.contains('wm-agent')) continue;
+    const ch = b.querySelector('.wm-ch')?.textContent?.trim(), name = b.querySelector('.wm-name')?.textContent?.replace(/\s*\d+$/, '').trim();
+    if (ch && name) by.set(ch, (by.get(ch) || new Set()).add(name));
+  }
+  const el = $('#legend');
+  el.hidden = !by.size;
+  el.innerHTML = [...by.entries()].sort(([a], [b]) => a.localeCompare(b))
+    .map(([ch, names]) => `<span><b>${esc(ch)}</b> ${[...names].sort().map(esc).join(' · ')}</span>`).join('') + '<span><b>@</b> the agent</span>';
+}
 // the tiles as large as the left pane allows (the map, its attention slot beside it when there is room)
 function fitMap() {
   const v = $('#map .wm-view'), L = $('#left');
@@ -155,9 +169,18 @@ function ask(f) {
 
 // ── the band's rows in the page's words: an ask is an ask, the typed intent as its name and slots, the floor in words ──
 const FLOOR = { FREEu: 'free', FREEs: 'free', USER: 'yours', SYSTEM: 'the agent\'s' };
+// the typed intent in words: "FETCH object=TOMATO1 receptacle=MICROWAVE1" → "fetch: object tomato 1, receptacle microwave 1"
+// (opus's P1); a handle reads as the map names it (TOMATO1 → tomato 1)
+const spoken = v => String(v).toLowerCase().replace(/_/g, ' ').replace(/([a-z])(\d+)$/, '$1 $2');
 function intentWords(text) {
-  try { const o = JSON.parse(text); return Object.entries(o).filter(([k]) => k !== 'domain').map(([k, v]) => k === 'intent' ? v : `${k}=${v}`).join(' '); } catch { return text; }
+  try {
+    const o = JSON.parse(text);
+    const verb = spoken(o.intent ?? '').trim();
+    const slots = Object.entries(o).filter(([k]) => k !== 'intent' && k !== 'domain').map(([k, v]) => `${k.replace(/_/g, ' ')} ${spoken(v)}`);
+    return slots.length ? `${verb}: ${slots.join(', ')}` : verb;
+  } catch { return text; }
 }
+world.intentWords = t => intentWords(t);
 function rowLook(r) {
   const li = panel?.rowEl.get(r.n);
   if (!li || li.dataset.looked) return;
@@ -193,7 +216,7 @@ function hint(e) {
 let say = 0, panel = null, port = null, send = () => {};
 async function frame(f) {
   rec('frame', { ev: f.ev });
-  if (f.ev === 'world/map') { world.mapUrl = new URL(f.url, world.base).href; await world.map.load(world.mapUrl); fitMap(); tagCard(); return; }
+  if (f.ev === 'world/map') { world.mapUrl = new URL(f.url, world.base).href; await world.map.load(world.mapUrl); fitMap(); legend(); tagCard(); return; }
   if (f.ev === 'world/delta') { world.map.delta(f); if (f.task) { chainTo(world.map.map.task); } return; }
   if (f.ev === 'world/hierarchy') { hierarchy(f); return; }
   if (f.ev === 'world/status') { status(f); return; }

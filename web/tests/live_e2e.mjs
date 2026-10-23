@@ -20,6 +20,13 @@ try {
   c.ok(await ev(`!!window.MetisShell && document.querySelector('#band .brand').textContent === 'WORLD' && ['talk','hierarchy','journal'].every(d => document.getElementById('dock-' + d))
     && getComputedStyle(document.body).backgroundColor === 'rgb(13, 16, 20)'`), 'the consoles\' shell: the band, the docks, the dark tokens', null);
 
+  // the map's letters have a legend (opus's P3); the typed intent reads in words (P1); the task row says it is the game's (P2)
+  const lg = await ev(`document.getElementById('legend').textContent`);
+  c.ok(/c\s[^@]*cabinet[^@]*countertop/.test(lg) && lg.includes('@ the agent'), 'the map\'s letters: a legend (c is a cabinet, a countertop …)', lg.slice(0, 160));
+  c.ok(await ev(`world.intentWords('{"intent":"FETCH","object":"TOMATO1","receptacle":"MICROWAVE1"}') === 'fetch: object tomato 1, receptacle microwave 1'
+    && world.intentWords('{"intent":"NEW_GAME"}') === 'new game' && world.intentWords('{"intent":"PICK","domain":"world_ui","name":"microwave"}') === 'pick: name microwave'`),
+    'the typed intent in words, its handles as the map names them', null);
+
   // waiting: the page says what it wants first
   c.ok(await stepTo(`document.getElementById('status').dataset.state === 'waiting'`), 'waiting on hello', await st());
   const w = await st();
@@ -30,6 +37,8 @@ try {
   c.ok(await stepTo(`document.getElementById('status').dataset.state === 'working' && document.querySelector('#hlist li[data-domain="nav"] .goal')`),
     'working: the goal shows beside nav in the hierarchy', await ev(`document.getElementById('hlist').textContent.replace(/\\s+/g, ' ')`));
   c.ok(await ev(`document.querySelector('#hlist li[data-domain="nav"] .goal').textContent === 'goal: Going to countertop 3'`), 'the goal in the world\'s names', null);
+  c.ok(await ev(`document.querySelector('#hlist li[data-domain="task"] .g').textContent === "this game's task: Put a tomato in the microwave."`),
+    'the task row says the game\'s task, labelled (not the person\'s request)', await ev(`document.querySelector('#hlist li[data-domain="task"]').textContent`));
 
   // done → over: the chip for a new game
   c.ok(await stepTo(`document.getElementById('status').dataset.state === 'over'`), 'over after the win', await st());
