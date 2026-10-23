@@ -191,10 +191,22 @@ def check(game, out_dir, port):
                 k4 = s.say("new game", "p4")
                 s.wait(lambda f: f.get("ev") == "world/status" and f.get("state") == "waiting", k4, timeout=120)
                 after["new_game_status"] = [f.get("state") for f in s.since(k4) if f.get("ev") == "world/status"]
+                # opus's 3b user test: a stop while a specialist is on its goal, then the task again from where
+                # it stopped (the stop that left the director's state awake sent the next goal to a sleeping domain).
+                # Stopped while nav works, before the take: a stop with the object in hand waits for the task
+                # card's rule for a held object (the architect's F12)
                 k5 = s.say(words, "p5")
-                end5 = s.wait(ended, k5, timeout=300)
+                mid = s.wait(lambda f: f.get("ev") == "world/status" and f.get("state") == "working" and f.get("domain") == "nav", k5, timeout=300)
+                k6 = s.say("stop", "p6")
+                rep6 = s.wait(lambda f: f.get("ev") == "intent" and f.get("id") == "p6", k6, timeout=60)
                 time.sleep(2.0)
-                after["again_outcome"] = end5["rec"]["outcome"] if end5 else "timeout"
+                after["mid_stop"] = {"at": (mid or {}).get("goal"), "voice": (rep6 or {}).get("voice"),
+                                     "asleep": [x for x in (next((f.get("state") for f in reversed(s.since(k6)) if f.get("ev") == "world/hierarchy"), None) or [])
+                                                if x.startswith("active(")]}
+                k7 = s.say(words, "p7")
+                end7 = s.wait(ended, k7, timeout=300)
+                time.sleep(2.0)
+                after["again_outcome"] = end7["rec"]["outcome"] if end7 else "timeout"
             else:
                 # step 3b F5: stop is answered and waits; then the ask's first answer, said back, is taken
                 ask = next((f for f in reversed(turn) if f.get("ev") == "world/ask"), None)
@@ -259,7 +271,11 @@ def check(game, out_dir, port):
             need.append(("over" in (rec.get("over_status") or []) and "game is over" in (rec.get("over_voice") or "").lower(),
                          "3b. another task after the win is refused in words"))
             need.append(("waiting" in (rec.get("new_game_status") or []), "3b. a new game: the same room, waiting for a task"))
-            need.append((rec.get("again_outcome") == "ended(done)", "3b. … and the task wins again in it"))
+            ms = rec.get("mid_stop") or {}
+            need.append((ms.get("at") and ms.get("voice") == "Stopped.", "3b. a stop while a specialist works is answered"))
+            need.append((ms.get("asleep") is not None and all(x.startswith("active(task") for x in ms["asleep"]),
+                         "3b. … the hierarchy at its start after it (only the planner awake, world/hierarchy)"))
+            need.append((rec.get("again_outcome") == "ended(done)", "3b. … and the task, asked again from there, wins"))
         else:
             a = rec.get("ask") or {}
             need.append((bool(a.get("options")), "3b. the ask carries its answers (world/ask options)"))
