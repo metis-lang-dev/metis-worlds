@@ -1,75 +1,105 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>World Page</title>
+<!-- the common web style of the loop and agent consoles (vendor/shell.css + shell.js: this repo's copies,
+     web/tests keep them equal to the consoles'); map.css keeps the tiles -->
+<link rel="stylesheet" href="vendor/shell.css">
 <link rel="stylesheet" href="map.css">
 <link rel="stylesheet" href="vendor/panel.css">
 <link rel="stylesheet" href="vendor/narrator.css">
+<script src="vendor/shell.js"></script>
 <script type="importmap">{"imports":{"fsttm-web/tts":"./vendor/tts.js","fsttm-web/ws":"./vendor/ws.js","fsttm-web/panel":"./vendor/panel.js"}}</script>
 <style>
-  :root { --w-bg: #f4f1ea; --w-fg: #1d1d1b; --w-mute: #6b6760; --w-line: #d6d0c4; --w-card: #fff; --w-on: #2d8a4e; --w-att: #d4632a; }
-  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
-    --w-bg: #16171a; --w-fg: #e8e6e1; --w-mute: #9a968e; --w-line: #33353a; --w-card: #202226; --w-on: #5bc27e; --w-att: #f08a4b; } }
-  :root[data-theme="dark"] { --w-bg: #16171a; --w-fg: #e8e6e1; --w-mute: #9a968e; --w-line: #33353a; --w-card: #202226; --w-on: #5bc27e; --w-att: #f08a4b; }
-  * { box-sizing: border-box; }
-  body { margin: 0; background: var(--w-bg); color: var(--w-fg); font: 14px/1.4 system-ui, sans-serif; }
-  #root { display: flex; flex-direction: column; min-height: 100vh; outline: none; }
-  [data-w]:focus-visible, [data-w]:focus { outline: 2px solid var(--wm-focus); outline-offset: -2px; }
-  [data-j] { position: relative; outline: 2px dashed var(--wm-focus); }
+  /* the map and the band in the shell's tokens (one look with the consoles) */
+  :root, :root[data-theme="dark"] { --wm-bg: var(--bg); --wm-fg: var(--fg); --wm-mute: var(--dim); --wm-line: var(--line); --wm-card: var(--panel);
+    --wm-hot: var(--yellow); --wm-focus: var(--cyan); --fw-accent: var(--fg); --fw-side: var(--yellow); }
+  [data-w]:focus-visible, [data-w]:focus { outline: 1px solid var(--cyan); outline-offset: -1px; }
+  [data-j] { position: relative; outline: 2px dashed var(--cyan); }
   [data-j]::after { content: attr(data-j); position: absolute; top: -7px; left: -7px; z-index: 9; min-width: 1.3em; text-align: center;
-    color: #000; background: #6ee7f0; border-radius: 3px; font-size: 11px; }
-  header { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; padding: 8px 16px; border-bottom: 1px solid var(--w-line); }
-  header h1 { font-size: 16px; margin: 0; } #conn { color: var(--w-mute); font-size: 12px; }
-  #ctrl { display: flex; gap: 6px; } #ctrl button { font: inherit; padding: 2px 10px; }
-  main { display: flex; flex-wrap: wrap; gap: 16px; padding: 16px; align-items: flex-start; }
-  #map { flex: 1 1 360px; min-width: 0; }
-  aside { flex: 1 1 320px; display: flex; flex-direction: column; gap: 12px; min-width: 0; max-width: 560px; }
-  .dock { background: var(--w-card); border: 1px solid var(--w-line); border-radius: 6px; padding: 8px 10px; }
-  .dock[hidden] { display: none; }
-  .dock h2 { font-size: 13px; margin: 0 0 6px; display: flex; justify-content: space-between; color: var(--w-mute); text-transform: uppercase; letter-spacing: .04em; }
-  #talkpanel { min-height: 160px; max-height: 260px; display: flex; flex-direction: column; }
+    color: #000; background: var(--cyan); border-radius: 2px; font-size: 11px; }
+  #root { display: flex; flex-direction: column; flex: 1; min-height: 0; outline: none; }
+  /* the band's status: what the agent is doing, and what it wants from you */
+  #status { display: flex; gap: 8px; align-items: baseline; min-width: 0; flex: 1 1 320px; }
+  #status .state { font-size: 10.5px; padding: 0 6px; border: 1px solid var(--line); letter-spacing: .06em; text-transform: uppercase; flex: none; }
+  #status[data-state="waiting"] .state { color: var(--cyan); border-color: var(--cyan); }
+  #status[data-state="working"] .state { color: var(--green); border-color: #2a5a35; }
+  #status[data-state="asking"] .state, #status[data-state="stuck"] .state { color: var(--yellow); border-color: var(--yellow); }
+  #status[data-state="done"] .state, #status[data-state="over"] .state { color: var(--purple); border-color: #5a4580; }
+  #status .text { color: var(--fg); overflow: hidden; text-overflow: ellipsis; }
+  #status .opts { display: inline-flex; gap: 6px; flex: none; }
+  #conn { color: var(--dim); }
+  #left { overflow: auto; padding: 12px; }
+  #map { min-width: 0; }
+  /* the ask: the agent's question, its answers as chips (a chip says its answer, as typing it would) */
+  #ask { border: 1px solid var(--yellow); background: #2a2111; padding: 6px 8px; margin: 0 0 6px; }
+  #ask .q { color: var(--yellow); margin-bottom: 4px; }
+  #ask .q::before { content: "the agent asks: "; color: var(--dim); }
+  #ask .opts { display: flex; flex-wrap: wrap; gap: 6px; }
+  #ask .chip { border-color: var(--yellow); }
+  #talkpanel { min-height: 160px; height: 100%; }
+  .fw-panel .fw-ask .fw-text { color: var(--yellow); font-weight: bold; }
+  .fw-panel .fw-ask .fw-who { color: var(--yellow); opacity: 1; }
+  .fw-panel .fw-status .fw-text { color: var(--dim); font-style: italic; }
+  .fw-panel .fw-intent code { color: var(--dim); }
+  .fw-panel .fw-note .fw-text { color: var(--dim); }
+  .fw-panel .fw-input .fw-text { background: var(--bg); border: 1px solid var(--line); padding: 1px 6px; }
+  .fw-panel .fw-mic, .fw-panel .fw-input button { background: transparent; border: 1px solid var(--line); padding: 0 8px; cursor: pointer; }
+  /* the hierarchy: who is attending, on what goal */
   #hlist { list-style: none; margin: 0; padding: 0; }
-  #hlist li { display: flex; flex-wrap: wrap; gap: 6px; padding: 3px 6px; border-radius: 4px; position: relative; }
-  #hlist li.on .st { color: var(--w-on); } #hlist li.off { color: var(--w-mute); }
-  #hlist li.att { background: color-mix(in srgb, var(--w-att) 15%, transparent); } #hlist li.att .st { color: var(--w-att); font-weight: 600; }
+  #hlist li { display: flex; flex-wrap: wrap; gap: 6px; padding: 2px 6px; border-left: 2px solid transparent; }
+  #hlist li.on .st { color: var(--green); } #hlist li.off { color: var(--dim); }
+  #hlist li.att { border-left-color: var(--yellow); background: var(--sel); } #hlist li.att .st { color: var(--yellow); font-weight: bold; }
   #hlist li[data-domain="task"] { cursor: pointer; }
-  #hlist li[data-n]::before { content: attr(data-n); min-width: 1.4em; text-align: center; color: #000; background: #6ee7f0; border-radius: 3px; }
-  #hlist .k, #hlist .g { font-size: 12px; } #hlist .g { color: var(--w-mute); font-family: ui-monospace, monospace; }
-  #hstate { font-size: 12px; text-transform: none; letter-spacing: 0; }
-  #jlog { list-style: none; margin: 0; padding: 0; max-height: 220px; overflow: auto; font-size: 12px; }
-  #jlog li { padding: 1px 0; } #jlog .who { color: var(--w-mute); display: inline-block; min-width: 3.5em; }
-  #jlog .j-you { font-weight: 600; }
-  @media (max-width: 600px) { header, main { padding: 8px 16px; } aside { max-width: none; } }
+  #hlist li[data-n]::before { content: attr(data-n); min-width: 1.4em; text-align: center; color: #000; background: var(--cyan); }
+  #hlist .k { font-size: 11.5px; } #hlist .g { color: var(--dim); font-size: 11.5px; } #hlist .goal { color: var(--yellow); font-size: 11.5px; }
+  #hstate { color: var(--dim); text-transform: none; letter-spacing: 0; font-size: 11px; }
+  #jlog { list-style: none; margin: 0; padding: 0; font-size: 11.5px; }
+  #jlog li { padding: 1px 0; border-top: 1px solid var(--line); } #jlog .who { color: var(--dim); display: inline-block; min-width: 3.5em; }
+  #jlog .j-you { color: var(--fg); font-weight: bold; } #jlog .j-note { color: var(--dim); }
 </style>
 </head>
 <body>
 <div id="root" data-w="root" data-role="container" tabindex="-1">
-  <header data-w="band" data-role="container" tabindex="-1">
-    <h1>World</h1>
-    <div id="ctrl" data-w="ctrl" data-role="composite" tabindex="-1" aria-label="the replay">
-      <button id="play" data-w="play" data-role="item" type="button">play</button>
-      <button id="step" data-w="step" data-role="item" type="button">step</button>
+  <header id="band" data-w="band" data-role="container" tabindex="-1">
+    <div class="l">
+      <span class="brand">WORLD</span>
+      <span id="status" data-state="" aria-live="polite"><span class="state" id="sstate">…</span><span class="text" id="stext"></span><span class="opts" id="sopts"></span></span>
+      <span id="sessbar">
+        <span id="conn"></span>
+        <span id="narrator" data-port-off aria-live="polite"></span>
+        <span id="ctrl" data-w="ctrl" data-role="composite" tabindex="-1" aria-label="the replay">
+          <button class="btn" id="play" data-w="play" data-role="item" type="button">play</button>
+          <button class="btn" id="step" data-w="step" data-role="item" type="button">step</button>
+        </span>
+      </span>
     </div>
-    <span id="conn"></span>
-    <span id="narrator" data-port-off aria-live="polite"></span>
   </header>
   <main>
-    <section id="map" data-w="map" data-role="list" tabindex="-1" aria-label="the map"></section>
-    <aside>
-      <section class="dock" id="talk" data-w="talk" data-role="dock" tabindex="-1" aria-label="the dialog">
-        <h2>talk</h2><div id="talkpanel" data-port-off></div>
+    <section id="left">
+      <section id="map" data-w="map" data-role="list" tabindex="-1" aria-label="the map"></section>
+    </section>
+    <div id="split"></div>
+    <aside id="right">
+      <section class="dock" id="dock-talk" data-dock="talk" data-w="talk" data-role="dock" tabindex="-1" aria-label="the dialog">
+        <header><span class="tw">▾</span><span class="tt">TALK</span><button class="x" type="button" aria-label="hide the dialog">✕</button></header>
+        <div class="dbody">
+          <div id="ask" hidden aria-live="assertive"><div class="q" id="askq"></div><div class="opts" id="askopts"></div></div>
+          <div id="talkpanel" data-port-off></div>
+        </div>
       </section>
-      <section class="dock" id="hierarchy" data-w="hierarchy" data-role="dock" tabindex="-1" aria-label="the hierarchy">
-        <h2>hierarchy <span id="hstate"></span></h2>
-        <ul id="hlist" data-w="hlist" data-role="list" tabindex="-1" aria-label="the domains"></ul>
+      <section class="dock" id="dock-hierarchy" data-dock="hierarchy" data-w="hierarchy" data-role="dock" tabindex="-1" aria-label="the hierarchy">
+        <header><span class="tw">▾</span><span class="tt">HIERARCHY</span><span id="hstate"></span><button class="x" type="button" aria-label="hide the hierarchy">✕</button></header>
+        <div class="dbody"><ul id="hlist" data-w="hlist" data-role="list" tabindex="-1" aria-label="the domains"></ul></div>
       </section>
-      <section class="dock" id="journal" data-w="journal" data-role="dock" tabindex="-1" aria-label="the journal">
-        <h2>journal</h2>
-        <ol id="jlog" data-w="jlog" data-role="container" tabindex="-1" aria-label="the journal's lines"></ol>
+      <section class="dock" id="dock-journal" data-dock="journal" data-w="journal" data-role="dock" tabindex="-1" aria-label="the journal">
+        <header><span class="tw">▾</span><span class="tt">JOURNAL</span><button class="x" type="button" aria-label="hide the journal">✕</button></header>
+        <div class="dbody"><ol id="jlog" data-w="jlog" data-role="container" tabindex="-1" aria-label="the journal's lines"></ol></div>
       </section>
     </aside>
+    <nav id="strip"><button type="button" data-strip="talk">Talk</button><button type="button" data-strip="hierarchy">Hierarchy</button><button type="button" data-strip="journal">Journal</button></nav>
   </main>
 </div>
 <script type="module">
