@@ -55,7 +55,7 @@ export function toGrid(sem, { cell = sem.cell ?? 0.5, margin = 1 } = {}) {
   const a = sem.agent || {};
   return { cols: C, rows: R, cells: Array.from({ length: R }, () => Array(C).fill('floor')), entities,   // the room, all seen
     agent: { pos: a.pos ? q(a.pos) : [0, 0], yaw: a.yaw ?? null, ch: '@', name: 'the agent' },
-    task: task, tileset: sem.tileset || { index: [] }, world: sem.world, scene: sem.scene };
+    task: task, tileset: sem.tileset || { index: [] }, world: sem.world, scene: sem.scene, card: sem.card || null };   // the world card (web/README)
 }
 
 export class WorldMap {

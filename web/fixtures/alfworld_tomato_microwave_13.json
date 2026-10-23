@@ -6599,7 +6599,7 @@
  "overview": null,
  "tileset": {
   "index": [
-   "tiles/alfworld.json"
+   "../../alfworld/tiles/index.json"
   ]
  }
 }

@@ -28,6 +28,9 @@ try {
     && world.intentWords('{"intent":"GO","domain":"world_ui","widget":"MAP"}') === 'go: the map'`),
     'the typed intent in words, its handles as the map names them', null);
 
+  // a map without a card (this older recording): the dock says so, the waiting line offers none
+  c.ok(await ev(`document.getElementById('wcard').textContent.includes('This world has no card')`), 'an older map without a card: the WORLD CARD dock says so', null);
+
   // waiting: the page says what it wants first
   c.ok(await stepTo(`document.getElementById('status').dataset.state === 'waiting'`), 'waiting on hello', await st());
   const w = await st();

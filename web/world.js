@@ -108,6 +108,7 @@ const chips = (box, options, pressed) => box.replaceChildren(...(options || []).
 }));
 function answer(o) {                                 // a chip is the person saying its answer (the same path as typing it)
   rec('answer', { say: o.say ?? o.label });
+  if (o.card) return showCard();
   if (o.ev) send({ ev: o.ev }); else panel.say(o.say ?? o.label);
 }
 let lastStatus = '', lastStatusRow = '';
@@ -125,6 +126,29 @@ function legend() {
   el.innerHTML = [...by.entries()].sort(([a], [b]) => a.localeCompare(b))
     .map(([ch, names]) => `<span><b>${esc(ch)}</b> ${[...names].sort().map(esc).join(' · ')}</span>`).join('') + '<span><b>@</b> the agent</span>';
 }
+// the world card (the map's `card`: what this world is, its room and things by kind, what you can ask it and what it
+// cannot do; web/README "The schema"): the WORLD CARD dock, its asks as chips that say them; a map without one
+// (an older recording) says so
+const spokenId = id => String(id).replace(/([a-z])(\d+)$/, '$1 $2');
+function kindRows(rows, opens) {
+  return `<div class="wc-kinds">${(rows || []).map(r => `<details class="wc-kind" title="${esc((r.ids || []).map(spokenId).join(', '))}">
+    <summary><b>${esc(r.type)}</b> <span class="wc-n">× ${esc(r.n)}</span>${opens && r.openable ? '<span class="wc-opens">opens</span>' : ''}</summary>
+    <div class="wc-ids">${esc((r.ids || []).map(spokenId).join(', '))}</div></details>`).join('')}</div>`;
+}
+function worldCard() {
+  const c = world.map.map?.card, box = $('#wcard');
+  world.card = c || null;
+  if (!c) { box.innerHTML = '<p class="empty">This world has no card (an older map or recording): ask for its task, or say "stop".</p>'; return; }
+  box.innerHTML = `<p class="wc-title">${esc(c.title || 'this world')}</p>
+    ${(c.about || []).map(a => `<p class="wc-about">${esc(a)}</p>`).join('')}
+    ${c.asks?.length ? `<div class="wc-h">what you can ask</div><div id="wcasks">${c.asks.map((a, i) => `<div class="wc-ask"><button type="button" class="chip" data-ask="${i}">${esc(a.say)}</button><span class="what">${esc(a.what || '')}</span></div>`).join('')}</div>` : ''}
+    ${c.room?.length ? `<div class="wc-h">the room</div>${kindRows(c.room, true)}` : ''}
+    ${c.things?.length ? `<div class="wc-h">the things you can ask for</div>${kindRows(c.things, false)}` : ''}
+    ${c.cannot?.length ? `<div class="wc-h">it cannot</div><ul class="wc-cannot">${c.cannot.map(x => `<li>${esc(x)}</li>`).join('')}</ul>` : ''}
+    ${c.source ? `<p class="wc-src">${esc(c.source)}</p>` : ''}`;
+  for (const b of box.querySelectorAll('[data-ask]')) b.onclick = () => answer({ say: c.asks[Number(b.dataset.ask)].say });
+}
+function showCard() { docks.set('world', { shown: true, open: true }); $('#dock-world')?.scrollIntoView?.({ block: 'nearest' }); }
 // the tiles as large as the left pane allows (the map, its attention slot beside it when there is room)
 function fitMap() {
   const v = $('#map .wm-view'), L = $('#left');
@@ -141,7 +165,8 @@ function status(f) {
   $('#status').dataset.state = f.state || '';
   $('#sstate').textContent = f.state || '';
   $('#stext').textContent = f.text || '';
-  chips($('#sopts'), f.state === 'asking' ? [] : f.options);        // the ask's answers are in the ask box
+  // the ask's answers are in the ask box; waiting offers the world card ("what can I ask?")
+  chips($('#sopts'), f.state === 'asking' ? [] : [...(f.options || []), ...(f.state === 'waiting' && world.card ? [{ label: 'what can I ask?', card: true }] : [])]);
   if (f.state !== 'asking') $('#ask').hidden = true;
   if (f.state === 'waiting' || (f.state === 'working' && ['done', 'stuck', 'over', 'asking', 'waiting'].includes(was))) resetHierarchy();
   if (f.state === 'waiting' && was === 'over' && world.mapUrl) world.map.load(world.mapUrl).then(fitMap);   // a new game: the room from its start
@@ -182,6 +207,7 @@ function intentWords(text) {
   } catch { return text; }
 }
 world.intentWords = t => intentWords(t);
+world.frame = f => frame(f);                         // a test hook: one frame in, as the wire or a recording gives it
 function rowLook(r) {
   const li = panel?.rowEl.get(r.n);
   if (!li || li.dataset.looked) return;
@@ -217,7 +243,7 @@ function hint(e) {
 let say = 0, panel = null, port = null, send = () => {};
 async function frame(f) {
   rec('frame', { ev: f.ev });
-  if (f.ev === 'world/map') { world.mapUrl = new URL(f.url, world.base).href; await world.map.load(world.mapUrl); fitMap(); legend(); tagCard(); return; }
+  if (f.ev === 'world/map') { world.mapUrl = new URL(f.url, world.base).href; await world.map.load(world.mapUrl); fitMap(); legend(); worldCard(); tagCard(); return; }
   if (f.ev === 'world/delta') { world.map.delta(f); if (f.task) { chainTo(world.map.map.task); } return; }
   if (f.ev === 'world/hierarchy') { hierarchy(f); return; }
   if (f.ev === 'world/status') { status(f); return; }
@@ -306,11 +332,11 @@ const backend = agentUrl ? await live(agentUrl) : null;
 // person shows or hides on the strip is reported to the port (docked)
 let portDock = false, shown = {};
 const docks = world.docks = MetisShell.docks({
-  names: ['talk', 'hierarchy', 'journal'], key: 'worldpage.docks.v1',
-  defaults: { talk: { shown: true, open: true }, hierarchy: { shown: true, open: true }, journal: { shown: true, open: false } },
+  names: ['talk', 'hierarchy', 'world', 'journal'], key: 'worldpage.docks.v2',       // v2: the world card's dock
+  defaults: { talk: { shown: true, open: true }, hierarchy: { shown: true, open: true }, world: { shown: true, open: false }, journal: { shown: true, open: false } },
   onChange: st => {
     for (const [d, s] of Object.entries(st)) {
-      if (port && !portDock && (shown[d] ?? true) !== !!s.shown) port.docked(d, !!s.shown);
+      if (port && !portDock && d !== 'world' && (shown[d] ?? true) !== !!s.shown) port.docked(d, !!s.shown);   // the card dock is not world_ui's
       shown[d] = !!s.shown;
     }
   },

@@ -87,6 +87,26 @@ try {
   await ev(`world.port.effect({ ui: 'focus', widget: 'journal' })`);
   c.ok(await ev(`document.activeElement?.dataset?.w === 'journal'`), 'a focus effect moves the page\'s focus (the journal dock)', null);
 
+  // 7b. the world card (the user: "I did not know what to ask"): what this world is, its room and things by kind, what to ask
+  const wc = await ev(`({ title: document.querySelector('#wcard .wc-title')?.textContent, room: document.querySelectorAll('#wcard .wc-kinds')[0]?.querySelectorAll('.wc-kind').length,
+    things: document.querySelectorAll('#wcard .wc-kinds')[1]?.querySelectorAll('.wc-kind').length,
+    cab: [...document.querySelectorAll('#wcard .wc-kind summary')].map(x => x.textContent.replace(/\\s+/g, ' ').trim()).find(t => t.startsWith('cabinet')),
+    asks: [...document.querySelectorAll('#wcasks .chip')].map(b => b.textContent), cannot: document.querySelectorAll('#wcard .wc-cannot li').length,
+    src: document.querySelector('#wcard .wc-src')?.textContent, strip: !!document.querySelector('[data-strip="world"]') })`);
+  c.ok(wc.title === 'ALFWorld kitchen FloorPlan13' && wc.room === 10 && wc.things === 24 && wc.cab.startsWith('cabinet × 26') && wc.cab.endsWith('opens') && wc.cannot === 3
+    && wc.src.startsWith('generated from the game') && wc.strip && wc.asks[0] === 'put a tomato in the microwave' && wc.asks.includes('new game'),
+    'the world card: its title, the room and the things by kind × count, the asks, what it cannot, the source', wc);
+  await page.mouse('[data-strip="world"]');
+  c.ok(await ev(`document.getElementById('dock-world').classList.contains('open')`), 'the strip opens the WORLD CARD dock', null);
+  await page.mouse('#wcasks .chip');
+  c.ok(await ev(`[...document.querySelectorAll('#talkpanel .fw-person .fw-text')].some(t => t.textContent === 'put a tomato in the microwave')`),
+    'an ask\'s chip says it, as typing it would', null);
+  await ev(`world.frame({ ev: 'world/status', state: 'waiting', text: 'Tell me a task.' })`);
+  c.ok(await ev(`[...document.querySelectorAll('#sopts .chip')].some(b => b.textContent === 'what can I ask?')`), 'waiting offers "what can I ask?"', null);
+  await ev(`world.docks.set('world', { shown: true, open: false })`);
+  await page.mouse('#sopts .chip:last-child');
+  c.ok(await ev(`document.getElementById('dock-world').classList.contains('open')`), '…which opens the world card', null);
+
   // 8. the disengagement: the fridge is not where this task wants the tomato
   await page.goto('web/world.html?replay=fixtures/alfworld_tomato_microwave_13_fridge.run.jsonl');
   await ev(`world.stepAll()`);

@@ -64,6 +64,21 @@
   #hlist li[data-n]::before { content: attr(data-n); min-width: 1.4em; text-align: center; color: #000; background: var(--cyan); }
   #hlist .k { font-size: 11.5px; } #hlist .g { color: var(--dim); font-size: 11.5px; } #hlist .goal { color: var(--yellow); font-size: 11.5px; }
   #hstate { color: var(--dim); text-transform: none; letter-spacing: 0; font-size: 11px; }
+  /* the world card: what this world is and what you can ask it (the map's `card`) */
+  #wcard .wc-title { color: var(--fg); font-weight: bold; margin: 0 0 4px; }
+  #wcard .wc-about { color: var(--fg); margin: 0 0 3px; }
+  #wcard .wc-h { color: var(--dim); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; margin: 10px 0 3px; }
+  #wcard .wc-kinds { display: flex; flex-wrap: wrap; gap: 2px 6px; }
+  #wcard details.wc-kind { border: 1px solid var(--line); padding: 0 6px; }
+  #wcard details.wc-kind[open] { flex-basis: 100%; }
+  #wcard details.wc-kind summary { cursor: pointer; list-style: none; }
+  #wcard details.wc-kind summary::-webkit-details-marker { display: none; }
+  #wcard .wc-n { color: var(--dim); } #wcard .wc-opens { color: var(--cyan); font-size: 10.5px; margin-left: 4px; }
+  #wcard .wc-ids { color: var(--dim); font-size: 11.5px; padding: 2px 0 3px; }
+  #wcard .wc-ask { display: flex; gap: 8px; align-items: baseline; margin: 3px 0; }
+  #wcard .wc-ask .chip { flex: none; } #wcard .wc-ask .what { color: var(--dim); }
+  #wcard ul.wc-cannot { margin: 0; padding-left: 16px; color: var(--fg); }
+  #wcard .wc-src { color: var(--faint); font-size: 10.5px; margin-top: 10px; }
   #jlog { list-style: none; margin: 0; padding: 0; font-size: 11.5px; }
   #jlog li { padding: 1px 0; border-top: 1px solid var(--line); } #jlog .who { color: var(--dim); display: inline-block; min-width: 3.5em; }
   #jlog .j-you { color: var(--fg); font-weight: bold; } #jlog .j-note { color: var(--dim); }
@@ -103,12 +118,16 @@
         <header><span class="tw">▾</span><span class="tt">HIERARCHY</span><span id="hstate"></span><button class="x" type="button" aria-label="hide the hierarchy">✕</button></header>
         <div class="dbody"><ul id="hlist" data-w="hlist" data-role="list" tabindex="-1" aria-label="the domains"></ul></div>
       </section>
+      <section class="dock" id="dock-world" data-dock="world" tabindex="-1" aria-label="the world card">
+        <header><span class="tw">▾</span><span class="tt">WORLD CARD</span><button class="x" type="button" aria-label="hide the world card">✕</button></header>
+        <div class="dbody" id="wcard"><p class="empty">loading the world…</p></div>
+      </section>
       <section class="dock" id="dock-journal" data-dock="journal" data-w="journal" data-role="dock" tabindex="-1" aria-label="the journal">
         <header><span class="tw">▾</span><span class="tt">JOURNAL</span><button class="x" type="button" aria-label="hide the journal">✕</button></header>
         <div class="dbody"><ol id="jlog" data-w="jlog" data-role="container" tabindex="-1" aria-label="the journal's lines"></ol></div>
       </section>
     </aside>
-    <nav id="strip"><button type="button" data-strip="talk">Talk</button><button type="button" data-strip="hierarchy">Hierarchy</button><button type="button" data-strip="journal">Journal</button></nav>
+    <nav id="strip"><button type="button" data-strip="talk">Talk</button><button type="button" data-strip="hierarchy">Hierarchy</button><button type="button" data-strip="world">World card</button><button type="button" data-strip="journal">Journal</button></nav>
   </main>
 </div>
 <script type="module">
