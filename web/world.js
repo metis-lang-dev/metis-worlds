@@ -25,6 +25,7 @@ import { connect } from './vendor/ws.js';
 import { UiPort } from './vendor/ui-port.js';
 import { Journal } from './vendor/journal.js';
 import { Narrator, attachSelection, attachKey, narratorView } from './vendor/narrator.js';
+import { keywordStop } from './vendor/dialog.js';
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -109,7 +110,17 @@ function answer(o) {                                 // a chip is the person say
   rec('answer', { say: o.say ?? o.label });
   if (o.ev) send({ ev: o.ev }); else panel.say(o.say ?? o.label);
 }
-let lastStatus = '';
+let lastStatus = '', lastStatusRow = '';
+// the tiles as large as the left pane allows (the map, its attention slot beside it when there is room)
+function fitMap() {
+  const v = $('#map .wm-view'), L = $('#left');
+  if (!v || !L) return;
+  const cols = Number(getComputedStyle(v).getPropertyValue('--cols')) || 1, rows = Number(getComputedStyle(v).getPropertyValue('--rows')) || 1;
+  const w = L.clientWidth - 28 - (L.clientWidth > 900 ? 280 : 0), h = L.clientHeight - 40;
+  const z = Math.max(1, Math.min(3, w / (cols * 16), h / (rows * 16)));
+  $('#map').style.setProperty('--wm-z', z.toFixed(2));
+}
+addEventListener('resize', () => fitMap());
 function status(f) {
   const was = world.status?.state;
   world.status = f;
@@ -119,9 +130,13 @@ function status(f) {
   chips($('#sopts'), f.state === 'asking' ? [] : f.options);        // the ask's answers are in the ask box
   if (f.state !== 'asking') $('#ask').hidden = true;
   if (f.state === 'waiting' || (f.state === 'working' && ['done', 'stuck', 'over', 'asking', 'waiting'].includes(was))) resetHierarchy();
+  if (f.state === 'waiting' && was === 'over' && world.mapUrl) world.map.load(world.mapUrl).then(fitMap);   // a new game: the room from its start
+  if (f.state !== 'working') { hier.goal = null; if (f.state !== 'asking') hier.attention = null; drawHierarchy(); }
+  if ((f.state === 'waiting' || f.state === 'working') && world.map.map?.entities?.some(e => e.cornered)) world.map.delta({ cornered: null });   // the ask is over: no place in red
   if (f.state === 'working' && f.domain) { hier.goal = { domain: f.domain, text: f.text.replace(/^[^:]*:\s*/, '') }; drawHierarchy(); }
   if (f.state !== 'working' && f.state !== 'asking' && f.text && f.text !== lastStatus) {   // waiting, done, stuck, over: one line each
     panel?.core.row({ who: 'note', text: f.text, status: f.state });
+    lastStatusRow = f.text;
     journalRow({ who: 'note', text: `${f.state}: ${f.text}` });
   }
   lastStatus = f.text || lastStatus;
@@ -141,13 +156,18 @@ function ask(f) {
 // ── the band's rows in the page's words: an ask is an ask, the typed intent as its name and slots, the floor in words ──
 const FLOOR = { FREEu: 'free', FREEs: 'free', USER: 'yours', SYSTEM: 'the agent\'s' };
 function intentWords(text) {
-  try { const o = JSON.parse(text); return Object.entries(o).map(([k, v]) => k === 'intent' ? v : `${k}=${v}`).join(' '); } catch { return text; }
+  try { const o = JSON.parse(text); return Object.entries(o).filter(([k]) => k !== 'domain').map(([k, v]) => k === 'intent' ? v : `${k}=${v}`).join(' '); } catch { return text; }
 }
 function rowLook(r) {
   const li = panel?.rowEl.get(r.n);
   if (!li || li.dataset.looked) return;
   li.dataset.looked = '1';
+  const box = panel.dom.log;                         // the newest line in view, unless the person scrolled up to read
+  requestAnimationFrame(() => { if (box.scrollHeight - box.scrollTop - box.clientHeight < 160) box.scrollTop = box.scrollHeight; });
   const who = li.querySelector('.fw-who'), text = li.querySelector('.fw-text');
+  // a line the band already shows (the status line the agent then says, a reply that repeats its narration): once
+  const prev = [...panel.dom.log.children].slice(-4, -1).filter(x => !x.hidden).map(x => x.querySelector('.fw-text')?.textContent.trim());
+  if ((r.who === 'agent') && (prev.includes(r.text.trim()) || r.text.trim() === lastStatusRow.trim())) { li.hidden = true; return; }
   if (r.who === 'agent' && r.narration) {
     const asks = r.narration === 'v3-ask';
     if (asks) text.textContent = asked(r.text)[0] ?? r.text;            // the answers are the ask box's chips
@@ -173,7 +193,7 @@ function hint(e) {
 let say = 0, panel = null, port = null, send = () => {};
 async function frame(f) {
   rec('frame', { ev: f.ev });
-  if (f.ev === 'world/map') { await world.map.load(new URL(f.url, world.base).href); tagCard(); return; }
+  if (f.ev === 'world/map') { world.mapUrl = new URL(f.url, world.base).href; await world.map.load(world.mapUrl); fitMap(); tagCard(); return; }
   if (f.ev === 'world/delta') { world.map.delta(f); if (f.task) { chainTo(world.map.map.task); } return; }
   if (f.ev === 'world/hierarchy') { hierarchy(f); return; }
   if (f.ev === 'world/status') { status(f); return; }
@@ -279,12 +299,32 @@ port = world.port = new WorldPort({
   log: (dir, e) => rec(dir, { e }),
   onDock: (w, on) => { portDock = true; try { docks.set(w, on ? { shown: true, open: true } : { shown: false }); } finally { portDock = false; } },
 });
+// a pick shows: the picked thing takes the focus (the map's attention slot says what it is; the hierarchy's task row
+// opens its card), outlined — the port only marks it `.picked` (the Chrome test: "I picked it." and nothing to see)
+port.onPick = (w, text, el) => {
+  rec('picked', { w, text });
+  el?.focus?.({ preventScroll: false });
+  if (w === 'hlist' && el?.dataset?.domain === 'task') world.map.showTask('@agent');
+};
 panel = world.panel = new Panel($('#talkpanel'), {
   backend: backend || { turn: async function* () { yield 'This is a replay: nobody is listening.'; }, onFrame: null },
-  table: await (await fetch('vendor/fsttm.json')).json(), title: 'talk', voice: q.get('voice') === '1',
+  table: await (await fetch('vendor/fsttm.json')).json(), title: '', voice: q.get('voice') === '1',
   onFrame: f => frame(f), onRow: r => rowLook(r), onState: s => floorLook(s),
 });
 floorLook(panel.core.state());
+// "stop" (the dialog's stop words) cuts the page's own voice; while the agent works or asks, it is also the
+// person's word to the agent (the ask's "stop" answer, F5): a turn of its own, past the floor's stop-word drop
+const say0 = panel.core.say.bind(panel.core);
+let stops = 0;
+panel.core.say = (text, opts = {}) => {
+  const t = String(text ?? '').trim();
+  if (backend && t && keywordStop(t, panel.core.dialog.stopWords) && ['working', 'asking', 'stuck'].includes(world.status?.state)) {
+    panel.core.tts.cancel?.();
+    panel.core.via = opts.via ?? 'say';
+    try { return panel.core.turn(t, { id: `stop${++stops}` }); } finally { panel.core.via = null; }
+  }
+  return say0(text, opts);
+};
 window.say = text => panel.say(text);
 if (backend) hello(backend);
 // the narrator (fsttm-web 0.6): the page's selected text read aloud on F8 (the task card's words, the journal), never

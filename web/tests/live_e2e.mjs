@@ -29,7 +29,7 @@ try {
   // working: the goal beside the attending domain
   c.ok(await stepTo(`document.getElementById('status').dataset.state === 'working' && document.querySelector('#hlist li[data-domain="nav"] .goal')`),
     'working: the goal shows beside nav in the hierarchy', await ev(`document.getElementById('hlist').textContent.replace(/\\s+/g, ' ')`));
-  c.ok(await ev(`document.querySelector('#hlist li[data-domain="nav"] .goal').textContent === 'goal: Goto(countertop 3)'`), 'the goal in the world\'s names', null);
+  c.ok(await ev(`document.querySelector('#hlist li[data-domain="nav"] .goal').textContent === 'goal: Going to countertop 3'`), 'the goal in the world\'s names', null);
 
   // done → over: the chip for a new game
   c.ok(await stepTo(`document.getElementById('status').dataset.state === 'over'`), 'over after the win', await st());
@@ -75,6 +75,7 @@ try {
   c.ok(await ev(`world.log.some(r => r.dir === 'answer' && r.say === 'stop') && document.querySelector('#askopts .chip:last-child').getAttribute('aria-pressed') === 'true'`),
     'the "stop" chip says "stop"', null);
   c.ok(await stepTo(`document.getElementById('status').dataset.state === 'waiting' && document.getElementById('ask').hidden`), 'after stop: waiting, the ask box gone', await st());
+  c.ok(await ev(`!document.querySelector('#map .wm-cornered')`), 'after stop: no place in red', null);
   await ev(`world.stepAll()`);
   c.ok((await st()).state === 'over', 'fridge: the first answer finishes the task (over)', await st());
 

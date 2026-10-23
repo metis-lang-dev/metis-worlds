@@ -80,6 +80,8 @@ try {
   await ev(`world.port.effect({ ui: 'pick', widget: 'map', name: 'the microwave' })`);
   c.ok(await ev(`document.querySelector('#map [data-id="microwave1"]').classList.contains('picked') && world.log.some(r => r.dir === 'port' && r.lines.includes('+picked'))`),
     'a pick by name in the map: the microwave picked', null);
+  c.ok(await ev(`document.activeElement?.dataset?.id === 'microwave1' && getComputedStyle(document.querySelector('#map [data-id="microwave1"]')).outlineStyle === 'solid'`),
+    'the pick shows: the microwave has the focus, outlined (the Chrome test: "I picked it." and nothing to see)', await ev(`document.activeElement?.dataset?.id`));
   await ev(`world.port.effect({ ui: 'numbers', widget: 'map' })`);
   c.ok(await ev(`document.querySelectorAll('#map .wm-ent[data-n]').length === 9`), 'NUMBERS labels the map\'s first nine things', null);
   await ev(`world.port.effect({ ui: 'focus', widget: 'journal' })`);

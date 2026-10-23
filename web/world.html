@@ -32,6 +32,12 @@
   #status .opts { display: inline-flex; gap: 6px; flex: none; }
   #conn { color: var(--dim); }
   #left { overflow: auto; padding: 12px; }
+  #map .wm-view { box-sizing: content-box; }
+  #map .wm-ent.picked { outline: 2px solid var(--yellow); outline-offset: -2px; z-index: 2; }
+  #hlist li.picked { outline: 1px solid var(--yellow); }       /* map.css sizes the view to its grid; the shell's border-box would clip it */
+  #dock-talk .dbody { display: flex; flex-direction: column; overflow: hidden; }
+  #dock-talk #talkpanel { flex: 1 1 auto; min-height: 0; }
+  .fw-panel .fw-title:empty { display: none; }
   #map { min-width: 0; }
   /* the ask: the agent's question, its answers as chips (a chip says its answer, as typing it would) */
   #ask { border: 1px solid var(--yellow); background: #2a2111; padding: 6px 8px; margin: 0 0 6px; }
@@ -39,7 +45,7 @@
   #ask .q::before { content: "the agent asks: "; color: var(--dim); }
   #ask .opts { display: flex; flex-wrap: wrap; gap: 6px; }
   #ask .chip { border-color: var(--yellow); }
-  #talkpanel { min-height: 160px; height: 100%; }
+  #talkpanel { min-height: 160px; }
   .fw-panel .fw-ask .fw-text { color: var(--yellow); font-weight: bold; }
   .fw-panel .fw-ask .fw-who { color: var(--yellow); opacity: 1; }
   .fw-panel .fw-status .fw-text { color: var(--dim); font-style: italic; }
