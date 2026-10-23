@@ -65,11 +65,43 @@ def bindings(name):
 
 
 class GymClient(GymChild):
-    """world/alf_gym.py as a child: one JSON request per line, one answer (metis.host.GymChild)."""
+    """world/alf_gym.py as a child: one JSON request per line, one answer (metis.host.GymChild).
+    `history` is the commands stepped since the last reset and `last` the last answer, so a host
+    opened on a world another host already brought to the log's state takes it without a replay.
+    A `shared` client (one per game and commands log, _SHARED) lives for the process: close() is a
+    no-op on it — the agent's hierarchy opens a host per activation (alf-demo step 3b: a spawn, a
+    reset and a replay cost 3.6 s, twice per director step, 90 s of a 93 s task)."""
 
     def __init__(self, game, max_steps=60, handles=None):
+        self.history, self.last, self.shared = [], None, False
         super().__init__(os.path.join(HERE, "alf_gym.py"), interpreter(), "game", env=dict(os.environ),
                          game=game, max_steps=max_steps, handles=handles)
+
+    def call(self, op, **kw):
+        out = super().call(op, **kw)
+        if op == "reset":
+            self.history, self.last = [], out
+        elif op == "step":
+            self.history.append(kw.get("command"))
+            self.last = out
+        return out
+
+    def close(self):
+        if self.shared:
+            return
+        super().close()
+
+
+_SHARED = {}          # (game, commands_log) -> the GymClient every host on that log shares
+
+
+def shared_client(game, commands_log, max_steps, handles):
+    key = (game, commands_log)
+    c = _SHARED.get(key)
+    if c is None or c.proc.poll() is not None:
+        c = _SHARED[key] = GymClient(game, max_steps=max_steps, handles=handles)
+        c.shared = True
+    return c
 
 
 class AlfHost:
@@ -79,12 +111,16 @@ class AlfHost:
 
     PAIRS = ()
 
-    def __init__(self, package_dir, case=None, max_steps=60):
+    def __init__(self, package_dir, case=None, max_steps=60, commands_log=None):
         self.package_dir, self.case = package_dir, case
         meta = json.load(open(os.path.join(package_dir, "game.json")))
         self.game = meta["game"]
         self.to_name = meta["handles"]["to_name"]
-        self.gym = GymClient(self.game, max_steps=max_steps, handles=meta["handles"])
+        self.commands_log = commands_log or meta.get("commands_log")   # the agent's hierarchy: the shared world state (every host's commands, replayed at reset)
+        if self.commands_log:                                           # … and every host on that log shares one world process
+            self.gym = shared_client(self.game, self.commands_log, max_steps, meta["handles"])
+        else:
+            self.gym = GymClient(self.game, max_steps=max_steps, handles=meta["handles"])
         info = self.gym.info
         self.task, self.params = info["task_type"], info["params"]
         self.static = set(info["static"])
@@ -104,19 +140,23 @@ class AlfHost:
         self.reported = set()
         self.pending_frames = []                               # the world page's frames (alf-demo): frames() hands them over
         self.things = set(meta["things"]) if meta.get("things") else None   # … and the things it declares
-        self.commands_log = meta.get("commands_log")           # the agent's hierarchy: the shared world state (every host's commands, replayed at reset)
         self.verbs = bool(meta.get("verbs"))                   # the loop's instances: a rule named verb_why is a command (opt-in: a hand domain's bookkeeping rule may start with a verb — go_for, open_dest)
         self.beat, self.due, self.script, self.last = 0, (), {}, None   # the AgentHost reads these
         self._reset()
 
     # ── the episode ──
     def _reset(self):
+        want = self._replay()                        # the prefix another package's run sent
+        self.commands = []                           # (beat, rule, command, admissible, changed): the snapshot
+        self.stepped = False
+        if self.gym.shared and self.gym.last is not None and self.gym.history == want:
+            self._take(self.gym.last)                # the shared world already stands at the log's end: no replay
+            self.t = len(want)
+            return
         out = self.gym.call("reset")
         self._take(out)
-        self.commands = []                           # (beat, rule, command, admissible, changed): the snapshot
         self.t, self.done, self.won = 0, False, False
-        self.stepped = False
-        for c in self._replay():                     # the prefix another package's run sent
+        for c in want:
             self._take(self.gym.call("step", command=c))
             self.t += 1
 

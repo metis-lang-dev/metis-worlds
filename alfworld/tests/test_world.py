@@ -550,3 +550,30 @@ def test_new_episode_restarts_the_won_game(package):
         assert any(a.startswith("holds(") for a in h.reading()) is False
     finally:
         h.gym.close()
+
+
+def test_hosts_on_one_log_share_one_world(package):
+    """alf-demo step 3b (the user's time profile: 12 director steps × two ALFWorld spawns = 90 s of a
+    93 s task): every host on the same commands log shares one world process; a host opened after
+    another stepped the world takes its state without a reset or a replay; new_episode resets it."""
+    import time
+    from alf_host import AlfHost, _SHARED
+    pkg, _ = package
+    log = os.path.join(pkg, ".commands.jsonl")
+    open(log, "w").close()
+    a = AlfHost(pkg, commands_log=log)
+    assert a.gym.shared and (a.game, log) in _SHARED
+    steps = plan(a)[:2]
+    for name, args in steps:
+        a.on_event(name, args)
+    t = time.time()
+    b = AlfHost(pkg, commands_log=log)
+    dt = time.time() - t
+    assert b.gym is a.gym and b.t == a.t == len(a.gym.history) >= 1 and b.reading() == a.reading(), "the state carried over"
+    assert dt < 0.5, "no spawn, no reset, no replay: %.2f s" % dt
+    assert b.gym.history == [c for _, _, c, _, _ in a.commands]
+    b.new_episode()
+    assert b.t == 0 and b.gym.history == [] and os.path.getsize(log) == 0
+    c = AlfHost(pkg)                                     # no log: a private world as before
+    assert not c.gym.shared and c.gym is not a.gym
+    c.gym.close()

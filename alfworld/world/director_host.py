@@ -89,7 +89,7 @@ class DirectorHost:
         if domain not in gen_hier.SPECS:
             return False
         flat = self.meta["flat"]
-        mirror = AlfHost(flat)                       # replays the shared log: the world as it is now
+        mirror = AlfHost(flat, commands_log=self.meta["commands_log"])   # the shared world as it is now (one process per log: alf_host.shared_client)
         try:
             info = dict(json.load(open(os.path.join(flat, "game.json"))), static=sorted(mirror.static), task_type=mirror.task, params=mirror.params)
             reading = mirror.reading()
