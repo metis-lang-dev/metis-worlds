@@ -438,6 +438,16 @@ def test_a_taken_command_is_the_maps_delta(package):
         h.gym.close()
 
 
+def test_a_goal_is_said_as_the_person_reads_it():
+    """nina's alf-demo 3b wire note: the working status says a domain's goal in words (goal_text)."""
+    from alf_host import AlfHost
+    h = AlfHost.__new__(AlfHost)
+    h.to_name = {"countertop3": "countertop 3", "tomato1": "tomato 1", "microwave1": "microwave 1"}
+    assert h.goal_text("goto(countertop3)") == "going to countertop 3"
+    assert h.goal_text("put(tomato1,microwave1)") == "moving tomato 1 to microwave 1"
+    assert h.goal_text("dance(tomato1)") is None and h.goal_text("put(tomato1)") is None
+
+
 def test_the_director_copy_matches_the_catalogs():
     """The lifted director base's canonical home is metis-catalog domains/director (loop-policy 2b G5);
     this world carries a copy (copies, not dependencies). Skipped without the catalog checkout beside."""

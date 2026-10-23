@@ -299,6 +299,20 @@ class AlfHost:
         from semantic_map import spoken
         return re.sub(r"\b[a-z]+\d+\b", lambda m: spoken(m.group(0)) if m.group(0) in self.to_name else m.group(0), text)
 
+    GOALS = {"goto": "going to {0}", "open": "opening {0}", "take": "taking {0}", "put": "moving {0} to {1}"}
+
+    def goal_text(self, goal):
+        """A hierarchy domain's goal as the person reads it (goto(countertop3) → "going to countertop 3"):
+        metis-agent's service says the working status with it (nina's alf-demo 3b wire note); None for a
+        goal it has no words for."""
+        from semantic_map import spoken
+        name, _, rest = goal.partition("(")
+        words = self.GOALS.get(name)
+        args = [a.strip() for a in rest.rstrip(")").split(",")] if rest else []
+        if words is None or words.count("{") != len(args):
+            return None
+        return words.format(*(spoken(a) if a in self.to_name else a for a in args))
+
     def frames(self):
         """The world page's frames since the last call (metis-agent's service sends them on the wire)."""
         out, self.pending_frames = self.pending_frames, []
