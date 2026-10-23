@@ -89,8 +89,11 @@ try {
   await page.goto('web/world.html?replay=fixtures/alfworld_tomato_microwave_13_fridge.run.jsonl');
   await ev(`world.stepAll()`);
   const d = await ev(`({ said: [...document.querySelectorAll('#talkpanel .fw-log li')].map(l => l.textContent),
-    red: document.querySelector('#map [data-id="fridge1"]').classList.contains('wm-cornered'), hstate: document.getElementById('hstate').textContent })`);
-  c.ok(d.said.some(s => s.includes('Fridge 1 is not where this task wants tomato 1. Put it there anyway, or leave tomato 1 where it is?')) && d.red && d.hstate === 'ended: wrong_dest',
+    red: document.querySelector('#map [data-id="fridge1"]').classList.contains('wm-cornered'), hstate: document.getElementById('hstate').textContent,
+    chips: [...document.querySelectorAll('#askopts .chip')].map(b => b.textContent), asking: !document.getElementById('ask').hidden
+      && [...document.querySelectorAll('#talkpanel .fw-ask .fw-who')].some(w => w.textContent === 'asks') })`);
+  c.ok(d.said.some(s => s.includes('Fridge 1 is not where this task wants tomato 1.') && !s.includes('|')) && d.red && d.hstate === 'ended: wrong_dest'
+    && d.chips.join(' / ') === 'put tomato 1 in microwave 1 / stop' && d.asking,
     'the disengagement: the band asks, the fridge in red, the hierarchy ended on wrong_dest', d);
 
   // 9. at phone width the page does not scroll sideways
