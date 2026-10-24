@@ -160,6 +160,8 @@ function fitMap() {
   $('#map').style.setProperty('--wm-z', z.toFixed(2));
 }
 addEventListener('resize', () => fitMap());
+// the left pane's own size: the splitter, a dock hidden or shown, a window moved to another monitor
+new ResizeObserver(() => fitMap()).observe($('#left'));
 function status(f) {
   const was = world.status?.state;
   world.status = f;

@@ -26,6 +26,39 @@ try {
   await ev(`(() => { world.panel.core.listening = true; world.panel.core.changed(); world.narrator._set('reading'); })()`);
   const on = await ev(`[getComputedStyle(document.querySelector('#voice .fw-sw-light')).backgroundColor, getComputedStyle(document.querySelector('#voice .fw-narr')).color]`);
   c.ok(on.every(x => x === 'rgb(63, 185, 80)'), 'on: the mic light and the reading narrator green (not the page\'s white accent)', on);
+
+  // the docks resize vertically: the grip on HIERARCHY's top edge moves its border with TALK; kept; a double click: equal
+  const hs = () => ev(`['talk', 'hierarchy'].map(d => Math.round(document.getElementById('dock-' + d).getBoundingClientRect().height))`);
+  const g = await ev(`(() => { const g = document.querySelector('#dock-hierarchy > .dgrip'), r = g.getBoundingClientRect(); return { hidden: g.hidden, x: r.x + r.width / 2, y: r.y + r.height / 2, talkGrip: document.querySelector('#dock-talk > .dgrip')?.hidden }; })()`);
+  c.ok(!g.hidden && g.talkGrip, 'a grip between two open docks (none on the first)', g);
+  const h0 = await hs();
+  await page.cmd('Input.dispatchMouseEvent', { type: 'mouseMoved', x: g.x, y: g.y });
+  await page.cmd('Input.dispatchMouseEvent', { type: 'mousePressed', x: g.x, y: g.y, button: 'left', clickCount: 1 });
+  for (let i = 1; i <= 5; i++) await page.cmd('Input.dispatchMouseEvent', { type: 'mouseMoved', x: g.x, y: g.y + 16 * i, button: 'left', buttons: 1 });
+  await page.cmd('Input.dispatchMouseEvent', { type: 'mouseReleased', x: g.x, y: g.y + 80, button: 'left', clickCount: 1 });
+  const h1 = await hs();
+  c.ok(Math.abs(h1[0] - h0[0] - 80) <= 3 && Math.abs(h0[1] - h1[1] - 80) <= 3, 'dragged 80 px down: TALK grows, HIERARCHY shrinks by as much', [h0, h1]);
+  c.ok(await ev(`Math.round(world.docks.state.talk.size) === ${h1[0]} && JSON.parse(localStorage.getItem('worldpage.docks.v3')).talk.size > 0`), 'the sizes kept with the layout', await ev(`JSON.stringify(world.docks.state)`));
+  await page.goto('web/world.html');
+  c.ok(JSON.stringify(await hs()) === JSON.stringify(h1), 'and after a reload', [h1, await hs()]);
+  await ev(`document.querySelector('#dock-hierarchy > .dgrip').dispatchEvent(new MouseEvent('dblclick', { bubbles: true }))`);
+  c.ok(await ev(`!world.docks.state.talk.size && !world.docks.state.hierarchy.size`), 'a double click on a grip: equal again', await ev(`JSON.stringify(world.docks.state)`));
+
+  // the splitter keeps a share of the row: a smaller window (another monitor) keeps the proportion, the map refits
+  const sp = await ev(`(() => { const r = document.getElementById('split').getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + 200 }; })()`);
+  await page.cmd('Input.dispatchMouseEvent', { type: 'mouseMoved', x: sp.x, y: sp.y });
+  await page.cmd('Input.dispatchMouseEvent', { type: 'mousePressed', x: sp.x, y: sp.y, button: 'left', clickCount: 1 });
+  await page.cmd('Input.dispatchMouseEvent', { type: 'mouseMoved', x: sp.x - 150, y: sp.y, button: 'left', buttons: 1 });
+  await page.cmd('Input.dispatchMouseEvent', { type: 'mouseReleased', x: sp.x - 150, y: sp.y, button: 'left', clickCount: 1 });
+  const share = () => ev(`(() => { const L = document.getElementById('left'), m = L.parentElement; return [L.style.flex, L.getBoundingClientRect().width / m.getBoundingClientRect().width, getComputedStyle(document.getElementById('map')).getPropertyValue('--wm-z')]; })()`);
+  const s1 = await share();
+  c.ok(/%$/.test(s1[0]), 'the splitter sets a share (%), not pixels', s1);
+  await page.cmd('Emulation.setDeviceMetricsOverride', { width: 900, height: 700, deviceScaleFactor: 1.5, mobile: false });
+  await sleep(400);
+  const s2 = await share();
+  c.ok(Math.abs(s2[1] - s1[1]) < 0.02 && s2[2] !== s1[2], 'a smaller window, another scale: the same share, the map refitted', [s1, s2]);
+  await page.cmd('Emulation.clearDeviceMetricsOverride');
+  await ev(`document.getElementById('split').dispatchEvent(new MouseEvent('dblclick', { bubbles: true }))`);
   await ev(`(() => { world.panel.core.listening = false; world.panel.core.changed(); world.narrator._set('stopped'); })()`);
   c.ok(await ev(`!document.querySelector('#talkpanel .fw-mic') && document.querySelector('#voice .fw-switch').getAttribute('role') === 'switch'`),
     'the mic is the band\'s switch, not the text line\'s button', null);
