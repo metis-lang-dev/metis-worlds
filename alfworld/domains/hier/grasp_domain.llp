@@ -9,9 +9,9 @@ types (receptacle location object).   % completed by the instance that includes 
 
 namespace grasp produce (dyn).
 
-bwd recat(receptacle, location).
-bwd openable(receptacle).
-bwd notopenable(receptacle).
+pred recat(receptacle, location) : grasp.    % the projection's, as openable/notopenable (the map)
+pred openable(receptacle) : grasp.
+pred notopenable(receptacle) : grasp.
 
 pred at(location) : grasp.
 pred objat(object, location) : grasp.

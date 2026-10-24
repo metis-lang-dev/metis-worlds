@@ -4,23 +4,22 @@ acts in the world, so this host has no gym. Its faces:
   tick(counts)   the queued arrivals, then the retraction of the director's own out atoms present
                  in counts (wake/sleep/forward/ask/ended): reported once, never piled up
   observe        nothing: the director reads no world
-  instance(D, goal, tokens) -> bool   D's installed package rewritten for GOAL from the world as it is
-                 now (the shared commands log replayed on the flat package's mirror; `tokens` = D's own
-                 counts carried between activations); the agent then reloads D
-  deliver(D, goal, tokens) -> lines | None   for the planner: the do-lines that bring its live
-                 session to what that new instance would start at (the agent takes them as one row,
-                 no reload); None for a specialist (its instance is narrowed to its goal's things)
+  instance(D, goal, tokens) -> bool   D's start for a reload (a new game, a reset): the map re-read from
+                 the world as it is now (the shared commands log on the flat package's mirror) and
+                 re-projected; the program, the committed instance over the roles, is never rewritten
+  deliver(D, goal, tokens) -> lines | None   for every hierarchy domain: the do-lines that bring its
+                 live session to its next activation — the world in roles through the map's binding, its
+                 own tokens, the goal (the agent takes them as one row, no reload; semantic-map s-d4270bed)
 The package's game.json names the game, the flat package, the root and the commands log."""
 import collections
 import json
 import os
-import re
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import gen_hier  # noqa: E402
-from alf_host import DYNAMIC_PREDS, AlfHost  # noqa: E402
+from alf_host import DYNAMIC_PREDS, PLACE_PREDS, AlfHost  # noqa: E402
 
 OUT = tuple(gen_hier.DIRECTOR_OUT)
 
@@ -32,7 +31,7 @@ def own_tokens(domain, tokens, reading):
     held = tokens.items() if isinstance(tokens, dict) else ((t, 1) for t in tokens)
     out = set(gen_hier.SPECS[domain]["out"])
     return sorted(a for a, n in held if a and n > 0 and a not in reading
-                  and a.split("(")[0] not in DYNAMIC_PREDS and a.split("(")[0] not in out)
+                  and a.split("(")[0] not in DYNAMIC_PREDS | PLACE_PREDS and a.split("(")[0] not in out)
 
 
 class DirectorHost:
@@ -89,51 +88,47 @@ class DirectorHost:
             return []
         return [json.loads(l)["command"] for l in open(p) if l.strip()]
 
+    def _map(self):
+        from semantic_map import SemanticMap
+        return SemanticMap(os.path.join(self.meta["root"], "domains", "hier", ".map.json"))
+
     def instance(self, domain, goal, tokens=()):
-        """Write DOMAIN's installed package for GOAL (an atom) over the world as it is now; True when written."""
+        """DOMAIN's next start when the agent reloads it (a new game, a reset: the hierarchy at its start):
+        the program is the committed instance over the roles and is never rewritten — the map is
+        re-read from the world as it is now (the shared log on the flat package's mirror) and re-projected
+        for the game's own task; True: the agent reloads D, whose host brings the world in on its first tick."""
         if domain not in gen_hier.SPECS:
             return False
-        flat = self.meta["flat"]
-        mirror = AlfHost(flat, commands_log=self.meta["commands_log"])   # the shared world as it is now (one process per log: alf_host.shared_client)
+        smap = self._map()
+        mirror = AlfHost(self.meta["flat"], commands_log=self.meta["commands_log"])   # the shared world as it is now (one process per log: alf_host.shared_client)
         try:
-            info = dict(json.load(open(os.path.join(flat, "game.json"))), static=sorted(mirror.static), task_type=mirror.task, params=mirror.params)
-            reading = mirror.reading()
+            smap.observe(mirror.dyn)
+            info = dict(json.load(open(os.path.join(self.meta["flat"], "game.json"))), static=sorted(mirror.static), task_type=mirror.task, params=mirror.params)
         finally:
             mirror.gym.close()
+        if goal is None:
+            smap.project(*gen_hier.args_of(gen_hier.seed(info)[0]))
         self.k += 1
-        inits = own_tokens(domain, tokens, reading) + ([goal] if goal else [])
-        gen_hier.generate(self.meta["game_dir"], os.path.join(self.meta["root"], "domains", "hier"), domain, self.k, info, reading, inits,
-                          self._log_commands(), intents=(domain == "task"), continues=True, fixed=True, commands_log=self.meta["commands_log"])
         return True
 
     def deliver(self, domain, goal, tokens=()):
-        """The planner's next activation as do-lines on its live session (alf-demo 3b timing: the
-        task's six reloads were 0.2 s each of a 4 s turn): the counts a new instance's #init would give
-        it — the world's facts it sees, its own tokens, the goal, one each, as instance() writes them —
-        less the counts it holds. Only a planner (its types are the game's, the same in every
-        instance: a person's task sees every pickupable); None for any other domain, or when its
-        installed instance cannot be read (the agent re-instances and reloads it then)."""
+        """DOMAIN's next activation as do-lines on its live session, no reload (alf-demo 3b timing for the
+        planner; semantic-map step 2 for every specialist: compiled once over the roles, each takes its
+        goal this way): the counts it would start at — the world's facts it sees said in roles through the
+        map's binding, its own tokens, the goal, one each — less the counts it holds. None for a domain that
+        is not the hierarchy's."""
         sp = gen_hier.SPECS.get(domain)
-        if sp is None or "takes" not in sp:
+        if sp is None:
             return None
-        try:
-            text = open(os.path.join(self.meta["root"], "domains", "hier", domain, domain + ".llp")).read()
-        except OSError:
-            return None
-        things = set()
-        for kind in sp["types"]:
-            m = re.search(r"^type %s \{([^}]*)\}\." % kind, text, re.M)
-            if m is None:
-                return None
-            things |= set(m.group(1).split())
+        smap = self._map()
         mirror = AlfHost(self.meta["flat"], commands_log=self.meta["commands_log"])
         try:
-            reading = mirror.reading()
+            smap.observe(mirror.dyn)
+            reading = smap.role_reading(mirror.reading())
         finally:
             mirror.gym.close()
         held = {a: n for a, n in (tokens.items() if isinstance(tokens, dict) else ((t, 1) for t in tokens)) if a and n > 0}
-        want = collections.Counter(a for a in sorted(reading) if a.split("(")[0] in sp["dyn"]
-                                   and all(x in things for x in gen_hier.args_of(a)))
+        want = collections.Counter(a for a in sorted(reading) if a.split("(")[0] in sp["dyn"])
         want.update(own_tokens(domain, held, reading) + ([goal] if goal else []))
         lines = []
         for a in sorted(set(want) | set(held)):

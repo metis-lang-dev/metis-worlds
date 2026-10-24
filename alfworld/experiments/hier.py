@@ -43,6 +43,21 @@ def run_package(path, steps=12):
     return {"commands": cmds, "out": last.get("out", []), "tokens": last.get("tokens", []), "error": err, "stderr": p.stderr[-400:]}
 
 
+def _map(out_dir, info, mirror):
+    """The game's semantic map for one run (out_dir/.map.json), bound for the game's own task."""
+    os.makedirs(out_dir, exist_ok=True)
+    smap = gen_hier.build_map(os.path.join(out_dir, ".map.json"), info, mirror)
+    smap.project(*gen_hier.args_of(gen_hier.seed(info)[0]))
+    return smap
+
+
+def mirror_step(mirror, command):
+    """The driver's copy of the game takes what a specialist did, by its command (the rule's roles are
+    the specialist's binding, not the flat mirror's)."""
+    mirror._take(mirror.gym.call("step", command=command))
+    mirror.t += 1
+
+
 def run_game(game_dir, workdir, max_activations=16):
     """The flat package first (its game.json gives the handles and the mirror host its game)."""
     flat, _, _ = gen_instance.generate(game_dir, workdir)
@@ -51,12 +66,13 @@ def run_game(game_dir, workdir, max_activations=16):
     out_dir = os.path.join(workdir, gen_instance.instance_id(game_dir))
     mirror = AlfHost(flat_pkg)                       # the driver's own copy of the game
     info = dict(info, static=sorted(mirror.static), task_type=mirror.task, params=mirror.params)
+    smap = _map(out_dir, info, mirror)               # the room as data; the activations speak roles (semantic-map s-d4270bed)
     t0 = time.time()
-    commands, tokens, results, acts, error, outcome = [], gen_hier.seed(info), [], [], None, "running"
+    commands, tokens, results, acts, error, outcome = [], [smap.intent_atom(a) for a in gen_hier.seed(info)], [], [], None, "running"
     try:
         for k in range(max_activations):
             # the task domain: until it asks for something, or is done, or stuck
-            path = gen_hier.generate(game_dir, out_dir, "task", k, info, mirror.reading(), tokens + results, commands)
+            path = gen_hier.generate(game_dir, out_dir, "task", k, info, smap, mirror.reading(), tokens + results, commands)
             r = run_package(path)
             if r["error"]:
                 error, outcome = "task: " + r["error"], "error"
@@ -73,13 +89,13 @@ def run_game(game_dir, workdir, max_activations=16):
             spec = gen_hier.HANDLES[base]            # the manual switch
             tokens = r["tokens"]
             # the specialist: over the game as it is now, with the goal; until its result
-            path = gen_hier.generate(game_dir, out_dir, spec, k, info, mirror.reading(), [goal], commands)
+            path = gen_hier.generate(game_dir, out_dir, spec, k, info, smap, mirror.reading(), [goal], commands)
             s = run_package(path)
             if s["error"]:
                 error, outcome = spec + ": " + s["error"], "error"
                 break
             for c in s["commands"]:                  # mirror what the specialist did
-                mirror.on_event(c["rule"], ())
+                mirror_step(mirror, c["command"])
                 commands.append(c["command"])
             results = s["out"]
             acts.append({"k": k, "spec": spec, "goal": goal, "result": results, "commands": [c["command"] for c in s["commands"]],
@@ -125,12 +141,13 @@ def run_game_director(game_dir, workdir, max_beats=40, first=None):
     out_dir = os.path.join(workdir, gen_instance.instance_id(game_dir))
     mirror = AlfHost(flat_pkg)
     info = dict(info, static=sorted(mirror.static), task_type=mirror.task, params=mirror.params)
+    smap = _map(out_dir, info, mirror)
     t0 = time.time()
     commands, acts, error, outcome = [], [], None, "running"
     tokens = {"task": []}                            # each domain's own tokens between its runs
     frames = {}                                      # kind -> the atom last seen of that kind; (D, kind) -> the one sent to D
     state = gen_hier.director_start()
-    arrivals = list(first or gen_hier.seed(info))
+    arrivals = [smap.intent_atom(a) for a in (first or gen_hier.seed(info))]   # a person's goal in the room's terms, projected
     beats = []
     try:
         for k in range(max_beats):
@@ -160,13 +177,13 @@ def run_game_director(game_dir, workdir, max_beats=40, first=None):
                             goal = "refused(%s)" % atom[atom.index("(") + 1:-1]
                         frames[(d, kd)] = goal
                         inits = [goal]
-                    path = gen_hier.generate(game_dir, out_dir, d, k, info, mirror.reading(), inits, commands)
+                    path = gen_hier.generate(game_dir, out_dir, d, k, info, smap, mirror.reading(), inits, commands)
                     r = run_package(path)
                     if r["error"]:
                         error, outcome = d + ": " + r["error"], "error"
                         break
                     for c in r["commands"]:
-                        mirror.on_event(c["rule"], ())
+                        mirror_step(mirror, c["command"])
                         commands.append(c["command"])
                     if d == "task":
                         tokens["task"] = r["tokens"]
@@ -209,6 +226,7 @@ def main(argv=None):
     os.makedirs(os.path.join(wd, "hier"), exist_ok=True)
     for s in gen_hier.SPECS:
         shutil.copy(os.path.join(ROOT, "domains", "hier", s + "_domain.llp"), os.path.join(wd, "hier", s + "_domain.llp"))
+    shutil.copy(os.path.join(ROOT, "domains", "hier", "capacity.llp"), os.path.join(wd, "hier", "capacity.llp"))
     shutil.copy(os.path.join(ROOT, "domains", "director_domain.llp"), os.path.join(wd, "director_domain.llp"))
     for i, g in enumerate(games):
         r = run_game_director(g, wd) if a.director else run_game(g, wd)

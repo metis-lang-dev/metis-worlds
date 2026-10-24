@@ -141,6 +141,11 @@ class AlfHost:
         self.pending_frames = []                               # the world page's frames (alf-demo): frames() hands them over
         self.things = set(meta["things"]) if meta.get("things") else None   # … and the things it declares
         self.verbs = bool(meta.get("verbs"))                   # the loop's instances: a rule named verb_why is a command (opt-in: a hand domain's bookkeeping rule may start with a verb — go_for, open_dest)
+        # a hierarchy package over the role vocabulary (semantic-map s-d4270bed): the program speaks roles,
+        # this host the room — it reads the world through the map's binding and says its commands, its
+        # lines and its goals through it back in the room's things
+        from semantic_map import SemanticMap
+        self.smap = SemanticMap(meta["map"]) if meta.get("map") else None
         self.beat, self.due, self.script, self.last = 0, (), {}, None   # the AgentHost reads these
         self._reset()
 
@@ -160,6 +165,11 @@ class AlfHost:
             self._take(self.gym.call("step", command=c))
             self.t += 1
 
+    def intent_atom(self, atom):
+        """The mapper's atom (the room's things: the card names them) in the program's roles: a fetch
+        re-projects the map for its goal (metis-agent's AgentHost.submit asks); the atom itself without a map."""
+        return self.smap.intent_atom(atom) if self.smap is not None else atom
+
     def refresh(self):
         """This host's view of the world taken from the shared process as it stands now (another host on
         the log stepped it): no reset, no replay. A planner kept live between its activations (the
@@ -168,6 +178,7 @@ class AlfHost:
         if getattr(self.gym, "shared", False) and self.gym.last is not None:
             self._take(self.gym.last)
             self.t = len(self.gym.history)
+        self.reported = set()                    # a delivered activation reports its result again (reached(p1) in a second task)
 
     def new_episode(self):
         """The same game from its start (alf-demo step 3b, F7: a won game accepts commands that change
@@ -185,6 +196,8 @@ class AlfHost:
 
     def _take(self, out):
         self.dyn = set(out["dynamic"])
+        if self.smap is not None:
+            self.smap.observe(self.dyn)              # the map follows what the robot sees (another host's step too)
         self.admissible = list(out["admissible"])
         self.obs = out["obs"]
         self.won = bool(out.get("won"))
@@ -201,9 +214,11 @@ class AlfHost:
         for rec in self.openable:
             if rec not in opened:
                 r["closed(%s)" % rec] = 1
+        if self.smap is not None:
+            r = self.smap.role_reading(r)            # the world over the bound roles: the binding changed, so does the reading
         if self.observed is not None:
             r = {a: n for a, n in r.items() if a.split("(")[0] in self.observed}
-        if self.things is not None:
+        if self.things is not None and self.smap is None:
             r = {a: n for a, n in r.items() if all(x in self.things for x in _args(a))}
         return r
 
@@ -217,6 +232,8 @@ class AlfHost:
 
     def command_of(self, name, args):
         base, b = bindings(name)
+        if self.smap is not None:                    # the rule's roles → the map's things
+            b = {k: self.smap.handle(v) or v for k, v in b.items()}
         spec = COMMANDS.get(base)
         if spec is None:
             spec = self.VERBS.get(base.split("_")[0]) if self.verbs else None
@@ -245,7 +262,8 @@ class AlfHost:
 
     # ── the host faces ──
     def bind(self, reg):
-        pass
+        if self.smap is not None:                # the task's belief port: where the map believes the target is
+            reg.weight("look", lambda args, counts: self.smap.belief(*args))
 
     def on_event(self, name, args):
         cmd = self.command_of(name, args)
@@ -286,7 +304,7 @@ class AlfHost:
         self.beat += 1
         self.stepped = False
         reading = self.reading()
-        own = sorted(a for a, n in counts.items() if n > 0 and a not in reading and a.split("(")[0] not in DYNAMIC_PREDS)
+        own = sorted(a for a, n in counts.items() if n > 0 and a not in reading and a.split("(")[0] not in self.dynamic_preds())
         out = [a for a in own if a.split("(")[0] in self.out and a not in self.reported]
         tokens = [a for a in own if a not in out]
         dos = self.sync(counts)
@@ -301,6 +319,10 @@ class AlfHost:
             self.reported |= set(out)
         return dos
 
+    def dynamic_preds(self):
+        """The predicates the world owns in this program (sync may retract them): a role host's place facts too."""
+        return DYNAMIC_PREDS | PLACE_PREDS if self.smap is not None else DYNAMIC_PREDS
+
     def sync(self, counts):
         """The do-lines that bring the program's dynamic facts to the game's (the policy's
         own tokens untouched)."""
@@ -312,7 +334,7 @@ class AlfHost:
                 dos.append("+%s %d" % (a, n - have))
         for a, have in sorted(counts.items()):
             base = a.split("(")[0]
-            if have > 0 and a not in reading and base in DYNAMIC_PREDS:
+            if have > 0 and a not in reading and base in self.dynamic_preds():
                 dos.append("-%s %d" % (a, have))
         return dos
 
@@ -346,6 +368,10 @@ class AlfHost:
         metis-agent's service says the director's lines with it (nina's alf-demo review N3)."""
         import re
         from semantic_map import spoken
+        if getattr(self, "smap", None) is not None:   # a role said as the thing it is bound to: name(role, thing)
+            names = dict(self.smap.names())
+            if names:
+                text = re.sub(r"\b(%s)\b" % "|".join(sorted(names, key=len, reverse=True)), lambda m: names[m.group(0)], text)
         return re.sub(r"\b[a-z]+\d+\b", lambda m: spoken(m.group(0)) if m.group(0) in self.to_name else m.group(0), text)
 
     GOALS = {"goto": "going to {0}", "open": "opening {0}", "take": "taking {0}", "put": "moving {0} to {1}"}
@@ -358,9 +384,19 @@ class AlfHost:
         name, _, rest = goal.partition("(")
         words = self.GOALS.get(name)
         args = [a.strip() for a in rest.rstrip(")").split(",")] if rest else []
+        if getattr(self, "smap", None) is not None:
+            args = [self.smap.handle(a) or a for a in args]
         if words is None or words.count("{") != len(args):
             return None
         return words.format(*(spoken(a) if a in self.to_name else a for a in args))
+
+    def in_room(self, atom):
+        """An atom of the program's roles with its roles as the things they are bound to (goto(p1) →
+        goto(countertop3)): the hierarchy's chain as the page shows it; the atom itself without a map."""
+        if getattr(self, "smap", None) is None or "(" not in atom:
+            return atom
+        name, _, rest = atom.partition("(")
+        return "%s(%s)" % (name, ",".join(self.smap.handle(a.strip()) or a.strip() for a in rest.rstrip(")").split(",")))
 
     def frames(self):
         """The world page's frames since the last call (metis-agent's service sends them on the wire)."""
@@ -371,6 +407,7 @@ class AlfHost:
         return {"game": {"path": self.game, "task": self.task, "params": self.params, "step": self.t,
                          "done": self.done, "won": self.won},
                 "observed": sorted({a.split("(")[0] for a in self.dyn} | {"closed", "handsfree", "holding"}),
+                **({"names": self.smap.names()} if self.smap is not None else {}),     # name(role, thing) as data
                 "commands": [[b, n, c, adm, ch] for b, n, c, adm, ch in self.commands]}
 
     def snapshot(self):
@@ -389,6 +426,8 @@ class AlfHost:
 # the program's dynamic predicates (the ones sync may retract): ground.py's, plus the complements
 from ground import DYNAMIC as _DYN  # noqa: E402
 DYNAMIC_PREDS = set(_DYN) | {"closed", "handsfree", "holding"}
+PLACE_PREDS = {"recat", "openable", "notopenable"}     # a role host's too: the projection asserts the place facts (a flat
+                                                       # program's are static, or its own: a learned split's to keep)
 
 
 def make(case=None, package_dir=None):

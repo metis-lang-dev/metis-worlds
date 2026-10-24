@@ -149,6 +149,54 @@ puts out `done`, the director ends the run); re-instancing takes a domain's HELD
 the world's facts or its results (`director_host.own_tokens`); an installed task seeds no fetch
 (`install(person=True)`): the person's FETCH is its goal. Step 4 is the user's gate.
 
+## Roles, not rooms (semantic-map s-d4270bed step 2)
+
+The room left the source. Each specialist is compiled ONCE: `domains/hier/<spec>/<spec>.llp` is
+its base plus `domains/hier/capacity.llp`, the role vocabulary (`gen_hier.capacity(k)`, k = 8
+committed):
+
+- `object {target other}`;
+- `receptacle {dest p0 p1..pk}`;
+- `location {lhere ldest l1..lk}`.
+
+The task's statics hold in every room (`target(target). dest(dest). nottarget(other).
+notdest(p0..pk).`). The room lives in the host: `semantic_map.SemanticMap`, one
+`domains/hier/.map.json` beside the commands log. It holds the places, the things, the agent,
+the task, and a belief per thing.
+
+**The projection.** Per goal, `project(obj, rec)` binds the roles to the map's entries:
+- `target`: the goal's object, when the task wants it;
+- `other`: a named object it does not want;
+- `dest`: the goal's receptacle, when it is a dest;
+- `p0`: the receptacle where the robot stands;
+- `p1..pk`: a named non-dest receptacle, then the places by belief of holding the target;
+- the location roles follow their places, and a shared location keeps one role.
+
+**What follows from it:**
+- **The reading.** The hosts read the world through the binding (`role_reading`, with
+  recat/openable/notopenable now dynamic facts the projection asserts).
+- **Rebinding.** A rebinding is the host's sync, retract and assert on the live session, so
+  nothing is recompiled.
+- **Delivery.** `director_host.deliver()` gives every domain its next activation as do-lines;
+  `instance()` only re-projects for a reload (a new game).
+- **The room's terms.** The person's FETCH arrives in the room's terms (the card is built from
+  the map); `AlfHost.intent_atom` projects it.
+- **The voice.** The commands, the voice (`speak`), the goal text and the chain (`in_room`) say
+  the bound things; `ports()` carries `name(role, thing)`.
+- **Belief.** The task's `go_for` is weighted by `look(O, R)`, the map's normalized belief.
+
+Grounding (CPU, `test_the_capacity_grounds_small`):
+
+| specialist | k = 4 | k = 8 (committed) | k = 16 |
+|---|---|---|---|
+| nav | 216 events, 1 ms | 1,000, 3 ms | 5,832, 18 ms |
+| access | 288, 2 ms | 1,200, 4 ms | 6,480, 18 ms |
+| grasp / place | 588, 3 ms | 2,420, 9 ms | 12,996, 42 ms |
+| task | 134, 2 ms | 218, 3 ms | 386, 3 ms |
+
+The full room was 159k events for grasp/place, and today's narrowed instance about 3k, paid on
+every activation. With roles, grounding is paid once, at load.
+
 ## What it gives the agent paper
 
 The same family, three programs: flat (step 1 of world-alfworld), hierarchical by hand

@@ -18,6 +18,9 @@ from alf_host import AlfHost  # noqa: E402
 
 def stats(instance, base):
     t = open(instance).read()
+    cap = os.path.join(os.path.dirname(base), "capacity.llp")     # a role instance's types are the capacity's (semantic-map step 2)
+    if 'include "' in t and os.path.exists(cap) and "capacity.llp" in t:
+        t += open(cap).read()
     kinds = {m.group(1): len(m.group(2).split()) for m in re.finditer(r"^type (\w+) \{([^}]*)\}", t, re.M)}
     facts = sum(1 for l in t.splitlines() if re.match(r"^[a-z]\w*\(.*\)\.$", l))
     init = sum(1 for l in t.splitlines() if l.startswith("#init"))
@@ -41,18 +44,18 @@ def measure(game, wd):
     try:
         info = dict(info, static=sorted(h.static), task_type=h.task, params=h.params)
         reading = h.reading()
+        smap = gen_hier.build_map(os.path.join(wd, ".map.json"), info, h)
     finally:
         h.gym.close()
     rows = {"flat": stats(path, os.path.join(ROOT, "domains", "alfred_domain.llp"))}
     # the activation instances along the task's own plan on this game: the first target, its receptacle, the first destination
-    targets = sorted(a[len("target("):-1] for a in gen_hier.static_facts("task", info) if a.startswith("target("))
-    dests = sorted(a[len("dest("):-1] for a in gen_hier.static_facts("task", info) if a.startswith("dest("))
+    targets, dests = gen_hier.task_goal(info)
     o, d = targets[0], dests[0]
     rec = next(a for a in reading if a.startswith("inrecep(%s," % o))[8:-1].split(",")[1]
     goals = {"task": gen_hier.seed(info), "nav": ["goto(%s)" % rec], "access": ["open(%s)" % rec], "grasp": ["take(%s)" % o],
              "place": ["put(%s,%s)" % (o, d)]}
     for spec in gen_hier.SPECS:
-        p = gen_hier.generate(game, os.path.join(wd, "pk"), spec, 0, info, reading, goals[spec], [])
+        p = gen_hier.generate(game, os.path.join(wd, "pk"), spec, 0, info, smap, reading, [smap.intent_atom(g) for g in goals[spec]], [])
         rows[spec] = stats(p, os.path.join(ROOT, "domains", "hier", spec + "_domain.llp"))
     return rows
 

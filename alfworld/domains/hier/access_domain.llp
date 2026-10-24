@@ -10,9 +10,9 @@ types (receptacle location).   % completed by the instance that includes this fi
 
 namespace access produce (dyn).
 
-bwd recat(receptacle, location).
-bwd openable(receptacle).
-bwd notopenable(receptacle).              % the complement, given by the instance
+pred recat(receptacle, location) : access.
+pred openable(receptacle) : access.
+pred notopenable(receptacle) : access.              % the complement: recat and both, the projection's (the map)
 
 pred at(location) : access.
 pred opened(receptacle) : access.

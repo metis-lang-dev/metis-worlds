@@ -19,8 +19,12 @@ namespace task produce (dyn).
 
 bwd target(object).                       % the task: an object the task wants moved
 bwd dest(receptacle).                     % … and a receptacle it wants it in
-bwd notdest(receptacle).                  % the complements, given by the instance
+bwd notdest(receptacle).                  % the complements, given by the instance (over roles: task/task.llp)
 bwd nottarget(object).
+
+% the belief that the object is in the receptacle (semantic-map s-d4270bed): the host answers it from
+% the semantic map, normalized over the places asserted to hold it
+weight look(O, R) reads {inrecep(O, R)}.
 
 pred inrecep(object, receptacle) : task.  % the world: where the target is
 pred holds(object) : task.                % … or that the agent holds it (a stop after the take: opus's F12)
@@ -59,7 +63,7 @@ stage act {
   %% {O} is not what this task fetches. | put {T} in {R} | stop
   not_target [dyn] : fetch(O, R) * $nottarget(O) * $target(T) -o wrong_object(O).
   %% {O} is in {R}: I go there.
-  go_for [dyn] : want(O) * start * $inrecep(O, R) -o want(O) * goto(R).
+  go_for [dyn] : want(O) * start * $inrecep(O, R) -o want(O) * goto(R)  @w look(O, R).
   %% At {R}: I need it open.
   open_for [dyn] : want(O) * reached(R) * $inrecep(O, R) -o want(O) * open(R).
   %% {R} is accessible: I take {O}.

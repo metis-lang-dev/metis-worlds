@@ -9,9 +9,9 @@ types (receptacle location object).   % completed by the instance that includes 
 
 namespace place produce (dyn).
 
-bwd recat(receptacle, location).
-bwd openable(receptacle).
-bwd notopenable(receptacle).
+pred recat(receptacle, location) : place.    % the projection's, as openable/notopenable (the map)
+pred openable(receptacle) : place.
+pred notopenable(receptacle) : place.
 
 pred at(location) : place.
 pred objat(object, location) : place.

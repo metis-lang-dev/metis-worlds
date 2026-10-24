@@ -149,6 +149,7 @@ def test_hierarchy_wins_by_manual_switch(tmp_path):
     os.makedirs(os.path.join(wd, "hier"))
     for s in gen_hier.SPECS:
         shutil.copy(os.path.join(ROOT, "domains", "hier", s + "_domain.llp"), os.path.join(wd, "hier", s + "_domain.llp"))
+    shutil.copy(os.path.join(ROOT, "domains", "hier", "capacity.llp"), os.path.join(wd, "hier", "capacity.llp"))
     r = hier.run_game(game_dir(), wd)
     assert r["error"] is None, r
     assert r["won"] and r["outcome"] == "done", r
@@ -164,11 +165,13 @@ def test_hierarchy_instances_see_less(tmp_path):
     try:
         info = dict(info, static=sorted(h.static), task_type=h.task, params=h.params)
         reading = h.reading()
+        smap = gen_hier.build_map(str(tmp_path / "map.json"), info, h)
     finally:
         h.gym.close()
     flat_init = sum(1 for l in open(path) if l.startswith("#init"))
+    seed = [smap.intent_atom(gen_hier.seed(info)[0])]
     for spec in gen_hier.SPECS:
-        p = gen_hier.generate(game_dir(), str(tmp_path / "pk"), spec, 0, info, reading, gen_hier.seed(info), [])
+        p = gen_hier.generate(game_dir(), str(tmp_path / "pk"), spec, 0, info, smap, reading, seed, [])
         init = sum(1 for l in open(p) if l.startswith("#init"))
         assert init < flat_init, (spec, init, flat_init)
         assert gen_hier.vector(spec)["rules"] <= 14          # the task domain: 14 with `already` and `held` (alf-demo step 3b, F8/F12)
@@ -186,14 +189,15 @@ def test_activation_cards(tmp_path):
     try:
         info = dict(info, static=sorted(h.static), task_type=h.task, params=h.params)
         reading = h.reading()
+        smap = gen_hier.build_map(str(tmp_path / "map.json"), info, h)
     finally:
         h.gym.close()
     kinds = info["handles"]["kind"]
     pick = {a[len("pickupable("):-1] for a in info["static"] if a.startswith("pickupable(")}
-    plain = os.path.dirname(gen_hier.generate(game_dir(), str(tmp_path / "plain"), "nav", 0, info, reading, [], []))
+    plain = os.path.dirname(gen_hier.generate(game_dir(), str(tmp_path / "plain"), "nav", 0, info, smap, reading, [], []))
     assert sorted(os.listdir(plain)) == ["alf_host.py", "domain.yaml", "game.json", "nav.llp"]
     for spec in gen_hier.SPECS:
-        pkg = os.path.dirname(gen_hier.generate(game_dir(), str(tmp_path / "pk"), spec, 0, info, reading, [], [],
+        pkg = os.path.dirname(gen_hier.generate(game_dir(), str(tmp_path / "pk"), spec, 0, info, smap, reading, [], [],
                                                 intents=True))
         assert "intent: {spec: intent.yaml}" in open(os.path.join(pkg, "domain.yaml")).read()
         c = yaml.safe_load(open(os.path.join(pkg, "intent.yaml")))
@@ -219,6 +223,7 @@ def _hier_workdir(tmp_path):
     os.makedirs(os.path.join(wd, "hier"))
     for s in gen_hier.SPECS:
         shutil.copy(os.path.join(ROOT, "domains", "hier", s + "_domain.llp"), os.path.join(wd, "hier", s + "_domain.llp"))
+    shutil.copy(os.path.join(ROOT, "domains", "hier", "capacity.llp"), os.path.join(wd, "hier", "capacity.llp"))
     return wd
 
 
@@ -254,6 +259,10 @@ def test_director_detours_a_goal_from_elsewhere(tmp_path):
         h.gym.close()
     r = hier.run_game_director(game_dir(), wd, first=["open(%s)" % far])
     assert r["error"] is None, r
+    import semantic_map
+    smap = semantic_map.SemanticMap(os.path.join(wd, gen_instance.instance_id(game_dir()), ".map.json"))
+    far = smap.role_of(far)                            # the activations speak roles: far is bound for the person's goal
+    assert far and far.startswith("p")
     assert [(a["spec"], a["result"]) for a in r["activations"]][:3] == [
         ("access", ["elsewhere(%s)" % far]), ("nav", ["reached(%s)" % far]), ("access", ["accessible(%s)" % far])]
     detour = next(b for b in r["beats"] if b["arrival"] == "elsewhere(%s)" % far)
@@ -325,13 +334,15 @@ def test_hierarchy_continues_after_a_result(tmp_path):
     mirror = AlfHost(flat_pkg)
     try:
         info = dict(info, static=sorted(mirror.static), task_type=mirror.task, params=mirror.params)
-        rec = next(a for a in mirror.static if a.startswith("recat("))[6:-1].split(",")[0]
         reading = mirror.reading()
+        smap = gen_hier.build_map(os.path.join(wd, "map.json"), info, mirror)
     finally:
         mirror.gym.close()
+    smap.project(*gen_hier.args_of(gen_hier.seed(info)[0]))
+    rec = "dest"                                                          # a role: the nav specialist speaks roles
     for continues in (False, True):
         out_dir = os.path.join(wd, "c%d" % continues)
-        path = gen_hier.generate(game_dir(), out_dir, "nav", 0, info, reading, gen_hier.seed(info) + ["goto(%s)" % rec], [],
+        path = gen_hier.generate(game_dir(), out_dir, "nav", 0, info, smap, reading, ["goto(%s)" % rec], [],
                                  domain_rel=os.path.join(ROOT, "domains", "hier", "nav_domain.llp"), continues=continues)
         h = AlfHost(os.path.dirname(path))
         try:
@@ -361,6 +372,8 @@ def test_install_director_for_the_agent(tmp_path):
         meta = json.load(open(os.path.join(pk[d], "game.json")))
         assert meta["continues"] and meta["commands_log"].endswith(".commands.jsonl"), d
     assert "#init fetch(" not in open(os.path.join(pk["task"], "task.llp")).read()      # person=True: the FETCH is typed, not seeded (W6)
+    for d in ("task", "nav", "access", "grasp", "place"):      # each is its committed instance, byte for byte (semantic-map step 2)
+        assert open(os.path.join(pk[d], d + ".llp")).read() == open(os.path.join(ROOT, "domains", "hier", d, d + ".llp")).read(), d
     h = DirectorHost(pk["director"])
     h.world(["+seen(goto) 1"])
     assert h.tick({}) == ["+seen(goto) 1"]
@@ -372,9 +385,9 @@ def test_install_director_for_the_agent(tmp_path):
         rec = next(a for a in sorted(m.static) if a.startswith("recat("))[6:-1].split(",")[0]
     finally:
         m.gym.close()
-    assert h.instance("nav", "goto(%s)" % rec, []) is True
-    llp = open(os.path.join(pk["nav"], "nav.llp")).read()
-    assert "#init goto(%s) 1" % rec in llp
+    before = open(os.path.join(pk["nav"], "nav.llp")).read()
+    assert h.instance("nav", None, []) is True                      # a reload's start: the map re-projected, the program untouched
+    assert open(os.path.join(pk["nav"], "nav.llp")).read() == before
     # the log is the world's state: a nav host made now replays it (empty: t == 0); after a step the
     # log has one line and the next host made over the flat package starts one step in
     nav = AlfHost(pk["nav"])
@@ -395,22 +408,27 @@ def test_install_director_for_the_agent(tmp_path):
             assert out.returncode == 0 and "error" not in out.stdout.lower(), (d, out.stdout[-400:] + out.stderr[-200:])
 
 
-def test_a_planners_delivery_is_its_new_instance(tmp_path):
-    """alf-demo 3b timing: deliver(task, goal, tokens) brings the live planner's counts to exactly
-    what instance(task, goal, tokens) would start it at — its put-out sub-goals and stale world facts
-    gone, its own tokens one each, the goal in, the world's facts as the log says — so the agent
-    takes them as one row instead of a reload; a specialist is not delivered."""
+def test_a_delivery_is_the_activations_start(tmp_path):
+    """alf-demo 3b timing, semantic-map step 2: deliver(D, goal, tokens) brings ANY hierarchy domain's
+    live session to its next activation — its put-out atoms and stale world facts gone, its own tokens
+    one each, the goal in, the world's facts in roles through the map's binding — so the agent takes
+    them as one row and never reloads; the live planner's host follows the shared world when refreshed."""
     import collections
     from director_host import DirectorHost
+    from alf_host import AlfHost
     root = str(tmp_path)
     pk = gen_hier.install(game_dir(), root)
     h = DirectorHost(pk["director"])
-    task = open(os.path.join(pk["task"], "task.llp")).read()
-    obj = next(a for a in task.splitlines() if a.startswith("#init inrecep("))[len("#init inrecep("):].split(",")[0]
-    rec = next(a for a in task.splitlines() if a.startswith("#init inrecep(%s," % obj)).split(",")[1].split(")")[0]
-    tokens = {"want(%s)" % obj: 1, "to(%s)" % rec: 2, "goto(%s)" % rec: 1, "done": 1,     # a put-out sub-goal, an out, a count of 2
-              "holds(%s)" % obj: 1,                                                    # a stale world fact (the log says it is in rec)
-              "inrecep(%s,%s)" % (obj, rec): 1}
+    th = AlfHost(pk["task"])
+    try:
+        world = th.reading()                                              # the task's world in roles
+    finally:
+        th.gym.close()
+    rec = next(a for a in world if a.startswith("inrecep(target,"))[len("inrecep(target,"):-1]
+    assert rec == "p1"                                                    # p1: where the map believes the target is
+    tokens = {"want(target)": 1, "to(dest)": 2, "goto(%s)" % rec: 1, "done": 1,  # a put-out sub-goal, an out, a count of 2
+              "holds(target)": 1,                                         # a stale world fact (the map says it is in p1)
+              "inrecep(target,%s)" % rec: 1}
     goal = "reached(%s)" % rec
     lines = h.deliver("task", goal, tokens)
     got = collections.Counter(tokens)
@@ -418,23 +436,23 @@ def test_a_planners_delivery_is_its_new_instance(tmp_path):
         atom, n = l[1:].split()
         got[atom] += int(n) if l[0] == "+" else -int(n)
     got = {a: n for a, n in got.items() if n > 0}
-    assert h.instance("task", goal, tokens) is True
-    want = collections.Counter(l.split()[1] for l in open(os.path.join(pk["task"], "task.llp")).read().splitlines() if l.startswith("#init "))
-    assert got == dict(want), (sorted(set(got.items()) ^ set(want.items())))[:10]
-    assert "-goto(%s) 1" % rec in lines and "-holds(%s) 1" % obj in lines and "+%s 1" % goal in lines
-    assert h.deliver("nav", "goto(%s)" % rec, {}) is None
-    # the live planner's own host follows the shared world when refreshed: a specialist's command on the
-    # same log moves the world, and the task's host reads it after refresh() (no reset, no replay)
-    from alf_host import AlfHost
-    th, nav = AlfHost(pk["task"]), AlfHost(pk["nav"])
+    want = dict(collections.Counter([a for a in world if a.split("(")[0] in gen_hier.SPECS["task"]["dyn"]]
+                                    + ["want(target)", "to(dest)", goal]))
+    assert got == want, sorted(set(got.items()) ^ set(want.items()))[:10]
+    assert "-goto(%s) 1" % rec in lines and "-holds(target) 1" in lines and "+%s 1" % goal in lines
+    nav = h.deliver("nav", "goto(%s)" % rec, {"reached(dest)": 1, "at(lhere)": 1})   # a specialist too: its last result retracted
+    assert "+goto(%s) 1" % rec in nav and "-reached(dest) 1" in nav and "+recat(%s,l1) 1" % rec in nav
+    assert not any(a.startswith(("+inrecep", "+holds")) for a in nav)      # only what nav observes
+    assert h.deliver("director", None, {}) is None
+    th, nh = AlfHost(pk["task"]), AlfHost(pk["nav"])
     try:
-        loc = next(a for a in sorted(nav.static) if a.startswith("recat(%s," % rec))[6:-1].split(",")[1]
-        nav.on_event("go[R=%s,L2=%s]" % (rec, loc), ())
-        assert nav.t == 1 and th.t == 0
+        loc = nh.smap.handle("l1")
+        nh.on_event("go[R=%s,L2=l1]" % rec, ())
+        assert nh.t == 1 and th.t == 0 and nh.commands[-1][2] == "go to " + nh.name(nh.smap.handle(rec))
         th.refresh()
-        assert th.t == 1 and th.dyn == nav.dyn            # each reading is its package's predicates: the world view is dyn
+        assert th.t == 1 and th.dyn == nh.dyn and "at(%s)" % loc in th.dyn
     finally:
-        nav.gym.close()
+        nh.gym.close()
         th.gym.close()
 
 
@@ -523,11 +541,13 @@ def _task_instance(wd, name, reading, init):
     try:
         info = dict(json.load(open(os.path.join(fp, "game.json"))), static=sorted(m.static), task_type=m.task, params=m.params)
         world = m.reading()
+        smap = gen_hier.build_map(os.path.join(wd, name + ".map.json"), info, m)
     finally:
         m.gym.close()
     dom = os.path.relpath(os.path.join(ROOT, "domains", "hier", "task_domain.llp"), os.path.join(wd, name, "task-0"))
-    rd = reading(info, world)
-    path = gen_hier.generate(game_dir(), os.path.join(wd, name), "task", 0, info, rd, init(info), [], domain_rel=dom)
+    start = [smap.intent_atom(a) for a in init(info)]          # the goal in the room's terms, projected onto the roles
+    rd = {a: 1 for a in reading(info, world)}
+    path = gen_hier.generate(game_dir(), os.path.join(wd, name), "task", 0, info, smap, rd, start, [], domain_rel=dom)
     out = subprocess.run([os.environ["METISC"], "--run", path], capture_output=True, text=True, timeout=300)
     assert out.returncode == 0, out.stderr[-500:]
     fired = [l.split()[2].split("[")[0] for l in out.stdout.splitlines() if l.startswith("T ")]
@@ -571,7 +591,8 @@ def test_the_asks_carry_their_answers(tmp_path):
             assert re.search(r"\(\s*%s\s*[,)]|,\s*%s\s*[,)]" % (v, v), rule.split("-o")[0]), (name, v, rule)
     def notdest(info):
         o = gen_hier.seed(info)[0][6:-1].split(",")[0]
-        nd = sorted(a[8:-1] for a in gen_hier.static_facts("task", info) if a.startswith("notdest("))[0]
+        dests = gen_hier.task_goal(info)[1]
+        nd = sorted(r for r in (a[6:-1].split(",")[0] for a in info["static"] if a.startswith("recat(")) if r not in dests)[0]
         return ["fetch(%s,%s)" % (o, nd)]
     fired, final = _task_instance(str(tmp_path), "notdest", lambda info, world: world, notdest)
     assert fired == ["not_dest"] and "wrong_dest(" in final, (fired, final)
@@ -638,3 +659,183 @@ def test_every_lifted_base_compiles_alone():
     for p in bases:
         out = subprocess.run([os.environ["METISC"], p], capture_output=True, text=True, timeout=120)
         assert out.returncode == 0 and "; abstract " in out.stdout, (p, out.stderr[-600:])
+
+
+# ── semantic-map s-d4270bed step 2: the room as data — roles in the program, the map in the host ──
+ROLES_HIER = os.path.join(ROOT, "domains", "hier")
+
+
+def _kitchen_handles():
+    """Every handle the demo-style test game has (objects, receptacles, locations)."""
+    path, _, _ = gen_instance.generate(game_dir(), os.path.join(__import__("tempfile").mkdtemp(), "h"))
+    return set(json.load(open(os.path.join(os.path.dirname(path), "game.json")))["handles"]["kind"])
+
+
+def test_no_room_in_any_specialists_source(tmp_path):
+    """The five committed instances and the capacity name no thing of any room; they are what
+    gen_hier writes (committed(), capacity()); an install writes no specialist source but them."""
+    import re
+    handles = _kitchen_handles()
+    for f in ["capacity.llp"] + ["%s/%s.llp" % (s, s) for s in gen_hier.SPECS]:
+        text = open(os.path.join(ROLES_HIER, f)).read()
+        words = set(re.findall(r"\b[a-z]+\d+\b", re.sub(r"%.*", "", text)))
+        assert not words & handles, (f, sorted(words & handles)[:5])
+    assert open(os.path.join(ROLES_HIER, "capacity.llp")).read() == gen_hier.capacity()
+    for s in gen_hier.SPECS:
+        assert open(os.path.join(ROLES_HIER, s, s + ".llp")).read() == gen_hier.committed(s), s
+    pk = gen_hier.install(game_dir(), str(tmp_path))
+    for s in gen_hier.SPECS:
+        llps = [f for f in os.listdir(pk[s]) if f.endswith(".llp")]
+        assert llps == [s + ".llp"] and open(os.path.join(pk[s], llps[0])).read() == gen_hier.committed(s), s
+
+
+def test_no_role_is_a_word_of_a_doc_line():
+    """A role is said as its thing in every line (AlfHost.speak replaces the bound roles' words): no
+    rule's %% line may use a role's name as a plain word, or the voice would rename it too."""
+    import re
+    import semantic_map
+    roles = set(semantic_map.OBJECT_ROLES) | set(semantic_map.place_roles(16)) | set(semantic_map.location_roles(16))
+    for f in [os.path.join(ROLES_HIER, s + "_domain.llp") for s in gen_hier.SPECS] + [os.path.join(ROOT, "domains", "director_domain.llp")]:
+        for line in open(f):
+            if line.strip().startswith("%%"):
+                plain = re.sub(r"\{\w+\}", "", line)
+                assert not set(re.findall(r"\b\w+\b", plain)) & roles, (f, line.strip())
+
+
+@pytest.mark.parametrize("k", [8, 16])
+def test_the_capacity_grounds_small(tmp_path, k):
+    """The committed role bases ground small at k = 8 (the committed capacity) and k = 16 (capacity(16)):
+    with the place facts dynamic (the projection asserts recat/openable) a rule ranges over every
+    location × receptacle role, so grasp/place grow as places³ — 2.4k events at 8, 13k at 16, against
+    the room's 160k and today's ~3k per activation, paid once at load (step 2's report has the table)."""
+    import shutil, time
+    from metis.lang.compiler import load_llp
+    d = tmp_path / "hier"
+    shutil.copytree(ROLES_HIER, d, ignore=shutil.ignore_patterns("*.tsv", "intent.yaml"))
+    (d / "capacity.llp").write_text(gen_hier.capacity(k))
+    bound = {8: 3000, 16: 15000}[k]
+    for s in gen_hier.SPECS:
+        if k != 8:
+            (d / s / (s + ".llp")).write_text(gen_hier.instance_text(s, "../%s_domain.llp" % s, "../capacity.llp", k=k))
+        t0 = time.perf_counter()
+        prog = load_llp(d / s / (s + ".llp")).catalog.ground({})
+        dt = time.perf_counter() - t0
+        events = sum(len(v) for v in prog.stages.values()) + len(prog.links)
+        assert 0 < events <= bound and dt < 2.0, (s, k, events, dt)
+
+
+def _role_install(tmp_path):
+    from alf_host import AlfHost
+    pk = gen_hier.install(game_dir(), str(tmp_path))
+    return pk, AlfHost(pk["task"])
+
+
+def test_the_projection_binds_the_goals_working_set(tmp_path):
+    """project(): target the task's object, dest its receptacle, p1 where the map believes the target
+    is, p0 where the robot stands; a location shared by two receptacles is one role; a fetch of an
+    object the task does not want binds `other`, of a receptacle it does not want a p slot."""
+    pk, th = _role_install(tmp_path)
+    try:
+        m = th.smap
+        d = m.load()
+        b = m.binding()
+        tgt, dst = d["task"]["targets"][0], d["task"]["dests"][0]
+        assert b["target"] == tgt and b["dest"] == dst and b["p1"] == d["things"][tgt]["in"]
+        assert b["lhere"] == d["agent"]["at"] and b["ldest"] == d["places"][dst]["loc"]
+        locs = {}
+        for r, p in d["places"].items():
+            locs.setdefault(p["loc"], []).append(r)
+        shared = next(rs for l, rs in sorted(locs.items()) if len(rs) > 1 and dst not in rs)
+        b = m.project(None, shared[0])                          # a named non-dest receptacle: p1; its neighbour too
+        b = m.project(None, shared[0])
+        m.data["belief"][tgt] = {shared[0]: 0.5, shared[1]: 0.5}   # an uncertain belief: two places
+        b = m.project(tgt, None)
+        assert {b["p1"], b["p2"]} == set(shared) and b["l1"] == d["places"][shared[0]]["loc"] and "l2" not in b
+        rd = m.role_reading({})
+        assert rd["recat(p1,l1)"] == rd["recat(p2,l1)"] == 1          # one location role for both
+        other = sorted(o for o, t in d["things"].items() if t["pickupable"] and o not in d["task"]["targets"])[0]
+        assert m.intent_atom("fetch(%s,%s)" % (other, dst)) == "fetch(other,dest)" and m.binding()["other"] == other
+        nd = sorted(r for r in d["places"] if r not in d["task"]["dests"])[0]
+        assert m.intent_atom("fetch(%s,%s)" % (tgt, nd)) == "fetch(target,p1)" and m.binding()["p1"] == nd
+        assert m.intent_atom("fetch(target,dest)") == "fetch(target,dest)"     # already roles
+    finally:
+        th.gym.close()
+
+
+def test_a_rebinding_is_a_sync_on_the_live_session(tmp_path):
+    """Moved/new is the host's: a second goal re-projects the map, and the SAME host's next tick
+    retracts the old role atoms and asserts the new ones — the counts then are a fresh reading's,
+    no reload, no recompile."""
+    pk, th = _role_install(tmp_path)
+    try:
+        counts = dict(th.reading())
+        assert th.tick(counts) == []                             # at the world's state: nothing to sync
+        d = th.smap.load()
+        nd = sorted(r for r in d["places"] if r not in d["task"]["dests"] and r != th.smap.handle("p1"))[0]
+        held = th.smap.handle("p1")
+        assert th.intent_atom("fetch(%s,%s)" % (d["task"]["targets"][0], nd)) == "fetch(target,p1)"
+        assert th.smap.handle("p1") == nd and th.smap.handle("p2") == held     # the target's place moved to p2
+        dos = th.tick(counts)
+        assert "-inrecep(target,p1) 1" in dos and "+inrecep(target,p2) 1" in dos, dos
+        for l in dos:
+            a, n = l[1:].split()
+            counts[a] = counts.get(a, 0) + (int(n) if l[0] == "+" else -int(n))
+        assert {a: n for a, n in counts.items() if n} == th.reading()
+    finally:
+        th.gym.close()
+
+
+def test_the_host_says_the_roles_as_the_rooms_things(tmp_path):
+    """name(role, thing) as data: the commands, the voice, the goal text and the page's chain say
+    the room's things; the rules say roles."""
+    from alf_host import AlfHost
+    pk, th = _role_install(tmp_path)
+    gh = AlfHost(pk["grasp"])
+    try:
+        b = th.smap.binding()
+        names = dict(th.ports()["names"])
+        assert names["target"] == b["target"] and names["dest"] == b["dest"] and "lhere" not in names
+        assert gh.command_of("take_plain[O=target,L=l1,R=p1]", ()) == "take %s from %s" % (gh.name(b["target"]), gh.name(b["p1"]))
+        from semantic_map import spoken
+        assert th.speak("I take target from p1.") == "I take %s from %s." % (spoken(b["target"]), spoken(b["p1"]))
+        assert th.goal_text("goto(p1)") == "going to " + spoken(b["p1"])
+        assert th.in_room("reached(p1)") == "reached(%s)" % b["p1"] and th.in_room("done") == "done"
+    finally:
+        gh.gym.close()
+        th.gym.close()
+
+
+def test_the_belief_port_reads_the_map(tmp_path):
+    """The task's `look(O, R)` weight: the map's belief that O is in R, normalized over the bound
+    places — 1.0 where it is seen, 0 elsewhere, flat when the map knows nothing; the host binds it."""
+    pk, th = _role_install(tmp_path)
+
+    class Reg:
+        def __init__(self):
+            self.w = {}
+
+        def weight(self, name, fn):
+            self.w[name] = fn
+    try:
+        reg = Reg()
+        th.bind(reg)
+        look = reg.w["look"]
+        assert look(("target", "p1"), {}) == 1.0 and look(("target", "dest"), {}) == 0.0
+        assert look(("other", "p1"), {}) == 1.0                  # unbound: the map has no belief, flat
+        m = th.smap
+        m.data["belief"][m.handle("target")] = {m.handle("p1"): 0.3, m.handle("dest"): 0.1}
+        assert abs(look(("target", "p1"), {}) - 0.75) < 1e-9
+    finally:
+        th.gym.close()
+
+
+@pytest.mark.skipif(not os.environ.get("METISC"), reason="METISC is not set")
+def test_a_fetch_of_another_thing_is_refused_by_roles(tmp_path):
+    """F1 over roles: a person's fetch of an object the task does not want binds it to `other`;
+    not_target refuses it and asks with the task's own target."""
+    def other(info):
+        targets = gen_hier.task_goal(info)[0]
+        pick = sorted(a[len("pickupable("):-1] for a in info["static"] if a.startswith("pickupable("))
+        return ["fetch(%s,%s)" % (next(o for o in pick if o not in targets), gen_hier.task_goal(info)[1][0])]
+    fired, final = _task_instance(str(tmp_path), "other", lambda info, world: world, other)
+    assert fired == ["not_target"] and "wrong_object(other)" in final, (fired, final)

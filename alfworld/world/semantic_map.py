@@ -174,3 +174,218 @@ if __name__ == "__main__":
         json.dump(m, f, indent=1)
     print("%s: %d places, %d things; task %r → %s" % (m["scene"], len(m["places"]), len(m["things"]),
                                                      m["task"]["text"], m["task"]["goal"]))
+
+
+# ── the store (semantic-map s-d4270bed step 2): the room as data; the hierarchy's roles bound to it ──
+# The specialists are compiled once over a role vocabulary (domains/hier/capacity.llp, gen_hier.capacity);
+# the map lives here, in the host. Per goal the projection binds roles to the map's entries — target ↦ the
+# object the goal wants, dest ↦ where it goes, p0 ↦ the receptacle where the robot stands, p1..pk ↦ the
+# places most likely to hold the target (by belief), the location roles ↦ their places' locations — and the
+# hosts read the world through that binding (role_reading), so a rebinding is a sync's retract + assert on
+# the live session, never a recompile. One file per hierarchy, beside the commands log (.map.json): the
+# agent's hosts share a process, the driver runs one per activation; one writer at a time.
+K = 8                                              # the places a projection binds besides dest and p0 (step 1's measure)
+OBJECT_ROLES = ("target", "other")
+
+
+def place_roles(k=K):
+    return ("dest", "p0") + tuple("p%d" % i for i in range(1, k + 1))
+
+
+def location_roles(k=K):
+    return ("lhere", "ldest") + tuple("l%d" % i for i in range(1, k + 1))
+
+
+class SemanticMap:
+    """places {receptacle: {loc, openable, opened}}, things {object: {in, pickupable}}, belief {object:
+    {receptacle: p}}, agent {at, holding}, task {targets, dests}, binding {role: handle}, k — as JSON at
+    `path`, read again when the file changed (another host wrote it)."""
+
+    def __init__(self, path):
+        self.path, self.data, self._mtime = path, None, None
+
+    @classmethod
+    def build(cls, path, static, dyn, targets, dests, k=K):
+        """The map from the game's facts as the mirror reads them (static and dynamic atoms) and the task's
+        resolved targets and dests; no binding yet."""
+        m = cls(path)
+        st = set(static)
+        places = {}
+        for a in sorted(st):
+            if a.startswith("recat("):
+                r, l = _args(a)
+                places[r] = {"loc": l, "openable": "openable(%s)" % r in st, "opened": False}
+        pick = {_args(a)[0] for a in st if a.startswith("pickupable(")}
+        things = {o: {"in": None, "pickupable": True} for o in sorted(pick)}
+        m.data = {"places": places, "things": things, "belief": {}, "agent": {"at": None, "holding": None},
+                  "task": {"targets": sorted(targets), "dests": sorted(dests)}, "binding": {}, "k": k}
+        m.observe(dyn, save=False)
+        m.save()
+        return m
+
+    def load(self):
+        try:
+            t = os.stat(self.path).st_mtime_ns
+        except OSError:
+            return self.data
+        if t != self._mtime:
+            with open(self.path) as f:
+                self.data = json.load(f)
+            self._mtime = t
+        return self.data
+
+    def save(self):
+        tmp = self.path + ".tmp"
+        with open(tmp, "w") as f:
+            json.dump(self.data, f, indent=1, sort_keys=True)
+        os.replace(tmp, self.path)
+        self._mtime = os.stat(self.path).st_mtime_ns
+
+    def observe(self, dyn, save=True):
+        """What the robot sees now (text mode: every fact) folded into the map: the places opened, the
+        agent's place and hand, and each thing's belief updated by the observation's likelihood (1 at the
+        place it is seen in, 0 elsewhere: the posterior collapses; a thing not seen keeps its prior)."""
+        d = self.load()
+        dyn = set(dyn)
+        changed = False
+        opened = {_args(a)[0] for a in dyn if a.startswith("opened(")}
+        for r, p in d["places"].items():
+            if p["opened"] != (r in opened):
+                p["opened"], changed = r in opened, True
+        at = next((_args(a)[0] for a in dyn if a.startswith("at(")), d["agent"]["at"])
+        held = next((_args(a)[0] for a in sorted(dyn) if a.startswith("holds(")), None)
+        if (at, held) != (d["agent"]["at"], d["agent"]["holding"]):
+            d["agent"].update(at=at, holding=held)
+            changed = True
+        seen = {}
+        for a in dyn:
+            if a.startswith("inrecep("):
+                o, r = _args(a)
+                seen[o] = r
+        for o in sorted(set(seen) | ({held} if held else set())):
+            t = d["things"].setdefault(o, {"in": None, "pickupable": False})
+            r = seen.get(o)
+            prior = d["belief"].get(o, {})
+            post = {r: 1.0} if r else {}
+            if t["in"] != r or prior != post:
+                t["in"], changed = r, True
+                if post:
+                    d["belief"][o] = post
+                else:
+                    d["belief"].pop(o, None)
+        if changed and save:
+            self.save()
+        return changed
+
+    # ── the binding ──
+    def project(self, obj=None, rec=None, k=None):
+        """Bind the roles for a goal naming OBJ (an object) and REC (a receptacle), either may be None:
+        target the goal's object when the task wants it (else the task's first target; a held target
+        first), other a named object the task does not want (else a held one), dest the goal's receptacle
+        when it is a dest (else the task's first dest), p0 the receptacle where the robot stands, p1..pk a
+        named non-dest receptacle, then the places by belief of holding the target, then of holding
+        `other`; the location roles follow their places (lhere where the robot stands, a location shared
+        with a place bound before reuses its role). Saved; → the binding."""
+        d = self.load()
+        k = k or d["k"]
+        targets, dests = d["task"]["targets"], d["task"]["dests"]
+        held = d["agent"]["holding"]
+        if obj in targets:
+            tgt = obj
+        else:
+            tgt = held if held in targets else (targets[0] if targets else obj)
+        other = obj if obj and obj != tgt else (held if held and held != tgt else None)
+        dst = rec if rec in dests else (dests[0] if dests else rec)
+        at = d["agent"]["at"]
+        here = [r for r, p in sorted(d["places"].items()) if p["loc"] == at]
+        p0 = next((r for r in here if r != dst), None)
+        ranked = [rec] if rec and rec != dst else []
+        for o in (tgt, other):
+            bel = d["belief"].get(o) or {}
+            ranked += [r for r, p in sorted(bel.items(), key=lambda x: (-x[1], x[0])) if p > 0]
+        ranked += here
+        slots = []
+        for r in ranked:
+            if r in d["places"] and r not in (dst, p0) and r not in slots:
+                slots.append(r)
+        slots = slots[:k]
+        b = {"target": tgt, "other": other, "dest": dst, "p0": p0}
+        b.update(("p%d" % i, r) for i, r in enumerate(slots, 1))
+        locs = {}
+        if at:
+            locs[at] = "lhere"
+        for role, r in [("dest", dst)] + [("p%d" % i, r) for i, r in enumerate(slots, 1)]:
+            loc = d["places"].get(r, {}).get("loc") if r else None
+            if loc and loc not in locs:
+                locs[loc] = "ldest" if role == "dest" else "l" + role[1:]
+        b.update((role, loc) for loc, role in locs.items())
+        d["binding"] = {r: h for r, h in sorted(b.items()) if h}
+        d["k"] = k
+        self.save()
+        return dict(d["binding"])
+
+    def binding(self):
+        return dict(self.load()["binding"])
+
+    def handle(self, role):
+        """The map entry a role is bound to (None when unbound); a constant that is no role is itself."""
+        return self.binding().get(role) if role in self.roles() else role
+
+    def roles(self):
+        k = self.load()["k"]
+        return set(OBJECT_ROLES) | set(place_roles(k)) | set(location_roles(k))
+
+    def role_of(self, handle):
+        return {h: r for r, h in self.binding().items()}.get(handle)
+
+    def role_reading(self, reading):
+        """The world's facts (atom → count, the game's handles) over the bound entries only, said in roles,
+        with each bound receptacle's place facts: recat(R, L) when its location is bound, openable(R) or
+        notopenable(R)."""
+        d = self.load()
+        inv = {h: r for r, h in d["binding"].items()}
+        out = {}
+        for a, n in reading.items():
+            name = a.split("(")[0]
+            args = _args(a) if "(" in a else []
+            if all(x in inv for x in args):
+                out["%s(%s)" % (name, ",".join(inv[x] for x in args)) if args else name] = n
+        for role, h in d["binding"].items():
+            p = d["places"].get(h)
+            if p is None or role not in place_roles(d["k"]):
+                continue
+            if p["loc"] in inv:
+                out["recat(%s,%s)" % (role, inv[p["loc"]])] = 1
+            out[("openable(%s)" if p["openable"] else "notopenable(%s)") % role] = 1
+        return out
+
+    def names(self):
+        """name(role, thing) as data: the bound roles and the things they name (locations left out)."""
+        k = self.load()["k"]
+        keep = set(OBJECT_ROLES) | set(place_roles(k))
+        return sorted([r, h] for r, h in self.binding().items() if r in keep)
+
+    def belief(self, obj_role, rec_role):
+        """The belief that the role-bound object is in the role-bound receptacle, normalized over the bound
+        places (the weight port `look`): 1.0 for a single believed place, 1.0 when the map has no belief for it."""
+        d = self.load()
+        b = d["binding"]
+        bel = d["belief"].get(b.get(obj_role), {})
+        bound = {b[r] for r in place_roles(d["k"]) if b.get(r)}
+        z = sum(p for r, p in bel.items() if r in bound)
+        return bel.get(b.get(rec_role), 0.0) / z if z > 0 else 1.0      # the map knows nothing: flat
+
+    def intent_atom(self, atom):
+        """An atom in the room's terms (the mapper's: fetch(tomato1,microwave1)) said in roles: a fetch
+        re-projects for its object and receptacle (the person's goal is the projection's goal), any other
+        atom naming an unbound thing too; one already in roles is itself."""
+        d = self.load()
+        name, args = atom.split("(")[0], (_args(atom) if "(" in atom else [])
+        if all(a in self.roles() for a in args):
+            return atom
+        inv = {h: r for r, h in d["binding"].items()}
+        if name == "fetch" or any(a not in inv for a in args):
+            obj = next((a for a in args if a in d["things"]), None)
+            rec = next((a for a in args if a in d["places"]), None)
+            inv = {h: r for r, h in self.project(obj, rec).items()}
+        return "%s(%s)" % (name, ",".join(inv.get(a, a) for a in args)) if args else name

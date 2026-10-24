@@ -37,7 +37,7 @@ sys.path.insert(0, os.path.join(ROOT, "world"))
 import hier  # noqa: E402
 from alf_host import AlfHost  # noqa: E402
 import gen_instance  # noqa: E402
-from semantic_map import spoken  # noqa: E402
+from semantic_map import SemanticMap, spoken  # noqa: E402
 
 RUNS, BEATS = [], []
 _beat = hier.director_beat
@@ -91,11 +91,13 @@ def lines():
     return out
 
 
-def said(line, fired):
-    """A %% line with its {X} filled from the fired instance's bindings, the handles spoken."""
+def said(line, fired, names=None):
+    """A %% line with its {X} filled from the fired instance's bindings — the roles as the things the
+    map binds them to (names: role → handle), the handles spoken."""
     _, _, b = fired.partition("[")
     binds = dict(kv.split("=", 1) for kv in b.rstrip("]").split(",") if "=" in kv)
-    t = re.sub(r"\{(\w+)\}", lambda m: spoken(binds.get(m.group(1), m.group(1))), line)
+    names = names or {}
+    t = re.sub(r"\{(\w+)\}", lambda m: spoken(names.get(binds.get(m.group(1), m.group(1)), binds.get(m.group(1), m.group(1)))), line)
     return t[:1].upper() + t[1:]
 
 
@@ -107,9 +109,18 @@ def record(game_dir, map_path, out_path, words, goal):
     os.makedirs(os.path.join(work, "hier"))
     for s in hier.gen_hier.SPECS:
         shutil.copy(os.path.join(ROOT, "domains", "hier", s + "_domain.llp"), os.path.join(work, "hier"))
+    shutil.copy(os.path.join(ROOT, "domains", "hier", "capacity.llp"), os.path.join(work, "hier"))
     shutil.copy(os.path.join(ROOT, "domains", "director_domain.llp"), work)
     r = hier.run_game_director(game_dir, work, first=[goal])
     L = lines()
+    smap = SemanticMap(os.path.join(work, gen_instance.instance_id(game_dir), ".map.json"))
+    names = {role: h for role, h in smap.binding().items()}      # the run's binding: the frames say the room's things
+
+    def room(atom):
+        if "(" not in atom:
+            return atom
+        n, _, rest = atom.partition("(")
+        return "%s(%s)" % (n, ",".join(names.get(a, a) for a in rest.rstrip(")").split(",")))
     o, rr = goal[goal.index("(") + 1:-1].split(",")
     frames = [{"ev": "world/map", "url": os.path.relpath(os.path.abspath(map_path), os.path.dirname(os.path.abspath(out_path)))},
               {"ev": "journal", "rec": {"kind": "dlg-wake", "what": "person", "person": words}},
@@ -141,14 +152,14 @@ def record(game_dir, map_path, out_path, words, goal):
                     host._take(host.gym.call("step", command=c["command"]))
                     frames.append({"ev": "world/delta", **delta(c["command"], to_handle, items)})
                 if spec != "task":
-                    chain.append({"domain": spec, "goal": act["goal"], "result": ", ".join(act["result"])})
-                line = next((said(L[f.split("[")[0]], f) for f in reversed(run["fired"]) if f.split("[")[0] in L), None)
+                    chain.append({"domain": spec, "goal": room(act["goal"]), "result": ", ".join(room(a) for a in act["result"])})
+                line = next((said(L[f.split("[")[0]], f, names) for f in reversed(run["fired"]) if f.split("[")[0] in L), None)
                 if not line:
                     continue
                 results.append(line)
                 ask = next((x for x in act["result"] if x.split("(")[0] in ("wrong_dest", "wrong_object", "stuck")), None)
                 frames.append({"ev": "world/delta", "task": {"chain": list(chain), "results": list(results)},
-                               **({"cornered": _arg(ask, 0)} if ask else {})})
+                               **({"cornered": _arg(room(ask), 0)} if ask else {})})
                 frames.append({"ev": "journal", "rec": {"kind": "dlg-say", "what": "ask" if ask else "voice", "text": line,
                                                          "src": {"by": "harness", "domain": spec, "what": "result"}}})
         if r["won"]:

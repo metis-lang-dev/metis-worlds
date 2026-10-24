@@ -73,12 +73,16 @@ flat, _, _ = gen_instance.generate(GAME, str(stage))
 mirror = AlfHost(os.path.dirname(flat))
 info = json.load(open(os.path.join(os.path.dirname(flat), "game.json")))
 info = dict(info, static=sorted(mirror.static), task_type=mirror.task, params=mirror.params)
+(stage / "hier-out").mkdir(parents=True, exist_ok=True)
+smap = gen_hier.build_map(str(stage / "hier-out" / ".map.json"), info, mirror)   # the room as data (semantic-map s-d4270bed)
+smap.project(*gen_hier.args_of(gen_hier.seed(info)[0]))
+shutil.copy(os.path.join(WORLD, "domains", "hier", "capacity.llp"), cat / "hier")
 
 
 def package(spec, k, init, replay):
     """The activation's package, served from the catalog as <spec>_<k> (its manifest, its card,
     the card's generated grammar and prompts, the host shim under the name the agent looks for)."""
-    p = Path(gen_hier.generate(GAME, str(stage / "hier-out"), spec, k, info, mirror.reading(), init, replay,
+    p = Path(gen_hier.generate(GAME, str(stage / "hier-out"), spec, k, info, smap, mirror.reading(), init, replay,
                                intents=True)).parent
     name = "%s_%d" % (spec, k)
     d = cat / "domains" / name
@@ -226,14 +230,14 @@ try:
         ack = wait_frame(lambda m: m.get("ev") == "domain_ack" and m.get("domain") == name, 120)
         if ack.get("error"):
             raise SystemExit("activate %s: %s" % (name, ack["error"]))
-        j = J[base](gen_hier.args_of(goal))
+        j = J[base]([smap.handle(a) or a for a in gen_hier.args_of(goal)])   # the card speaks the room: the goal's roles as things
         w.send({"ev": "intent", "domain": name, "id": "g%d" % k, "j": j})
         iack = wait_frame(lambda m: m.get("ev") == "intent_ack" and m.get("id") == "g%d" % k, 60)
         if iack.get("error"):
             raise SystemExit("intent %s: %s" % (name, iack["error"]))
         res, _, cmds, off = wait_out(off, name, spec)
         for c in cmds:                                  # the driver's mirror does what the specialist did
-            mirror.on_event(c["rule"], ())
+            mirror._take(mirror.gym.call("step", command=c["command"]))
             commands.append(c["command"])
         steps.append({"k": k, "domain": name, "by": "hand", "goal": goal, "j": j, "out": res,
                       "commands": [c["command"] for c in cmds], "refused": [c["command"] for c in cmds if not c["admissible"]],

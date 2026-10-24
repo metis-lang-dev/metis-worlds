@@ -17,17 +17,19 @@ import json, os, sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import gen_instance  # noqa: E402
+import semantic_map  # noqa: E402
 
 SPECS = {
-    "nav":    dict(types=("location", "receptacle"), static=("recat",), dyn=("at",), goal="goto", out=("reached",)),
-    "access": dict(types=("location", "receptacle"), static=("recat", "openable", "notopenable"),
-                   dyn=("at", "opened", "closed", "checked"), goal="open", out=("accessible", "refused", "elsewhere")),
-    "grasp":  dict(types=("location", "receptacle", "object"), static=("recat", "openable", "notopenable"),
-                   dyn=("at", "objat", "inrecep", "opened", "closed", "holds", "holding", "handsfree"), goal="take",
-                   out=("taken", "refused", "elsewhere")),
-    "place":  dict(types=("location", "receptacle", "object"), static=("recat", "openable", "notopenable"),
-                   dyn=("at", "objat", "inrecep", "opened", "closed", "holds", "holding", "handsfree"), goal="put",
-                   out=("placed", "refused", "elsewhere")),
+    "nav":    dict(types=("location", "receptacle"), static=(), dyn=("at", "recat"), goal="goto", out=("reached",)),
+    "access": dict(types=("location", "receptacle"), static=(),
+                   dyn=("at", "recat", "openable", "notopenable", "opened", "closed", "checked"), goal="open",
+                   out=("accessible", "refused", "elsewhere")),
+    "grasp":  dict(types=("location", "receptacle", "object"), static=(),
+                   dyn=("at", "recat", "openable", "notopenable", "objat", "inrecep", "opened", "closed", "holds", "holding",
+                        "handsfree"), goal="take", out=("taken", "refused", "elsewhere")),
+    "place":  dict(types=("location", "receptacle", "object"), static=(),
+                   dyn=("at", "recat", "openable", "notopenable", "objat", "inrecep", "opened", "closed", "holds", "holding",
+                        "handsfree"), goal="put", out=("placed", "refused", "elsewhere")),
     "task":   dict(types=("object", "receptacle", "thing"), static=("target", "dest", "notdest", "nottarget"), dyn=("inrecep", "holds"),
                    goal="fetch", takes=("reached", "accessible", "taken", "placed", "refused"),
                    out=("goto", "open", "take", "put", "done", "stuck", "wrong_dest", "wrong_object")),
@@ -41,41 +43,82 @@ def args_of(atom):
     return [x.strip() for x in atom[i + 1:-1].split(",")] if i >= 0 else []
 
 
-def static_facts(spec, info, objects=None):
-    """The specialist's static facts from the game's (gen_instance's maps), plus the complements."""
-    st = list(info["static"])
-    want = SPECS[spec]["static"]
-    facts = [a for a in st if a.split("(")[0] in want]
-    if "notopenable" in want:
-        kinds = info["handles"]["kind"]
-        openable = {a[len("openable("):-1] for a in st if a.startswith("openable(")}
-        facts += ["notopenable(%s)" % r for r, k in sorted(kinds.items()) if k == "receptacle" and r not in openable]
-    if "target" in want:
-        facts += [f.rstrip(".") for f in gen_instance.TASK_FACTS[info["task_type"]](info["params"], info)]
-        dests = {f[len("dest("):-1] for f in facts if f.startswith("dest(")}
-        kinds = info["handles"]["kind"]
-        facts += ["notdest(%s)" % r for r, k in sorted(kinds.items()) if k == "receptacle" and r not in dests]
-        targets = {f[len("target("):-1] for f in facts if f.startswith("target(")}
-        facts += ["nottarget(%s)" % o for o in sorted(objects or ()) if o not in targets]
-    return facts
+def task_goal(info):
+    """The task resolved to the game's things (gen_instance.TASK_FACTS): (targets, dests)."""
+    facts = [f.rstrip(".") for f in gen_instance.TASK_FACTS[info["task_type"]](info["params"], info)]
+    return (sorted(f[len("target("):-1] for f in facts if f.startswith("target(")),
+            sorted(f[len("dest("):-1] for f in facts if f.startswith("dest(")))
 
 
-def card(spec, kinds, info):
-    """The activation's intent.yaml (alf-hierarchy step 2): the specialist's card template
-    (domains/hier/<spec>/intent.yaml) with its slots' enums and values the activation's things —
-    every receptacle, the objects that can be picked up (the task: its targets) — and only the
-    examples whose values the game has. None when the specialist has no card."""
+# ── the roles (semantic-map s-d4270bed step 2): one vocabulary per robot, the room in the host's map ──
+K = semantic_map.K
+
+
+def capacity(k=K):
+    """The role vocabulary's source: the types every specialist's base leaves abstract (spec 12),
+    completed with roles, k the places a projection binds besides dest and p0. domains/hier/capacity.llp
+    is capacity(8), committed; k is this argument, never a rule's."""
+    obj, rec, loc = semantic_map.OBJECT_ROLES, semantic_map.place_roles(k), semantic_map.location_roles(k)
+    return "\n".join([
+        "%% capacity — the ALFWorld hierarchy's role vocabulary, k = %d (semantic-map s-d4270bed; generated by" % k,
+        "%% world/gen_hier.py capacity(%d)): one per robot, never per room. The host binds the roles to its" % k,
+        "% semantic map per goal (world/semantic_map.py project): target, the object the goal wants; other, one",
+        "% it does not; dest, where it goes; p0, the receptacle where the robot stands; p1..pk, the places most",
+        "% likely to hold the target; lhere, ldest, l1..lk, their locations.",
+        "catalog capacity 1.",
+        'provenance text "the role vocabulary of the ALFWorld specialists, k = %d" "2026-10-24".' % k,
+        "type object {%s}." % " ".join(obj),
+        "type receptacle {%s}." % " ".join(rec),
+        "type location {%s}." % " ".join(loc),
+        "type thing {%s}." % " ".join(obj + rec), ""])
+
+
+def role_statics(spec, k=K):
+    """The task's static facts over roles: true in every room (target is what it wants, dest where)."""
+    if spec != "task":
+        return []
+    return (["target(target)", "dest(dest)", "nottarget(other)"]
+            + ["notdest(%s)" % r for r in semantic_map.place_roles(k) if r != "dest"])
+
+
+def instance_text(spec, base_rel, capacity_rel, init=(), name=None, k=K, header=None):
+    """A specialist's instance: its base and the role vocabulary, the task's role statics, the start
+    (`init`: role atoms) — no constant of any room. committed(spec) is the one domains/hier/<spec>/ holds."""
+    lines = ["% " + (name or spec) + " — " + (header or "the %s specialist over the role vocabulary (semantic-map s-d4270bed): "
+             "compiled once, the room in the host's semantic map (generated by world/gen_hier.py)." % spec),
+             "catalog %s 1." % (name or spec),
+             'provenance text "the %s specialist over roles: the host projects the map onto them" "2026-10-24".' % spec,
+             'include "%s".' % base_rel, 'include "%s".' % capacity_rel, ""]
+    st = role_statics(spec, k)
+    if st:
+        lines += ["% the task over roles: what it wants is the target, where, the dest"] + [a + "." for a in st] + [""]
+    lines += ["#init %s 1" % a for a in init]
+    lines += ["#steps 8", "#seeds 1", ""]
+    return "\n".join(lines)
+
+
+def committed(spec):
+    return instance_text(spec, "../%s_domain.llp" % spec, "../capacity.llp")
+
+
+def card(spec, smap):
+    """The activation's intent.yaml (alf-hierarchy step 2), from the semantic map (step 2 of
+    semantic-map): the specialist's card template (domains/hier/<spec>/intent.yaml) with its slots'
+    enums and values the map's things — every place, every thing that can be picked up — and only the
+    examples whose values the map has. The card stays in the room's terms (the person names things);
+    the host projects what it is told onto the roles (AlfHost.intent_atom). None when the specialist
+    has no card."""
     import yaml
     t = os.path.join(os.path.dirname(HERE), "domains", "hier", spec, "intent.yaml")
     if not os.path.exists(t):
         return None
     text = open(t).read()
     c = yaml.safe_load(text)
-    pick = {a[len("pickupable("):-1] for a in info["static"] if a.startswith("pickupable(")}
+    d = smap.load()
     import re
     num = lambda h: (re.sub(r"\d+$", "", h), int(re.search(r"\d*$", h).group() or 0))   # cabinet2 before cabinet10
-    have = {"receptacle": sorted(kinds.get("receptacle", []), key=num),
-            "object": sorted((o for o in kinds.get("object", []) if spec == "task" or o in pick), key=num)}
+    have = {"receptacle": sorted(d["places"], key=num),
+            "object": sorted((o for o, th in d["things"].items() if th["pickupable"]), key=num)}
     for slot in c.get("slots") or {}:      # an enum value upper-cased, as the mapper looks it up; the atom's constant
         c["slots"][slot] = {"enum": [v.upper() for v in have[slot]]}
         c["values"][slot] = {v.upper(): v for v in have[slot]}
@@ -98,8 +141,15 @@ def card(spec, kinds, info):
     class Dumper(yaml.SafeDumper):
         pass
     Dumper.add_representer(str, lambda d, v: d.represent_scalar("tag:yaml.org,2002:str", v, style="|" if "\n" in v else None))
-    return ("# GENERATED by world/gen_hier.py from domains/hier/%s/intent.yaml for this activation's things.\n" % spec
+    return ("# GENERATED by world/gen_hier.py from domains/hier/%s/intent.yaml for the semantic map's things.\n" % spec
             + head + yaml.dump(c, Dumper=Dumper, sort_keys=False, allow_unicode=True, width=100, default_flow_style=None))
+
+
+def build_map(path, info, mirror, k=K):
+    """The hierarchy's semantic map at PATH from the mirror's game as it is now (its static facts and its
+    reading) and the task (task_goal)."""
+    targets, dests = task_goal(info)
+    return semantic_map.SemanticMap.build(path, mirror.static, mirror.dyn, targets, dests, k)
 
 
 # ── the director (alf-hierarchy step 3): the instance's facts from the specialists' declared ports ──
@@ -173,13 +223,15 @@ def generate_director_package(root, game_dir, flat_pkg, commands_log, domain_rel
     return pkg
 
 
-def install(game_dir, root, person=True):
+def install(game_dir, root, person=True, k=K):
     """A game installed for the agent under ROOT: domains/hier/_flat (the mirror's package), the
-    director, the task's person-mode instance (continues; `person`: no seeded fetch — the FETCH the
-    person types is its goal; False seeds the driver's fetch), and an empty instance of every
-    specialist (no goal: the director's forward re-instances it through the director host's
-    instance()). Every host appends its commands to domains/hier/.commands.jsonl, the shared world
-    state the re-instancing reads. → {name: package dir}."""
+    director, the semantic map (domains/hier/.map.json: the room as data, bound to the roles for the
+    game's own task until a goal re-projects it), the task (continues; `person`: no seeded fetch — the
+    FETCH the person types is its goal; False seeds the driver's fetch), and every specialist — each the
+    committed instance over the role vocabulary (k: the capacity's places; 8 is the committed
+    capacity.llp), no room in its source: the director's forward delivers it its goal on the live
+    session. Every host appends its commands to domains/hier/.commands.jsonl, the shared world state.
+    → {name: package dir}."""
     hier = os.path.join(root, "domains", "hier")
     os.makedirs(hier, exist_ok=True)
     import shutil
@@ -188,6 +240,9 @@ def install(game_dir, root, person=True):
                     [(os.path.join(bases, "hier", sp + "_domain.llp"), os.path.join(hier, sp + "_domain.llp")) for sp in SPECS]:
         if os.path.abspath(src) != os.path.abspath(dst) and not os.path.exists(dst):
             shutil.copy(src, dst)
+    cap = os.path.join(hier, "capacity.llp")
+    if not os.path.exists(cap) or open(cap).read() != capacity(k):
+        open(cap, "w").write(capacity(k))
     flat, _, _ = gen_instance.generate(game_dir, os.path.join(hier, "_flat"))
     flat_pkg = os.path.dirname(flat)
     log = os.path.join(hier, ".commands.jsonl")
@@ -196,14 +251,17 @@ def install(game_dir, root, person=True):
     mirror = AlfHost(flat_pkg)
     try:
         info = dict(json.load(open(os.path.join(flat_pkg, "game.json"))), static=sorted(mirror.static), task_type=mirror.task, params=mirror.params)
+        smap = build_map(os.path.join(hier, ".map.json"), info, mirror, k)
         reading = mirror.reading()
     finally:
         mirror.gym.close()
+    smap.project(*args_of(seed(info)[0]))                          # the game's own task until a goal says otherwise
     out = {"_flat": flat_pkg, "director": generate_director_package(root, game_dir, flat_pkg, log)}
     for spec in SPECS:
         # the task's goal: a person's FETCH arrives by intent (person=True: no seed), else the driver's seed
-        inits = seed(info) if spec == "task" and not person else []
-        path = generate(game_dir, hier, spec, 0, info, reading, inits, [], intents=(spec == "task"), continues=True, fixed=True, commands_log=log)
+        inits = [smap.intent_atom(seed(info)[0])] if spec == "task" and not person else []
+        path = generate(game_dir, hier, spec, 0, info, smap, reading, inits, [], intents=(spec == "task"), continues=True, fixed=True,
+                        commands_log=log, places=k)
         out[spec] = os.path.dirname(path)
     return out
 
@@ -214,71 +272,44 @@ def director_start():
 
 
 def seed(info):
-    """The driver's way into the task: fetch(the first target, the first destination) — the same
-    atom the FETCH intent types."""
-    facts = static_facts("task", info)
-    o = sorted(a[len("target("):-1] for a in facts if a.startswith("target("))[0]
-    r = sorted(a[len("dest("):-1] for a in facts if a.startswith("dest("))[0]
-    return ["fetch(%s,%s)" % (o, r)]
+    """The driver's way into the task, in the room's terms: fetch(the first target, the first
+    destination) — the atom the FETCH intent types; the host projects it onto the roles."""
+    targets, dests = task_goal(info)
+    return ["fetch(%s,%s)" % (targets[0], dests[0])]
 
 
-def generate(game_dir, out_dir, spec, k, info, reading, init, replay, domain_rel=None, intents=False, continues=False, fixed=False, commands_log=None):
+def generate(game_dir, out_dir, spec, k, info, smap, reading, init, replay, domain_rel=None, intents=False, continues=False, fixed=False,
+             commands_log=None, places=None):
+    """One package of SPEC over the semantic map SMAP. `fixed` (the agent's install): the committed
+    instance (committed(spec)), plus `init` (role atoms: the driver's seed) — the world comes in on the
+    first tick's sync, the goals by delivery. Otherwise the driver's activation K: the instance over
+    domain_rel (default ../../hier/<spec>_domain.llp) and the capacity beside it, starting at the world
+    as it is now said in roles (`reading`: the game's facts, the mirror's; the projection's binding) and
+    `init`. Either way no constant of the room is in the source: game.json names the game and the map."""
     sp = SPECS[spec]
+    kp = places or smap.load()["k"]                                  # the capacity's places (install's k)
     iid = gen_instance.instance_id(game_dir)
-    kinds = {}
-    for handle, kind in info["handles"]["kind"].items():
-        kinds.setdefault(kind, []).append(handle)
-    # the activation sees only the things its goal names: grasp and place the one object, the task
-    # its targets (the receptacles stay whole: where a target is, is the world's to say)
-    goal_objs = sorted({a[a.index("(") + 1:-1].split(",")[0] for a in init if a.split("(")[0] in ("take", "put")})
-    if spec in ("grasp", "place") and (goal_objs or not intents):
-        # no goal yet and no card (the agent's startup instance, re-instanced by the director at its
-        # first forward): no object at all — the full room grounded to 160k events, 14 s each in the
-        # grounder (the demo's 50 s start); `none` is the empty type's constant. A card (intents=True)
-        # with no goal keeps every pickupable: a person may name any of them
-        kinds["object"] = goal_objs
-    if spec == "task":
-        # the driver's task sees its targets and the object its goal names; a person's task (intents=True)
-        # sees every pickupable, since a typed fetch may name any of them (then nottarget/1 refuses it)
-        targets = sorted(a[len("target("):-1] for a in static_facts("task", info) if a.startswith("target("))
-        pick = sorted(a[len("pickupable("):-1] for a in info["static"] if a.startswith("pickupable("))
-        named = sorted({a[a.index("(") + 1:-1].split(",")[0] for a in init if a.startswith("fetch(")})
-        kinds["object"] = pick if intents else sorted(set(targets) | set(named))
-    kinds["thing"] = sorted(kinds.get("object", [])) + sorted(kinds.get("receptacle", []))
-    things = sorted({h for kind in sp["types"] for h in kinds.get(kind, [])})
-    name = "%s_%d" % (spec, k)
-    lines = ["% " + name + " — " + iid + ", activation " + str(k) + " of the " + spec + " specialist (generated by world/gen_hier.py):",
-             "% the game's types and the facts this specialist sees, over the lifted " + spec + "_domain.llp.",
-             "catalog " + name + " 1.",
-             'provenance text "generated from ALFWorld game %s, activation %d" "2026-10-22".' % (os.path.basename(os.path.dirname(game_dir)), k),
-             'include "%s".' % (domain_rel or "../../hier/%s_domain.llp" % spec)]
-    for kind in sp["types"]:
-        lines.append("type %s {%s}." % (kind, " ".join(sorted(kinds.get(kind, []))) or "none"))
-    lines.append("")
-    lines.append("% the static facts this specialist sees")
-    lines += [a + "." for a in static_facts(spec, info, kinds.get("object") if spec == "task" else None)]
-    lines.append("")
-    lines.append("% the start: the world as it is now (this specialist's predicates), the goal or the results, the tokens")
-    for a in sorted(reading):
-        if a.split("(")[0] in sp["dyn"] and all(x in things for x in args_of(a)):
-            lines.append("#init %s 1" % a)
-    for a in init:
-        lines.append("#init %s 1" % a)
-    lines.append("#steps 8")
-    lines.append("#seeds 1")
-    pkg = os.path.join(out_dir, spec if fixed else "%s-%d" % (spec, k))   # fixed: the agent's installed directory, rewritten per activation
+    if fixed:
+        text = instance_text(spec, "../%s_domain.llp" % spec, "../capacity.llp", init, k=kp)
+    else:
+        base = domain_rel or "../../hier/%s_domain.llp" % spec
+        roles = smap.role_reading(reading)
+        start = [a for a in sorted(roles) if a.split("(")[0] in sp["dyn"]] + list(init)
+        text = instance_text(spec, base, os.path.join(os.path.dirname(base), "capacity.llp"), start, name="%s_%d" % (spec, k), k=kp,
+                             header="activation %d of the %s specialist on %s, over the role vocabulary (generated by world/gen_hier.py)." % (k, spec, iid))
+    pkg = os.path.join(out_dir, spec if fixed else "%s-%d" % (spec, k))   # fixed: the agent's installed directory
     os.makedirs(pkg, exist_ok=True)
     path = os.path.join(pkg, spec + ".llp")
-    open(path, "w").write("\n".join(lines) + "\n")
+    open(path, "w").write(text)
     json.dump({"game": os.path.join(game_dir, "game.tw-pddl"), "task_type": info["task_type"], "params": info["params"],
                "handles": info["handles"], "replay": list(replay), "observe": list(sp["dyn"]), "out": list(sp["out"]), "continues": bool(continues),
-               "things": things, "commands_log": commands_log},
+               "map": os.path.abspath(smap.path), "commands_log": commands_log},
               open(os.path.join(pkg, "game.json"), "w"), indent=1)
     open(os.path.join(pkg, "domain.yaml"), "w").write(
-        "# %s — one activation of the %s specialist on an ALFWorld game (generated by world/gen_hier.py).\n"
+        "# %s — the %s specialist on an ALFWorld game over the role vocabulary (generated by world/gen_hier.py).\n"
         "program: %s.llp\nhost: alf_host.py:make\nclock: {beats: 1}\nrecords: records/\n"
-        "display: ALFWorld %s (%s)\nline: \"%s\"\nvoice: own\n" % (name, spec, spec, spec, iid, spec))
-    c = card(spec, kinds, info) if intents else None   # the agent's package (step 2); the driver's stays four files
+        "display: ALFWorld %s (%s)\nline: \"%s\"\nvoice: own\n" % (spec, spec, spec, spec, iid, spec))
+    c = card(spec, smap) if intents else None   # the agent's package (step 2); the driver's stays four files
     if c is not None:
         open(os.path.join(pkg, "intent.yaml"), "w").write(c)
         open(os.path.join(pkg, "domain.yaml"), "a").write("intent: {spec: intent.yaml}\n")
