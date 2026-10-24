@@ -839,3 +839,21 @@ def test_a_fetch_of_another_thing_is_refused_by_roles(tmp_path):
         return ["fetch(%s,%s)" % (next(o for o in pick if o not in targets), gen_hier.task_goal(info)[1][0])]
     fired, final = _task_instance(str(tmp_path), "other", lambda info, world: world, other)
     assert fired == ["not_target"] and "wrong_object(other)" in final, (fired, final)
+
+
+def test_no_world_frame_of_the_recordings_carries_a_role():
+    """The compiled vocabulary never reaches the page (the architect's rule, semantic-map step 2): every
+    world/* frame of the recorded turns says the world's things — a program's own atom only in a `role`
+    field; the journal's dlg-trace is the program's record and stays in roles."""
+    import re
+    import semantic_map
+    roles = set(semantic_map.OBJECT_ROLES) | set(semantic_map.place_roles()) | set(semantic_map.location_roles())
+    pat = re.compile(r"\b(%s)\b" % "|".join(sorted(roles, key=len, reverse=True)))
+    ref = os.path.join(ROOT, "..", "web", "fixtures")
+    for name in ("alfworld_tomato_microwave_13.run.jsonl", "alfworld_tomato_microwave_13_fridge.run.jsonl"):
+        frames = [json.loads(x) for x in open(os.path.join(ref, name))]
+        assert any(f["ev"] == "journal" and f["rec"].get("kind") == "dlg-trace" and pat.search(json.dumps(f)) for f in frames)
+        for f in frames:
+            if f["ev"].startswith("world/"):
+                shown = json.dumps({k: v for k, v in f.items() if k != "role"})
+                assert not pat.search(shown), (name, shown[:200])
