@@ -197,6 +197,10 @@ Grounding (CPU, `test_the_capacity_grounds_small`):
 The full room was 159k events for grasp/place, and today's narrowed instance about 3k, paid on
 every activation. With roles, grounding is paid once, at load.
 
+The places³ growth of grasp and place comes from the dynamic recat, and it is the price of keeping the room as
+data. If it ever needs narrowing, the fix is a projection that asserts recat only for bound places (it already
+does), plus rules that test it earlier in the body. It is not a return to static tables.
+
 ## What it gives the agent paper
 
 The same family, three programs: flat (step 1 of world-alfworld), hierarchical by hand
