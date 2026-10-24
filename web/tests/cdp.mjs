@@ -30,7 +30,9 @@ export async function open(path, { width = 1200, height = 900 } = {}) {
     `--user-data-dir=${prof}`, `--window-size=${width},${height}`, '--no-first-run', 'about:blank'], { stdio: 'ignore', detached: true });
   for (let i = 0; i < 50; i++) { try { await fetch(`http://127.0.0.1:${PORT}/json/version`); break; } catch { await sleep(200); } }
   const url = `http://127.0.0.1:${server.address().port}/${path}`;
-  const tab = await (await fetch(`http://127.0.0.1:${PORT}/json/new?${url}`, { method: 'PUT' })).json();
+  // a blank tab, then the page: /json/new?<url> cuts the URL at its first & (fsttm-web's test/cdp.mjs fix;
+  // ?live=1&host reached the page as ?live=1)
+  const tab = await (await fetch(`http://127.0.0.1:${PORT}/json/new?about:blank`, { method: 'PUT' })).json();
   const ws = new WebSocket(tab.webSocketDebuggerUrl);
   let seq = 0;
   const pending = new Map();
@@ -71,6 +73,7 @@ export async function open(path, { width = 1200, height = 900 } = {}) {
       catch (e) { console.log(`(left ${prof}: ${e.code})`); }   // a temp dir left behind never fails a test
     },
   };
+  await cmd('Page.navigate', { url });
   await page.ready();
   return page;
 }

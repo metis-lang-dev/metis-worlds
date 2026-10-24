@@ -359,6 +359,10 @@ port.onPick = (w, text, el) => {
 panel = world.panel = new Panel($('#talkpanel'), {
   backend: backend || { turn: async function* () { yield 'This is a replay: nobody is listening.'; }, onFrame: null },
   table: await (await fetch('vendor/fsttm.json')).json(), title: '', voice: q.get('voice') === '1',
+  // fsttm-web's one panel (dialog-panel s-277c33e3): the strip in the bar, the dialog's sections closed until
+  // opened; the world's own frames kept as events only for world/* (the journal frames have their dock);
+  // ?host: the backchannel to the host (rows, events, state back on the socket: a test or a program drives it)
+  sections: ['floor', 'state', 'turns', 'events'], frames: f => String(f.ev ?? '').startsWith('world/'), host: q.has('host'),
   onFrame: f => frame(f), onRow: r => rowLook(r), onState: s => floorLook(s),
 });
 floorLook(panel.core.state());
