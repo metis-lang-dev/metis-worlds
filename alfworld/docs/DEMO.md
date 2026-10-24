@@ -163,9 +163,9 @@ the wire, the task card's `values` from the map).
   replayed in text mode without a browser (the backend's test), 10 train games by voice-less
   `say_text`.
 - **Step 3 — the page (nina, after console-nav step 2).** `world.html` + `map.js`, the dialog
-  band and journal copied in, the hierarchy pane, `world_ui.llp` over the lifted base with the
-  L2 synthetic harness; acceptance: the e2e page test drives §5 with frames from a recorded
-  THOR run (fixtures), and the voice nav cases of console-nav pass on the instance.
+  band and journal copied in, the hierarchy pane; acceptance: the e2e page test drives §5 with
+  frames from a recorded THOR run (fixtures). (Its `world_ui.llp` voice navigation was removed by
+  voice-nav-removal, 2026-10-24.)
 - **Step 4 — the user's session (USER GATE).** Live, on THOR: a task by voice, a detour, a
   disengagement answered by voice.
 
@@ -176,8 +176,9 @@ The parts that are world-neutral by construction and get lifted out when the sec
 
 1. the **world port** = the PortPlugin contract + three ops (`map`, `frame`, `pose`);
 2. the **semantic map schema** (§3) and its **map widget** (`map.js`);
-3. the **director** and **ui navigation** bases (already lifted: `director_domain.llp`,
-   `ui_domain.llp`) with their instance generators;
+3. the **director** base (already lifted: `director_domain.llp`) with its instance generator, and the
+   role vocabulary with the host's semantic map (semantic-map s-d4270bed) — the ui navigation base
+   is gone (voice-nav-removal);
 4. the **world page** composition (map + band + hierarchy + journal) over metis-agent's wire.
 
 That is the complement of the agentic loop: the loop discovers and formalizes a world into a

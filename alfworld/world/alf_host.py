@@ -139,7 +139,6 @@ class AlfHost:
         self.continues = bool(meta.get("continues"))          # the agent's hierarchy: a result is reported, the run goes on (the director sleeps the specialist)
         self.reported = set()
         self.pending_frames = []                               # the world page's frames (alf-demo): frames() hands them over
-        self.things = set(meta["things"]) if meta.get("things") else None   # … and the things it declares
         self.verbs = bool(meta.get("verbs"))                   # the loop's instances: a rule named verb_why is a command (opt-in: a hand domain's bookkeeping rule may start with a verb — go_for, open_dest)
         # a hierarchy package over the role vocabulary (semantic-map s-d4270bed): the program speaks roles,
         # this host the room — it reads the world through the map's binding and says its commands, its
@@ -218,8 +217,6 @@ class AlfHost:
             r = self.smap.role_reading(r)            # the world over the bound roles: the binding changed, so does the reading
         if self.observed is not None:
             r = {a: n for a, n in r.items() if a.split("(")[0] in self.observed}
-        if self.things is not None and self.smap is None:
-            r = {a: n for a, n in r.items() if all(x in self.things for x in _args(a))}
         return r
 
     # ── the commands ──

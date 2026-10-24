@@ -1,5 +1,10 @@
 # ALFWorld as a hierarchy of domains (alf-hierarchy, the architect, 2026-10-22)
 
+**Where it stands now:** §Roles, not rooms (semantic-map s-d4270bed step 2). The specialists are compiled once over a
+role vocabulary; the room lives in the host's semantic map; a goal is a projection and a rebinding, never a
+recompile. The step sections before it are the measured history: they describe the per-activation instances as
+built then.
+
 The user: "split ALFWorld into hierarchical domains to reduce complexity — first with a
 manual switch and domain activation; add an LLM agent and intents per domain; add an
 orchestrator domain and find the way to activate domains automatically."

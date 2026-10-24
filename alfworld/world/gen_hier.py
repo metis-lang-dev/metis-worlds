@@ -1,17 +1,18 @@
-"""gen_hier.py — a game as generated instances over the HIERARCHY's lifted specialists
-(alf-hierarchy step 1, docs/HIERARCHY.md): one package per activation,
+"""gen_hier.py — a game over the HIERARCHY's specialists (alf-hierarchy, docs/HIERARCHY.md), roles not
+rooms (semantic-map s-d4270bed): every specialist is compiled ONCE over the role vocabulary, and the
+room lives in the host's semantic map.
 
-    generate(game_dir, out_dir, spec, k, handles, reading, init, replay)
+    capacity(k)          domains/hier/capacity.llp: object {target other}, receptacle {dest p0 p1..pk},
+                         location {lhere ldest l1..lk} (k = 8 committed)
+    committed(spec)      domains/hier/<spec>/<spec>.llp: the base + the capacity (+ the task's role statics)
+    install(game, root)  the agent's catalog under ROOT: the flat mirror, the director, the semantic map
+                         (domains/hier/.map.json), the committed instances, one commands log
+    generate(…)          one package of a specialist over the map: the agent's (fixed, the committed
+                         instance) or the driver's activation k (its start in roles, experiments/hier.py)
+    card(spec, smap)     a specialist's intent.yaml from the map's things (the room's terms)
 
-writes out_dir/<spec>-<k>/{<spec>.llp, game.json, domain.yaml, alf_host.py} — the specialist's
-instance: the types it uses, the static facts it sees, the current world facts it observes
-(`reading`, the driver's mirror of the game, filtered to the specialist's predicates), the
-goal or the results and the task's tokens (`init`), over ../../hier/<spec>_domain.llp (the driver
-copies the bases to out_dir/hier). game.json carries the commands to replay (the game is a
-fresh child per run), the observed predicates and the result predicates for the host.
-With intents=True (the domain agent's package, alf-hierarchy step 2) it adds intent.yaml, the
-specialist's card (domains/hier/<spec>/intent.yaml) filled with the activation's things, and
-names it in domain.yaml; the driver's packages stay four files.
+No constant of any room is in a specialist's source: game.json names the game and the map, and the host
+reads the world through the map's binding (alf_host.AlfHost, semantic_map.SemanticMap).
 """
 import json, os, sys
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -20,17 +21,17 @@ import gen_instance  # noqa: E402
 import semantic_map  # noqa: E402
 
 SPECS = {
-    "nav":    dict(types=("location", "receptacle"), static=(), dyn=("at", "recat"), goal="goto", out=("reached",)),
-    "access": dict(types=("location", "receptacle"), static=(),
+    "nav":    dict(types=("location", "receptacle"), dyn=("at", "recat"), goal="goto", out=("reached",)),
+    "access": dict(types=("location", "receptacle"),
                    dyn=("at", "recat", "openable", "notopenable", "opened", "closed", "checked"), goal="open",
                    out=("accessible", "refused", "elsewhere")),
-    "grasp":  dict(types=("location", "receptacle", "object"), static=(),
+    "grasp":  dict(types=("location", "receptacle", "object"),
                    dyn=("at", "recat", "openable", "notopenable", "objat", "inrecep", "opened", "closed", "holds", "holding",
                         "handsfree"), goal="take", out=("taken", "refused", "elsewhere")),
-    "place":  dict(types=("location", "receptacle", "object"), static=(),
+    "place":  dict(types=("location", "receptacle", "object"),
                    dyn=("at", "recat", "openable", "notopenable", "objat", "inrecep", "opened", "closed", "holds", "holding",
                         "handsfree"), goal="put", out=("placed", "refused", "elsewhere")),
-    "task":   dict(types=("object", "receptacle", "thing"), static=("target", "dest", "notdest", "nottarget"), dyn=("inrecep", "holds"),
+    "task":   dict(types=("object", "receptacle", "thing"), dyn=("inrecep", "holds"),
                    goal="fetch", takes=("reached", "accessible", "taken", "placed", "refused"),
                    out=("goto", "open", "take", "put", "done", "stuck", "wrong_dest", "wrong_object")),
 }

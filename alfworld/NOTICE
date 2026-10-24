@@ -3,5 +3,5 @@ Copyright 2026 Robofortis
 
 Licensed under the Apache License, Version 2.0 (see LICENSE).
 
-configs/base_config.yaml is ALFWorld's (https://github.com/alfworld/alfworld, MIT License,
-Copyright (c) 2020 Mohit Shridhar et al.), unchanged; ALFWorld and TextWorld are MIT.
+This world builds on ALFWorld (https://github.com/alfworld/alfworld, MIT License, Copyright (c) 2020
+Mohit Shridhar et al.) and TextWorld (MIT).
