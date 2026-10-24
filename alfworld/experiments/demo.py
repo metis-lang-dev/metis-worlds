@@ -1,6 +1,6 @@
 """demo.py — the exploitation demo's agent side in TEXT mode (alf-demo step 2, docs/DEMO.md §4–§5).
 
-    ALFWORLD_DATA=… .worlds/alf/bin/python experiments/demo.py setup GAME_DIR ROOT [--port P]
+    ALFWORLD_DATA=… .worlds/alf/bin/python experiments/demo.py setup GAME_DIR ROOT [--port P] [--view]
     ALFWORLD_DATA=… .worlds/alf/bin/python experiments/demo.py check [--game GAME_DIR] [--out DIR] [--port P]
     ALFWORLD_DATA=… .worlds/alf/bin/python experiments/demo.py games [--n 10] [--split train] [--out DIR]
 
@@ -43,12 +43,13 @@ WEB = WORLD.parent / "web"
 GAME = "train/pick_and_place_simple-Tomato-None-Microwave-13"        # the fixtures' kitchen (web/fixtures)
 
 
-def setup(game, root, port=8398):
-    """ROOT as the demo's catalog; → (config path, the map, the task's fetch)."""
+def setup(game, root, port=8398, view=False):
+    """ROOT as the demo's catalog; → (config path, the map, the task's fetch). view: the semantic map sees
+    only what the robot sees (semantic-map step 3)."""
     root = Path(root)
     if root.exists():
         shutil.rmtree(root)
-    out = gen_hier.install(str(game), str(root), person=True)
+    out = gen_hier.install(str(game), str(root), person=True, view=view)
     for spec in hda.NAMES[1:]:                 # metis-agent loads a host from <name>_host.py, or the manifest's host: file
         shutil.copy(Path(out[spec]) / "alf_host.py", Path(out[spec]) / ("%s_host.py" % spec))
     hda.card_files(root, out["task"])
@@ -374,6 +375,7 @@ def main(argv=None):
     s.add_argument("game")
     s.add_argument("root")
     s.add_argument("--port", type=int, default=8398)
+    s.add_argument("--view", action="store_true", help="the semantic map sees only what the robot sees (semantic-map step 3)")
     c = sub.add_parser("check")
     c.add_argument("--game", default=None)
     c.add_argument("--out", default=str(HERE / "records" / "demo-check"))
@@ -385,7 +387,7 @@ def main(argv=None):
     g.add_argument("--port", type=int, default=8398)
     a = ap.parse_args(argv)
     if a.cmd == "setup":
-        cfg, m, fetch, _ = setup(a.game, a.root, a.port)
+        cfg, m, fetch, _ = setup(a.game, a.root, a.port, view=a.view)
         print(json.dumps({"config": str(cfg), "task": m["task"]["text"], "fetch": fetch}))
         return 0
     if a.cmd == "check":

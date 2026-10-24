@@ -28,6 +28,11 @@ weight look(O, R) reads {inrecep(O, R)}.
 
 pred inrecep(object, receptacle) : task.  % the world: where the target is
 pred holds(object) : task.                % … or that the agent holds it (a stop after the take: opus's F12)
+% what the robot found where it looked (the map's view mode, semantic-map step 3): its inrecep is then
+% the map's belief (every place it may be in), look chooses among them; a place looked into without it
+pred absent(object, receptacle) : task.
+pred lost(thing) : task.                  % … and no place left to look (a thing: stuck's own type)
+pred believed(object, receptacle) : task. % … in its destination by an earlier look, not seen there now: go and look
 % the sub-goals (out)
 pred goto(receptacle) : task.
 pred open(receptacle) : task.
@@ -56,6 +61,10 @@ stage act {
   fetch [dyn] : fetch(O, R) * $target(O) * $dest(R) * $inrecep(O, R0) * R0 <> R -o want(O) * to(R) * start.
   %% {O} is already in {R}: nothing to do.
   already [dyn] : fetch(O, R) * $target(O) * $dest(R) * $inrecep(O, R) -o done.
+  %% I left {O} in {R}: I go and look.
+  verify [dyn] : fetch(O, R) * $target(O) * $dest(R) * $believed(O, R) -o want(O) * to(R) * goto(R).
+  %% I can't find {X}: I stop and ask.
+  nowhere [dyn] : fetch(O, R) * $target(O) * $dest(R) * $lost(X) -o stuck(X).
   %% I have {O}: to {R}.
   held [dyn] : fetch(O, R) * $target(O) * $dest(R) * $holds(O) -o carry(O) * to(R) * goto(R).
   %% {R} is not where this task wants {O}. | put {O} in {D} | stop
@@ -67,7 +76,17 @@ stage act {
   %% At {R}: I need it open.
   open_for [dyn] : want(O) * reached(R) * $inrecep(O, R) -o want(O) * open(R).
   %% {R} is accessible: I take {O}.
-  take_for [dyn] : want(O) * accessible(R) * $inrecep(O, R) -o want(O) * take(O).
+  take_for [dyn] : want(O) * accessible(R) * $inrecep(O, R) * $notdest(R) -o want(O) * take(O).
+  %% At {R}: I need it open to see.
+  open_look [dyn] : want(O) * reached(R) * $to(R) * $believed(O, R) -o want(O) * open(R).
+  %% {O} is in {R}: done.
+  verified [dyn] : want(O) * accessible(R) * $to(R) * $inrecep(O, R) -o done.
+  %% {O} is not in {R}: I look elsewhere.
+  not_here [dyn] : want(O) * reached(R) * $absent(O, R) -o want(O) * start.
+  %% {O} is not in {R}: I look elsewhere.
+  not_in [dyn] : want(O) * accessible(R) * $absent(O, R) -o want(O) * start.
+  %% I can't find {X}: I stop and ask.
+  lost_it [dyn] : want(O) * start * $lost(X) -o stuck(X).
   %% I have {O}: to {R}.
   go_dest [dyn] : want(O) * taken(O) * $to(R) -o carry(O) * goto(R).
   %% At {R}: I need it open.

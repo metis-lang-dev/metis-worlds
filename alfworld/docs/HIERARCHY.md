@@ -206,6 +206,43 @@ The places³ growth of grasp and place comes from the dynamic recat, and it is t
 data. If it ever needs narrowing, the fix is a projection that asserts recat only for bound places (it already
 does), plus rules that test it earlier in the body. It is not a return to static tables.
 
+## The robot sees what stands before it (semantic-map step 3, view mode)
+
+Opt-in: `gen_hier.install(…, view=True)`, `demo.py setup --view`, `demo.sh --view`. The default is every fact,
+as above; the demo check and the fixtures run on it unchanged.
+
+- **What the map sees.** The receptacles at the robot's location that are open or not openable, and its hand.
+  The places are known from the start (the room's first look lists them); a thing only once seen.
+- **The belief.** A thing seen in R: 1 there, 0 elsewhere. A receptacle looked into without it: 0 there, the
+  rest renormalized. When nothing is left, it starts again from the prior less the places looked into.
+- **The prior.** The task names a kind before any is seen ("a tomato"). The map holds an entry for the kind,
+  flat over the places ALFWorld's own `cancontain` lets hold it, the dests left out. The first sighting of a
+  target resolves it to the instance. A fetch of the kind takes any target of it the robot sees.
+- **What the task reads.** Its `inrecep` is the belief: one per bound place it may be in, so `look` chooses
+  the first place to try. `absent(O, R)` marks a place looked into without it. `lost(X)` means no place is
+  left. `believed(O, R)` marks a target left in its dest by an earlier run that is not seen there now.
+- **The task's look rules.**
+  - `not_here` / `not_in`: absent where it arrived, or where it opened: start again, and go_for takes the
+    next place.
+  - `verify`, `open_look`, `verified`: believed in the dest: go, open, and done only if it is seen there.
+  - `lost_it` / `nowhere`: nothing left to look, during the search or at the fetch: stuck, and the director
+    asks ("I can't find tomato 1: I stop and ask.").
+- **The binding stays stable while the robot looks.**
+  - A place keeps its role while the target may be there, or while it is the place just looked into (so its
+    absent fact reaches the task).
+  - The places looked into empty free their slots, and the belief's next places fill them.
+  - A specialist reads the binding it was woken with until its next activation (AlfHost.frozen, set at
+    refresh). A place fact that moved under its goal would be a surprise to its watch.
+  - The planner reads the map's own binding.
+- **The card grows.**
+  - The task's card offers the kind, and every thing once it is seen.
+  - The task host rewrites it when the map's things grow (`card_changed()`).
+  - metis-agent re-reads it on the next tick (DomainAgent.refresh_card, the service's reload_intents, a
+    `dlg-card` journal row). There is no reload.
+
+The cases, on CPU through metis-agent's own service object: `experiments/sm_cases.py` (new, moved, revisit,
+revisit-wrong, lost).
+
 ## What it gives the agent paper
 
 The same family, three programs: flat (step 1 of world-alfworld), hierarchical by hand

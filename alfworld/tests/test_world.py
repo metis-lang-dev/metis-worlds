@@ -174,7 +174,9 @@ def test_hierarchy_instances_see_less(tmp_path):
         p = gen_hier.generate(game_dir(), str(tmp_path / "pk"), spec, 0, info, smap, reading, seed, [])
         init = sum(1 for l in open(p) if l.startswith("#init"))
         assert init < flat_init, (spec, init, flat_init)
-        assert gen_hier.vector(spec)["rules"] <= 14          # the task domain: 14 with `already` and `held` (alf-demo step 3b, F8/F12)
+        assert gen_hier.vector(spec)["rules"] <= 21          # the task domain: 14 with `already` and `held` (alf-demo step 3b, F8/F12),
+                                                             # 21 with view mode's look (semantic-map step 3: not_here, not_in,
+                                                             # lost_it, nowhere; verify, open_look, verified)
 
 
 def test_activation_cards(tmp_path):
@@ -857,3 +859,132 @@ def test_no_world_frame_of_the_recordings_carries_a_role():
             if f["ev"].startswith("world/"):
                 shown = json.dumps(f)
                 assert not pat.search(shown), (name, shown[:200])
+
+
+# ── semantic-map step 3: the map sees only what the robot sees (view mode, the architect's RULING 1) ──
+def _view_install(tmp_path):
+    from alf_host import AlfHost
+    pk = gen_hier.install(game_dir(), str(tmp_path), view=True)
+    return pk, AlfHost(pk["task"])
+
+
+def _loc(m, place):
+    return m.load()["places"][place]["loc"]
+
+
+def test_view_mode_knows_only_what_the_robot_sees(tmp_path):
+    """The robot starts where it sees into no receptacle: the map knows the places, no thing; the task's
+    kind is an entry of its own ("tomato"), believed flat over the places ALFWorld's cancontain lets hold
+    it, the dests left out; the task reads that belief (an inrecep per candidate place), never the game's
+    truth, and the card offers the kind."""
+    import semantic_map
+    import yaml
+    pk, th = _view_install(tmp_path)
+    try:
+        d = th.smap.load()
+        kind = semantic_map.want_handle(d["task"]["targets"][0])
+        assert d["view"] and d["prior"] == "cancontain" and set(d["things"]) == {kind}
+        bel = d["belief"][kind]
+        st = set(th.static)
+        ok = {a[len("cancontain("):-1].split(",")[0] for a in st if a.startswith("cancontain(") and a.endswith(",%s)" % d["types"][d["task"]["targets"][0]])}
+        want = {r for r in d["places"] if d["types"][r] in ok and r not in d["task"]["dests"]}
+        assert set(bel) == want and abs(sum(bel.values()) - 1) < 1e-9 and len(set(bel.values())) == 1
+        b = th.smap.binding()
+        assert b["target"] == kind
+        believed = {"inrecep(target,%s)" % r for r, h in b.items() if h in bel}
+        assert {a for a in th.reading() if a.startswith("inrecep(")} == believed      # the belief, not the truth
+        card = yaml.safe_load(open(os.path.join(pk["task"], "intent.yaml")))
+        assert card["slots"]["object"]["enum"] == [kind.upper()]
+    finally:
+        th.gym.close()
+
+
+def test_view_a_look_updates_the_belief_and_the_binding_stays(tmp_path):
+    """A place looked into without the thing: its belief goes to 0, the rest renormalizes, the task reads
+    absent there and its role stays bound (the task holds reached(p) for it); a place seen into with the
+    thing: the kind resolves to the instance, the map and the card grow (the host's card_changed), the
+    place keeps its role and the target is bound to the instance."""
+    import yaml
+    pk, th = _view_install(tmp_path)
+    m = th.smap
+    try:
+        d = m.load()
+        kind = next(iter(d["things"]))
+        truth = {a[len("inrecep("):-1].split(",")[0]: a[len("inrecep("):-1].split(",")[1] for a in th.dyn if a.startswith("inrecep(")}
+        tgt = next(t for t in d["task"]["targets"] if t in truth)
+        home = truth[tgt]
+        empty = next(r for r in sorted(d["belief"][kind]) if not d["places"][r]["openable"] and r != home
+                     and not any(v == r for o, v in truth.items() if o in d["task"]["targets"]))
+        role = m.role_of(empty)
+        n = len(d["belief"][kind])
+        m.observe({"at(%s)" % _loc(m, empty)})
+        d = m.load()
+        assert empty not in d["belief"][kind] and abs(sum(d["belief"][kind].values()) - 1) < 1e-9 and len(d["belief"][kind]) == n - 1
+        assert d["looked"][kind] == [empty] and m.role_of(empty) == role
+        assert th.reading().get("absent(target,%s)" % role) == 1 and "inrecep(target,%s)" % role not in th.reading()
+        hrole = m.role_of(home)
+        seen = {"at(%s)" % _loc(m, home)} | ({"opened(%s)" % home} if d["places"][home]["openable"] else set()) | \
+               {"inrecep(%s,%s)" % (o, r) for o, r in truth.items() if r == home}
+        m.observe(seen)
+        d = m.load()
+        assert d["resolved"][kind] in d["task"]["targets"] and kind not in d["belief"]
+        inst = d["resolved"][kind]
+        assert m.binding()["target"] == inst and d["belief"][inst] == {home: 1.0} and m.role_of(home) == hrole
+        assert th.reading().get("inrecep(target,%s)" % hrole) == 1
+        assert th.card_changed() and not th.card_changed()                 # once, after the growth
+        enum = yaml.safe_load(open(os.path.join(pk["task"], "intent.yaml")))["slots"]["object"]["enum"]
+        assert inst.upper() in enum and kind.upper() in enum               # the instance, and still the kind
+    finally:
+        th.gym.close()
+
+
+def test_view_the_dest_is_looked_into_before_already(tmp_path):
+    """A target the map left in its dest (a run before: not seen there now) is believed(target, dest),
+    never inrecep — the task's `already` waits for a look (verify); looked into without it: absent there,
+    and the belief starts again from the prior less the places looked into; nothing left: lost."""
+    pk, th = _view_install(tmp_path)
+    m = th.smap
+    try:
+        d = m.load()
+        inst, dst = d["task"]["targets"][0], m.binding()["dest"]
+        d["things"][inst] = {"in": dst, "pickupable": True}
+        d["belief"][inst] = {dst: 1.0}
+        m.save()
+        assert m.project(inst, dst)["target"] == inst
+        r = th.reading()
+        assert r.get("believed(target,dest)") == 1 and "inrecep(target,dest)" not in r
+        m.observe({"at(%s)" % _loc(m, dst)} | ({"opened(%s)" % dst} if m.load()["places"][dst]["openable"] else set()))
+        d = m.load()
+        assert th.reading().get("absent(target,dest)") == 1 and d["belief"][inst] and dst not in d["belief"][inst]
+        d["looked"][inst] = sorted(set(d["looked"][inst]) | set(d["belief"][inst]))
+        d["belief"][inst] = {}
+        m.save()
+        assert th.reading().get("lost(target)") == 1
+    finally:
+        th.gym.close()
+
+
+def test_a_specialist_reads_its_activation_binding(tmp_path):
+    """View mode re-projects while the robot looks: a specialist reads the binding it was woken with
+    (frozen at its activation: refresh, as the agent's take calls it) — no place fact moves under its
+    goal, which its watch would take for a surprise — and the planner reads the map's own."""
+    from alf_host import AlfHost
+    pk, th = _view_install(tmp_path)
+    ah = AlfHost(pk["access"])
+    m = th.smap
+    try:
+        before = dict(ah.frozen)
+        assert ah.frozen == m.binding() and th.frozen is None
+        bel = m.load()["belief"][next(iter(m.load()["things"]))]
+        empty = next(r for r in sorted(bel) if not m.load()["places"][r]["openable"])
+        role = m.role_of(empty)
+        m.observe({"at(%s)" % _loc(m, empty)})                        # a look elsewhere: the map's binding may move
+        m.load()["binding"].pop(role)                                  # … say this slot was freed
+        m.save()
+        lrole = next(r for r, h in before.items() if h == _loc(m, empty))
+        assert ah.frozen == before and "recat(%s,%s)" % (role, lrole) in ah.reading()
+        ah.refresh()
+        assert ah.frozen == m.binding() and not any(a.startswith("recat(%s," % role) for a in ah.reading())
+    finally:
+        ah.gym.close()
+        th.gym.close()

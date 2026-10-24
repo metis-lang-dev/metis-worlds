@@ -145,8 +145,14 @@ class AlfHost:
         # lines and its goals through it back in the room's things
         from semantic_map import SemanticMap
         self.smap = SemanticMap(meta["map"]) if meta.get("map") else None
+        # view mode (step 3): the map re-projects while the robot looks; a specialist reads the binding it
+        # was woken with until its next activation (a role in its goal keeps its place: no surprise
+        # mid-goal), the planner the map's own (the next place to look is its)
+        self.spec, self.frozen = meta.get("spec"), None
         self.beat, self.due, self.script, self.last = 0, (), {}, None   # the AgentHost reads these
         self._reset()
+        self._freeze()
+        self.card_changed()                          # the card as loaded: the map's things now
 
     # ── the episode ──
     def _reset(self):
@@ -177,7 +183,31 @@ class AlfHost:
         if getattr(self.gym, "shared", False) and self.gym.last is not None:
             self._take(self.gym.last)
             self.t = len(self.gym.history)
+        self._freeze()
         self.reported = set()                    # a delivered activation reports its result again (reached(p1) in a second task)
+
+    def card_changed(self):
+        """The planner's card in view mode (semantic-map step 3): True once after the map's things grew —
+        a thing seen for the first time — with the card rewritten from the map (intent.yaml and its
+        generated grammar and prompts); the agent re-reads it (DomainAgent.refresh_card), no reload.
+        False for any other host, and in text mode (the map knows every thing from the start)."""
+        if self.smap is None or self.spec != "task" or not self.smap.load().get("view"):
+            return False
+        d = self.smap.load()
+        key = sorted(o for o, t in d["things"].items() if t.get("pickupable"))
+        if key == getattr(self, "_card_key", None):
+            return False
+        first = not hasattr(self, "_card_key")
+        self._card_key = key
+        if first:                                    # at load: the card the agent read
+            return False
+        import gen_hier
+        gen_hier.write_card(self.package_dir, self.spec, self.smap)
+        return True
+
+    def _freeze(self):
+        if self.smap is not None and self.smap.load().get("view") and self.spec not in (None, "task"):
+            self.frozen = self.smap.binding()
 
     def new_episode(self):
         """The same game from its start (alf-demo step 3b, F7: a won game accepts commands that change
@@ -187,6 +217,7 @@ class AlfHost:
             open(self.commands_log, "w").close()
         self.reported, self.pending_frames = set(), []
         self._reset()
+        self._freeze()
 
     def _replay(self):
         if self.commands_log and os.path.exists(self.commands_log):
@@ -214,7 +245,7 @@ class AlfHost:
             if rec not in opened:
                 r["closed(%s)" % rec] = 1
         if self.smap is not None:
-            r = self.smap.role_reading(r)            # the world over the bound roles: the binding changed, so does the reading
+            r = self.smap.role_reading(r, self.frozen)   # the world over the bound roles: the binding changed, so does the reading
         if self.observed is not None:
             r = {a: n for a, n in r.items() if a.split("(")[0] in self.observed}
         return r
@@ -230,7 +261,7 @@ class AlfHost:
     def command_of(self, name, args):
         base, b = bindings(name)
         if self.smap is not None:                    # the rule's roles → the map's things
-            b = {k: self.smap.handle(v) or v for k, v in b.items()}
+            b = {k: self.smap.handle(v, self.frozen) or v for k, v in b.items()}
         spec = COMMANDS.get(base)
         if spec is None:
             spec = self.VERBS.get(base.split("_")[0]) if self.verbs else None
@@ -366,7 +397,7 @@ class AlfHost:
         import re
         from semantic_map import spoken
         if getattr(self, "smap", None) is not None:   # a role said as the thing it is bound to: name(role, thing)
-            names = dict(self.smap.names())
+            names = dict(self.smap.names(self.frozen))
             if names:
                 text = re.sub(r"\b(%s)\b" % "|".join(sorted(names, key=len, reverse=True)), lambda m: names[m.group(0)], text)
         return re.sub(r"\b[a-z]+\d+\b", lambda m: spoken(m.group(0)) if m.group(0) in self.to_name else m.group(0), text)
@@ -382,7 +413,7 @@ class AlfHost:
         words = self.GOALS.get(name)
         args = [a.strip() for a in rest.rstrip(")").split(",")] if rest else []
         if getattr(self, "smap", None) is not None:
-            args = [self.smap.handle(a) or a for a in args]
+            args = [self.smap.handle(a, self.frozen) or a for a in args]
         if words is None or words.count("{") != len(args):
             return None
         return words.format(*(spoken(a) if a in self.to_name else a for a in args))
@@ -393,7 +424,7 @@ class AlfHost:
         if getattr(self, "smap", None) is None or "(" not in atom:
             return atom
         name, _, rest = atom.partition("(")
-        return "%s(%s)" % (name, ",".join(self.smap.handle(a.strip()) or a.strip() for a in rest.rstrip(")").split(",")))
+        return "%s(%s)" % (name, ",".join(self.smap.handle(a.strip(), self.frozen) or a.strip() for a in rest.rstrip(")").split(",")))
 
     def frames(self):
         """The world page's frames since the last call (metis-agent's service sends them on the wire)."""
@@ -404,7 +435,7 @@ class AlfHost:
         return {"game": {"path": self.game, "task": self.task, "params": self.params, "step": self.t,
                          "done": self.done, "won": self.won},
                 "observed": sorted({a.split("(")[0] for a in self.dyn} | {"closed", "handsfree", "holding"}),
-                **({"names": self.smap.names()} if self.smap is not None else {}),     # name(role, thing) as data
+                **({"names": self.smap.names(self.frozen)} if self.smap is not None else {}),     # name(role, thing) as data
                 "commands": [[b, n, c, adm, ch] for b, n, c, adm, ch in self.commands]}
 
     def snapshot(self):
@@ -423,8 +454,9 @@ class AlfHost:
 # the program's dynamic predicates (the ones sync may retract): ground.py's, plus the complements
 from ground import DYNAMIC as _DYN  # noqa: E402
 DYNAMIC_PREDS = set(_DYN) | {"closed", "handsfree", "holding"}
-PLACE_PREDS = {"recat", "openable", "notopenable"}     # a role host's too: the projection asserts the place facts (a flat
-                                                       # program's are static, or its own: a learned split's to keep)
+PLACE_PREDS = {"recat", "openable", "notopenable", "absent", "lost", "believed"}     # a role host's too: the projection asserts the place facts (a flat
+                                                       # program's are static, or its own: a learned split's to keep),
+                                                       # and the map's view mode what was looked for in vain (step 3)
 
 
 def make(case=None, package_dir=None):

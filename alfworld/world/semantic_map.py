@@ -188,6 +188,11 @@ K = 8                                              # the places a projection bin
 OBJECT_ROLES = ("target", "other")
 
 
+def want_handle(obj):
+    """The wanted entry for a target's kind before one is seen (view mode): tomato1 → "tomato"."""
+    return re.sub(r"\d+$", "", obj)
+
+
 def place_roles(k=K):
     return ("dest", "p0") + tuple("p%d" % i for i in range(1, k + 1))
 
@@ -205,9 +210,12 @@ class SemanticMap:
         self.path, self.data, self._mtime = path, None, None
 
     @classmethod
-    def build(cls, path, static, dyn, targets, dests, k=K):
+    def build(cls, path, static, dyn, targets, dests, k=K, view=False):
         """The map from the game's facts as the mirror reads them (static and dynamic atoms) and the task's
-        resolved targets and dests; no binding yet."""
+        resolved targets and dests; no binding yet. view: the robot sees only what stands before it
+        (step 3, the architect's RULING 1): the places are known (the room's first look lists them), a
+        thing only once seen; the task's wanted type is an entry of its own, believed flat over the places
+        that can hold it (ALFWorld's cancontain), until a target is seen."""
         m = cls(path)
         st = set(static)
         places = {}
@@ -219,9 +227,96 @@ class SemanticMap:
         things = {o: {"in": None, "pickupable": True} for o in sorted(pick)}
         m.data = {"places": places, "things": things, "belief": {}, "agent": {"at": None, "holding": None},
                   "task": {"targets": sorted(targets), "dests": sorted(dests)}, "binding": {}, "k": k}
+        if view:
+            types = {}
+            for a in st:
+                if a.startswith(("otype(", "rtype(")):
+                    h, t = _args(a)
+                    types[h] = t
+            compat = {}
+            for a in sorted(st):
+                if a.startswith("cancontain("):
+                    rt, ot = _args(a)
+                    compat.setdefault(ot, []).append(rt)
+            m.data.update(view=True, things={}, types=types, compat=compat, pickable=sorted(pick), looked={}, look=None,
+                          prior="cancontain" if compat else "flat")
+            for o in sorted(targets):                  # the wanted type: one entry per kind the task names
+                w = want_handle(o)
+                if w not in m.data["things"]:
+                    m.data["things"][w] = {"in": None, "pickupable": True, "wanted": types.get(o)}
+                    m.data["belief"][w] = m._prior(w)
         m.observe(dyn, save=False)
         m.save()
         return m
+
+    # ── view mode (step 3): what the robot sees, the belief over the rest ──
+    def _prior(self, thing):
+        """Flat over the places that can hold THING's type (cancontain), less the dests (a target already
+        in its dest is seen there, never believed: the task's `already` must not fire on a guess) and the
+        places looked into without it; flat over all such places when the game gives no compatibility."""
+        d = self.data
+        t = d["things"].get(thing, {}).get("wanted") or d["types"].get(thing)
+        ok = set(d["compat"].get(t, ())) if d["compat"] else None
+        gone = set(d["looked"].get(thing, ()))
+        cand = [r for r in sorted(d["places"]) if r not in d["task"]["dests"] and r not in gone
+                and (ok is None or d["types"].get(r) in ok)]
+        return {r: 1.0 / len(cand) for r in cand} if cand else {}
+
+    def _visible(self, d, at):
+        """The receptacles the robot sees into: at its location, open or not openable."""
+        return [r for r, p in sorted(d["places"].items()) if p["loc"] == at and (p["opened"] or not p["openable"])]
+
+    def _observe_view(self, d, dyn, held):
+        changed = False
+        vis = self._visible(d, d["agent"]["at"])
+        seen = {}
+        for a in dyn:
+            if a.startswith("inrecep("):
+                o, r = _args(a)
+                if r in vis:
+                    seen[o] = r
+        if held:
+            seen[held] = None
+        for o, r in sorted(seen.items(), key=lambda x: x[0]):
+            if o not in d["things"]:                   # a thing never seen: the map grows
+                d["things"][o] = {"in": None, "pickupable": o in d["pickable"]}
+                changed = True
+            t = d["things"][o]
+            post = {r: 1.0} if r else {}
+            if t["in"] != r or d["belief"].get(o) != post:
+                t["in"], changed = r, True
+                if post:
+                    d["belief"][o] = post
+                else:
+                    d["belief"].pop(o, None)
+            d["looked"].pop(o, None)                   # a sighting supersedes the places it was not in
+            for w, wt in list(d["things"].items()):    # a target seen resolves its wanted type
+                if wt.get("wanted") and o in d["task"]["targets"] and d["types"].get(o) == wt["wanted"]:
+                    del d["things"][w]
+                    d["belief"].pop(w, None)
+                    d["looked"].pop(w, None)
+                    d.setdefault("resolved", {})[w] = o
+                    changed = True
+        for r in vis:                                  # looked into: what is not there is not there
+            for o in sorted(d["belief"]):
+                bel = d["belief"][o]
+                if bel.get(r, 0) > 0 and seen.get(o) != r:
+                    d["looked"].setdefault(o, []).append(r)
+                    del bel[r]
+                    z = sum(bel.values())
+                    d["belief"][o] = {x: p / z for x, p in bel.items()} if z > 0 else self._prior(o)
+                    d["look"] = r
+                    changed = True
+            for o, x in seen.items():
+                if x == r and d["look"] != r and (o in d["task"]["targets"] or o in d.get("resolved", {}).values()):
+                    d["look"], changed = r, True
+        return changed
+
+    def lost(self, thing):
+        """No place left to look for THING: the belief is empty and it is not in hand."""
+        d = self.load()
+        return bool(d.get("view")) and thing in d["things"] and not d["belief"].get(thing) \
+            and d["agent"]["holding"] != thing
 
     def load(self):
         try:
@@ -257,6 +352,13 @@ class SemanticMap:
         if (at, held) != (d["agent"]["at"], d["agent"]["holding"]):
             d["agent"].update(at=at, holding=held)
             changed = True
+        if d.get("view"):
+            moved = self._observe_view(d, dyn, held)
+            if moved and d["binding"]:
+                self._reproject(d)
+            if (changed or moved) and save:
+                self.save()
+            return changed or moved
         seen = {}
         for a in dyn:
             if a.startswith("inrecep("):
@@ -290,11 +392,18 @@ class SemanticMap:
         k = k or d["k"]
         targets, dests = d["task"]["targets"], d["task"]["dests"]
         held = d["agent"]["holding"]
-        if obj in targets:
+        if d.get("view"):
+            tgt = self._view_target(d, obj, held)
+            # the person named the kind ("a tomato"): any target of it the robot sees will do (_reproject)
+            d["task"]["by_kind"] = bool(obj) and (obj in d.get("resolved", {}) or bool(d["things"].get(obj, {}).get("wanted")))
+            same = obj and (obj == tgt or d.get("resolved", {}).get(obj) == tgt or want_handle(obj) == want_handle(tgt or ""))
+            other = obj if obj and not same else (held if held and held != tgt else None)
+        elif obj in targets:
             tgt = obj
+            other = obj if obj and obj != tgt else (held if held and held != tgt else None)
         else:
             tgt = held if held in targets else (targets[0] if targets else obj)
-        other = obj if obj and obj != tgt else (held if held and held != tgt else None)
+            other = obj if obj and obj != tgt else (held if held and held != tgt else None)
         dst = rec if rec in dests else (dests[0] if dests else rec)
         at = d["agent"]["at"]
         here = [r for r, p in sorted(d["places"].items()) if p["loc"] == at]
@@ -324,12 +433,73 @@ class SemanticMap:
         self.save()
         return dict(d["binding"])
 
+    def _view_target(self, d, obj, held):
+        """The target in view mode: the instance the person or the goal names once it is seen, its wanted
+        type until then (resolved at the first sighting), a held target first."""
+        targets, res = d["task"]["targets"], d.get("resolved", {})
+        if obj in res:
+            return res[obj]
+        if obj in targets and obj in d["things"]:
+            return obj
+        if obj in d["things"] and d["things"][obj].get("wanted"):
+            return obj
+        if held in targets:
+            return held
+        seen = [t for t in targets if t in d["things"]]
+        if seen:
+            return seen[0]
+        wanted = [w for w, t in sorted(d["things"].items()) if t.get("wanted")]
+        return wanted[0] if wanted else obj
+
+    def _reproject(self, d):
+        """The binding after a look (view mode), STABLE: a place bound stays bound to its role (a role is
+        in tokens on the live sessions: reached(p1), goto(p2)) while the target may be there or it is
+        the place just looked into (its absent fact must reach the task); the places looked into empty
+        free their slots, and the belief's next places fill the free slots, the most likely first; the
+        target bound to its wanted type becomes the instance seen. Not saved here."""
+        b, k = dict(d["binding"]), d["k"]
+        tgt = b.get("target")
+        if tgt in d.get("resolved", {}):
+            b["target"] = tgt = d["resolved"][tgt]
+        vis = set(self._visible(d, d["agent"]["at"]))
+        if d["task"].get("by_kind") and tgt and not any(r in vis for r in d["belief"].get(tgt) or {}) \
+                and d["agent"]["holding"] != tgt:      # a target of the kind asked for, in sight: that one
+            kin = [o for o in d["task"]["targets"] if want_handle(o) == want_handle(tgt) and o != tgt
+                   and any(r in vis for r, p in (d["belief"].get(o) or {}).items() if p >= 1.0)]
+            if kin:
+                b["target"] = tgt = kin[0]
+                d.setdefault("resolved", {})[want_handle(tgt)] = tgt
+        bel = d["belief"].get(tgt) or {}
+        obel = d["belief"].get(b.get("other")) or {} if b.get("other") else {}
+        slot = lambda r: re.fullmatch(r"p[1-9]\d*", r)
+        keep = {r: h for r, h in b.items() if slot(r) and (bel.get(h, 0) > 0 or obel.get(h, 0) > 0 or h == d.get("look"))}
+        free = ["p%d" % i for i in range(1, k + 1) if "p%d" % i not in keep]
+        bound = set(keep.values()) | {b.get("dest"), b.get("p0")}
+        cand = [r for r, p in sorted(bel.items(), key=lambda x: (-x[1], x[0])) if p > 0 and r in d["places"] and r not in bound]
+        slots = dict(keep, **dict(zip(free, cand)))
+        loc_role = {h: r for r, h in b.items() if r in ("lhere", "ldest")}
+        need = {d["places"][h]["loc"] for h in slots.values()}
+        for r, h in sorted(b.items()):
+            if re.fullmatch(r"l[1-9]\d*", r) and h in need and h not in loc_role:
+                loc_role[h] = r
+        used = set(loc_role.values())
+        for h in sorted(need):
+            if h not in loc_role:
+                r = next("l%d" % i for i in range(1, k + 1) if "l%d" % i not in used)
+                loc_role[h] = r
+                used.add(r)
+        b = {r: h for r, h in b.items() if not slot(r) and not re.fullmatch(r"l[1-9]\d*", r)}
+        b.update(slots)
+        b.update((r, h) for h, r in loc_role.items() if re.fullmatch(r"l[1-9]\d*", r))
+        d["binding"] = {r: h for r, h in sorted(b.items()) if h}
+
     def binding(self):
         return dict(self.load()["binding"])
 
-    def handle(self, role):
-        """The map entry a role is bound to (None when unbound); a constant that is no role is itself."""
-        return self.binding().get(role) if role in self.roles() else role
+    def handle(self, role, binding=None):
+        """The map entry a role is bound to (None when unbound); a constant that is no role is itself.
+        binding: a host's own (a specialist's, frozen for its activation in view mode) over the map's."""
+        return (binding if binding is not None else self.binding()).get(role) if role in self.roles() else role
 
     def roles(self):
         k = self.load()["k"]
@@ -338,13 +508,20 @@ class SemanticMap:
     def role_of(self, handle):
         return {h: r for r, h in self.binding().items()}.get(handle)
 
-    def role_reading(self, reading):
+    def role_reading(self, reading, binding=None):
         """The world's facts (atom → count, the game's handles) over the bound entries only, said in roles,
         with each bound receptacle's place facts: recat(R, L) when its location is bound, openable(R) or
-        notopenable(R)."""
+        notopenable(R). binding: a host's own over the map's (handle)."""
         d = self.load()
+        if binding is not None:
+            d = dict(d, binding=binding)
         inv = {h: r for r, h in d["binding"].items()}
         out = {}
+        if d.get("view"):                          # where a bound thing is: the belief's, not the game's (step 3)
+            objs = {h for r, h in d["binding"].items() if r in OBJECT_ROLES}
+            reading = {a: n for a, n in reading.items()
+                       if not (a.startswith(("inrecep(", "objat(")) and _args(a)[0] in objs)}
+            out.update(self._believed(d, inv))
         for a, n in reading.items():
             name = a.split("(")[0]
             args = _args(a) if "(" in a else []
@@ -359,11 +536,41 @@ class SemanticMap:
             out[("openable(%s)" if p["openable"] else "notopenable(%s)") % role] = 1
         return out
 
-    def names(self):
+    def _believed(self, d, inv):
+        """View mode's place facts for the bound things: inrecep(role, p) and objat(role, l) at every bound
+        place the belief holds it may be in (a dest only once seen there), absent(role, p) at a bound place
+        looked into without it, lost(role) when no place is left to look."""
+        out = {}
+        vis = set(self._visible(d, d["agent"]["at"]))
+        for orole in OBJECT_ROLES:
+            h = d["binding"].get(orole)
+            if not h or d["agent"]["holding"] == h:
+                continue
+            bel = d["belief"].get(h) or {}
+            gone = set(d["looked"].get(h, ()))
+            for prole in place_roles(d["k"]):
+                ph = d["binding"].get(prole)
+                if not ph:
+                    continue
+                p = bel.get(ph, 0)
+                if p > 0 and prole == "dest" and ph not in vis:
+                    out["believed(%s,%s)" % (orole, prole)] = 1    # left there once: `already` waits for a look
+                elif p > 0:
+                    out["inrecep(%s,%s)" % (orole, prole)] = 1
+                    loc = inv.get(d["places"][ph]["loc"])
+                    if loc:
+                        out["objat(%s,%s)" % (orole, loc)] = 1
+                elif ph in gone:
+                    out["absent(%s,%s)" % (orole, prole)] = 1
+            if orole == "target" and h in d["things"] and not bel:
+                out["lost(%s)" % orole] = 1
+        return out
+
+    def names(self, binding=None):
         """name(role, thing) as data: the bound roles and the things they name (locations left out)."""
         k = self.load()["k"]
         keep = set(OBJECT_ROLES) | set(place_roles(k))
-        return sorted([r, h] for r, h in self.binding().items() if r in keep)
+        return sorted([r, h] for r, h in (binding if binding is not None else self.binding()).items() if r in keep)
 
     def belief(self, obj_role, rec_role):
         """The belief that the role-bound object is in the role-bound receptacle, normalized over the bound
@@ -383,9 +590,17 @@ class SemanticMap:
         name, args = atom.split("(")[0], (_args(atom) if "(" in atom else [])
         if all(a in self.roles() for a in args):
             return atom
+        kind = None
+        if d.get("view"):                              # a target not seen yet is its wanted type; one resolved is the instance
+            res = d.get("resolved", {})
+            kind = next((a for a in args if a in res or d["things"].get(a, {}).get("wanted")), None)   # "a tomato": the kind
+            args = [res.get(a, a) if a in res else (want_handle(a) if a not in d["things"] and want_handle(a) in d["things"] else a)
+                    for a in args]
         inv = {h: r for r, h in d["binding"].items()}
         if name == "fetch" or any(a not in inv for a in args):
-            obj = next((a for a in args if a in d["things"]), None)
+            obj = kind or next((a for a in args if a in d["things"]), None)
             rec = next((a for a in args if a in d["places"]), None)
             inv = {h: r for r, h in self.project(obj, rec).items()}
+            if kind:                                   # the kind's instance as the projection bound it
+                args = [d["binding"].get("target") if a in (kind, d.get("resolved", {}).get(kind)) else a for a in args]
         return "%s(%s)" % (name, ",".join(inv.get(a, a) for a in args)) if args else name
