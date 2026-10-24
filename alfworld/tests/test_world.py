@@ -842,9 +842,9 @@ def test_a_fetch_of_another_thing_is_refused_by_roles(tmp_path):
 
 
 def test_no_world_frame_of_the_recordings_carries_a_role():
-    """The compiled vocabulary never reaches the page (the architect's rule, semantic-map step 2): every
-    world/* frame of the recorded turns says the world's things — a program's own atom only in a `role`
-    field; the journal's dlg-trace is the program's record and stays in roles."""
+    """The compiled vocabulary never reaches the page (the architect's rule, semantic-map step 2): no role
+    token anywhere in a world/* frame of the recorded turns, not even in a side field; the journal's
+    dlg-trace is the program's record and stays in roles."""
     import re
     import semantic_map
     roles = set(semantic_map.OBJECT_ROLES) | set(semantic_map.place_roles()) | set(semantic_map.location_roles())
@@ -855,5 +855,5 @@ def test_no_world_frame_of_the_recordings_carries_a_role():
         assert any(f["ev"] == "journal" and f["rec"].get("kind") == "dlg-trace" and pat.search(json.dumps(f)) for f in frames)
         for f in frames:
             if f["ev"].startswith("world/"):
-                shown = json.dumps({k: v for k, v in f.items() if k != "role"})
+                shown = json.dumps(f)
                 assert not pat.search(shown), (name, shown[:200])
