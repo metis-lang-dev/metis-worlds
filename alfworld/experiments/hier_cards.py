@@ -67,6 +67,7 @@ def load_llm(persona):
 
 
 summary = {}
+NO_GOAL = ("UNKNOWN", "CHITCHAT")       # verbs with no goal atom: an errand it cannot do, small talk
 if mode in ("alone", "both"):
     for n in NAMES:
         persona, gbnf = gen.prompt(specs[n]) + gen.spoken(specs[n]), gen.grammar(specs[n])
@@ -77,7 +78,7 @@ if mode in ("alone", "both"):
             verb = j.get("intent", "")
             atom, err = in_program(*mapped(maps[n][0], json.dumps(j)), maps[n][1])
             verb_ok = verb == r["want"] and err is None
-            atom_ok = verb_ok and (r["want"] == "UNKNOWN" or norm(atom) == norm(r["atom_want"]))
+            atom_ok = verb_ok and (r["want"] in NO_GOAL or norm(atom) == norm(r["atom_want"]))
             recs.append(dict(r, got=verb, json=res["json"], voice=res["voice"], atom=atom, error=err,
                              verb_ok=verb_ok, ok=atom_ok, ms=ms))
             print("%s %s %-46r want %-7s %-26s got %s" % (n, "ok  " if atom_ok else ("VERB" if verb_ok else "MISS"), r["utt"],
@@ -99,7 +100,7 @@ if mode in ("union", "both"):
     for n in NAMES:
         for r in ROWS[n]:
             # the expectations, the strict one first: the row's own card, else the corpus's union column, else UNKNOWN
-            alts = r["union"] or ([(n, r["want"], r["atom_want"])] if r["want"] != "UNKNOWN" else [("", "UNKNOWN", None)])
+            alts = r["union"] or ([(n, r["want"], r["atom_want"])] if r["want"] not in NO_GOAL else [("", r["want"], None)])
             j, res, ms = answer(llm, persona, r["utt"], gbnf)
             dom, verb = j.pop("domain", ""), j.get("intent", "")
             atom, err = (None, "no such domain")
@@ -107,8 +108,8 @@ if mode in ("union", "both"):
                 atom, err = in_program(*mapped(maps[dom][0], json.dumps(j)), maps[dom][1])
 
             def hit(w):
-                if w[1] == "UNKNOWN":
-                    return verb == "UNKNOWN", verb == "UNKNOWN"
+                if w[1] in NO_GOAL:
+                    return verb == w[1], verb == w[1]
                 v = (dom, verb) == w[:2] and err is None
                 return v, v and norm(atom) == norm(w[2])
             hits = [hit(w) for w in alts]

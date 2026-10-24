@@ -136,6 +136,10 @@ try {
   await page.mouse('#wcasks .chip');
   c.ok(await ev(`[...document.querySelectorAll('#talkpanel .fw-person .fw-text')].some(t => t.textContent === 'put a tomato in the microwave')`),
     'an ask\'s chip says it, as typing it would', null);
+  // small talk is talk: no "meant" row for a CHITCHAT intent, an errand's intent row stays
+  await ev(`(() => { world.panel.core.row({ who: 'intent', text: '{"intent":"CHITCHAT"}' }); world.panel.core.row({ who: 'intent', text: '{"intent":"UNKNOWN"}' }); })()`);
+  c.ok(await ev(`(() => { const r = [...document.querySelectorAll('#talkpanel .fw-intent')].slice(-2); return r[0].hidden && !r[1].hidden && r[1].querySelector('.fw-text').textContent === 'unknown'; })()`),
+    'small talk: no "meant" row; an unknown errand keeps its row', null);
   await ev(`world.frame({ ev: 'world/status', state: 'waiting', text: 'Tell me a task.' })`);
   c.ok(await ev(`[...document.querySelectorAll('#sopts .chip')].some(b => b.textContent === 'what can I ask?')`), 'waiting offers "what can I ask?"', null);
   await ev(`world.docks.set('world', { shown: false })`);

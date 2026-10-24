@@ -24,5 +24,9 @@ go to the microwave	UNKNOWN	hand		nav/GO/goto(microwave1)
 pick up the tomato	UNKNOWN	hand		grasp/TAKE/take(tomato1)
 open the microwave	UNKNOWN	hand		access/OPEN/open(microwave1)
 where is the tomato	UNKNOWN	hand		
-what's the time	UNKNOWN	hand		
-hello there	UNKNOWN	hand		
+what's the time	CHITCHAT	hand		
+hello there	CHITCHAT	hand		
+okay I understood	CHITCHAT	hand		
+understand	CHITCHAT	hand		
+thanks a lot	CHITCHAT	hand		
+good job	CHITCHAT	hand		

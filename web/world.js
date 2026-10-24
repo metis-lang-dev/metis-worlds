@@ -215,7 +215,11 @@ function rowLook(r) {
     if (asks) text.textContent = asked(r.text)[0] ?? r.text;            // the answers are the ask box's chips
     who.textContent = asks ? 'asks' : r.narration === 'v3-card' ? 'world' : 'agent';   // v3-card: the world card's line (hello, an unknown)
     li.classList.toggle('fw-ask', asks);
-  } else if (r.who === 'intent') { text.textContent = intentWords(r.text); who.textContent = 'meant'; }
+  } else if (r.who === 'intent') {
+    // small talk is talk, not an errand: the person's line and her reply, no "meant" row (the user, 2026-10-24)
+    if (/"intent"\s*:\s*"CHITCHAT"/.test(r.text)) { li.hidden = true; return; }
+    text.textContent = intentWords(r.text); who.textContent = 'meant';
+  }
   else if (r.who === 'note' && r.status) { who.textContent = r.status; li.classList.add('fw-status'); }
 }
 function floorLook(s) { if (panel) panel.dom.floor.textContent = `floor: ${FLOOR[s.floor] ?? s.floor.toLowerCase()}`; }

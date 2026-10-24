@@ -12,7 +12,8 @@ persona: |
 
 verbs:
   - {verb: FETCH, meaning: "get an object from wherever it is and put it in or on a receptacle (the whole errand)"}
-  - {verb: UNKNOWN, meaning: "anything else: one step on its own (just go, just open, just pick up), an object not in the schema, a question, small talk"}
+  - {verb: CHITCHAT, meaning: "small talk, not an errand: an acknowledgement (okay, I understand, got it), thanks, a greeting, a comment, a question to you that asks for no errand"}
+  - {verb: UNKNOWN, meaning: "an errand you cannot do here: one step on its own (just go, just open, just pick up), an object not in the schema, a question about where things are"}
 
 slots:
   object: {enum: []}
@@ -26,6 +27,8 @@ guidance: |
   an object TO a receptacle is FETCH, and so is "put X in R" when the person wants the whole
   errand done. An object that is not in the schema's object list is UNKNOWN (never another
   object in its place). Just going somewhere, just opening or just picking up is UNKNOWN here.
+  Words that ask for no errand at all (okay, understood, thanks, hello, how are you) are
+  CHITCHAT: the person is talking with you, the errand in progress goes on.
 
 examples:
   - ["fetch the tomato to the fridge", {"intent":"FETCH","object":"TOMATO1","receptacle":"FRIDGE1"}]
@@ -39,7 +42,11 @@ examples:
   - ["go to the fridge", {"intent":"UNKNOWN"}]
   - ["pick up the tomato", {"intent":"UNKNOWN"}]
   - ["open the microwave", {"intent":"UNKNOWN"}]
-  - ["what time is it", {"intent":"UNKNOWN"}]
+  - ["where is the tomato", {"intent":"UNKNOWN"}]
+  - ["okay I understood", {"intent":"CHITCHAT"}]
+  - ["thanks", {"intent":"CHITCHAT"}]
+  - ["hello there", {"intent":"CHITCHAT"}]
+  - ["what time is it", {"intent":"CHITCHAT"}]
 
 spoken:
   heading: Spoken response (after the JSON)
@@ -50,6 +57,8 @@ spoken:
     - ["fetch the tomato to the fridge", {"intent":"FETCH","object":"TOMATO1","receptacle":"FRIDGE1"}, "I'll get the tomato into the fridge."]
     - ["bring the tomato to the microwave", {"intent":"FETCH","object":"TOMATO1","receptacle":"MICROWAVE1"}, "Bringing the tomato to the microwave."]
     - ["take the book to the desk", {"intent":"FETCH","object":"BOOK1","receptacle":"DESK1"}, "Taking the book to the desk."]
+    - ["okay I understood", {"intent":"CHITCHAT"}, "Good."]
+    - ["thanks", {"intent":"CHITCHAT"}, "You're welcome."]
 
 map:
   - {verb: FETCH, atom: "fetch({object:object},{receptacle:receptacle})", act: fetch}
