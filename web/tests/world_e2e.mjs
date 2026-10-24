@@ -23,6 +23,10 @@ try {
     && document.querySelectorAll('#voice .fw-switch').length === 1 && document.getElementById('voice').textContent === 'micnarrator'
     && document.querySelector('#voice .fw-narr')?.dataset.state === 'stopped' && !document.querySelector('#band .narrator')`),
     'the band\'s voice card (fsttm-web): [● mic ⟦switch⟧ narrator], the narrator (F8) always on, stopped', null);
+  await ev(`(() => { world.panel.core.listening = true; world.panel.core.changed(); world.narrator._set('reading'); })()`);
+  const on = await ev(`[getComputedStyle(document.querySelector('#voice .fw-sw-light')).backgroundColor, getComputedStyle(document.querySelector('#voice .fw-narr')).color]`);
+  c.ok(on.every(x => x === 'rgb(63, 185, 80)'), 'on: the mic light and the reading narrator green (not the page\'s white accent)', on);
+  await ev(`(() => { world.panel.core.listening = false; world.panel.core.changed(); world.narrator._set('stopped'); })()`);
   c.ok(await ev(`!document.querySelector('#talkpanel .fw-mic') && document.querySelector('#voice .fw-switch').getAttribute('role') === 'switch'`),
     'the mic is the band\'s switch, not the text line\'s button', null);
 
