@@ -211,15 +211,19 @@ def check(game, out_dir, port):
                 after["mid_stop"] = {"at": (mid or {}).get("goal"), "voice": (rep6 or {}).get("voice"),
                                      "asleep": [x for x in (next((f.get("state") for f in reversed(s.since(k6)) if f.get("ev") == "world/hierarchy"), None) or [])
                                                 if x.startswith("active(")]}
-                # … and a stop with the object in hand (carried by nav after the take), then the task again: the
-                # task card's `held` rule carries it on (the architect's F12)
+                # … and a stop with the object in hand, then the task again: the task card's `held` rule carries it
+                # on (the architect's F12). Said on the take's own world/delta (the agent holding it): the earliest
+                # frame that proves the object is in hand. Said on nav's carry status instead, it raced the rest of
+                # the errand once the specialists stopped reloading (semantic-map step 2: go + open + put in 835 ms,
+                # the stop at +888 ms, the game won first — nina's GPU window)
                 k7 = s.say(words, "p7")
-                carry = s.wait(lambda f: f.get("ev") == "world/status" and f.get("state") == "working" and f.get("domain") == "nav"
-                               and f.get("goal") != (mid or {}).get("goal"), k7, timeout=300)
+                carry = s.wait(lambda f: f.get("ev") == "world/delta" and (f.get("agent") or {}).get("holding"), k7, timeout=300)
                 k8 = s.say("stop", "p8")
                 rep8 = s.wait(lambda f: f.get("ev") == "intent" and f.get("id") == "p8", k8, timeout=60)
                 time.sleep(2.0)
-                after["held_stop"] = {"at": (carry or {}).get("goal"), "voice": (rep8 or {}).get("voice")}
+                won_first = any(f.get("ev") == "world/status" and f.get("state") == "over" for f in s.since(k7))
+                after["held_stop"] = {"at": ((carry or {}).get("agent") or {}).get("holding"), "voice": (rep8 or {}).get("voice"),
+                                      "won_before_the_stop": won_first}
                 k9 = s.say(words, "p9")
                 end9 = s.wait(ended, k9, timeout=300)
                 time.sleep(2.0)
@@ -297,7 +301,8 @@ def check(game, out_dir, port):
             need.append((ms.get("asleep") is not None and all(x.startswith("active(task") for x in ms["asleep"]),
                          "3b. … the hierarchy at its start after it (only the planner awake, world/hierarchy)"))
             hs = rec.get("held_stop") or {}
-            need.append((hs.get("at") and hs.get("voice") == "Stopped.", "3b. a stop with the object in hand is answered"))
+            need.append((hs.get("at") and hs.get("voice") == "Stopped." and not hs.get("won_before_the_stop"),
+                         "3b. a stop with the object in hand is answered (before the errand ends)"))
             need.append((rec.get("again_outcome") == "ended(done)", "3b. … and the task, asked again from there, wins"))
         else:
             a = rec.get("ask") or {}
