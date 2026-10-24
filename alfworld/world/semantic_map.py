@@ -269,6 +269,10 @@ class SemanticMap:
     def _observe_view(self, d, dyn, held):
         changed = False
         vis = self._visible(d, d["agent"]["at"])
+        for r in vis:                                  # the places seen into (the page lights them)
+            if r not in d.setdefault("seen", []):
+                d["seen"].append(r)
+                changed = True
         seen = {}
         for a in dyn:
             if a.startswith("inrecep("):

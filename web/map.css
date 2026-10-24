@@ -31,6 +31,7 @@
   color: var(--wm-fg); border-radius: 3px; padding: 0 2px; }
 .wm-ent:focus-visible, .wm-ent:hover { outline: 2px solid var(--wm-focus); outline-offset: -2px; z-index: 2; }
 .wm-hot { box-shadow: inset 0 0 0 2px var(--wm-hot); }
+.wm-unseen { opacity: .35; }                              /* view mode: not seen into yet (kept in place: no jump) */
 .wm-cornered { box-shadow: inset 0 0 0 3px #e03a3a; background: rgba(224, 58, 58, .25); }
 .wm-agent { z-index: 3; }
 .wm-name { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }

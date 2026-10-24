@@ -157,6 +157,23 @@ try {
     && d.chips.join(' / ') === 'put tomato 1 in microwave 1 / stop' && d.asking,
     'the disengagement: the band asks, the fridge in red, the hierarchy ended on wrong_dest', d);
 
+  // 8b. view mode (semantic-map step 3): the page draws what the robot knows — a place not seen into is
+  // dimmed where it stands (its things hidden), and lit as the robot sees into it; a seen one is not dimmed
+  const v = await ev(`(async () => {
+    const sem = await (await fetch(world.mapUrl)).json();
+    sem.view = true;
+    for (const p of sem.places) p.unseen = p.id !== 'countertop3';
+    await world.map.load(sem, world.mapUrl);
+    const el = id => document.querySelector('#map [data-id="' + id + '"]'), ent = id => world.map.map.entities.find(e => e.id === id);
+    const pos = ent('fridge1').pos + '';
+    const before = { dim: el('fridge1').classList.contains('wm-unseen'), seen: !el('countertop3').classList.contains('wm-unseen'),
+      hidden: ent('fridge1').items.length === 0, shown: ent('countertop3').items.length > 0 };
+    world.frame({ ev: 'world/delta', entities: [{ id: 'fridge1', unseen: false, items: ['tomato 1'] }] });
+    return { ...before, lit: !el('fridge1').classList.contains('wm-unseen'), items: ent('fridge1').items, still: ent('fridge1').pos + '' === pos };
+  })()`);
+  c.ok(v.dim && v.seen && v.hidden && v.shown && v.lit && v.items.join() === 'tomato 1' && v.still,
+    'view mode: an unseen place dimmed in place, its things hidden; a seen one not; lit when seen into', v);
+
   // 9. at phone width the page does not scroll sideways
   await page.cmd('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 2, mobile: true });
   await sleep(300);

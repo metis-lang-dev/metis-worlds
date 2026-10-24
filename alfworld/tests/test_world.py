@@ -922,6 +922,8 @@ def test_view_a_look_updates_the_belief_and_the_binding_stays(tmp_path):
         assert empty not in d["belief"][kind] and abs(sum(d["belief"][kind].values()) - 1) < 1e-9 and len(d["belief"][kind]) == n - 1
         assert d["looked"][kind] == [empty] and m.role_of(empty) == role
         assert th.reading().get("absent(target,%s)" % role) == 1 and "inrecep(target,%s)" % role not in th.reading()
+        lit = [e for f in th.frames() for e in f.get("entities", [])]          # the page lights the place seen into
+        assert {"id": empty, "unseen": False, "items": []} in lit and not th.frames()
         hrole = m.role_of(home)
         seen = {"at(%s)" % _loc(m, home)} | ({"opened(%s)" % home} if d["places"][home]["openable"] else set()) | \
                {"inrecep(%s,%s)" % (o, r) for o, r in truth.items() if r == home}

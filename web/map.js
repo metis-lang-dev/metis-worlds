@@ -4,7 +4,7 @@
 //   import { WorldMap, toGrid } from './map.js';
 //   const map = new WorldMap(el, { base: { sheet, glyphs, index: [url…] }, onTask, onAttend });
 //   await map.load(url)              // the grid schema, or a semantic map (DEMO.md §3: places/things)
-//   map.delta({ agent: {pos | at, yaw, holding}, entities: [{id, pos?, tile?, items?, closed?, gone?}],
+//   map.delta({ agent: {pos | at, yaw, holding}, entities: [{id, pos?, tile?, items?, closed?, unseen?, gone?}],
 //               cells: [{pos, tile}], hot: [id…], cornered: id | null, task: {chain, results} })   // world/delta
 //
 // The grid: {cols, rows, cells: [[tile|null]], entities: [{id, name, pos: [x, y], tile, ch?, kind?,
@@ -47,9 +47,9 @@ export function toGrid(sem, { cell = sem.cell ?? 0.5, margin = 1 } = {}) {
   const task = sem.task || {}, targets = new Set(task.targets || []), dests = new Set(task.dests || []);
   const entities = ps.map(p => {
     const pos = free(q(p.pos)); taken.add(pos + '');
-    const items = (sem.things || []).filter(t => t.at === p.id);
+    const items = p.unseen ? [] : (sem.things || []).filter(t => t.at === p.id);   // view mode: what is in it, once seen
     return { id: p.id, name: p.name || p.id, pos, tile: p.type || p.id, kind: 'place', frame: p.frame || null,
-      items: items.map(t => t.name || t.id), closed: !!p.closed,
+      items: items.map(t => t.name || t.id), closed: !!p.closed, unseen: !!p.unseen,
       hot: dests.has(p.id) || items.some(t => targets.has(t.id)) };
   });
   const a = sem.agent || {};
@@ -131,7 +131,8 @@ export class WorldMap {
       this.layer.appendChild(b); this.els.set(e.id, b);
     }
     b.dataset.kind = e.kind || ''; b.dataset.name = e.name || e.id;
-    b.setAttribute('aria-label', (e.name || e.id) + (e.items?.length ? ` (${e.items.length} in it)` : ''));
+    b.setAttribute('aria-label', (e.name || e.id) + (e.unseen ? ' (not seen yet)' : e.items?.length ? ` (${e.items.length} in it)` : ''));
+    b.classList.toggle('wm-unseen', !!e.unseen);           // view mode: the robot has not seen into it (dimmed, kept in place)
     b.classList.toggle('wm-hot', !!e.hot); b.classList.toggle('wm-agent', e.id === '@agent'); b.classList.toggle('wm-cornered', !!e.cornered);
     b.style.setProperty('--x', e.pos[0]); b.style.setProperty('--y', e.pos[1]);
     if (e.yaw != null) b.style.setProperty('--yaw', `${e.yaw}deg`);
@@ -176,7 +177,7 @@ export class WorldMap {
     const ix = this.index[nameOf(e.tile ?? '')] || this.index[nameOf(e.tile ?? '').replace(/_?\d+$/, '')];
     const frame = e.frame ? new URL(e.frame, this.frameBase).href : null;
     this.attn.innerHTML = `<div class="wm-big">${this.tile(e.tile, e.ch)}</div><b>${esc(e.name || e.id)}</b>
-      <span class="wm-kind">${esc(e.kind || '')}${e.closed ? ' · closed' : ''}${e.hot ? ' · in the task' : ''}${e.cornered ? ' · the loop stopped here' : ''}</span>
+      <span class="wm-kind">${esc(e.kind || '')}${e.closed ? ' · closed' : ''}${e.unseen ? ' · not seen yet' : ''}${e.hot ? ' · in the task' : ''}${e.cornered ? ' · the loop stopped here' : ''}</span>
       ${frame ? `<img class="wm-frame" src="${esc(frame)}" alt="${esc(e.name)} as the world showed it">` : ''}
       ${e.items?.length ? `<div class="wm-items">in it: ${e.items.map(esc).join(', ')}</div>` : ''}
       ${ix?.source?.startsWith('http') ? `<a href="${esc(ix.source)}" target="_blank" rel="noopener">about the picture</a>` : ''}`;

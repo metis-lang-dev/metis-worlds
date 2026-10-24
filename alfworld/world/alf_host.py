@@ -428,8 +428,39 @@ class AlfHost:
 
     def frames(self):
         """The world page's frames since the last call (metis-agent's service sends them on the wire)."""
+        self._seen_frames()
         out, self.pending_frames = self.pending_frames, []
         return out
+
+    def _seen_frames(self):
+        """View mode (semantic-map step 3, the architect): the page draws what the robot knows — a place
+        is dimmed until the robot has seen into it. The planner's host (one per hierarchy) sends each place
+        as it is first seen into, with what the map saw there (world/delta entities: unseen false, items),
+        and marks it seen in the page's map file (a page loaded later draws the same)."""
+        if self.smap is None or self.spec != "task":
+            return
+        d = self.smap.load()
+        if not d.get("view"):
+            return
+        sent = getattr(self, "_seen_sent", None)
+        if sent is None:
+            sent = self._seen_sent = set()
+        new = [r for r in d.get("seen", []) if r not in sent]
+        if not new:
+            return
+        from semantic_map import spoken
+        ents = [{"id": r, "unseen": False, "items": sorted(spoken(o) for o, b in d["belief"].items() if b.get(r) == 1.0)} for r in new]
+        self.pending_frames.append({"ev": "world/delta", "entities": ents})
+        sent.update(new)
+        wm = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(self.package_dir)))), "world-map.json")
+        if os.path.exists(wm):
+            m = json.load(open(wm))
+            for p in m.get("places", []):
+                if p["id"] in sent:
+                    p["unseen"] = False
+            tmp = wm + ".tmp"
+            json.dump(m, open(tmp, "w"), indent=1)
+            os.replace(tmp, wm)
 
     def ports(self):
         return {"game": {"path": self.game, "task": self.task, "params": self.params, "step": self.t,

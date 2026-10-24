@@ -55,6 +55,10 @@ def setup(game, root, port=8398, view=False):
     hda.card_files(root, out["task"])
     from semantic_map import text_map
     m = text_map(str(game))
+    if view:                                   # the page draws what the robot knows: every place dimmed until seen into
+        m["view"] = True
+        for p in m["places"]:
+            p["unseen"] = True
     (root / "world-map.json").write_text(json.dumps(m, indent=1))
     names = list(hda.NAMES)
     run = root / ".run"
