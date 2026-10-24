@@ -392,7 +392,7 @@ if (backend) hello(backend);
 // taking the floor: it wraps the band's own TTS and yields while the dialog speaks
 const narrator = world.narrator = new Narrator({ tts: panel.core.tts });
 attachSelection(narrator, document); attachKey(narrator, document, { key: 'F8' });
-// the band's voice widget (fsttm-web switch.js): the mic switch and the narrator's, side by side
+// the band's voice card (fsttm-web switch.js): [● mic ⟦switch⟧ narrator], the narrator always on
 $('#voice').replaceWith(Object.assign(voiceWidget(panel, { narrator, key: 'F8' }).el, { id: 'voice' }));
 $('#voice').dataset.portOff = '';
 $('#hlist').addEventListener('click', e => { const li = e.target.closest('li'); if (li?.dataset.domain === 'task') world.map.showTask('@agent'); });
