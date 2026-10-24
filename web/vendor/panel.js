@@ -52,13 +52,16 @@ export class PanelCore {
   //   default, or reply); turn(id, text, mode) gets the one chosen ('intent' without modes)
   // narrate(frame): is a narration voiced (default: unless form R); backendName: shown
   // host: the backchannel to the host — true, or {rows, events, state}: what goes back (backend.send)
+  // hostLink: the backchannel on a socket of its own ({send, onFrame, onOpen?}: hostSocket(url), the
+  //   fsttm-chat tool's /page), where the backend has none (llama-server) or the page is driven from
+  //   a terminal; host defaults to true with it
   // frames: the application's own frames kept as events (kind frame, its ev and kind as ev / of):
   //   false (default: a busy backend would fill the log), true, or frame => bool
   // onRow(row), onState(state): the view's; onFrame(frame): a frame the panel does not
   // know (the application's own); log(kind, fields): every dialog event; onEvent(event):
   // the same as the bench keeps it ({t, kind, …}), for a view
   constructor({ backend, table, tts = null, attention = null, side = null, bargeIn = 'words', voice = true,
-    modes = null, reply = null, narrate = null, backendName = null, bench = null, host = false, frames = false,
+    modes = null, reply = null, narrate = null, backendName = null, bench = null, host = null, hostLink = null, frames = false,
     stopWords, onRow = () => {}, onState = () => {}, onFrame = () => {}, onChannel = () => {}, log = () => {},
     onEvent = () => {}, now, dialog = null, maxRows = 300 }) {
     Object.assign(this, { backend, side, voice, onRow, onState, onFrame, onChannel, log, onEvent, maxRows, backendName });
@@ -68,6 +71,8 @@ export class PanelCore {
     this.bench = bench ?? new Bench(now ? { now } : {});
     this.timings = [];           // the turns' timings: {n, mode, text, first, ms, dwell, end}
     this.recognition = null;     // what the recognizer probe said (probeLocal)
+    this.hostLink = hostLink;
+    host ??= !!hostLink;
     this.host = host === true ? { rows: true, events: true, state: true } : host || null;
     this.hostN = 0;              // the host's own system lines: h1, h2, …
     this.keepFrame = typeof frames === 'function' ? frames : () => !!frames;
@@ -89,6 +94,10 @@ export class PanelCore {
       onHeard: (id, heard) => this.heard(id, heard),
     });
     if (backend && 'onFrame' in backend) backend.onFrame = f => this.frame(f);
+    if (hostLink) {
+      hostLink.onFrame = f => this.frame(f);
+      if ('onOpen' in hostLink) hostLink.onOpen = () => this.hostOpened();
+    }
   }
 
   state() {
@@ -114,8 +123,10 @@ export class PanelCore {
       if (j !== this.hostState) { this.hostState = j; this.toHost(w); }
     }
   }
-  // toHost: a frame back to the host on the backend's socket (a backend without send, or a closed one: dropped)
-  toHost(frame) { try { this.backend?.send?.(frame); } catch {} }
+  // toHost: a frame back to the host on the link, else the backend's socket (a backend without send, or a closed one: dropped)
+  toHost(frame) { try { (this.hostLink ?? this.backend)?.send?.(frame); } catch {} }
+  // the host's socket is open (again): it gets the state now, not at the next change
+  hostOpened() { this.hostState = null; this.changed(); }
   // a row as the host reads it: who (user, system, intent, note), its words, its source, its tags
   hostRow(r) {
     const who = { person: 'user', agent: 'system', intent: 'intent', note: 'note' }[r.who] ?? r.who;
@@ -383,6 +394,31 @@ export async function probeLocal(SR, lang = 'en-US') {
   return out;
 }
 
+// hostSocket: the backchannel on a socket of its own, opened again when it closes (the fsttm-chat
+// tool, python -m fsttm_web.chat, at /page; or any Relay's page_route): a hostLink
+export function hostSocket(url, { reconnect = 2000, WebSocketImpl = globalThis.WebSocket } = {}) {
+  const link = {
+    url, ws: null, closed: false, onFrame: null, onOpen: null,
+    get isOpen() { return link.ws?.readyState === 1; },
+    send(f) { if (!link.isOpen) throw new Error('host socket closed'); link.ws.send(JSON.stringify(f)); },
+    close() { link.closed = true; link.ws?.close(); },
+  };
+  const open = () => {
+    const ws = link.ws = new WebSocketImpl(url);
+    ws.onopen = () => link.onOpen?.();
+    ws.onmessage = e => { let f; try { f = JSON.parse(e.data); } catch { return; } link.onFrame?.(f); };
+    ws.onclose = () => { if (!link.closed && reconnect > 0) setTimeout(open, reconnect); };
+  };
+  open();
+  return link;
+}
+// the page's URL asks for the tool: ?fw_host (port 8395), ?fw_host=8396, ?fw_host=ws://…/page
+export function hostURL(param = 'fw_host', search = globalThis.location?.search ?? '') {
+  const v = param ? new URLSearchParams(search).get(param) : null;
+  if (v == null) return null;
+  return /^wss?:\/\//.test(v) ? v : `ws://127.0.0.1:${/^\d+$/.test(v) ? v : 8395}/page`;
+}
+
 export const SECTIONS = { floor: 'floor · FSTTM', state: 'state · perf', turns: 'turns · timing', events: 'events' };
 const store = { get(k) { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } },
   set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} } };
@@ -400,17 +436,27 @@ export class Panel {
   //   controls (the strip: true), sections (which of SECTIONS, in that order; none by
   //   default), storeKey (whose open sections are kept: the page's path), meta (rows show
   //   their small print: via and floor, a narration's kind and form);
-  //   the page's onRow / onState / onEvent are called after the view has drawn
+  //   dialogIn (an element: the dialog's own part there — the floor, barge-in, attention and the
+  //   sections as cards — a tools drawer the page may hide, showDialog(shown); the chat keeps the
+  //   reply mode), hostParam ('fw_host': ?fw_host on the page's URL connects the backchannel to the
+  //   fsttm-chat tool, hostURL(); null: never), micButton (the mic by the text line: true; false where the page has its own, micSwitch),
+  //   the page's onRow / onState / onEvent are called after the view has drawn; subscribe(fn)
+  //   adds a listener later (a header's widget): fn({state} | {event})
   constructor(root, opts = {}) {
     const { flipKey = 'ctrl+space', holdKey = ' ', holdMs = 400, title = 'dialog',
       Recognizer = globalThis.SpeechRecognition ?? globalThis.webkitSpeechRecognition, mic = cancelledMic,
-      onDevice = false, micWakes = true, controls = true, sections = [], storeKey = globalThis.location?.pathname ?? '',
+      onDevice = false, micWakes = true, controls = true, sections = [], dialogIn = null, hostParam = 'fw_host', micButton = true,
+      storeKey = globalThis.location?.pathname ?? '',
       meta = false, onRow = () => {}, onState = () => {}, onEvent = () => {}, ...core } = opts;
     Object.assign(this, { root, flipKey, holdKey, holdMs, Recognizer, mic, onDevice, micWakes, meta });
     this.rowEl = new Map();
+    this.subs = new Set();
+    this.dialogShown = true;              // the dialog's part is on screen (dialogIn: the page says, showDialog)
+    const tool = !core.hostLink && hostURL(hostParam);
+    if (tool) core.hostLink = hostSocket(tool);
     this.core = new PanelCore({ ...core,                       // the page's onRow / onState after the view's
-      onRow: (r, how) => { this.drawRow(r, how); onRow(r, how); }, onState: s => { this.drawState(s); onState(s); },
-      onEvent: e => { this.drawEvent(e); onEvent(e); } });
+      onRow: (r, how) => { this.drawRow(r, how); onRow(r, how); }, onState: s => { this.drawState(s); onState(s); this.tell({ state: s }); },
+      onEvent: e => { this.drawEvent(e); onEvent(e); this.tell({ event: e }); } });
     this.core.onMic = on => { if (on !== this.core.listening) this.toggleMic(); };   // the host's ctl{mic}
     root.classList.add('fw-panel');
     this.dom = {
@@ -421,20 +467,34 @@ export class Panel {
       voice: el('input', { type: 'checkbox', checked: this.core.voice }),
     };
     const d = this.dom;
-    const form = el('form', { class: 'fw-input' }, d.mic, d.text, el('label', { class: 'fw-voice' }, d.voice, ' voice'));
-    const bar = el('div', { class: 'fw-bar' }, el('span', { class: 'fw-title' }, title), d.channel, d.mode, d.floor);
-    if (controls) bar.append(this.strip());
+    const form = el('form', { class: 'fw-input' }, micButton ? d.mic : null, d.text, el('label', { class: 'fw-voice' }, d.voice, ' voice'));
+    const bar = el('div', { class: 'fw-bar' }, el('span', { class: 'fw-title' }, title), d.channel, d.mode);
     this.sections = this.makeSections(sections.filter(n => n in SECTIONS), `fw-panel:${storeKey}:sections`);
-    root.replaceChildren(bar, el('div', { class: 'fw-main' }, d.log, form), ...(this.sections.box ? [this.sections.box] : []));
+    const box = this.sections.box ? [this.sections.box] : [];
+    if (dialogIn) {                       // the chat here, the dialog's own part in the page's drawer
+      const dbar = el('div', { class: 'fw-bar' }, d.floor);
+      if (controls) { const s = this.strip(); dbar.append(s.dialog); bar.append(s.chat); }
+      dialogIn.classList.add('fw-panel', 'fw-part');
+      dialogIn.replaceChildren(dbar, ...box);
+      this.dialogEl = dialogIn;
+      root.replaceChildren(bar, el('div', { class: 'fw-main' }, d.log, form));
+    } else {
+      bar.append(d.floor);
+      if (controls) { this.strip(); bar.append(el('span', { class: 'fw-controls' }, d.barge, d.attn, d.reply)); }
+      root.replaceChildren(bar, el('div', { class: 'fw-main' }, d.log, form), ...box);
+    }
     form.onsubmit = e => { e.preventDefault(); const t = d.text.value; d.text.value = ''; this.core.say(t, { via: 'text' }); };
     d.mic.onclick = () => this.toggleMic();
     d.voice.onchange = () => this.core.setVoice(d.voice.checked);
     if (!this.Recognizer) { d.mic.disabled = true; d.mic.title = 'no SpeechRecognition in this browser'; }
     this.keys();
     this.drawState(this.core.state());
+    if (tool) this.note(`the host's tool: ${tool} (fsttm-chat)`);
   }
 
   say(text) { return this.core.say(text); }
+  subscribe(fn) { this.subs.add(fn); fn({ state: this.core.state() }); return () => this.subs.delete(fn); }
+  tell(m) { for (const fn of this.subs) { try { fn(m); } catch (e) { console.error(e); } } }
   setMode(m) { this.core.setMode(m); }
   setBargeIn(p) { return this.core.setBargeIn(p); }
   flip() { return this.core.flip(); }
@@ -444,6 +504,7 @@ export class Panel {
     if (core.listening) { core.unlisten(); if (wake) core.setAttention(false, 'mic'); return; }
     if (!this.Recognizer || this.opening) return;
     this.opening = true;
+    this.tell({ state: core.state() });                                     // a widget shows the mic opening
     try {
       if (this.onDevice && !core.recognition) core.event('recognition', await probeLocal(this.Recognizer));
       const stream = this.mic ? await this.mic().catch(() => null) : null; // refused or absent: the raw mic
@@ -452,7 +513,7 @@ export class Panel {
       core.listen(rec, { stream });
       if (wake) core.setAttention(true, 'mic');                             // pressing mic is mic possession
       if (!core.recognizer?.track) this.note('the mic without the echo canceller: her voice reaches the recognizer, dropped by text');
-    } finally { this.opening = false; }
+    } finally { this.opening = false; this.tell({ state: core.state() }); }
   }
 
   // the strip: barge-in, attention (where there is a wake word), the reply mode (where the backend has modes)
@@ -466,7 +527,7 @@ export class Panel {
     d.reply = el('select', { class: 'fw-ctl', 'aria-label': 'reply mode', title: "the backend's reply mode" },
       (c.modes ?? []).map(m => el('option', { value: m.value }, m.label)));
     d.reply.onchange = () => c.setReply(d.reply.value);
-    return el('span', { class: 'fw-controls' }, d.barge, d.attn, d.reply);
+    return { dialog: el('span', { class: 'fw-controls' }, d.barge, d.attn), chat: el('span', { class: 'fw-controls' }, d.reply) };
   }
 
   // the sections: one <details> each, closed until opened; the open ones kept (storeKey)
@@ -485,7 +546,14 @@ export class Panel {
     queueMicrotask(() => { for (const n of names) this.drawSection(n); this.ticking(); });
     return sec;
   }
-  isOpen(n) { return !!this.sections.el?.[n]?.open; }
+  isOpen(n) { return this.dialogShown && !!this.sections.el?.[n]?.open; }
+  // the page's drawer shown or not (dialogIn): hidden, nothing is drawn and the floor does not tick
+  showDialog(shown) {
+    if (this.dialogShown === !!shown) return;
+    this.dialogShown = !!shown;
+    for (const n of this.sections.names ?? []) this.drawSection(n);
+    this.ticking();
+  }
 
   sectionBody(n) {
     const d = this.dom;
@@ -511,7 +579,7 @@ export class Panel {
 
   // every dialog event, as the bench keeps it: the open sections follow
   drawEvent(e) {
-    if (!this.sections?.box) return;
+    if (!this.sections?.names) return;
     if (e.kind === 'fsttm') { this.trail.push({ state: e.dst, t: e.t }); if (this.trail.length > 7) this.trail.shift(); if (this.isOpen('floor')) this.drawSection('floor'); }
     if (this.isOpen('events')) this.appendEvent(e);
     if (this.isOpen('turns') && ['llm', 'llm_aborted', 'speak', 'tts_end', 'cut'].includes(e.kind)) this.drawSection('turns');
