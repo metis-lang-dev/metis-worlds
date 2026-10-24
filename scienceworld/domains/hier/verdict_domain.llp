@@ -4,6 +4,7 @@ catalog verdict_domain 1.
 provenance text "ScienceWorld's verdict as a lifted specialist: move the thing into the box the task names; the world's answer, not the rule's claim" "2026-10-23".
 layers (dyn).
 stages (act).
+types (said_kind thing).   % completed by the instance that includes this file (spec 12)
 
 namespace verdict produce (dyn).
 

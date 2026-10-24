@@ -208,3 +208,16 @@ def test_hierarchy_wins_by_manual_switch(tmp_path):
     assert r["won"] and r["outcome"] == "done", r
     assert [a["spec"] for a in r["activations"]] == ["nav", "grasp", "circuit", "verdict"], [a["spec"] for a in r["activations"]]
     assert r["refused"] == 0
+
+
+@pytest.mark.skipif(not os.environ.get("METISC"), reason="METISC is not set")
+def test_the_lifted_bases_compile_alone(tmp_path):
+    """spec 12 (abstract-types step 3): the hierarchy's bases and the loop's empty base
+    (base_source, which declares the perception's types) compile alone with metisc."""
+    hier = os.path.join(ROOT, "domains", "hier")
+    (tmp_path / "sw.llp").write_text(gen_instance.base_source())
+    bases = sorted(os.path.join(hier, f) for f in os.listdir(hier) if f.endswith("_domain.llp")) + [str(tmp_path / "sw.llp")]
+    assert len(bases) == 6
+    for p in bases:
+        out = subprocess.run([os.environ["METISC"], p], capture_output=True, text=True, timeout=120)
+        assert out.returncode == 0 and "; abstract " in out.stdout, (p, out.stderr[-600:])

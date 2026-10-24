@@ -271,3 +271,12 @@ def test_the_policy_drivers_base_instance_and_splits(tmp_path):
     assert q and all(v[2] == "none" for v, _ in q) and levels.sample("discovery", "room", 5, 1) == d[:5]
     with pytest.raises(ValueError, match="family"):
         levels.sample("discovery", "maze", 1, 1)
+
+
+@pytest.mark.skipif(not os.environ.get("METISC"), reason="METISC is not set")
+def test_the_loops_base_compiles_alone(tmp_path):
+    """spec 12 (abstract-types step 3): base_source declares the level's types (cell thing beast)
+    as abstract, so the loop's empty base compiles alone with metisc."""
+    (tmp_path / "mh.llp").write_text(gen_level.base_source())
+    out = subprocess.run([os.environ["METISC"], str(tmp_path / "mh.llp")], capture_output=True, text=True, timeout=120)
+    assert out.returncode == 0 and "; abstract cell thing beast " in out.stdout, out.stderr[-600:]

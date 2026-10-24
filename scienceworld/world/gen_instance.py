@@ -58,6 +58,18 @@ FIXED_TYPES = ["type doorstate {open closed}.", "type onoff {on off}.", "type ph
 DYNAMIC_PREDS = ("here", "door", "in", "state", "closed", "open", "reads", "holds", "matter", "measured", "focused", "connected", "task", "where", "threshold", "said")
 
 
+def perceived_types():
+    """The types the perception's signatures name, in order of first naming (the instance's
+    type lines and FIXED_TYPES complete them)."""
+    out = []
+    for line in PERCEPTION:
+        m = re.match(r"pred \w+\(([^)]*)\)", line)
+        for t in (m.group(1).split(",") if m else ()):
+            if t.strip() not in out:
+                out.append(t.strip())
+    return out
+
+
 def base_source(name="sw"):
     """The loop's EMPTY base (loop-policy): the perception's predicates over ScienceWorld's text, the
     namespace, an empty stage — no rule. The instance (generate with domain_rel) includes it and
@@ -67,7 +79,10 @@ def base_source(name="sw"):
              "% (exploit), the hierarchy (refactor), each through the experimental gate.",
              "catalog " + name + " 1.",
              'provenance text "the loop\'s base: the empty domain over ScienceWorld\'s perceived facts" "2026-10-23".',
-             "layers (dyn).", "stages (act).", "namespace sw produce (dyn)."] + PERCEPTION + ["stage act {", "}", ""]
+             "layers (dyn).", "stages (act).",
+             # the types the instance declares (spec 12: the base compiles alone)
+             "types (%s)." % " ".join(perceived_types()),
+             "namespace sw produce (dyn)."] + PERCEPTION + ["stage act {", "}", ""]
     return "\n".join(lines)
 
 

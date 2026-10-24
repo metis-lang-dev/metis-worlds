@@ -8,6 +8,7 @@ catalog nav_domain 1.
 provenance text "ScienceWorld navigation as a lifted specialist: rooms by doors, a route table; the world's answer, not the rule's claim" "2026-10-23".
 layers (dyn).
 stages (act).
+types (room doorstate said_kind).   % completed by the instance that includes this file (spec 12)
 
 namespace nav produce (dyn).
 

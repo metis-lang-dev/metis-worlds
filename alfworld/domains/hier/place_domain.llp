@@ -5,6 +5,7 @@ catalog place_domain 1.
 provenance text "ALFWorld put-down as a lifted specialist: move the held object to a receptacle" "2026-10-22".
 layers (dyn).
 stages (act).
+types (receptacle location object).   % completed by the instance that includes this file (spec 12)
 
 namespace place produce (dyn).
 

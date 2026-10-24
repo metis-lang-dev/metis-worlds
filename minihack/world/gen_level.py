@@ -59,7 +59,8 @@ def base_source(name="mh"):
                       "% perception's, the commands' and the outcomes' predicates; the level's types and the grid are the",
                       "% instance's. No rule: the loop writes them.",
                       "catalog %s 1." % name,
-                      'provenance text "the loop\'s base: the empty domain over MiniHack\'s facts (loop-policy)" "2026-10-22".']
+                      'provenance text "the loop\'s base: the empty domain over MiniHack\'s facts (loop-policy)" "2026-10-22".',
+                      "types (cell thing beast).   % the level's (spec 12: the base compiles alone)"]
                      + _declarations() + ["stage act {", "}", ""])
 
 

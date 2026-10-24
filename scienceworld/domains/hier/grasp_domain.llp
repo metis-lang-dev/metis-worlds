@@ -7,6 +7,7 @@ catalog grasp_domain 1.
 provenance text "ScienceWorld grasp as a lifted specialist: pick up and focus; the world's answer, not the rule's claim" "2026-10-23".
 layers (dyn).
 stages (act).
+types (thing room said_kind).   % completed by the instance that includes this file (spec 12)
 
 namespace grasp produce (dyn).
 

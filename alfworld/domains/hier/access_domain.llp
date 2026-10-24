@@ -6,6 +6,7 @@ catalog access_domain 1.
 provenance text "ALFWorld receptacle access as a lifted specialist: open what is closed, answer at once for the rest" "2026-10-22".
 layers (dyn).
 stages (act).
+types (receptacle location).   % completed by the instance that includes this file (spec 12)
 
 namespace access produce (dyn).
 

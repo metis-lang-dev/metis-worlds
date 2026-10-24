@@ -5,6 +5,7 @@ catalog grasp_domain 1.
 provenance text "ALFWorld pick-up as a lifted specialist: take an object from where it is" "2026-10-22".
 layers (dyn).
 stages (act).
+types (receptacle location object).   % completed by the instance that includes this file (spec 12)
 
 namespace grasp produce (dyn).
 

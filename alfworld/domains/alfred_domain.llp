@@ -23,6 +23,7 @@ catalog alfred_domain 1.
 provenance text "ALFRED's household actions as the agent's beliefs, lifted over ALFWorld's PDDL facts; a greedy rule policy for pick-and-place" "2026-10-21".
 layers (dyn).
 stages (act).
+types (receptacle location rtype object otype).   % completed by the instance that includes this file (spec 12)
 
 namespace alf produce (dyn).
 

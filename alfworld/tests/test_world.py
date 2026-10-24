@@ -624,3 +624,17 @@ def test_hosts_on_one_log_share_one_world(package):
     c = AlfHost(pkg)                                     # no log: a private world as before
     assert not c.gym.shared and c.gym is not a.gym
     c.gym.close()
+
+
+@pytest.mark.skipif(not os.environ.get("METISC"), reason="METISC is not set")
+def test_every_lifted_base_compiles_alone():
+    """spec 12 (abstract-types step 3): the director, the flat base and the hierarchy's specialist
+    bases declare the types their instances complete (`types (…)`), so metisc compiles each alone
+    — its advisory names them — and refuses only to ground it."""
+    hier = os.path.join(ROOT, "domains", "hier")
+    bases = [os.path.join(ROOT, "domains", f) for f in ("director_domain.llp", "alfred_domain.llp")] + \
+        sorted(os.path.join(hier, f) for f in os.listdir(hier) if f.endswith("_domain.llp"))
+    assert len(bases) == 7
+    for p in bases:
+        out = subprocess.run([os.environ["METISC"], p], capture_output=True, text=True, timeout=120)
+        assert out.returncode == 0 and "; abstract " in out.stdout, (p, out.stderr[-600:])

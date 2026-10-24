@@ -12,6 +12,7 @@ catalog circuit_domain 1.
 provenance text "ScienceWorld's conductivity test as a lifted specialist: wire, wait, look; the bulb's state is the answer; the world's answer, not the rule's claim" "2026-10-23".
 layers (dyn).
 stages (act).
+types (part term thing onoff said_kind).   % completed by the instance that includes this file (spec 12)
 
 namespace circuit produce (dyn).
 
