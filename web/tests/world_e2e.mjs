@@ -19,8 +19,11 @@ const ev = page.ev;
 const stepTo = pred => ev(`(async () => { for (let i = 0; i < 200; i++) { if (${pred}) return true; if (!(await world.step())) return ${pred}; } return false; })()`);
 try {
   c.ok(await ev(`document.querySelectorAll('#map .wm-ent').length === 52 && world.frames.length > 40`), 'the recording and its map load (51 places and the agent)', null);
-  c.ok(await ev(`world.narrator.state === 'stopped' && document.querySelector('#narrator .narrator-state')?.textContent === 'narrator'`),
-    'the narrator (F8) is in the band, stopped', null);
+  c.ok(await ev(`world.narrator.state === 'stopped' && document.querySelectorAll('#voice .fw-switch').length === 2
+    && document.querySelector('#voice .fw-sw-narrator')?.dataset.state === 'off' && !document.querySelector('#band .narrator')`),
+    'the band\'s voice widget (fsttm-web): the mic switch and the narrator\'s (F8), off', null);
+  c.ok(await ev(`!document.querySelector('#talkpanel .fw-mic') && document.querySelector('#voice .fw-switch').getAttribute('role') === 'switch'`),
+    'the mic is the band\'s switch, not the text line\'s button', null);
 
   // 1. the person's words, the typed J
   await stepTo(`[...document.querySelectorAll('#talkpanel .fw-log li')].some(l => l.textContent.includes('put a tomato in the microwave'))`);

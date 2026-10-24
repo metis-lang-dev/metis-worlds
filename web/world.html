@@ -9,7 +9,7 @@
 <link rel="stylesheet" href="vendor/shell.css">
 <link rel="stylesheet" href="map.css">
 <link rel="stylesheet" href="vendor/panel.css">
-<link rel="stylesheet" href="vendor/narrator.css">
+<link rel="stylesheet" href="vendor/switch.css">
 <script src="vendor/shell.js"></script>
 <script type="importmap">{"imports":{"fsttm-web/tts":"./vendor/tts.js","fsttm-web/ws":"./vendor/ws.js","fsttm-web/panel":"./vendor/panel.js"}}</script>
 <style>
@@ -54,7 +54,18 @@
   .fw-panel .fw-intent code { color: var(--dim); }
   .fw-panel .fw-note .fw-text { color: var(--dim); }
   .fw-panel .fw-input .fw-text { background: var(--bg); border: 1px solid var(--line); padding: 1px 6px; }
-  .fw-panel .fw-mic, .fw-panel .fw-input button { background: transparent; border: 1px solid var(--line); padding: 0 8px; cursor: pointer; }
+  .fw-panel .fw-input button { background: transparent; border: 1px solid var(--line); padding: 0 8px; cursor: pointer; }
+  /* fsttm-web's widgets in the shell's look: the voice (the mic, the narrator) in the band, the DIALOG drawer */
+  #band .fw-switch { padding: 0 8px; border-color: var(--line); border-radius: 0; }
+  #sessbar { flex-wrap: wrap; justify-content: flex-end; }             /* the voice widget and the replay's buttons: two rows when narrow */
+  .fw-panel .fw-ctl { background: var(--bg); border-color: var(--line); border-radius: 0; }
+  .fw-panel .fw-attn[aria-pressed="true"] { color: var(--bg); background: var(--green); border-color: var(--green); }
+  #dock-dialog .dbody { display: flex; flex-direction: column; overflow: hidden; }
+  #dialogpart { flex: 1 1 auto; min-height: 0; }
+  #dialogpart > .fw-bar { padding: 0 0 6px; border-bottom: 1px solid var(--line); }
+  #dialogpart .fw-sec { border: 1px solid var(--line); padding: 2px 8px; background: var(--panel); }
+  #dialogpart .fw-sec > summary { color: var(--dim); font-weight: normal; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; }
+  #dialogpart .fw-sec[open] > summary { color: var(--fg); }
   /* the hierarchy: who is attending, on what goal */
   #hlist { list-style: none; margin: 0; padding: 0; }
   #hlist li { display: flex; flex-wrap: wrap; gap: 6px; padding: 2px 6px; border-left: 2px solid transparent; }
@@ -92,7 +103,7 @@
       <span id="status" data-state="" aria-live="polite"><span class="state" id="sstate">…</span><span class="text" id="stext"></span><span class="opts" id="sopts"></span></span>
       <span id="sessbar">
         <span id="conn"></span>
-        <span id="narrator" data-port-off aria-live="polite"></span>
+        <span id="voice" data-port-off></span>
         <span id="ctrl" data-w="ctrl" data-role="composite" tabindex="-1" aria-label="the replay">
           <button class="btn" id="play" data-w="play" data-role="item" type="button">play</button>
           <button class="btn" id="step" data-w="step" data-role="item" type="button">step</button>
@@ -126,8 +137,12 @@
         <header><span class="tw">▾</span><span class="tt">JOURNAL</span><button class="x" type="button" aria-label="hide the journal">✕</button></header>
         <div class="dbody"><ol id="jlog" data-w="jlog" data-role="container" tabindex="-1" aria-label="the journal's lines"></ol></div>
       </section>
+      <section class="dock" id="dock-dialog" data-dock="dialog" tabindex="-1" aria-label="the dialog: the floor, barge-in, attention, the numbers">
+        <header><span class="tw">▾</span><span class="tt">DIALOG</span><button class="x" type="button" aria-label="hide the dialog">✕</button></header>
+        <div class="dbody"><div id="dialogpart" data-port-off></div></div>
+      </section>
     </aside>
-    <nav id="strip"><button type="button" data-strip="talk">Talk</button><button type="button" data-strip="hierarchy">Hierarchy</button><button type="button" data-strip="world">World card</button><button type="button" data-strip="journal">Journal</button></nav>
+    <nav id="strip"><button type="button" data-strip="talk">Talk</button><button type="button" data-strip="hierarchy">Hierarchy</button><button type="button" data-strip="world">World card</button><button type="button" data-strip="journal">Journal</button><button type="button" data-strip="dialog">Dialog</button></nav>
   </main>
 </div>
 <script type="module">

@@ -54,22 +54,31 @@ try {
   const rows = await band();
   c.ok(rows.some(r => r === 'agent: Done: the task is done.') && !rows.some(r => r.startsWith('unasked')), 'result lines are the agent\'s, never "unasked"', rows.slice(-4));
 
-  // fsttm-web's one panel in the TALK dock (dialog-panel s-277c33e3 step 3): the strip in its bar, the dialog's four
-  // sections closed, every summary inside the dock after the whole game's rows (the log gives way, not the sections);
-  // the world's own frames kept as dialog events only for world/* (the journal has its dock; a replay feeds the page
-  // directly, so the rule itself is checked)
-  const tp = await ev(`(() => { const p = document.getElementById('talkpanel').getBoundingClientRect();
-    return { barge: document.querySelector('#talkpanel .fw-controls select[aria-label="barge-in"]')?.value,
-      secs: [...document.querySelectorAll('#talkpanel details.fw-sec')].map(d => d.dataset.sec + (d.open ? ':open' : '')),
-      out: [...document.querySelectorAll('#talkpanel details.fw-sec > summary')].filter(x => { const r = x.getBoundingClientRect(); return r.height < 8 || r.top < p.top || r.bottom > p.bottom + 1; }).map(x => x.textContent),
-      keep: ['world/delta', 'world/status', 'journal', 'catalog', 'cut'].map(e => world.panel.core.keepFrame({ ev: e })) }; })()`);
-  c.ok(tp.barge === 'words' && tp.secs.join() === 'floor,state,turns,events', 'the TALK dock: the panel\'s strip (barge-in words) and its sections, closed', tp);
-  c.ok(tp.out.length === 0, 'every section\'s summary stays inside the dock under a long log', tp.out);
+  // fsttm-web's one panel (dialog-panel s-277c33e3 step 3): the chat in the TALK dock (no strip but the replies, no
+  // sections); its own part — the floor, barge-in, attention, the floor / state / events cards — in the DIALOG drawer,
+  // hidden until the strip shows it, drawn only then; the world's own frames kept as dialog events only for world/*
+  // (the journal has its dock; a replay feeds the page directly, so the rule itself is checked)
+  const tp = await ev(`(() => ({ talk: !!document.querySelector('#talkpanel [aria-label="barge-in"], #talkpanel details, #talkpanel .fw-floor'),
+      hidden: document.getElementById('dock-dialog').hidden, drawn: world.panel.isOpen('floor') || !!world.panel.tick,
+      keep: ['world/delta', 'world/status', 'journal', 'catalog', 'cut'].map(e => world.panel.core.keepFrame({ ev: e })) }))()`);
+  c.ok(!tp.talk && tp.hidden && !tp.drawn, 'the TALK dock is the chat; the DIALOG drawer hidden, nothing drawn', tp);
   c.ok(tp.keep.join() === 'true,true,false,false,false', 'the dialog\'s events keep the world/* frames only, no journal', tp.keep);
-  await page.mouse('#talkpanel details.fw-sec-events > summary');
-  c.ok(await ev(`document.querySelector('#talkpanel details.fw-sec-events').open && document.querySelector('#talkpanel .fw-events').children.length > 0`),
-    'the events section opens on a click, the dialog\'s events in it', null);
-  await page.mouse('#talkpanel details.fw-sec-events > summary');     // closed again: the dock as the rest of the test has it
+  await page.mouse('[data-strip="dialog"]');
+  const dp = await ev(`(() => { const p = document.querySelector('#dock-dialog .dbody').getBoundingClientRect();
+    return { shown: !document.getElementById('dock-dialog').hidden, barge: document.querySelector('#dialogpart [aria-label="barge-in"]')?.value,
+      floor: document.querySelector('#dialogpart > .fw-bar .fw-floor')?.textContent,
+      secs: [...document.querySelectorAll('#dialogpart details.fw-sec')].map(d => d.dataset.sec + (d.open ? ':open' : '')),
+      out: [...document.querySelectorAll('#dialogpart details.fw-sec > summary')].filter(x => { const r = x.getBoundingClientRect(); return r.height < 8 || r.top < p.top || r.bottom > p.bottom + 1; }).map(x => x.textContent),
+      port: world.log.filter(r => r.dir === 'port').slice(-1)[0]?.lines ?? [] }; })()`);
+  c.ok(dp.shown && dp.barge === 'words' && !!dp.floor && dp.secs.join() === 'floor,state,events', 'the strip shows DIALOG: the floor, barge-in words, three cards closed', dp);
+  c.ok(dp.out.length === 0, 'every card\'s summary inside the drawer', dp.out);
+  c.ok(!dp.port.some(l => l.includes('dialog')), 'the dialog drawer is not world_ui\'s (nothing to the port)', dp.port);
+  await page.mouse('#dialogpart details.fw-sec-events > summary');
+  c.ok(await ev(`document.querySelector('#dialogpart details.fw-sec-events').open && document.querySelector('#dialogpart .fw-events').children.length > 0`),
+    'the events card opens on a click, the dialog\'s events in it', null);
+  await page.mouse('#dialogpart details.fw-sec-events > summary');
+  await page.mouse('[data-strip="dialog"]');                            // hidden again: the docks as the rest of the test has them
+  c.ok(await ev(`document.getElementById('dock-dialog').hidden && !world.panel.tick`), 'hidden again: nothing drawn', null);
 
   // a new game: the hierarchy's last chain is gone
   c.ok(await stepTo(`[...document.querySelectorAll('#talkpanel .fw-person .fw-text')].some(t => t.textContent === 'new game')`), 'the person asks for a new game', null);

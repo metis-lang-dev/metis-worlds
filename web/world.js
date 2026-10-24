@@ -24,7 +24,8 @@ import { Panel } from './vendor/panel.js';
 import { connect } from './vendor/ws.js';
 import { UiPort } from './vendor/ui-port.js';
 import { Journal } from './vendor/journal.js';
-import { Narrator, attachSelection, attachKey, narratorView } from './vendor/narrator.js';
+import { Narrator, attachSelection, attachKey } from './vendor/narrator.js';
+import { voiceWidget } from './vendor/switch.js';
 import { keywordStop } from './vendor/dialog.js';
 
 const $ = s => document.querySelector(s);
@@ -332,11 +333,14 @@ const backend = agentUrl ? await live(agentUrl) : null;
 // person shows or hides on the strip is reported to the port (docked)
 let portDock = false, shown = {};
 const docks = world.docks = MetisShell.docks({
-  names: ['talk', 'hierarchy', 'world', 'journal'], key: 'worldpage.docks.v2',       // v2: the world card's dock
-  defaults: { talk: { shown: true, open: true }, hierarchy: { shown: true, open: true }, world: { shown: true, open: false }, journal: { shown: true, open: false } },
+  // v3: the DIALOG drawer (fsttm-web's panel, its own part: the floor, barge-in, attention, the numbers), hidden until asked for
+  names: ['talk', 'hierarchy', 'world', 'journal', 'dialog'], key: 'worldpage.docks.v3',
+  defaults: { talk: { shown: true, open: true }, hierarchy: { shown: true, open: true }, world: { shown: true, open: false }, journal: { shown: true, open: false },
+    dialog: { shown: false, open: true } },
   onChange: st => {
+    panel?.showDialog(!!(st.dialog?.shown && st.dialog?.open));              // hidden or folded: the panel draws nothing there
     for (const [d, s] of Object.entries(st)) {
-      if (port && !portDock && d !== 'world' && (shown[d] ?? true) !== !!s.shown) port.docked(d, !!s.shown);   // the card dock is not world_ui's
+      if (port && !portDock && d !== 'world' && d !== 'dialog' && (shown[d] ?? true) !== !!s.shown) port.docked(d, !!s.shown);   // the card and dialog docks are not world_ui's
       shown[d] = !!s.shown;
     }
   },
@@ -359,13 +363,16 @@ port.onPick = (w, text, el) => {
 panel = world.panel = new Panel($('#talkpanel'), {
   backend: backend || { turn: async function* () { yield 'This is a replay: nobody is listening.'; }, onFrame: null },
   table: await (await fetch('vendor/fsttm.json')).json(), title: '', voice: q.get('voice') === '1',
-  // fsttm-web's one panel (dialog-panel s-277c33e3): the strip in the bar, the dialog's sections closed until
-  // opened; the world's own frames kept as events only for world/* (the journal frames have their dock);
-  // ?host: the backchannel to the host (rows, events, state back on the socket: a test or a program drives it)
-  sections: ['floor', 'state', 'turns', 'events'], frames: f => String(f.ev ?? '').startsWith('world/'), host: q.has('host'),
+  // fsttm-web's one panel (dialog-panel s-277c33e3): the chat here (the reply line, the log, the text line); its own
+  // part — the floor, barge-in, attention, the floor / state / events cards — in the DIALOG drawer (dialogIn), the
+  // mic in the band's voice widget; the world's own frames kept as events only for world/* (the journal frames have
+  // their dock); ?host: the backchannel to the host on the socket; ?fw_host: the fsttm-chat tool's
+  sections: ['floor', 'state', 'events'], dialogIn: $('#dialogpart'), micButton: false,
+  frames: f => String(f.ev ?? '').startsWith('world/'), host: q.has('host') || null,
   onFrame: f => frame(f), onRow: r => rowLook(r), onState: s => floorLook(s),
 });
 floorLook(panel.core.state());
+panel.showDialog(!!(docks.state.dialog?.shown && docks.state.dialog?.open));
 // "stop" (the dialog's stop words) cuts the page's own voice; while the agent works or asks, it is also the
 // person's word to the agent (the ask's "stop" answer, F5): a turn of its own, past the floor's stop-word drop
 const say0 = panel.core.say.bind(panel.core);
@@ -384,7 +391,10 @@ if (backend) hello(backend);
 // the narrator (fsttm-web 0.6): the page's selected text read aloud on F8 (the task card's words, the journal), never
 // taking the floor: it wraps the band's own TTS and yields while the dialog speaks
 const narrator = world.narrator = new Narrator({ tts: panel.core.tts });
-attachSelection(narrator, document); attachKey(narrator, document, { key: 'F8' }); narratorView($('#narrator'), narrator);
+attachSelection(narrator, document); attachKey(narrator, document, { key: 'F8' });
+// the band's voice widget (fsttm-web switch.js): the mic switch and the narrator's, side by side
+$('#voice').replaceWith(Object.assign(voiceWidget(panel, { narrator, key: 'F8' }).el, { id: 'voice' }));
+$('#voice').dataset.portOff = '';
 $('#hlist').addEventListener('click', e => { const li = e.target.closest('li'); if (li?.dataset.domain === 'task') world.map.showTask('@agent'); });
 $('#hlist').addEventListener('keydown', e => { const li = e.target.closest('li'); if (e.key === 'Enter' && li?.dataset.domain === 'task') world.map.showTask('@agent'); });
 if (!agentUrl) await replay(q.get('replay') || 'fixtures/alfworld_tomato_microwave_13.run.jsonl');
