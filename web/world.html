@@ -16,10 +16,6 @@
   /* the map and the band in the shell's tokens (one look with the consoles) */
   :root, :root[data-theme="dark"] { --wm-bg: var(--bg); --wm-fg: var(--fg); --wm-mute: var(--dim); --wm-line: var(--line); --wm-card: var(--panel);
     --wm-hot: var(--yellow); --wm-focus: var(--cyan); --fw-accent: var(--fg); --fw-side: var(--yellow); }
-  [data-w]:focus-visible, [data-w]:focus { outline: 1px solid var(--cyan); outline-offset: -1px; }
-  [data-j] { position: relative; outline: 2px dashed var(--cyan); }
-  [data-j]::after { content: attr(data-j); position: absolute; top: -7px; left: -7px; z-index: 9; min-width: 1.3em; text-align: center;
-    color: #000; background: var(--cyan); border-radius: 2px; font-size: 11px; }
   #root { display: flex; flex-direction: column; flex: 1; min-height: 0; outline: none; }
   /* the band's status: what the agent is doing, and what it wants from you */
   #status { display: flex; gap: 8px; align-items: baseline; min-width: 0; flex: 1 1 320px; }
@@ -35,8 +31,7 @@
   #map .wm-view { box-sizing: content-box; }
   #legend { display: flex; flex-wrap: wrap; gap: 2px 14px; margin: 8px 0 0; color: var(--dim); font-size: 11.5px; }
   #legend b { color: var(--fg); margin-right: 4px; }
-  #map .wm-ent.picked { outline: 2px solid var(--yellow); outline-offset: -2px; z-index: 2; }
-  #hlist li.picked { outline: 1px solid var(--yellow); }       /* map.css sizes the view to its grid; the shell's border-box would clip it */
+  /* map.css sizes the view to its grid; the shell's border-box would clip it */
   #dock-talk .dbody { display: flex; flex-direction: column; overflow: hidden; }
   #dock-talk #talkpanel { flex: 1 1 auto; min-height: 0; }
   .fw-panel .fw-title:empty { display: none; }
@@ -72,7 +67,6 @@
   #hlist li.on .st { color: var(--green); } #hlist li.off { color: var(--dim); }
   #hlist li.att { border-left-color: var(--yellow); background: var(--sel); } #hlist li.att .st { color: var(--yellow); font-weight: bold; }
   #hlist li[data-domain="task"] { cursor: pointer; }
-  #hlist li[data-n]::before { content: attr(data-n); min-width: 1.4em; text-align: center; color: #000; background: var(--cyan); }
   #hlist .k { font-size: 11.5px; } #hlist .g { color: var(--dim); font-size: 11.5px; } #hlist .goal { color: var(--yellow); font-size: 11.5px; }
   #hstate { color: var(--dim); text-transform: none; letter-spacing: 0; font-size: 11px; }
   /* the world card: what this world is and what you can ask it (the map's `card`) */
@@ -96,50 +90,50 @@
 </style>
 </head>
 <body>
-<div id="root" data-w="root" data-role="container" tabindex="-1">
-  <header id="band" data-w="band" data-role="container" tabindex="-1">
+<div id="root" tabindex="-1">
+  <header id="band" tabindex="-1">
     <div class="l">
       <span class="brand">WORLD</span>
       <span id="status" data-state="" aria-live="polite"><span class="state" id="sstate">…</span><span class="text" id="stext"></span><span class="opts" id="sopts"></span></span>
       <span id="sessbar">
         <span id="conn"></span>
-        <span id="voice" data-port-off></span>
-        <span id="ctrl" data-w="ctrl" data-role="composite" tabindex="-1" aria-label="the replay">
-          <button class="btn" id="play" data-w="play" data-role="item" type="button">play</button>
-          <button class="btn" id="step" data-w="step" data-role="item" type="button">step</button>
+        <span id="voice"></span>
+        <span id="ctrl" tabindex="-1" aria-label="the replay">
+          <button class="btn" id="play" type="button">play</button>
+          <button class="btn" id="step" type="button">step</button>
         </span>
       </span>
     </div>
   </header>
   <main>
     <section id="left">
-      <section id="map" data-w="map" data-role="list" tabindex="-1" aria-label="the map"></section>
+      <section id="map" tabindex="-1" aria-label="the map"></section>
       <p id="legend" hidden aria-label="the map's letters"></p>
     </section>
     <div id="split"></div>
     <aside id="right">
-      <section class="dock" id="dock-talk" data-dock="talk" data-w="talk" data-role="dock" tabindex="-1" aria-label="the dialog">
+      <section class="dock" id="dock-talk" data-dock="talk" tabindex="-1" aria-label="the dialog">
         <header><span class="tw">▾</span><span class="tt">TALK</span><button class="x" type="button" aria-label="hide the dialog">✕</button></header>
         <div class="dbody">
           <div id="ask" hidden aria-live="assertive"><div class="q" id="askq"></div><div class="opts" id="askopts"></div></div>
-          <div id="talkpanel" data-port-off></div>
+          <div id="talkpanel"></div>
         </div>
       </section>
-      <section class="dock" id="dock-hierarchy" data-dock="hierarchy" data-w="hierarchy" data-role="dock" tabindex="-1" aria-label="the hierarchy">
+      <section class="dock" id="dock-hierarchy" data-dock="hierarchy" tabindex="-1" aria-label="the hierarchy">
         <header><span class="tw">▾</span><span class="tt">HIERARCHY</span><span id="hstate"></span><button class="x" type="button" aria-label="hide the hierarchy">✕</button></header>
-        <div class="dbody"><ul id="hlist" data-w="hlist" data-role="list" tabindex="-1" aria-label="the domains"></ul></div>
+        <div class="dbody"><ul id="hlist" tabindex="-1" aria-label="the domains"></ul></div>
       </section>
       <section class="dock" id="dock-world" data-dock="world" tabindex="-1" aria-label="the world card">
         <header><span class="tw">▾</span><span class="tt">WORLD CARD</span><button class="x" type="button" aria-label="hide the world card">✕</button></header>
         <div class="dbody" id="wcard"><p class="empty">loading the world…</p></div>
       </section>
-      <section class="dock" id="dock-journal" data-dock="journal" data-w="journal" data-role="dock" tabindex="-1" aria-label="the journal">
+      <section class="dock" id="dock-journal" data-dock="journal" tabindex="-1" aria-label="the journal">
         <header><span class="tw">▾</span><span class="tt">JOURNAL</span><button class="x" type="button" aria-label="hide the journal">✕</button></header>
-        <div class="dbody"><ol id="jlog" data-w="jlog" data-role="container" tabindex="-1" aria-label="the journal's lines"></ol></div>
+        <div class="dbody"><ol id="jlog" tabindex="-1" aria-label="the journal's lines"></ol></div>
       </section>
       <section class="dock" id="dock-dialog" data-dock="dialog" tabindex="-1" aria-label="the dialog: the floor, barge-in, attention, the numbers">
         <header><span class="tw">▾</span><span class="tt">DIALOG</span><button class="x" type="button" aria-label="hide the dialog">✕</button></header>
-        <div class="dbody"><div id="dialogpart" data-port-off></div></div>
+        <div class="dbody"><div id="dialogpart"></div></div>
       </section>
     </aside>
     <nav id="strip"><button type="button" data-strip="talk">Talk</button><button type="button" data-strip="hierarchy">Hierarchy</button><button type="button" data-strip="world">World card</button><button type="button" data-strip="journal">Journal</button><button type="button" data-strip="dialog">Dialog</button></nav>

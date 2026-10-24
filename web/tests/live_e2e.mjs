@@ -2,8 +2,7 @@
 // world/status and world/ask frames): what the agent wants from the person is always on the page. The status
 // line (waiting with the game's task, working with the goal beside the attending domain, asking, over with
 // its "new game" chip), the ask box with the task's answers as chips (a chip says its answer), the hierarchy
-// reset under a new task, the journal without the page's own world lines, and the consoles' shell (the docks,
-// the strip; a dock hidden on the strip reported to the port).
+// reset under a new task, and the consoles' shell (the docks as tools: the strip shows and hides them).
 //
 //   node web/tests/live_e2e.mjs        (node >= 22)
 import { open, checks } from './cdp.mjs';
@@ -24,8 +23,7 @@ try {
   const lg = await ev(`document.getElementById('legend').textContent`);
   c.ok(/c\s[^@]*cabinet[^@]*countertop/.test(lg) && lg.includes('@ the agent'), 'the map\'s letters: a legend (c is a cabinet, a countertop …)', lg.slice(0, 160));
   c.ok(await ev(`world.intentWords('{"intent":"FETCH","object":"TOMATO1","receptacle":"MICROWAVE1"}') === 'fetch: object tomato 1, receptacle microwave 1'
-    && world.intentWords('{"intent":"NEW_GAME"}') === 'new game' && world.intentWords('{"intent":"PICK","domain":"world_ui","name":"microwave"}') === 'pick: name microwave'
-    && world.intentWords('{"intent":"GO","domain":"world_ui","widget":"MAP"}') === 'go: the map'`),
+    && world.intentWords('{"intent":"NEW_GAME"}') === 'new game'`),
     'the typed intent in words, its handles as the map names them', null);
 
   // the live maps carry the world card; the card's line comes first on hello (v3-card)
@@ -69,10 +67,9 @@ try {
       floor: document.querySelector('#dialogpart > .fw-bar .fw-floor')?.textContent,
       secs: [...document.querySelectorAll('#dialogpart details.fw-sec')].map(d => d.dataset.sec + (d.open ? ':open' : '')),
       out: [...document.querySelectorAll('#dialogpart details.fw-sec > summary')].filter(x => { const r = x.getBoundingClientRect(); return r.height < 8 || r.top < p.top || r.bottom > p.bottom + 1; }).map(x => x.textContent),
-      port: world.log.filter(r => r.dir === 'port').slice(-1)[0]?.lines ?? [] }; })()`);
+    }; })()`);
   c.ok(dp.shown && dp.barge === 'words' && !!dp.floor && dp.secs.join() === 'floor,state,events', 'the strip shows DIALOG: the floor, barge-in words, three cards closed', dp);
   c.ok(dp.out.length === 0, 'every card\'s summary inside the drawer', dp.out);
-  c.ok(!dp.port.some(l => l.includes('dialog')), 'the dialog drawer is not world_ui\'s (nothing to the port)', dp.port);
   await page.mouse('#dialogpart details.fw-sec-events > summary');
   c.ok(await ev(`document.querySelector('#dialogpart details.fw-sec-events').open && document.querySelector('#dialogpart .fw-events').children.length > 0`),
     'the events card opens on a click, the dialog\'s events in it', null);
@@ -88,21 +85,18 @@ try {
   await ev(`world.stepAll()`);
   c.ok((await st()).state === 'over', 'the second win ends over too', await st());
 
-  // the journal: the agent's and the person's lines, not the page's own world atoms
-  c.ok(!(await ev(`document.getElementById('jlog').textContent`)).includes('world world_ui'), 'the journal keeps the page\'s world lines out', null);
 
   // a chip says its answer, as typing it would
   await page.mouse('#sopts .chip');
   c.ok(await stepTo(`[...document.querySelectorAll('#talkpanel .fw-person .fw-text')].filter(t => t.textContent === 'new game').length === 2`)
     && (await ev(`world.log.some(r => r.dir === 'answer' && r.say === 'new game')`)), 'the "new game" chip says "new game"', await band());
 
-  // the shell's strip: hiding a dock is reported to the port
+  // the shell's strip: a dock hidden, and shown again open (a tool)
   await page.mouse('[data-strip="hierarchy"]');
-  c.ok(await ev(`document.getElementById('dock-hierarchy').hidden && world.log.some(r => r.dir === 'port' && r.lines.includes('+hidden(hierarchy)'))`),
-    'a dock hidden on the strip: +hidden(hierarchy) to the port', await ev(`world.log.filter(r => r.dir === 'port').slice(-2)`));
+  c.ok(await ev(`document.getElementById('dock-hierarchy').hidden`), 'a dock hidden on the strip', null);
   await page.mouse('[data-strip="hierarchy"]');
-  c.ok(await ev(`!document.getElementById('dock-hierarchy').hidden && world.log.some(r => r.dir === 'port' && r.lines.includes('+shown(hierarchy)'))`),
-    '…and shown again: +shown(hierarchy)', null);
+  c.ok(await ev(`!document.getElementById('dock-hierarchy').hidden && document.getElementById('dock-hierarchy').classList.contains('open')`),
+    '…and shown again, open', null);
 
   // the ask: its question highlighted, its answers as chips
   await page.goto('web/world.html?replay=fixtures/live/fridge.run.jsonl');

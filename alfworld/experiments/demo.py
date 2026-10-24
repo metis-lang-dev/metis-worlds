@@ -1,13 +1,13 @@
 """demo.py — the exploitation demo's agent side in TEXT mode (alf-demo step 2, docs/DEMO.md §4–§5).
 
-    ALFWORLD_DATA=… .worlds/alf/bin/python experiments/demo.py setup GAME_DIR ROOT [--nav] [--port P]
+    ALFWORLD_DATA=… .worlds/alf/bin/python experiments/demo.py setup GAME_DIR ROOT [--port P]
     ALFWORLD_DATA=… .worlds/alf/bin/python experiments/demo.py check [--game GAME_DIR] [--out DIR] [--port P]
     ALFWORLD_DATA=… .worlds/alf/bin/python experiments/demo.py games [--n 10] [--split train] [--out DIR]
 
 setup: ROOT becomes the agent's catalog (cwd-root): the game's hierarchy installed for a person
 (gen_hier.install, person=True: the director, the task, the specialists, one commands log), the task
 card's generated grammar and prompts, the map in text mode (world/semantic_map.py → ROOT/world-map.json),
-with --nav the page's voice navigation (web/domains/world_ui), and ROOT/config.yaml for metis-agent's
+and ROOT/config.yaml for metis-agent's
 service: the director (v3.director), the turn serving the active cards (v3.serve: active), the map
 (v3.world_map: /world/map.json, named on every hello as world/map). demo.sh runs it with the page
 (web/world.html?live=1).
@@ -43,7 +43,7 @@ WEB = WORLD.parent / "web"
 GAME = "train/pick_and_place_simple-Tomato-None-Microwave-13"        # the fixtures' kitchen (web/fixtures)
 
 
-def setup(game, root, nav=False, port=8398):
+def setup(game, root, port=8398):
     """ROOT as the demo's catalog; → (config path, the map, the task's fetch)."""
     root = Path(root)
     if root.exists():
@@ -56,15 +56,12 @@ def setup(game, root, nav=False, port=8398):
     m = text_map(str(game))
     (root / "world-map.json").write_text(json.dumps(m, indent=1))
     names = list(hda.NAMES)
-    if nav:
-        shutil.copytree(WEB / "domains" / "world_ui", root / "domains" / "world_ui")
-        names.append("world_ui")
     run = root / ".run"
     run.mkdir()
     c = hda.config_dict(run, port)
     c["v3"]["world_map"] = str(root / "world-map.json")
     c["v3"]["catalog"] = names
-    c["v3"]["loaded"] = ["director", "task"] + (["world_ui"] if nav else [])
+    c["v3"]["loaded"] = ["director", "task"]
     c["domains"]["names"] = names
     c["domains"]["clocks"] = [{"domain": n, "n": 1} for n in names]
     c["ws"]["ui"] = str(WEB)
@@ -365,7 +362,6 @@ def main(argv=None):
     s = sub.add_parser("setup")
     s.add_argument("game")
     s.add_argument("root")
-    s.add_argument("--nav", action="store_true")
     s.add_argument("--port", type=int, default=8398)
     c = sub.add_parser("check")
     c.add_argument("--game", default=None)
@@ -378,7 +374,7 @@ def main(argv=None):
     g.add_argument("--port", type=int, default=8398)
     a = ap.parse_args(argv)
     if a.cmd == "setup":
-        cfg, m, fetch, _ = setup(a.game, a.root, a.nav, a.port)
+        cfg, m, fetch, _ = setup(a.game, a.root, a.port)
         print(json.dumps({"config": str(cfg), "task": m["task"]["text"], "fetch": fetch}))
         return 0
     if a.cmd == "check":

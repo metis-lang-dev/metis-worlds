@@ -9,8 +9,9 @@
 // the microwave, opens it, puts the tomato in); every result's own line spoken in the band and
 // kept in the journal; the task card with the words, the goal, the chain and the lines; the end.
 // A disengagement: the person's goal the task refuses (the fridge), the band asks, the place in
-// red. The page as world_ui's host: a click is +enter, a pick by name in the map, the numbers,
-// the task card rising through the port.
+// red. One voice paradigm (voice-nav-removal s-90621b2c): no voice navigation of the page; its
+// affordances turn into the chat (the world card's asks). The docks are tools: the strip shows and
+// hides them, a header folds nothing.
 import { open, checks, sleep } from './cdp.mjs';
 
 const c = checks();
@@ -38,7 +39,7 @@ try {
   await page.cmd('Input.dispatchMouseEvent', { type: 'mouseReleased', x: g.x, y: g.y + 80, button: 'left', clickCount: 1 });
   const h1 = await hs();
   c.ok(Math.abs(h1[0] - h0[0] - 80) <= 3 && Math.abs(h0[1] - h1[1] - 80) <= 3, 'dragged 80 px down: TALK grows, HIERARCHY shrinks by as much', [h0, h1]);
-  c.ok(await ev(`Math.round(world.docks.state.talk.size) === ${h1[0]} && JSON.parse(localStorage.getItem('worldpage.docks.v3')).talk.size > 0`), 'the sizes kept with the layout', await ev(`JSON.stringify(world.docks.state)`));
+  c.ok(await ev(`Math.round(world.docks.state.talk.size) === ${h1[0]} && JSON.parse(localStorage.getItem('worldpage.docks.v4')).talk.size > 0`), 'the sizes kept with the layout', await ev(`JSON.stringify(world.docks.state)`));
   await page.goto('web/world.html');
   c.ok(JSON.stringify(await hs()) === JSON.stringify(h1), 'and after a reload', [h1, await hs()]);
   await ev(`document.querySelector('#dock-hierarchy > .dgrip').dispatchEvent(new MouseEvent('dblclick', { bubbles: true }))`);
@@ -104,29 +105,23 @@ try {
   // 6. the hierarchy's task row opens the task card: the words, the goal, the chain, the lines
   await page.mouse('#hlist li[data-domain="task"]');
   const card = await ev(`({ open: document.querySelector('#map .wm-task').open, text: document.querySelector('#map .wm-card').textContent,
-    chain: document.querySelectorAll('#map .wm-chain li').length, focus: document.activeElement?.dataset?.w })`);
+    chain: document.querySelectorAll('#map .wm-chain li').length })`);
   c.ok(card.open && card.text.includes('Put a tomato in the microwave.') && card.text.includes('fetch(tomato1, microwave1)') && card.chain === 6
     && card.text.includes('Tomato 1 is in microwave 1: done.'), 'the task card: the words, the goal, the six steps, the lines', card);
-  c.ok(card.focus === 'cardclose' && await ev(`world.log.some(r => r.dir === 'port' && r.lines.includes('+opened(card)'))`),
-    'the card rose through the port: +opened(card), the focus on its close button', card.focus);
   await page.key('Escape');
-  c.ok(await ev(`!document.querySelector('#map .wm-task').open && world.log.some(r => r.dir === 'port' && r.lines.includes('+closed(card)'))`),
-    'Escape closes it: +closed(card)', null);
+  c.ok(await ev(`!document.querySelector('#map .wm-task').open`), 'Escape closes it', null);
 
-  // 7. the page as world_ui's host: a click is +enter(map); a pick by name; the numbers
-  await page.mouse('#map [data-id="fridge1"]', false);
-  await ev(`document.querySelector('#map [data-id="fridge1"]').focus()`);
-  await sleep(100);
-  c.ok(await ev(`world.log.some(r => r.dir === 'port' && r.lines.includes('+enter(map)'))`), 'a focus on a thing on the map is +enter(map)', null);
-  await ev(`world.port.effect({ ui: 'pick', widget: 'map', name: 'the microwave' })`);
-  c.ok(await ev(`document.querySelector('#map [data-id="microwave1"]').classList.contains('picked') && world.log.some(r => r.dir === 'port' && r.lines.includes('+picked'))`),
-    'a pick by name in the map: the microwave picked', null);
-  c.ok(await ev(`document.activeElement?.dataset?.id === 'microwave1' && getComputedStyle(document.querySelector('#map [data-id="microwave1"]')).outlineStyle === 'solid'`),
-    'the pick shows: the microwave has the focus, outlined (the Chrome test: "I picked it." and nothing to see)', await ev(`document.activeElement?.dataset?.id`));
-  await ev(`world.port.effect({ ui: 'numbers', widget: 'map' })`);
-  c.ok(await ev(`document.querySelectorAll('#map .wm-ent[data-n]').length === 9`), 'NUMBERS labels the map\'s first nine things', null);
-  await ev(`world.port.effect({ ui: 'focus', widget: 'journal' })`);
-  c.ok(await ev(`document.activeElement?.dataset?.w === 'journal'`), 'a focus effect moves the page\'s focus (the journal dock)', null);
+  // 7. no voice navigation: no port, no world_ui claim, no nav markup
+  c.ok(await ev(`!('port' in world) && !document.querySelector('[data-w], [data-port-off]') && !world.log.some(r => r.dir === 'port')`),
+    'the page is the game\'s alone: no ui port, no nav markup', null);
+  // the architect's ruling (b): the cards are tools — a header click folds nothing, "go to Talk" lands at once; ✕ hides
+  await page.mouse('#dock-talk > header .tt');
+  c.ok(await ev(`document.getElementById('dock-talk').classList.contains('open') && !document.querySelector('#dock-talk .tw').textContent
+    && getComputedStyle(document.querySelector('#dock-talk > header')).cursor === 'default'`), 'a dock\'s header folds nothing (no ▾, no pointer)', null);
+  await page.mouse('#dock-journal > header .x');
+  c.ok(await ev(`document.getElementById('dock-journal').hidden`), '✕ hides it', null);
+  await page.mouse('[data-strip="journal"]');
+  c.ok(await ev(`document.getElementById('dock-journal').classList.contains('open')`), 'the strip shows it again, open', null);
 
   // 7b. the world card (the user: "I did not know what to ask"): what this world is, its room and things by kind, what to ask
   const wc = await ev(`({ title: document.querySelector('#wcard .wc-title')?.textContent, room: document.querySelectorAll('#wcard .wc-kinds')[0]?.querySelectorAll('.wc-kind').length,
@@ -137,14 +132,13 @@ try {
   c.ok(wc.title === 'ALFWorld kitchen FloorPlan13' && wc.room === 10 && wc.things === 24 && wc.cab.startsWith('cabinet × 26') && wc.cab.endsWith('opens') && wc.cannot === 3
     && wc.src.startsWith('generated from the game') && wc.strip && wc.asks[0] === 'put a tomato in the microwave' && wc.asks.includes('new game'),
     'the world card: its title, the room and the things by kind × count, the asks, what it cannot, the source', wc);
-  await page.mouse('[data-strip="world"]');
-  c.ok(await ev(`document.getElementById('dock-world').classList.contains('open')`), 'the strip opens the WORLD CARD dock', null);
+  c.ok(await ev(`document.getElementById('dock-world').classList.contains('open')`), 'the WORLD CARD dock: shown, so open (a tool, not folded)', null);
   await page.mouse('#wcasks .chip');
   c.ok(await ev(`[...document.querySelectorAll('#talkpanel .fw-person .fw-text')].some(t => t.textContent === 'put a tomato in the microwave')`),
     'an ask\'s chip says it, as typing it would', null);
   await ev(`world.frame({ ev: 'world/status', state: 'waiting', text: 'Tell me a task.' })`);
   c.ok(await ev(`[...document.querySelectorAll('#sopts .chip')].some(b => b.textContent === 'what can I ask?')`), 'waiting offers "what can I ask?"', null);
-  await ev(`world.docks.set('world', { shown: true, open: false })`);
+  await ev(`world.docks.set('world', { shown: false })`);
   await page.mouse('#sopts .chip:last-child');
   c.ok(await ev(`document.getElementById('dock-world').classList.contains('open')`), '…which opens the world card', null);
 

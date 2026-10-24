@@ -1,5 +1,6 @@
-"""wire.py — a websocket client for metis-agent's /ws (RFC 6455), stdlib only (metis-loop domains/repl/repl_host.py's,
-console-nav): the experiments' way to the agent's wire from the world's venv, which has no websockets package."""
+"""wire.py — a websocket client for metis-agent's /ws (RFC 6455), stdlib only: the experiments' way to the agent's
+wire from the world's venv, which has no websockets package (demo.py check and games speak through it). It was lifted
+from metis-loop's REPL host, which voice-nav-removal (s-90621b2c) drops: this copy is its own now."""
 import base64
 import json
 import secrets
@@ -9,7 +10,7 @@ import threading
 import urllib.parse
 
 
-class Wire:  # metis-loop domains/repl/repl_host.py's (console-nav), stdlib only
+class Wire:
     """A websocket client (RFC 6455), stdlib only: text frames out (masked), text frames in
     (fragments joined, pings answered, close honoured). recv() blocks; None when closed."""
 

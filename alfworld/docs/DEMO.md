@@ -15,6 +15,13 @@ metis-agent docs/DIRECTOR.md (activation as a domain), metis-agentic-loop docs/P
 loop's phases; discovery is its exploration phase), metis-agent docs/FRAMEWORK.md (the dialog
 wire, domains as plugins), the console-nav brief (the lifted voice navigation of widgets).
 
+**Superseded (2026-10-24, voice-nav-removal s-90621b2c):** the voice navigation of the page is
+gone. The user dropped it as a mix of two paradigms: the web UI of the last 30 years, and the voice
+UX of a small LLM augmented with the metis runtime. One voice paradigm remains, the dialog. The
+page's affordances turn INTO the chat (the world card's ask chips, the status line's chips), never
+the other way round. `web/domains/world_ui`, `vendor/ui-port.js`, `web/run.sh` and `demo.sh --nav`
+are removed; the page runs on the game alone. Below, the voice-nav rows are the history.
+
 ## 1. The two phases, and who has the agency
 
 | phase | agency | what runs | what it produces |
@@ -97,7 +104,7 @@ and read by the UI, the agent and the tests:
  │   mic · floor · TTS · panel              │          │   served from metis-worlds/alfworld/  │
  │ hierarchy pane ─ active/attention/pending│          │   domains/ (cwd-root: cd = root)     │
  │ journal ─ journal.js (copied)            │          │ E2B types words → task card          │
- │ voice nav ─ ui_domain.llp + world_ui.llp │          ├──────────────────────────────────────┤
+ │ (voice nav: removed 2026-10-24)          │          ├──────────────────────────────────────┤
  └──────────────────────────────────────────┘          │ world plugin: alf_host.py ─► alf_gym │
                                                         │   (thor | tw backend) ─► THOR / TW   │
                                                         └──────────────────────────────────────┘
@@ -111,7 +118,7 @@ and read by the UI, the agent and the tests:
 | orchestration | metis-agent py backend: director + attended card (alf-hierarchy step 3, opus), `handles/2` generator (nina, SDK) | the world as a `process` plugin (`plugin: process`, `host: world/alf_host.py:make`) — FRAMEWORK §4, no new plugin kind |
 | dialog | fsttm-web `lib/` (fsttm, attention, dialog, tts, panel) copied into the page (copies-not-deps) | nothing in fsttm-web; the page composes it |
 | wire | metis-agent WIRE.md v1 (`say_text` → `intent`/`narration`, `activate`/`deactivate`, journal `dlg-*`) | one frame family `world/*`: `world/map` (the file's URL), `world/delta` (pose/at/holding/closed), `world/frame` (png) |
-| voice navigation of the page | console-nav's lifted `ui_domain.llp` base (focus tree, activation ports, JUMP/held modes) | `world_ui.llp`: the instance for the page's widgets (map, places, dialog, hierarchy, journal); the map's places are jumpable by name ("show the drawer") |
+| ~~voice navigation of the page~~ (removed, voice-nav-removal) | console-nav's lifted `ui_domain.llp` base (focus tree, activation ports, JUMP/held modes) | `world_ui.llp`: the instance for the page's widgets (map, places, dialog, hierarchy, journal); the map's places are jumpable by name ("show the drawer") |
 | page shell | metis-agent `console/` (index, shell.css/js, journal.js) | `world.html` + `map.js` (SVG plan, ≤ 300 lines) |
 | run script | `run.sh` pattern (metis-agent, metis-loop) | `alfworld/demo.sh`: starts THOR + the agent from the world root; `--tw` for text mode |
 

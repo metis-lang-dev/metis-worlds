@@ -1,28 +1,28 @@
 // world.js — the world page (alf-demo step 3b, alfworld/docs/DEMO.md §4–§5): the map
 // (map.js), the dialog band (fsttm-web's panel, copied in vendor/), the hierarchy of the domains at
-// work (the director's atoms), the journal (metis-agent's journal model, copied), and voice
-// navigation of the page itself (web/domains/world_ui: the page is that domain's host, through
-// the ui port).
+// work (the director's atoms), the journal (metis-agent's journal model, copied). One voice
+// paradigm, the dialog (voice-nav-removal s-90621b2c): the page's own affordances turn INTO the
+// chat (the world card's ask chips, the status line's answers), never a voice navigation of it.
 //
 //   world.html?replay=fixtures/x.run.jsonl[&speed=4]  a recorded turn, frame by frame (play / step)
 //   world.html?agent=ws://127.0.0.1:8395/ws            live: metis-agent's /ws (the person's words,
-//   world.html?live=1[&map=fixtures/x.json]            the journal, world/* frames, world_ui's effects);
-//                                                     live=1: this host's /ws (web/run.sh serves the page)
+//   world.html?live=1[&map=fixtures/x.json]            the journal, world/* frames);
+//                                                     live=1: this host's /ws (alfworld/demo.sh serves the page)
 //
 // The frames (the same in both): {ev: 'world/map', url} · {ev: 'world/delta', …} (map.js's delta)
 // · {ev: 'world/hierarchy', beat, arrival, effects, state} (the director's atoms) · {ev:
 // 'journal', rec} (metis-agent's dlg-* records: the words, the dispatch, activate/deactivate,
-// the domains' traces, the spoken lines; a dlg-trace of world_ui carries the page's effects)
+// the domains' traces, the spoken lines)
 // · {ev: 'world/status', state: waiting|working|asking|stuck|done|over, text, domain?, goal?,
 // options?} (what the agent does and wants: the band's status line) · {ev: 'world/ask', question,
 // options: [{label, say}], by, cornered?} (the director's question: its answers as chips; a chip
 // says its answer, as typing it would).
-// The shell is the consoles' (vendor/shell.css + shell.js): the docks talk, hierarchy, journal.
-// The test hooks: window.world = {map, port, panel, frames, step(), stepAll(), log, docks, status}.
+// The shell is the consoles' (vendor/shell.css + shell.js): the docks talk, hierarchy, world card, journal,
+// dialog — tools the strip shows and hides, not folded themselves (the architect's ruling, 2026-10-24).
+// The test hooks: window.world = {map, panel, frames, step(), stepAll(), log, docks, status}.
 import { WorldMap } from './map.js';
 import { Panel } from './vendor/panel.js';
 import { connect } from './vendor/ws.js';
-import { UiPort } from './vendor/ui-port.js';
 import { Journal } from './vendor/journal.js';
 import { Narrator, attachSelection, attachKey } from './vendor/narrator.js';
 import { voiceWidget } from './vendor/switch.js';
@@ -32,17 +32,6 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 const q = new URLSearchParams(location.search);
 const ORDER = ['task', 'nav', 'access', 'grasp', 'place'];    // the hierarchy's rows, the planner first; others as they appear
-
-// ── the page as world_ui's host: the map's things and the hierarchy's domains are list entries ──
-class WorldPort extends UiPort {
-  entries(w) {
-    if (w === 'map') return world.map.entries();
-    if (w === 'hlist') return [...document.querySelectorAll('#hlist li')];
-    return super.entries(w);
-  }
-  badges(items) { this.unbadge(); items.forEach((e, i) => { if (i < 9) e.dataset.n = String(i + 1); }); }
-  unbadge() { for (const e of document.querySelectorAll('[data-n]')) delete e.dataset.n; }
-}
 
 const world = window.world = { log: [], frames: [], at: 0 };
 const rec = (dir, f) => world.log.push({ t: Math.round(performance.now()), dir, ...f });
@@ -90,7 +79,7 @@ function drawHierarchy() {
 // ── the journal pane: metis-agent's model, its chat rows ──
 const journal = new Journal();
 function journalRow(row) {
-  if (!row || (row.kind === 'world' && /world world_ui:/.test(row.text))) return;     // the page's own world lines: the port's, not the user's
+  if (!row) return;
   const li = document.createElement('li');
   li.className = `j-${row.who}`;
   li.innerHTML = `<span class="who">${esc(row.who === 'you' ? 'you' : row.who === 'note' ? '·' : 'agent')}</span> ${esc(row.text)}`;
@@ -204,8 +193,8 @@ function intentWords(text) {
   try {
     const o = JSON.parse(text);
     const verb = spoken(o.intent ?? '').trim();
-    const slots = Object.entries(o).filter(([k]) => k !== 'intent' && k !== 'domain')    // a page widget is "the map" (opus's P6)
-      .map(([k, v]) => k === 'widget' ? `the ${spoken(v)}` : `${k.replace(/_/g, ' ')} ${spoken(v)}`);
+    const slots = Object.entries(o).filter(([k]) => k !== 'intent' && k !== 'domain')
+      .map(([k, v]) => `${k.replace(/_/g, ' ')} ${spoken(v)}`);
     return slots.length ? `${verb}: ${slots.join(', ')}` : verb;
   } catch { return text; }
 }
@@ -231,31 +220,19 @@ function rowLook(r) {
 }
 function floorLook(s) { if (panel) panel.dom.floor.textContent = `floor: ${FLOOR[s.floor] ?? s.floor.toLowerCase()}`; }
 
-// the voice navigation's next step, said when a list takes the focus (F10: the map took it, the band said nothing)
-const HINT = { map: 'In the map: say "pick the microwave" (a thing by name), or "numbers" to pick by number.',
-  hlist: 'In the hierarchy: say "pick task" (a domain by name), or "numbers".' };
-let lastHint = null;
-function hint(e) {
-  const h = e?.ui === 'focus' && HINT[e.widget];
-  if (!h || h === lastHint) return;
-  lastHint = h;
-  panel.note(h);
-}
-
 // ── the frames ──
-let say = 0, panel = null, port = null, send = () => {};
+let say = 0, panel = null, send = () => {};
 async function frame(f) {
   rec('frame', { ev: f.ev });
-  if (f.ev === 'world/map') { world.mapUrl = new URL(f.url, world.base).href; await world.map.load(world.mapUrl); fitMap(); legend(); worldCard(); tagCard(); return; }
+  if (f.ev === 'world/map') { world.mapUrl = new URL(f.url, world.base).href; await world.map.load(world.mapUrl); fitMap(); legend(); worldCard(); return; }
   if (f.ev === 'world/delta') { world.map.delta(f); if (f.task) { chainTo(world.map.map.task); } return; }
   if (f.ev === 'world/hierarchy') { hierarchy(f); return; }
   if (f.ev === 'world/status') { status(f); return; }
   if (f.ev === 'world/ask') { ask(f); return; }
   if (f.ev === 'new_game_ack') { if (f.text) panel.note(f.text); return; }
-  if (f.ev === 'page') { if (f.owns?.includes('world_ui')) port.sync(); return; }     // the claim: the takeover report
+  if (f.ev === 'page') return;                     // the hello's answer: this page owns no domain
   if (f.ev !== 'journal' || !f.rec) return;
   const r = f.rec;
-  if (r.kind === 'dlg-trace' && r.domain === 'world_ui' && r.effects) { for (const e of r.effects) effect(e); return; }
   if (r.kind === 'dlg-wake' && r.what === 'person' && world.replay) panel.core.row({ who: 'person', text: r.person, channel: 'main' });
   if (r.kind === 'dlg-say' && world.replay) {
     const [line, ...answers] = asked(r.text);
@@ -265,27 +242,6 @@ async function frame(f) {
   const out = journal.add(r);
   journalRow(out.chat);
 }
-function effect(e) {
-  rec('effect', { effect: e });
-  port.effect(e);
-  hint(e);
-}
-
-// the task card is map.js's dialog: world_ui's `card`, its close button `cardclose`
-function tagCard() {
-  const d = $('#map .wm-task'), b = d?.querySelector('.wm-close');
-  if (!d || d.dataset.w) return;
-  Object.assign(d.dataset, { w: 'card', role: 'dialog', entry: 'cardclose' }); d.tabIndex = -1;
-  if (b) Object.assign(b.dataset, { w: 'cardclose', role: 'button' });
-  const show = d.showModal.bind(d);
-  let rising = false;                                // the card rises through the port (+opened), which calls showModal itself
-  d.showModal = () => {
-    if (rising || !port) return show();
-    rising = true;
-    try { port.openDialog(d); } finally { rising = false; }
-  };
-}
-
 // ── replay: the recording, frame by frame ──
 async function replay(url) {
   world.replay = true;
@@ -329,39 +285,20 @@ world.map = new WorldMap($('#map'), {
   onTask: () => rec('task', {}),
 });
 const agentUrl = q.get('agent') || (q.get('live') ? `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws` : null);
-const hello = b => b.send({ ev: 'hello', since: 1e15, claim: ['world_ui'] });
+const hello = b => b.send({ ev: 'hello', since: 1e15 });
 const backend = agentUrl ? await live(agentUrl) : null;
-// the shell's docks (the consoles' look); a dock the port shows or hides for an effect goes through them, a dock the
-// person shows or hides on the strip is reported to the port (docked)
-let portDock = false, shown = {};
+// the shell's docks (the consoles' look): tools the strip shows and hides, each open while shown (fold: false — "go to
+// Talk" lands at once; the DIALOG tool's own FLOOR / STATE / EVENTS sections fold inside it)
 const docks = world.docks = MetisShell.docks({
   // v3: the DIALOG drawer (fsttm-web's panel, its own part: the floor, barge-in, attention, the numbers), hidden until asked for
-  names: ['talk', 'hierarchy', 'world', 'journal', 'dialog'], key: 'worldpage.docks.v3',
-  defaults: { talk: { shown: true, open: true }, hierarchy: { shown: true, open: true }, world: { shown: true, open: false }, journal: { shown: true, open: false },
+  // v4: the cards are tools, not folded (the world card and the journal shown by default as before; the dialog hidden)
+  names: ['talk', 'hierarchy', 'world', 'journal', 'dialog'], key: 'worldpage.docks.v4', fold: false,
+  defaults: { talk: { shown: true, open: true }, hierarchy: { shown: true, open: true }, world: { shown: true, open: true }, journal: { shown: true, open: true },
     dialog: { shown: false, open: true } },
-  onChange: st => {
-    panel?.showDialog(!!(st.dialog?.shown && st.dialog?.open));              // hidden or folded: the panel draws nothing there
-    for (const [d, s] of Object.entries(st)) {
-      if (port && !portDock && d !== 'world' && d !== 'dialog' && (shown[d] ?? true) !== !!s.shown) port.docked(d, !!s.shown);   // the card and dialog docks are not world_ui's
-      shown[d] = !!s.shown;
-    }
-  },
+  onChange: st => panel?.showDialog(!!st.dialog?.shown),              // hidden: the panel draws nothing there
 });
 docks.apply();
 MetisShell.splitter();
-port = world.port = new WorldPort({
-  root: $('#root'), syncDocks: true,
-  send: lines => { rec('port', { lines }); send({ ev: 'world', domain: 'world_ui', atoms: lines }); },
-  log: (dir, e) => rec(dir, { e }),
-  onDock: (w, on) => { portDock = true; try { docks.set(w, on ? { shown: true, open: true } : { shown: false }); } finally { portDock = false; } },
-});
-// a pick shows: the picked thing takes the focus (the map's attention slot says what it is; the hierarchy's task row
-// opens its card), outlined — the port only marks it `.picked` (the Chrome test: "I picked it." and nothing to see)
-port.onPick = (w, text, el) => {
-  rec('picked', { w, text });
-  el?.focus?.({ preventScroll: false });
-  if (w === 'hlist' && el?.dataset?.domain === 'task') world.map.showTask('@agent');
-};
 panel = world.panel = new Panel($('#talkpanel'), {
   backend: backend || { turn: async function* () { yield 'This is a replay: nobody is listening.'; }, onFrame: null },
   table: await (await fetch('vendor/fsttm.json')).json(), title: '', voice: q.get('voice') === '1',
@@ -374,7 +311,7 @@ panel = world.panel = new Panel($('#talkpanel'), {
   onFrame: f => frame(f), onRow: r => rowLook(r), onState: s => floorLook(s),
 });
 floorLook(panel.core.state());
-panel.showDialog(!!(docks.state.dialog?.shown && docks.state.dialog?.open));
+panel.showDialog(!!docks.state.dialog?.shown);
 // "stop" (the dialog's stop words) cuts the page's own voice; while the agent works or asks, it is also the
 // person's word to the agent (the ask's "stop" answer, F5): a turn of its own, past the floor's stop-word drop
 const say0 = panel.core.say.bind(panel.core);
@@ -396,7 +333,6 @@ const narrator = world.narrator = new Narrator({ tts: panel.core.tts });
 attachSelection(narrator, document); attachKey(narrator, document, { key: 'F8' });
 // the band's voice card (fsttm-web switch.js): [● mic ⟦switch⟧ narrator], the narrator always on
 $('#voice').replaceWith(Object.assign(voiceWidget(panel, { narrator, key: 'F8' }).el, { id: 'voice' }));
-$('#voice').dataset.portOff = '';
 $('#hlist').addEventListener('click', e => { const li = e.target.closest('li'); if (li?.dataset.domain === 'task') world.map.showTask('@agent'); });
 $('#hlist').addEventListener('keydown', e => { const li = e.target.closest('li'); if (e.key === 'Enter' && li?.dataset.domain === 'task') world.map.showTask('@agent'); });
 if (!agentUrl) await replay(q.get('replay') || 'fixtures/alfworld_tomato_microwave_13.run.jsonl');
