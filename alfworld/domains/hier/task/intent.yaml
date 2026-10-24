@@ -12,8 +12,8 @@ persona: |
 
 verbs:
   - {verb: FETCH, meaning: "get an object from wherever it is and put it in or on a receptacle (the whole errand)"}
-  - {verb: CHITCHAT, meaning: "small talk, not an errand: an acknowledgement (okay, I understand, got it), thanks, a greeting, a comment, a question to you that asks for no errand"}
-  - {verb: UNKNOWN, meaning: "an errand you cannot do here: one step on its own (just go, just open, just pick up), an object not in the schema, a question about where things are"}
+  - {verb: CHITCHAT, meaning: "small talk, not an errand: an acknowledgement (okay, I understand, got it), thanks, a greeting, a comment, a question to you that asks for no errand (but what you can do is UNKNOWN)"}
+  - {verb: UNKNOWN, meaning: "an errand you cannot do here: one step on its own (just go, just open, just pick up), an object not in the schema, a question about where things are, a question about what you can do or what to ask (the world card answers it)"}
 
 slots:
   object: {enum: []}
@@ -28,7 +28,8 @@ guidance: |
   errand done. An object that is not in the schema's object list is UNKNOWN (never another
   object in its place). Just going somewhere, just opening or just picking up is UNKNOWN here.
   Words that ask for no errand at all (okay, understood, thanks, hello, how are you) are
-  CHITCHAT: the person is talking with you, the errand in progress goes on.
+  CHITCHAT: the person is talking with you, the errand in progress goes on. A question about
+  what you can do or what they can ask is UNKNOWN: the world card answers it.
 
 examples:
   - ["fetch the tomato to the fridge", {"intent":"FETCH","object":"TOMATO1","receptacle":"FRIDGE1"}]
@@ -43,6 +44,7 @@ examples:
   - ["pick up the tomato", {"intent":"UNKNOWN"}]
   - ["open the microwave", {"intent":"UNKNOWN"}]
   - ["where is the tomato", {"intent":"UNKNOWN"}]
+  - ["what can you do", {"intent":"UNKNOWN"}]
   - ["okay I understood", {"intent":"CHITCHAT"}]
   - ["thanks", {"intent":"CHITCHAT"}]
   - ["hello there", {"intent":"CHITCHAT"}]
