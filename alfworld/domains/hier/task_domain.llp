@@ -36,6 +36,8 @@ pred holds(object) : task.                % … or that the agent holds it (a st
 pred absent(object, receptacle) : task.
 pred lost(thing) : task.                  % … and no place left to look (a thing: stuck's own type)
 pred believed(object, receptacle) : task. % … in its destination by an earlier look, not seen there now: go and look
+type risk {high mid low}.
+pred fetch_risk(risk) : task.             % the host's level port (spec16 step 4): the fetch's failure risk within h
 % the sub-goals (out)
 % the results (in)
 % the one way in: the goal, typed by the person (the FETCH intent) or seeded by the driver

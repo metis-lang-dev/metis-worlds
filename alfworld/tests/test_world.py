@@ -774,7 +774,10 @@ def test_a_rebinding_is_a_sync_on_the_live_session(tmp_path):
     pk, th = _role_install(tmp_path)
     try:
         counts = dict(th.reading())
-        assert th.tick(counts) == []                             # at the world's state: nothing to sync
+        # at the world's state: nothing to sync but the level port's atom, the host's at its tick (spec16 step 4:
+        # no fetch engaged, so its risk is high)
+        assert th.tick(counts) == ["+fetch_risk(high) 1"]
+        counts["fetch_risk(high)"] = 1
         d = th.smap.load()
         nd = sorted(r for r in d["places"] if r not in d["task"]["dests"] and r != th.smap.handle("p1"))[0]
         held = th.smap.handle("p1")

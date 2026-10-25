@@ -150,6 +150,7 @@ class AlfHost:
         # mid-goal), the planner the map's own (the next place to look is its)
         self.spec, self.frozen = meta.get("spec"), None
         self.beat, self.due, self.script, self.last = 0, (), {}, None   # the AgentHost reads these
+        self._level_hook()
         self._reset()
         self._freeze()
         self.card_changed()                          # the card as loaded: the map's things now
@@ -236,6 +237,54 @@ class AlfHost:
             self.done = False                        # beats on to put out its own (done), the director ends the run
         self.changed = bool(out.get("changed", True))
 
+    # ── the level port, live (spec16 s-b12d90f2 step 4; metis-lang spec/16 §4) ──
+    def _level_hook(self):
+        """The task's manifest names levels (gen_hier.TASK_INSTRUMENT): the one-tick instrument over its world model,
+        compiled once (metispy's metis.kernel.evaluate.LevelHook); none otherwise, or on a metispy without it."""
+        self.levels, self.level_atoms, self.level_preds = None, {}, set()
+        man_p = os.path.join(self.package_dir, "domain.yaml")
+        if self.spec != "task" or self.smap is None or not os.path.exists(man_p):
+            return
+        import yaml
+        man = yaml.safe_load(open(man_p)) or {}
+        if not man.get("levels"):
+            return
+        try:
+            from metis.kernel.evaluate import LevelHook
+        except ImportError:
+            return
+        self.levels = LevelHook(man, self.package_dir)
+        self.level_preds = set(man["levels"])
+
+    def instrument_ports(self):
+        """The ports the instrument reads, from the map: look (the task's choice weight) and where (the truth's
+        distribution) bound to the same numbers, for every object role and place role. A distribution the instrument
+        checks exactly: the map's belief normalized over the bound places, floored to nine decimals so its sum is
+        at most 1 (a lone belief: the rest is the world where the target is bound to no place), uniform over the
+        bound places for a thing the map has no belief of."""
+        from fractions import Fraction
+        d = self.smap.load()
+        b, places = d["binding"], self.smap.place_roles(d["k"])
+        bound = [r for r in places if b.get(r)]
+        tbl = {}
+        for o in self.smap.OBJECT_ROLES:
+            known = bool(d["belief"].get(b.get(o)))
+            for r in places:
+                p = (self.smap.belief(o, r) if known else 1.0 / len(bound)) if r in bound else 0.0
+                tbl[(o, r)] = repr(float(Fraction(int(p * 10 ** 9), 10 ** 9)))
+        return {"look": tbl, "where": tbl}
+
+    def update_levels(self, counts):
+        """Once a tick: the level atoms from the session as it stands (the instrument's init) and the map's belief;
+        the report (the values, the level, the time per tick) logged. A refusal or an error asserts no level."""
+        if self.levels is None:
+            return
+        try:
+            self.level_atoms, rep = self.levels.levels(counts, self.instrument_ports())
+        except Exception as e:                      # the level is advice: it never stops the task
+            self.level_atoms, rep = {}, {"error": "%s: %s" % (type(e).__name__, e)}
+        self._log({"beat": self.beat, "instrument": rep})
+
     def reading(self):
         r = {a: 1 for a in self.dyn}
         held = any(a.startswith("holds(") for a in self.dyn)
@@ -246,6 +295,7 @@ class AlfHost:
                 r["closed(%s)" % rec] = 1
         if self.smap is not None:
             r = self.smap.role_reading(r, self.frozen)   # the world over the bound roles: the binding changed, so does the reading
+        r.update(self.level_atoms)                       # the level port's atom (the task's: spec16 step 4)
         if self.observed is not None:
             r = {a: n for a, n in r.items() if a.split("(")[0] in self.observed}
         return r
@@ -331,6 +381,7 @@ class AlfHost:
             return None
         self.beat += 1
         self.stepped = False
+        self.update_levels(counts)
         reading = self.reading()
         own = sorted(a for a, n in counts.items() if n > 0 and a not in reading and a.split("(")[0] not in self.dynamic_preds())
         out = [a for a in own if a.split("(")[0] in self.out and a not in self.reported]
@@ -349,7 +400,7 @@ class AlfHost:
 
     def dynamic_preds(self):
         """The predicates the world owns in this program (sync may retract them): a role host's place facts too."""
-        return DYNAMIC_PREDS | PLACE_PREDS if self.smap is not None else DYNAMIC_PREDS
+        return (DYNAMIC_PREDS | PLACE_PREDS | self.level_preds) if self.smap is not None else DYNAMIC_PREDS
 
     def sync(self, counts):
         """The do-lines that bring the program's dynamic facts to the game's (the policy's

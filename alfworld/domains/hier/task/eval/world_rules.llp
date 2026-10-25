@@ -7,8 +7,6 @@ namespace world produce (dyn).
 pred truly(object, receptacle) : world.   % the belief fact: where the target is (drawn: one R by where)
 pred holding(object) : world.             % taken: no longer in its receptacle
 weight where(O, R) reads {truly(O, R)}.   % the map's belief, the truth's distribution (the case binds it as look)
-type risk {high mid low}.
-pred fetch_risk(risk) : world.            % the level port's (the manifest's levels: fetch_risk from fetch)
 
 stage act {
   %% I am at {R}: the target is here.
