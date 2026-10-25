@@ -486,7 +486,7 @@ def _director_base():
 PRIORITY = (("act", "nav"),)      # the tree's strict order: act's own trigger (a beast coming) preempts nav's body
 
 
-def install(level, root, view=False, k=K, seed=1, max_steps=600, name="level", tree=False, priority=None):
+def install(level, root, view=False, k=K, seed=1, max_steps=600, name="level", tree=False, priority=None, intents=None, speeds=None):
     """LEVEL (a des text, or a room variant tuple) installed for the agent under ROOT: ROOT/domains/hier/{director,
     task, nav, act} over the lifted bases and the capacity, the level's map store (.map.json), one shared NLE
     process for every host (the same level.json `shared` key), the task's card and ROOT/.run/config.yaml for
@@ -521,7 +521,7 @@ def install(level, root, view=False, k=K, seed=1, max_steps=600, name="level", t
         open(os.path.join(hier, "%s_domain.llp" % sp), "w").write(iface_gen.strip(t, cross, "minihack") if cross else t)
     open(os.path.join(hier, "capacity.llp"), "w").write(grid.capacity(k))
     mp = os.path.abspath(os.path.join(hier, ".map.json"))
-    grid.GridMap.build(mp, info["size"], des=des, view=view, k=k)
+    grid.GridMap.build(mp, info["size"], des=des, view=view, k=k, intents=intents, speeds=speeds)   # intents: nav-belief s-794cf4c1
     shim = open(os.path.join(HERE, "package_host.py")).read().replace("__WORLD__", HERE)
     out = {}
     for sp in SPECS:

@@ -83,18 +83,25 @@ class GridMap(core.SemanticMap):
     LOCATED = ("obj", "monster")
 
     @classmethod
-    def build(cls, path, size, des=None, view=False, k=K, want=(), peaceful=(), journal=None, cells=None, flat=False, speeds=None):
+    def build(cls, path, size, des=None, view=False, k=K, want=(), peaceful=(), journal=None, cells=None, flat=False, speeds=None,
+              intents=None):
         """The level's map: SIZE (w, h); `all` (view False) knows every cell from DES (or CELLS: {cell: kind}, a
         door's state in kind "door:<state>"); `view` knows nothing until seen. want: the things the task wants;
         peaceful: the beasts that do not come for the ego; speeds: {beast: cells a turn} where it is known (NetHack's
         newt: half the player's, 0.5), else one. flat: no roles — the reading is the level's own cells with
-        the route's next cell (a program compiled over the level itself: the comparison with roles)."""
+        the route's next cell (a program compiled over the level itself: the comparison with roles). intents
+        (nav-belief s-794cf4c1 step 1): {"priors": {species: {intent: p}}, "los": bool} — every beast seen carries a
+        categorical intent belief (semantic_world.intent) its sightings update and its motion follows; los: the ego
+        sees what a straight line over passable cells reaches (a lit level), not its area or its eight neighbours."""
         m = cls(path, journal)
         w, h = size
         d = {"w": w, "h": h, "view": bool(view), "k": k, "cells": {}, "doors": {}, "seen": [], "things": {}, "belief": {},
              "exists": {}, "looked": {}, "agent": {"at": None, "holding": None, "holds": []}, "binding": {}, "path": [],
              "task": {"goal": "stairs_down", "want": sorted(want)}, "peaceful": sorted(peaceful), "look": None, "flat": bool(flat),
              "speeds": dict(speeds or {})}
+        if intents is not None:
+            d["intents"] = {"priors": dict(intents.get("priors") or {}), "los": bool(intents.get("los"))}
+            d["intent"] = {}
         if not view and des:
             kinds, doors, things, beasts = des_cells(des)
             d["cells"], d["doors"] = kinds, doors
@@ -188,7 +195,10 @@ class GridMap(core.SemanticMap):
         return bayes.associate(sub, sightings, lambda c: self.neighbours(c, d), radius, kind_of=lambda t: kinds[t])
 
     def _sight(self, d, at):
-        """Every cell in view from AT, known or not: its area with the area's rim (a lit room), else the eight around."""
+        """Every cell in view from AT, known or not: its area with the area's rim (a lit room), else the eight around;
+        with intents' los, every known cell a straight line over passable cells reaches (los)."""
+        if (d.get("intents") or {}).get("los"):
+            return self.los(d, at)
         seg = self.segments()
         sid = seg["of"].get(at)
         x, y = xy(at)
@@ -197,6 +207,20 @@ class GridMap(core.SemanticMap):
             cells = set(seg["segments"][sid]["cells"])
             return sorted(cells | {name(xy(c)[0] + dx, xy(c)[1] + dy) for c in cells for dx in (-1, 0, 1) for dy in (-1, 0, 1)})
         return sorted(ring)
+
+    def los(self, d, at):
+        """The known cells in a straight line of sight from AT: the line's cells between (Bresenham's, both ways round
+        so a corner sees symmetrically) all passable; the eight around always. A lit level's view, this library's own
+        (nav-belief step 1)."""
+        x0, y0 = xy(at)
+        out = {name(x0 + dx, y0 + dy) for dx in (-1, 0, 1) for dy in (-1, 0, 1)}
+        for c in d["cells"]:
+            if c in out:
+                continue
+            x1, y1 = xy(c)
+            if any(all(self.passable(d, q) for q in line[1:-1]) for line in (_line(x0, y0, x1, y1), _line(x1, y1, x0, y0)[::-1])):
+                out.add(c)
+        return sorted(out)
 
     def visible(self, d):
         """The known cells the ego sees into now: its area with the area's rim (a lit room), else its eight neighbours."""
@@ -215,6 +239,8 @@ class GridMap(core.SemanticMap):
         is left (killed, or gone out of sight: the motion model and the alive decay carry it from there)."""
         changed = super().observe(atoms, save=False, predicted=predicted)
         d = self.load()
+        if d.get("intents") is not None:                       # each sighting updates its track's intent (nav-belief)
+            changed = self._intents_seen(d) or changed
         for n, c in (d.get("_beasts_seen") or {}).items():     # a beast on the screen is in sight: its last sighting
             d.setdefault("last_seen", {})[n] = [c, d.get("clock", 0.0)]
         if not d.get("view") and d["agent"]["at"]:
@@ -234,6 +260,140 @@ class GridMap(core.SemanticMap):
             self.save()
             self.log("observe", at=d["agent"]["at"], holding=d["agent"]["holding"])
         return changed
+
+    # ── the intent belief (nav-belief s-794cf4c1 step 1: semantic_world.intent) ──
+    def _intent_models(self, d, n):
+        from . import intent
+        at = d["agent"]["at"]
+        dist = self._dist_from(d, at) if at else None
+        far = (max(dist.values(), default=0) + 1) if dist else 0
+        sp = (d.get("speeds") or {}).get(d["things"].get(n, {}).get("of", n), (d.get("speeds") or {}).get(n, 1))
+        return intent.models(lambda c: self.neighbours(c, d), (lambda c: dist.get(c, far)) if dist else None, speed=sp)
+
+    def _intents_seen(self, d):
+        """The tracks of the beasts seen now: a new one at its species' prior; one seen before updated from its
+        displacement since (last_seen's cell and turn). → changed."""
+        from . import intent
+        changed = False
+        last, clock = d.get("last_seen") or {}, d.get("clock", 0.0)
+        for n, c in sorted((d.get("_beasts_seen") or {}).items()):
+            tr = d["intent"].get(n)
+            if tr is None:
+                tr = d["intent"][n] = {"p": intent.prior(d["things"].get(n, {}).get("of", n), d["intents"]["priors"]), "seen": 0}
+                changed = True
+            c1, t0 = last.get(n) or (None, clock)
+            p = intent.update(tr["p"], c1, c, clock - t0, self._intent_models(d, n))
+            if p != tr["p"]:
+                tr["p"], changed = {i: round(v, 6) for i, v in p.items()}, True
+            tr["seen"] += 1
+        return changed
+
+    def closing(self, thing, horizon=1.0, d=None, reach=False):
+        """P(THING closes on the ego within HORIZON turns): under its motion model (models(): a hostile's chase), the
+        mass of its belief that ends nearer the ego, along the map, than it started — each believed cell's mass carried
+        HORIZON turns on and counted where the distance shrank. The ego stands (what a wait assumes). A belief level's
+        source (belief-levels step 2: the host quantises it into closing_sure / closing_maybe). REACH: the no-intent
+        reachable set instead of the chase (models(reach=True)). → [0, 1]. (opus's, belief-levels-mh a810f4d.)"""
+        d = d or self.load()
+        at, bel = d["agent"]["at"], d["belief"].get(thing) or {}
+        model = self.models(d, reach=reach).get(thing)
+        if not at or not bel or model is None:
+            return 0.0
+        dist = self._dist_from(d, at)
+        far = max(dist.values(), default=0) + 1
+        p = 0.0
+        for c, m in bel.items():
+            g = dist.get(c, far)
+            p += m * sum(q for c2, q in model({c: 1.0}, horizon).items() if dist.get(c2, far) < g)
+        return min(1.0, p / (sum(bel.values()) or 1.0))
+
+    SUPPORT = 0.05                       # a cell in a beast's position support: its mass at least this
+
+    def intent_record(self, rho=1.0, d=None):
+        """Per tracked beast, for the log: its intent belief, its level, P(closing within RHO), its support's size and
+        likeliest cell, seen now or not. → {beast: {...}}."""
+        from . import intent
+        d = d or self.load()
+        seen = d.get("_beasts_seen") or {}
+        out = {}
+        for n, tr in sorted((d.get("intent") or {}).items()):
+            bel = d["belief"].get(n) or {}
+            sup = [c for c, m in bel.items() if m >= self.SUPPORT]
+            out[n] = {"p": {i: round(v, 3) for i, v in tr["p"].items()}, "level": intent.level(tr["p"]),
+                      "closing": round(self.closing(n, rho, d), 3), "support": len(sup),
+                      "top": max(bel.items(), key=lambda x: (x[1], x[0]))[0] if bel else None, "seen": n in seen}
+        return out
+
+    def intent_facts(self, closing_levels=(0.7, 0.3), rho=1.0, d=None):
+        """The bound beasts' facts in roles: hostile_sure(B) / hostile_maybe(B) (the intent level), closing_sure(B) /
+        closing_maybe(B) (P(closing within RHO) at CLOSING_LEVELS), support(B, P) for every bound cell P holding at
+        least SUPPORT of its mass. → {atom: 1}."""
+        from . import intent
+        d = d or self.load()
+        inv = {h: r for r, h in d["binding"].items()}
+        out = {}
+        for role in BEAST_ROLES:
+            n = d["binding"].get(role)
+            tr = (d.get("intent") or {}).get(n)
+            if not n or tr is None:
+                continue
+            lv = intent.level(tr["p"])
+            if lv:
+                out["%s(%s)" % (lv, role)] = 1
+            pc = self.closing(n, rho, d)
+            if pc >= closing_levels[0]:
+                out["closing_sure(%s)" % role] = 1
+            elif pc >= closing_levels[1]:
+                out["closing_maybe(%s)" % role] = 1
+            for c, m in (d["belief"].get(n) or {}).items():
+                if m >= self.SUPPORT and inv.get(c) in cell_roles(d["k"]):
+                    out["support(%s,%s)" % (role, inv[c])] = 1
+        return out
+
+    def predict_table(self, h, d=None):
+        """The belief per step over the next H ticks, for the instrument (nav-belief step 2; metis-lang spec/16 §10.1,
+        the architect's ruling on the shape). The ego stands. → {"h": H, "unit": "tick", "beasts": [names], "roles":
+        {role: name}, "intent": {name: {intent: p}} (the categorical belief intent(B, I), at this tick: drawn once by
+        the instrument), "rows": [{"closing(B,I)": hazard} per step t = 1..H] — the HAZARD that B, its intent I, steps
+        nearer the ego at step t given it has not before and where it is (its belief rolled under intent I's model
+        alone, the paths that have not closed yet kept), B its role when bound, else its name — and "marginals":
+        {"closing": [[P(nearer than now at t) per beast] …], "near": [[P(within one step at t)] …]} under the intent
+        mixture, for the levels only. Rows are TICKS (one NLE turn): the instrument's events per tick are step 3's."""
+        from . import intent
+        d = d or self.load()
+        at = d["agent"]["at"]
+        names = sorted(n for n in (d.get("intent") or {}) if d["belief"].get(n))
+        dist = self._dist_from(d, at) if at else {}
+        far = max(dist.values(), default=0) + 1
+        roles = {r: d["binding"][r] for r in BEAST_ROLES if d["binding"].get(r) in names}
+        label = {n: r for r, n in roles.items()}
+        ims = {n: self._intent_models(d, n) for n in names}
+        rows = [{} for _ in range(int(h))]
+        for n in names:
+            for i in intent.INTENTS:
+                bel = dict(d["belief"][n])
+                for t in range(int(h)):
+                    near, keep = 0.0, {}
+                    for c, m in bel.items():
+                        for c2, q in ims[n][i]({c: 1.0}, 1).items():
+                            if dist.get(c2, far) < dist.get(c, far):
+                                near += m * q
+                            else:
+                                keep[c2] = keep.get(c2, 0.0) + m * q
+                    z = sum(bel.values())
+                    rows[t]["closing(%s,%s)" % (label.get(n, n), i)] = round(near / z, 4) if z > 0 else 0.0
+                    zk = sum(keep.values())
+                    bel = {c: m / zk for c, m in keep.items()} if zk > 0 else bel
+        marg = {"closing": [], "near": []}
+        bels = {n: dict(d["belief"][n]) for n in names}
+        ms = {n: intent.mixture(d["intent"][n]["p"], ims[n]) for n in names}
+        now = {n: sum(m * dist.get(c, far) for c, m in bels[n].items()) for n in names}
+        for _ in range(int(h)):
+            bels = {n: ms[n](bels[n], 1) for n in names}
+            marg["closing"].append([round(sum(m for c, m in bels[n].items() if dist.get(c, far) < now[n]), 4) for n in names])
+            marg["near"].append([round(sum(m for c, m in bels[n].items() if dist.get(c, far) <= 1), 4) for n in names])
+        return {"h": int(h), "unit": "tick", "beasts": names, "roles": roles, "rows": rows, "marginals": marg,
+                "intent": {n: {i: round(v, 4) for i, v in d["intent"][n]["p"].items()} for n in names}}
 
     def describe(self, thing, n=3):
         """Where THING is believed, in the world's words: seen now, or last seen where and how long ago and the
@@ -444,8 +604,12 @@ class GridMap(core.SemanticMap):
         far = max(dist.values(), default=0) + 1
         toward = (lambda c: dist.get(c, far)) if at else None
         out = {}
+        tracked = d.get("intent") or {}
         for n, t in d["things"].items():
-            if t.get("kind") == "beast" and reach and n not in d["peaceful"]:
+            if t.get("kind") == "beast" and n in tracked and not reach:   # nav-belief: its intent belief's mixture
+                from . import intent
+                out[n] = intent.mixture(tracked[n]["p"], self._intent_models(d, n))
+            elif t.get("kind") == "beast" and reach and n not in d["peaceful"]:
                 # REACH: the reachable set instead of the chase (RSS's worst case: anywhere its speed allows, no
                 # intent assumed) — the belief a safety check must clear rather than the likeliest track
                 out[n] = bayes.reachable(lambda c: self.neighbours(c, d), vmin=0.0,
@@ -595,6 +759,24 @@ class GridMap(core.SemanticMap):
         out = super().role_reading(reading, binding)
         out.update({a: n for a, n in reading.items() if a.startswith("said(")})   # the message: no role in it
         return out
+
+
+def _line(x0, y0, x1, y1):
+    """Bresenham's cells from (x0, y0) to (x1, y1), both ends included."""
+    out, dx, dy = [], abs(x1 - x0), -abs(y1 - y0)
+    sx, sy = (1 if x0 < x1 else -1), (1 if y0 < y1 else -1)
+    err = dx + dy
+    while True:
+        out.append(name(x0, y0))
+        if (x0, y0) == (x1, y1):
+            return out
+        e2 = 2 * err
+        if e2 >= dy:
+            err += dy
+            x0 += sx
+        if e2 <= dx:
+            err += dx
+            y0 += sy
 
 
 def _turns(t):
