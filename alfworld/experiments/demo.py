@@ -81,7 +81,7 @@ class Session:
     """metis-agent's service over ROOT, its frames collected."""
 
     def __init__(self, root, cfg, port):
-        env = dict(os.environ, METIS_CATALOG=str(root), PYTHONPATH=str(hda.AGENT_PY), METIS_ALF_PY=os.environ.get("METIS_ALF_PY", sys.executable))
+        env = dict(os.environ, METIS_CATALOG=str(root), PYTHONPATH=os.pathsep.join([str(hda.AGENT_PY)] + [p for p in [os.environ.get("PYTHONPATH")] if p]), METIS_ALF_PY=os.environ.get("METIS_ALF_PY", sys.executable))
         self.svc = subprocess.Popen(["systemd-run", "--user", "--scope", "-q", "-p", "MemoryMax=6G", "nice",
                                      str(hda.AGENT_HOME / "py" / ".venv" / "bin" / "python"), "-m", "metis_agent.service",
                                      "--config", str(cfg), "--no-wait-viewer", "--ui-dir", str(WEB), "--lib-dir", str(WEB / "vendor")],
