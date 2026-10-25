@@ -226,6 +226,7 @@ def main(argv=None):
     os.makedirs(os.path.join(wd, "hier"), exist_ok=True)
     for s in gen_hier.SPECS:
         shutil.copy(os.path.join(ROOT, "domains", "hier", s + "_domain.llp"), os.path.join(wd, "hier", s + "_domain.llp"))
+    shutil.copytree(os.path.join(ROOT, "domains", "hier", "iface"), os.path.join(wd, "hier", "iface"), dirs_exist_ok=True)   # the bases' interface package
     shutil.copy(os.path.join(ROOT, "domains", "hier", "capacity.llp"), os.path.join(wd, "hier", "capacity.llp"))
     shutil.copy(os.path.join(ROOT, "domains", "director_domain.llp"), os.path.join(wd, "director_domain.llp"))
     for i, g in enumerate(games):

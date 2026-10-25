@@ -17,6 +17,18 @@ notdest(p5).
 notdest(p6).
 notdest(p7).
 notdest(p8).
+thing_of(target, target).
+thing_of(other, other).
+place_of(dest, dest).
+place_of(p0, p0).
+place_of(p1, p1).
+place_of(p2, p2).
+place_of(p3, p3).
+place_of(p4, p4).
+place_of(p5, p5).
+place_of(p6, p6).
+place_of(p7, p7).
+place_of(p8, p8).
 
 #steps 8
 #seeds 1

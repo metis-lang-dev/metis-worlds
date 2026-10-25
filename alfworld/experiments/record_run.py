@@ -110,6 +110,7 @@ def record(game_dir, map_path, out_path, words, goal):
     for s in hier.gen_hier.SPECS:
         shutil.copy(os.path.join(ROOT, "domains", "hier", s + "_domain.llp"), os.path.join(work, "hier"))
     shutil.copy(os.path.join(ROOT, "domains", "hier", "capacity.llp"), os.path.join(work, "hier"))
+    shutil.copytree(os.path.join(ROOT, "domains", "hier", "iface"), os.path.join(work, "hier", "iface"))   # the bases' interface package
     shutil.copy(os.path.join(ROOT, "domains", "director_domain.llp"), work)
     r = hier.run_game_director(game_dir, work, first=[goal])
     L = lines()

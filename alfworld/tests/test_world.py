@@ -150,6 +150,7 @@ def test_hierarchy_wins_by_manual_switch(tmp_path):
     for s in gen_hier.SPECS:
         shutil.copy(os.path.join(ROOT, "domains", "hier", s + "_domain.llp"), os.path.join(wd, "hier", s + "_domain.llp"))
     shutil.copy(os.path.join(ROOT, "domains", "hier", "capacity.llp"), os.path.join(wd, "hier", "capacity.llp"))
+    shutil.copytree(os.path.join(ROOT, "domains", "hier", "iface"), os.path.join(wd, "hier", "iface"), dirs_exist_ok=True)
     r = hier.run_game(game_dir(), wd)
     assert r["error"] is None, r
     assert r["won"] and r["outcome"] == "done", r
@@ -174,9 +175,10 @@ def test_hierarchy_instances_see_less(tmp_path):
         p = gen_hier.generate(game_dir(), str(tmp_path / "pk"), spec, 0, info, smap, reading, seed, [])
         init = sum(1 for l in open(p) if l.startswith("#init"))
         assert init < flat_init, (spec, init, flat_init)
-        assert gen_hier.vector(spec)["rules"] <= 21          # the task domain: 14 with `already` and `held` (alf-demo step 3b, F8/F12),
+        assert gen_hier.vector(spec)["rules"] <= 23          # the task domain: 14 with `already` and `held` (alf-demo step 3b, F8/F12),
                                                              # 21 with view mode's look (semantic-map step 3: not_here, not_in,
-                                                             # lost_it, nowhere; verify, open_look, verified)
+                                                             # lost_it, nowhere; verify, open_look, verified), 23 with
+                                                             # stuck_take / stuck_put (specialist-tree step 3b: refused split)
 
 
 def test_activation_cards(tmp_path):
@@ -226,6 +228,7 @@ def _hier_workdir(tmp_path):
     for s in gen_hier.SPECS:
         shutil.copy(os.path.join(ROOT, "domains", "hier", s + "_domain.llp"), os.path.join(wd, "hier", s + "_domain.llp"))
     shutil.copy(os.path.join(ROOT, "domains", "hier", "capacity.llp"), os.path.join(wd, "hier", "capacity.llp"))
+    shutil.copytree(os.path.join(ROOT, "domains", "hier", "iface"), os.path.join(wd, "hier", "iface"), dirs_exist_ok=True)
     return wd
 
 

@@ -8,14 +8,13 @@ provenance text "ALFWorld navigation as a lifted specialist: go to a receptacle;
 layers (dyn).
 stages (act).
 types (receptacle location).   % completed by the instance that includes this file (spec 12)
+include "iface/alfworld.llp".   % the family's crossing preds, declared once (tools/iface_gen.py)
 
 namespace nav produce (dyn).
 
 pred recat(receptacle, location) : nav.          % the receptacle's location: the projection's (the map)
 
 pred at(location) : nav.                  % the world: exactly one
-pred goto(receptacle) : nav.              % the goal (in)
-pred reached(receptacle) : nav.           % the result (out)
 
 stage act {
   %% I go to {R}.

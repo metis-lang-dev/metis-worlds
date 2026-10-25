@@ -1,11 +1,12 @@
 % grasp_domain — taking things (alf-hierarchy step 1, the architect, 2026-10-22): picking an
-% object up as a specialist. Goal in: take(O); result out: taken(O), or refused(O) when the agent
+% object up as a specialist. Goal in: take(O); result out: taken(O), or refused_take(O) when the agent
 % is elsewhere, the receptacle is shut, or the hands are full (each with its reason line).
 catalog grasp_domain 1.
 provenance text "ALFWorld pick-up as a lifted specialist: take an object from where it is" "2026-10-22".
 layers (dyn).
 stages (act).
 types (receptacle location object).   % completed by the instance that includes this file (spec 12)
+include "iface/alfworld.llp".   % the family's crossing preds, declared once (tools/iface_gen.py)
 
 namespace grasp produce (dyn).
 
@@ -21,10 +22,6 @@ pred closed(receptacle) : grasp.
 pred holds(object) : grasp.
 pred holding : grasp.
 pred handsfree : grasp.
-pred take(object) : grasp.                % the goal (in)
-pred taken(object) : grasp.               % the result (out)
-pred refused(object) : grasp.             % the refusal (out)
-pred elsewhere(receptacle) : grasp.      % the refusal the director detours: I am not there
 
 stage act {
   %% I take {O} from {R}.
@@ -34,7 +31,7 @@ stage act {
   %% I am not where {O} is.
   not_here [dyn] : take(O) * $at(L) * $inrecep(O, R) * $recat(R, L2) * L <> L2 -o elsewhere(R).
   %% {R} is shut: I cannot reach {O}.
-  shut [dyn] : take(O) * $at(L) * $recat(R, L) * $inrecep(O, R) * $closed(R) -o refused(O).
+  shut [dyn] : take(O) * $at(L) * $recat(R, L) * $inrecep(O, R) * $closed(R) -o refused_take(O).
   %% My hands are full.
-  hands_full [dyn] : take(O) * $at(L) * $objat(O, L) * $holding -o refused(O).
+  hands_full [dyn] : take(O) * $at(L) * $objat(O, L) * $holding -o refused_take(O).
 }

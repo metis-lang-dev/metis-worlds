@@ -25,6 +25,11 @@ def stats(instance, base):
     facts = sum(1 for l in t.splitlines() if re.match(r"^[a-z]\w*\(.*\)\.$", l))
     init = sum(1 for l in t.splitlines() if l.startswith("#init"))
     b = open(base).read()
+    body = "\n".join(l.split("%")[0] for l in b.split("stage ", 1)[-1].splitlines())   # the rules, no comments
+    for inc in re.findall(r'^include "([^"]+)"\.', b, re.M):       # the family package's preds the base uses (specialist-tree 3b)
+        if os.path.exists(os.path.join(os.path.dirname(base), inc)):
+            b += "".join(l for l in open(os.path.join(os.path.dirname(base), inc)) if l.startswith("pred ")
+                         and re.search(r"\b%s\b" % l.split()[1].split("(")[0], body))
     rules = len(re.findall(r"^\s+\w+ \[dyn\] :", b, re.M))
     preds = len(re.findall(r"^(?:pred|bwd) ", b, re.M))
     ground = 0

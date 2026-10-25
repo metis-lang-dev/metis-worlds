@@ -1,11 +1,12 @@
 % place_domain — putting things (alf-hierarchy step 1, the architect, 2026-10-22): placing the
 % held object into a receptacle as a specialist. Goal in: put(O, R); result out: placed(O, R), or
-% refused(R) when the agent is elsewhere, R is shut, or the hands are empty.
+% refused_put(R) when the agent is elsewhere, R is shut, or the hands are empty.
 catalog place_domain 1.
 provenance text "ALFWorld put-down as a lifted specialist: move the held object to a receptacle" "2026-10-22".
 layers (dyn).
 stages (act).
 types (receptacle location object).   % completed by the instance that includes this file (spec 12)
+include "iface/alfworld.llp".   % the family's crossing preds, declared once (tools/iface_gen.py)
 
 namespace place produce (dyn).
 
@@ -21,10 +22,6 @@ pred closed(receptacle) : place.
 pred holds(object) : place.
 pred holding : place.
 pred handsfree : place.
-pred put(object, receptacle) : place.     % the goal (in)
-pred placed(object, receptacle) : place.  % the result (out)
-pred refused(receptacle) : place.         % the refusal (out)
-pred elsewhere(receptacle) : place.      % the refusal the director detours: I am not there
 
 stage act {
   %% I put {O} in {R}.
@@ -34,7 +31,7 @@ stage act {
   %% I am not at {R}.
   not_here [dyn] : put(O, R) * $at(L) * $recat(R, L2) * L <> L2 -o elsewhere(R).
   %% {R} is shut.
-  shut [dyn] : put(O, R) * $at(L) * $recat(R, L) * $closed(R) -o refused(R).
+  shut [dyn] : put(O, R) * $at(L) * $recat(R, L) * $closed(R) -o refused_put(R).
   %% I am not holding {O}.
-  empty_handed [dyn] : put(O, R) * $handsfree -o refused(R).
+  empty_handed [dyn] : put(O, R) * $handsfree -o refused_put(R).
 }

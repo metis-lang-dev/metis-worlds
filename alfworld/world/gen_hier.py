@@ -24,15 +24,15 @@ SPECS = {
     "nav":    dict(types=("location", "receptacle"), dyn=("at", "recat"), goal="goto", out=("reached",)),
     "access": dict(types=("location", "receptacle"),
                    dyn=("at", "recat", "openable", "notopenable", "opened", "closed", "checked"), goal="open",
-                   out=("accessible", "refused", "elsewhere")),
+                   out=("accessible", "elsewhere")),
     "grasp":  dict(types=("location", "receptacle", "object"),
                    dyn=("at", "recat", "openable", "notopenable", "objat", "inrecep", "opened", "closed", "holds", "holding",
-                        "handsfree"), goal="take", out=("taken", "refused", "elsewhere")),
+                        "handsfree"), goal="take", out=("taken", "refused_take", "elsewhere")),
     "place":  dict(types=("location", "receptacle", "object"),
                    dyn=("at", "recat", "openable", "notopenable", "objat", "inrecep", "opened", "closed", "holds", "holding",
-                        "handsfree"), goal="put", out=("placed", "refused", "elsewhere")),
+                        "handsfree"), goal="put", out=("placed", "refused_put", "elsewhere")),
     "task":   dict(types=("object", "receptacle", "thing"), dyn=("inrecep", "holds", "absent", "lost", "believed"),
-                   goal="fetch", takes=("reached", "accessible", "taken", "placed", "refused"),
+                   goal="fetch", takes=("reached", "accessible", "taken", "placed", "refused_take", "refused_put", "refused"),
                    out=("goto", "open", "take", "put", "done", "stuck", "wrong_dest", "wrong_object")),
 }
 # which specialist handles a sub-goal: the driver's manual switch table (step 3 makes it the director's handles/2)
@@ -43,13 +43,110 @@ HANDLES = {"goto": "nav", "open": "access", "take": "grasp", "put": "place"}
 # out or the person's; world-private: the world through its own binding), what it puts out (out), the token it acts with (motion,
 # the body: every specialist but the planner moves or handles), and the statuses its outs mean
 STATUS = {"nav": {"success": ["reached"], "failure": []},
-          "access": {"success": ["accessible"], "failure": ["refused"]},
-          "grasp": {"success": ["taken"], "failure": ["refused"]},
-          "place": {"success": ["placed"], "failure": ["refused"]},
+          "access": {"success": ["accessible"], "failure": []},
+          "grasp": {"success": ["taken"], "failure": ["refused_take"]},
+          "place": {"success": ["placed"], "failure": ["refused_put"]},
           "task": {"success": ["done"], "failure": ["stuck", "wrong_dest", "wrong_object"]}}
 
 
-def manifest_fields(spec):
+# the inversion (specialist-tree step 3b): the tree variant of a member's base reports itself through the protocol
+REPORTS = {"nav": ("tick__active", "tick__done"), "access": ("tick__active", "tick__done"),
+           "grasp": ("tick__active", "tick__done", "tick__stuck"), "place": ("tick__active", "tick__done", "tick__stuck"),
+           "task": ("tick__active", "tick__done", "tick__stuck")}
+GOAL_ARITY = {"goto": 1, "open": 1, "take": 1, "put": 2}
+
+
+def tree_base(spec, text):
+    """SPEC's base TEXT as the tree variant: a specialist takes its goal with a begin rule that reads it (re-putting it
+    out would be a new arrival) and reports tick__active once (idle → busy); every rule consuming the goal also takes
+    busy and gives back idle, reporting tick__done with a success out, tick__stuck with a failure out (a refusal the
+    director detours, elsewhere, reports nothing); the task reports active as it takes a fetch, done and stuck with
+    its ends. The bases stay today's for plain installs."""
+    import re
+    st = STATUS[spec]
+    lines, out = text.split("\n"), []
+    if spec != "task":
+        g = SPECS[spec]["goal"]
+        args = ", ".join("X%d" % i for i in range(GOAL_ARITY[g]))
+    for l in lines:
+        m = re.match(r"^(  (\w+) \[dyn\] : )(.*) -o (.*)\.(\s*%.*)?$", l)
+        if m:
+            pre, name, body, head = m.group(1), m.group(2), m.group(3), m.group(4)
+            heads = {a.split("(")[0].strip() for a in head.split("*")}
+            rep_ = ""
+            if heads & set(st["success"]):
+                rep_ = " * tick__done(%s)" % spec
+            elif heads & set(st["failure"]):
+                rep_ = " * tick__stuck(%s)" % spec
+            if spec == "task":
+                if re.search(r"(^|\* )fetch\(", body):
+                    rep_ = " * tick__active(task)" + rep_
+                l = "%s%s -o %s%s." % (pre, body, head, rep_)
+            elif re.search(r"(^|\* )%s\(" % g, body):
+                l = "%s%s * busy -o %s * idle%s." % (pre, body, head, rep_)
+        out.append(l)
+        if spec != "task" and l.startswith("namespace "):
+            out += ["pred idle : %s.                     %% the tree: no goal taken" % spec,
+                    "pred busy : %s.                     %% … a goal taken (reported active once)" % spec]
+        if spec != "task" and l.strip() == "stage act {":
+            out += ["  %% I take my goal.", "  begin [dyn] : $%s(%s) * idle -o busy * tick__active(%s)." % (g, args, spec)]
+    return "\n".join(out)
+
+
+# each member's own cases (metis.catalog.stub: the member alone, its interface closed with facts), in roles;
+# the tree variant fires its begin rule first and reports itself
+def _cases(spec, tree):
+    T = lambda *a: list(a) if tree else []
+    B = ["begin"] if tree and spec != "task" else []
+    one = lambda name, world, deliver, fired, out, status: {name: {"case": "%s: %s" % (spec, name.replace("_", " ")), "boundaries": [
+        dict({"world": world} if world else {}, deliver=deliver, **({"grant": ["motion"]} if spec != "task" else {}),
+             expect={"out": out, "status": status, "fired": B + fired})]}}
+    if spec == "nav":
+        return dict(one("goes_there", ["at(lhere)", "recat(dest, ldest)"], ["goto(dest)"], ["go"],
+                        ["reached(dest)"] + T("tick__active(nav)", "tick__done(nav)"), "success"),
+                    **one("is_there", ["at(ldest)", "recat(dest, ldest)"], ["goto(dest)"], ["here"],
+                          ["reached(dest)"] + T("tick__active(nav)", "tick__done(nav)"), "success"))
+    if spec == "access":
+        return dict(one("opens_it", ["at(ldest)", "recat(dest, ldest)", "openable(dest)", "closed(dest)"], ["open(dest)"], ["open_closed"],
+                        ["accessible(dest)"] + T("tick__active(access)", "tick__done(access)"), "success"),
+                    **one("is_elsewhere", ["at(lhere)", "recat(dest, ldest)"], ["open(dest)"], ["not_here"],
+                          ["elsewhere(dest)"] + T("tick__active(access)"), "running"))
+    if spec == "grasp":
+        return dict(one("takes_it", ["at(l1)", "recat(p1, l1)", "notopenable(p1)", "inrecep(target, p1)", "objat(target, l1)", "handsfree"],
+                        ["take(target)"], ["take_plain"], ["taken(target)"] + T("tick__active(grasp)", "tick__done(grasp)"), "success"),
+                    **one("hands_full", ["at(l1)", "objat(target, l1)", "holding"], ["take(target)"], ["hands_full"],
+                          ["refused_take(target)"] + T("tick__active(grasp)", "tick__stuck(grasp)"), "failure"))
+    if spec == "place":
+        return dict(one("puts_it", ["at(ldest)", "recat(dest, ldest)", "notopenable(dest)", "holds(target)", "holding"],
+                        ["put(target, dest)"], ["put_plain"], ["placed(target, dest)"] + T("tick__active(place)", "tick__done(place)"), "success"),
+                    **one("hands_empty", ["handsfree"], ["put(target, dest)"], ["empty_handed"],
+                          ["refused_put(dest)"] + T("tick__active(place)", "tick__stuck(place)"), "failure"))
+    if spec == "task":
+        # (the task's weight port `look` reads the map's belief through its host: metis.catalog.stub binds no port
+        # yet — "unbound ports: look" — so its cases wait for the stub's port facts; written, not installed)
+        if not TASK_CASES:
+            return {}
+        return dict(one("already_there", ["inrecep(target, dest)"], ["fetch(target, dest)"], ["already"],
+                        ["done"] + T("tick__active(task)", "tick__done(task)"), "success"),
+                    **one("wrong_destination", ["inrecep(target, p2)"], ["fetch(target, p1)"], ["not_dest"],
+                          ["wrong_dest(p1)"] + T("tick__active(task)", "tick__stuck(task)"), "failure"))
+    return {}
+
+
+TASK_CASES = False       # the task's cases need the stub to bind its weight port (look)
+
+
+def write_cases(pkg, spec, tree=False):
+    """SPEC's cases into PKG/cases/ (one YAML file a case)."""
+    import yaml
+    d = os.path.join(pkg, "cases")
+    os.makedirs(d, exist_ok=True)
+    for name, c in _cases(spec, tree).items():
+        with open(os.path.join(d, name + ".yaml"), "w") as f:
+            yaml.safe_dump(c, f, sort_keys=False, default_flow_style=None, width=200)
+
+
+def manifest_fields(spec, tree=False):
     """SPEC's manifest lines (metis-lang spec/15 §2.1): shared {pred: in|out|resource|world-private} and status
     {success, failure}. The world readings are world-private: each session reads them through its own binding
     (a specialist the one it was woken with, the planner the map's live one)."""
@@ -58,6 +155,8 @@ def manifest_fields(spec):
     shared[sp["goal"]] = "in"
     shared.update({p: "in" for p in sp.get("takes", ())})
     shared.update({p: "out" for p in sp["out"]})
+    if tree:
+        shared.update({p: "out" for p in REPORTS[spec]})
     if spec != "task":
         shared["motion"] = "resource"
     return "shared: {%s}\nstatus: {success: [%s], failure: [%s]}\n" % (
@@ -104,7 +203,11 @@ def role_statics(spec, k=K):
     if spec != "task":
         return []
     return (["target(target)", "dest(dest)", "nottarget(other)"]
-            + ["notdest(%s)" % r for r in semantic_map.place_roles(k) if r != "dest"])
+            + ["notdest(%s)" % r for r in semantic_map.place_roles(k) if r != "dest"]
+            # the casts into `thing` (step 3b: grasp's refused_take is an object, place's refused_put a receptacle,
+            # the task's stuck a thing; one signature each, no subtyping)
+            + ["thing_of(%s, %s)" % (o, o) for o in semantic_map.OBJECT_ROLES]
+            + ["place_of(%s, %s)" % (r, r) for r in semantic_map.place_roles(k)])
 
 
 def instance_text(spec, base_rel, capacity_rel, init=(), name=None, k=K, header=None):
@@ -213,14 +316,15 @@ def director_facts():
     packages' declared ports (director decision 1): a specialist handles its goal kind; the planner
     its goal and the results; a result is what a specialist puts out that the planner takes; the
     ends end; elsewhere detours to the navigator's goal and escalates as refused."""
-    kinds = sorted({sp["goal"] for sp in SPECS.values()} | {k for sp in SPECS.values() for k in sp["out"]})
+    kinds = sorted({sp["goal"] for sp in SPECS.values()} | {k for sp in SPECS.values() for k in sp["out"]}
+                   | {k for sp in SPECS.values() for k in sp.get("takes", ())})
     facts = ["specialist(%s)" % d for d in SPECS if d != "task"] + ["planner(task)"]
     for d, sp in SPECS.items():
         facts.append("handles(%s, %s)" % (d, sp["goal"]))
         for k in sp.get("takes", ()):
             facts.append("handles(%s, %s)" % (d, k))
     handled = {k for d, sp in SPECS.items() for k in (sp["goal"],) + tuple(sp.get("takes", ()))}
-    facts += ["result(%s)" % k for k in SPECS["task"]["takes"] if k != "refused"]
+    facts += ["result(%s)" % k for k in SPECS["task"]["takes"] if not k.startswith("refused")]
     facts += ["end(%s)" % k for k in ENDS if k != "done"] + ["finished(done)"]   # done ends without an ask (opus, the demo)
     facts += ["detour(elsewhere, goto)", "escalate(elsewhere, refused)"]
     facts += ["rename(elsewhere, goto, goto)", "rename(elsewhere, refused, refused)"]   # the orchestrator's frames (metis-agent director.py)
@@ -299,8 +403,10 @@ def install(game_dir, root, person=True, k=K, view=False, tree=False):
     bases = os.path.join(os.path.dirname(HERE), "domains")        # the lifted bases the instances include, copied when the root is not this repo
     for src, dst in [(os.path.join(bases, b), os.path.join(root, "domains", b))
                      for b in ("director_domain.llp",)] + \
-                    [(os.path.join(bases, "hier", sp + "_domain.llp"), os.path.join(hier, sp + "_domain.llp")) for sp in SPECS]:
+                    [(os.path.join(bases, "hier", sp + "_domain.llp"), os.path.join(hier, sp + "_domain.llp")) for sp in SPECS] + \
+                    [(os.path.join(bases, "hier", "iface", f), os.path.join(hier, "iface", f)) for f in ("alfworld.llp", "alfworld.yaml")]:
         if os.path.abspath(src) != os.path.abspath(dst) and not os.path.exists(dst):
+            os.makedirs(os.path.dirname(dst), exist_ok=True)
             shutil.copy(src, dst)
     cap = os.path.join(hier, "capacity.llp")
     if not os.path.exists(cap) or open(cap).read() != capacity(k):
@@ -324,14 +430,21 @@ def install(game_dir, root, person=True, k=K, view=False, tree=False):
         # the task's goal: a person's FETCH arrives by intent (person=True: no seed), else the driver's seed
         inits = [smap.intent_atom(seed(info)[0])] if spec == "task" and not person else []
         path = generate(game_dir, hier, spec, 0, info, smap, reading, inits, [], intents=(spec == "task"), continues=True, fixed=True,
-                        commands_log=log, places=k)
+                        commands_log=log, places=k, tree=tree)
         out[spec] = os.path.dirname(path)
         if tree:                                                   # the protocol: the specialist reads its grant from it
             prog = os.path.join(out[spec], spec + ".llp")
             t = open(prog).read()
             inc = 'include "../capacity.llp".\n'
             t = t.replace(inc, inc + 'include "iface/protocol_domain.llp".\ninclude "../tick_types.llp".\n', 1)
+            if spec != "task":                                     # the inversion: a member starts with no goal taken
+                t = t.rstrip("\n") + "\n#init idle 1\n"
             open(prog, "w").write(t)
+            # … and its base the tree variant (the repo's bases stay today's: a tree root is never the repo)
+            bp = os.path.join(hier, spec + "_domain.llp")
+            if os.path.abspath(bp) == os.path.abspath(os.path.join(os.path.dirname(HERE), "domains", "hier", spec + "_domain.llp")):
+                raise ValueError("a tree install never writes into the repo's own domains/")
+            open(bp, "w").write(tree_base(spec, open(os.path.join(os.path.dirname(HERE), "domains", "hier", spec + "_domain.llp")).read()))
     if tree:
         open(os.path.join(hier, "composition.yaml"), "w").write(composition())
         open(os.path.join(hier, "tick_types.llp"), "w").write(
@@ -367,7 +480,7 @@ def composition():
     out = sorted({p for sp in SPECS.values() for p in sp["dyn"]} | {"fetch"})
     cmds = [SPECS[d]["goal"] for d in order if d != "task"]
     return ("# composition — the ALFWorld hierarchy as one package (specialist-tree s-404d001f; generated by world/gen_hier.py)\n"
-            "capacity: capacity.llp\nprotocol: iface/protocol_domain.llp\nspecialists: [%s]\ndirect: director\n"
+            "capacity: capacity.llp\nprotocol: iface/protocol_domain.llp\ninterfaces: [iface/alfworld.llp]\nspecialists: [%s]\ndirect: director\n"
             "world: {out: [%s], in: [%s]}\n" % (", ".join(order), ", ".join(out), ", ".join(cmds)))
 HOLD_GRANT, HOLD_STATUS = 1, 1     # brief §9 rule 4: a grant is not revoked within k ticks, a status holds m ticks
 
@@ -387,7 +500,7 @@ def seed(info):
 
 
 def generate(game_dir, out_dir, spec, k, info, smap, reading, init, replay, domain_rel=None, intents=False, continues=False, fixed=False,
-             commands_log=None, places=None):
+             commands_log=None, places=None, tree=False):
     """One package of SPEC over the semantic map SMAP. `fixed` (the agent's install): the committed
     instance (committed(spec)), plus `init` (role atoms: the driver's seed) — the world comes in on the
     first tick's sync, the goals by delivery. Otherwise the driver's activation K: the instance over
@@ -417,7 +530,9 @@ def generate(game_dir, out_dir, spec, k, info, smap, reading, init, replay, doma
         "# %s — the %s specialist on an ALFWorld game over the role vocabulary (generated by world/gen_hier.py).\n"
         "program: %s.llp\nhost: alf_host.py:make\nclock: {beats: 1}\nrecords: records/\n"
         "display: ALFWorld %s (%s)\nline: \"%s\"\nvoice: own\n" % (spec, spec, spec, spec, iid, spec))
-    open(os.path.join(pkg, "domain.yaml"), "a").write(manifest_fields(spec))
+    open(os.path.join(pkg, "domain.yaml"), "a").write(manifest_fields(spec, tree))
+    if fixed:
+        write_cases(pkg, spec, tree)
     c = write_card(pkg, spec, smap) if intents else None   # the agent's package (step 2); the driver's stays four files
     if c is not None:
         open(os.path.join(pkg, "domain.yaml"), "a").write("intent: {spec: intent.yaml}\n")

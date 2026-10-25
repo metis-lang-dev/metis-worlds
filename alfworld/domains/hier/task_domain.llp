@@ -14,6 +14,7 @@ provenance text "ALFWorld pick-and-place as the task domain over four specialist
 layers (dyn).
 stages (act).
 types (object receptacle thing).   % completed by the instance that includes this file (spec 12)
+include "iface/alfworld.llp".   % the family's crossing preds, declared once (tools/iface_gen.py)
 
 namespace task produce (dyn).
 
@@ -21,6 +22,8 @@ bwd target(object).                       % the task: an object the task wants m
 bwd dest(receptacle).                     % … and a receptacle it wants it in
 bwd notdest(receptacle).                  % the complements, given by the instance (over roles: task/task.llp)
 bwd nottarget(object).
+bwd thing_of(object, thing).              % an object as a thing (stuck's type), and a receptacle: the instance's casts
+bwd place_of(receptacle, thing).
 
 % the belief that the object is in the receptacle (semantic-map s-d4270bed): the host answers it from
 % the semantic map, normalized over the places asserted to hold it
@@ -34,27 +37,13 @@ pred absent(object, receptacle) : task.
 pred lost(thing) : task.                  % … and no place left to look (a thing: stuck's own type)
 pred believed(object, receptacle) : task. % … in its destination by an earlier look, not seen there now: go and look
 % the sub-goals (out)
-pred goto(receptacle) : task.
-pred open(receptacle) : task.
-pred take(object) : task.
-pred put(object, receptacle) : task.
 % the results (in)
-pred reached(receptacle) : task.
-pred accessible(receptacle) : task.
-pred taken(object) : task.
-pred placed(object, receptacle) : task.
-pred refused(thing) : task.
 % the one way in: the goal, typed by the person (the FETCH intent) or seeded by the driver
-pred fetch(object, receptacle) : task.
 % the task's own tokens
 pred start : task.                        % the first sub-goal not yet asked (once)
 pred want(object) : task.                 % fetching the object
 pred to(receptacle) : task.               % the destination this fetch names
 pred carry(object) : task.                % carrying it to the destination
-pred done : task.
-pred stuck(thing) : task.                 % a specialist refused and no rule handles it
-pred wrong_dest(receptacle) : task.       % the fetch names a receptacle this task does not want
-pred wrong_object(object) : task.         % … or an object it does not want (a silent substitution otherwise: opus's F1)
 
 stage act {
   %% I'll fetch {O} to {R}.
@@ -99,4 +88,8 @@ stage act {
   stuck_fetch [dyn] : want(O) * refused(X) -o stuck(X).
   %% {X} was refused and I have no rule for it: I stop and ask.
   stuck_carry [dyn] : carry(O) * refused(X) -o stuck(X).
+  %% {X} was refused and I have no rule for it: I stop and ask.
+  stuck_take [dyn] : want(O) * refused_take(X) * $thing_of(X, T) -o stuck(T).
+  %% {X} was refused and I have no rule for it: I stop and ask.
+  stuck_put [dyn] : carry(O) * refused_put(X) * $place_of(X, T) -o stuck(T).
 }
