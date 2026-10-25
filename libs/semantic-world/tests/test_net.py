@@ -1,5 +1,5 @@
 """A SUMO net as the lane adapter's map (road-world s-e812715d step 3b-3d): the loader on two netconvert-made nets
-(tests/data/make_nets.sh: a four-way junction, a two-lane major road W-E at 13.89 m/s and a one-lane minor road S-N
+(tests/nets/make_nets.sh: a four-way junction, a two-lane major road W-E at 13.89 m/s and a one-lane minor road S-N
 at 8.33 m/s; once under right of way, once under a traffic light), the conflict zones from the internal lanes'
 overlaps with their priority, the nearest zone on a route, the pairs a crossing makes, and the per-vClass dynamics."""
 import math
@@ -13,7 +13,7 @@ from semantic_world.lane import VCLASS, Mover, dynamics_for
 from semantic_world.net import load_net
 from semantic_world.situation import Situation
 
-DATA = Path(__file__).resolve().parent / "data"
+DATA = Path(__file__).resolve().parent / "nets"
 
 
 @pytest.fixture(scope="module")
