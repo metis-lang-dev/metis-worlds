@@ -228,15 +228,38 @@ def check(game, out_dir, port, tree=False):
                     after["held_stop"] = {"at": hand[-1], "voice": (rep6 or {}).get("voice"), "by": "the mid stop: already holding",
                                           "won_before_the_stop": any(f.get("ev") == "world/status" and f.get("state") == "over" for f in s.since(k5))}
                 else:
-                    # … else a stop with the object in hand, said on the take's own world/delta (the agent holding it)
-                    k7 = s.say(words, "p7")
-                    carry = s.wait(lambda f: f.get("ev") == "world/delta" and (f.get("agent") or {}).get("holding"), k7, timeout=300)
-                    k8 = s.say("stop", "p8")
-                    rep8 = s.wait(lambda f: f.get("ev") == "intent" and f.get("id") == "p8", k8, timeout=60)
-                    time.sleep(2.0)
-                    after["held_stop"] = {"at": ((carry or {}).get("agent") or {}).get("holding"), "voice": (rep8 or {}).get("voice"),
-                                          "by": "a stop on the take's delta",
-                                          "won_before_the_stop": any(f.get("ev") == "world/status" and f.get("state") == "over" for f in s.since(k7))}
+                    # … else a stop with the object in hand, CONDITION-based (the architect's ruling on spec16's demo
+                    # check): said once the errand has taken it (the take's world/delta) and nav reports the carry leg
+                    # (working on its goto, after the take), and before its done. An errand that ends before the stop
+                    # lands is a case not run (the stop's latency against the chain's), not a miss: a new game and
+                    # the case again, at most three times, every try recorded
+                    tries, held = [], None
+                    for attempt in range(3):
+                        if attempt:
+                            kn = s.say("new game", "p7n%d" % attempt)
+                            s.wait(lambda f: f.get("ev") == "world/status" and f.get("state") == "waiting", kn, timeout=120)
+                        k7 = s.say(words, "p7_%d" % attempt)
+                        carry = s.wait(lambda f: f.get("ev") == "world/delta" and (f.get("agent") or {}).get("holding"), k7, timeout=300)
+                        t_take = (carry or {}).get("at", 0)
+                        leg = s.wait(lambda f: f.get("ev") == "world/status" and f.get("state") == "working" and f.get("domain") == "nav"
+                                     and f.get("at", 0) > t_take, k7, timeout=60) if carry else None
+                        if not leg or any(f.get("ev") == "world/status" and f.get("state") == "over" for f in s.since(k7)):
+                            tries.append({"try": attempt, "ran": False, "why": "the errand ended before its carry leg was seen"})
+                            continue
+                        k8 = s.say("stop", "p8_%d" % attempt)
+                        rep8 = s.wait(lambda f: f.get("ev") == "intent" and f.get("id") == "p8_%d" % attempt, k8, timeout=60)
+                        time.sleep(2.0)
+                        holding = [(f.get("agent") or {}).get("holding") for f in s.since(k7)
+                                   if f.get("ev") == "world/delta" and "holding" in (f.get("agent") or {})]
+                        # the errand ended first: the game over, or the object put down before the stop (the world's
+                        # delta: the over status can reach the wire after the stop's own answer)
+                        won = any(f.get("ev") == "world/status" and f.get("state") == "over" for f in s.since(k7)) or not (holding and holding[-1])
+                        held = {"at": ((carry or {}).get("agent") or {}).get("holding"), "voice": (rep8 or {}).get("voice"),
+                                "by": "a stop on the carry leg (try %d)" % attempt, "won_before_the_stop": won}
+                        tries.append({"try": attempt, "ran": not won, "why": "the errand ended before the stop landed" if won else "stopped on the carry leg"})
+                        if not won:
+                            break
+                    after["held_stop"] = dict(held or {"at": None, "voice": None, "won_before_the_stop": None}, tries=tries)
                 k9 = s.say(words, "p9")
                 end9 = s.wait(ended, k9, timeout=300)
                 time.sleep(2.0)
