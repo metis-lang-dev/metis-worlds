@@ -2,6 +2,8 @@
 the route with gate costs and NetHack's doorway rule, predict for movers (a hostile walks toward the ego, a peaceful
 holds, the alive decay forgets), and the whole cycle on the exerciser — the ego through doors closed and locked to
 the stairs, the binding stable, view mode to the frontier first."""
+import json
+
 from semantic_world import bayes, dungeon
 from semantic_world.grid import GridMap, capacity, cell_roles, xy
 
@@ -189,3 +191,83 @@ def test_the_capacity_text():
     t = capacity(16)
     assert t.startswith("% capacity") and "k = 16" in t
     assert "type cell {goal %s}." % " ".join("p%d" % i for i in range(1, 17)) in t and "type beast {b1 b2}." in t
+
+
+# ── semantic-world step 3b: the Bayesian cases on the exerciser, predict with a float dt ──
+import importlib.util
+import math
+import pathlib
+
+
+def _cases():
+    p = pathlib.Path(__file__).resolve().parents[1] / "examples" / "bayes_cases.py"
+    spec = importlib.util.spec_from_file_location("bayes_cases", p)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def test_predict_with_a_float_dt(tmp_path):
+    cells = {"c%d_1" % x: "floor" for x in range(12)}
+    m = GridMap.build(str(tmp_path / "m.json"), (12, 3), cells=cells)
+    nb = lambda c: m.neighbours(c, m.load())
+    w = bayes.walk(nb, lambda c: abs(xy(c)[0]), stay=0.1, bias=3.0)
+    b0 = {"c8_1": 1.0}
+    assert w(dict(b0), 0) == b0 and w(dict(b0), 0.0) == b0                      # no time, no motion
+    one, two = w(dict(b0), 1.0), w(dict(b0), 2)
+    assert one == w(dict(b0), 1)                                                 # a whole dt is the old step
+    half = w(dict(b0), 0.5)
+    for c in set(half) | set(one):                                               # half a turn: the step with p 0.5
+        assert abs(half.get(c, 0) - (0.5 * b0.get(c, 0) + 0.5 * one.get(c, 0))) < 1e-9
+    mean = lambda b: sum(xy(c)[0] * p for c, p in b.items())
+    assert mean(two) < mean(w(dict(b0), 1.5)) < mean(one) and abs(sum(w(dict(b0), 2.5).values()) - 1) < 1e-9
+    slow = bayes.walk(nb, lambda c: abs(xy(c)[0]), stay=0.1, bias=3.0, speed=0.5)
+    assert slow(dict(b0), 1) == half                                             # half the speed: a step every other turn
+    d = {"belief": {"t": dict(b0)}, "exists": {"t": 1.0}}
+    bayes.predict(d, 0.3, {"t": w}, alive=(1.0, -9))
+    assert abs(d["exists"]["t"] - 0.7) < 1e-9                                    # the alive decay over 0.3 of a turn
+
+
+def test_a_miss_weighs_the_mass_it_takes():
+    d = {"belief": {"t": {"a": 0.01, "b": 0.99}}, "exists": {}}
+    bayes.missed(d, "a", {}, lambda t: {})
+    assert abs(d["exists"]["t"] - math.log(0.99)) < 1e-6 and d["belief"]["t"] == {"b": 1.0}
+    bayes.missed(d, "b", {}, lambda t: {})
+    assert d["exists"]["t"] == -bayes.L_MAX                                       # a sure miss: the clamp
+
+
+def test_case_8_spread_by_the_model_cut_by_the_empty_view(tmp_path):
+    """A beast last seen two turns ago: the chase spreads its mass toward the robot, the cells the robot sees empty
+    take theirs, the rest renormalized; exists falls by the evidence."""
+    cells = {"c%d_1" % x: "corridor" for x in range(11)}
+    m = GridMap.build(str(tmp_path / "m.json"), (11, 3), cells=cells)
+    m.cycle(["agent_at(c3_1)", "monster(newt,c6_1)"], 1, m.models(), ALIVE)
+    ex0 = m.load()["exists"]["newt"]
+    for _ in range(2):                                                          # two turns unseen
+        d = m.load()
+        pred = m.models()["newt"](dict(d["belief"]["newt"]), 1)
+        m.cycle(["agent_at(c3_1)"], 1, m.models(), ALIVE)
+    d = m.load()
+    vis = set(m.visible(d))
+    post = d["belief"]["newt"]
+    cut = sum(p for c, p in pred.items() if c in vis)
+    assert len(pred) > 2 and cut > 0.5                                           # spread, and much of it into the view
+    assert not (set(post) & vis) and abs(sum(post.values()) - 1) < 1e-9 and min(xy(c)[0] for c in post) > 4
+    assert d["exists"]["newt"] < ex0
+    assert "two turns ago" in m.describe("newt") and "6, 1" in m.describe("newt")
+
+
+def test_case_6_lost_behind_a_corner_refound_by_the_walk(tmp_path):
+    bc = _cases()
+    r = bc.run(str(tmp_path), speed=1.0)
+    last = r["turns"][-1]
+    assert r["lost_at"] == 2 and r["refound_at"] is not None and last["seen"]
+    assert last["pred_at_true"] >= 0.1 and last["pred_at_true"] > 4 / r["passable"]  # the walk carried it round the corner
+    assert not any(t["line"].endswith("lost.") for t in r["turns"])
+    k = bc.run(str(tmp_path), speed=0.5, model_speed=0.5, tag="known")             # a half-speed newt, the map told so
+    assert k["refound_at"] is not None and k["turns"][-1]["pred_at_true"] > 1 / k["passable"]
+    assert not any(t["line"].endswith("lost.") for t in k["turns"])
+    s = bc.run(str(tmp_path), speed=0.5, tag="slow")                              # not told: the model overshoots
+    assert max(t["cut"] for t in s["turns"]) > 0.3 and all(t["post_in_view"] == 0 for t in s["turns"])
+    rows = [json.loads(l) for l in open(r["journal"])]
+    assert sum(1 for x in rows if x["kind"] == "predict" and "newt" in x["belief"]) >= r["refound_at"] - 1   # the journal: every predicted turn

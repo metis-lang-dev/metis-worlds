@@ -37,6 +37,18 @@ class Level:
         self.tiles, self.doors, self.rooms, self.lit = {}, {}, [], set()
         self.start = self.stairs = None
 
+    def cells(self):
+        """The level as the grid adapter's known cells ({cell: kind}, a door "door:<state>"; a doorway or a broken
+        door is floor): GridMap.build(cells=…) in `all` mode."""
+        out = {}
+        for (x, y), t in self.tiles.items():
+            k = {".": "floor", "#": "corridor", "|": "wall", "-": "wall", ">": "stairs_down"}.get(t)
+            if t == "+":
+                st = self.doors[(x, y)]
+                k = "floor" if st in ("doorway", "broken") else "door:" + st
+            out[cell(x, y)] = k
+        return out
+
     def passable(self, p):
         t = self.tiles.get(p)
         return t in (".", "#", ">") or (t == "+" and self.doors.get(p) in ("doorway", "open", "broken"))
@@ -227,9 +239,35 @@ def rooms(w=76, h=21, seed=1, n=5, doors=("doorway", "open", "closed", "locked")
     return lv
 
 
+def corner(w=24, h=12):
+    """A lit room (floor 1..6 × 1..5) with a doorway in its east wall at (7, 3), a dark corridor east from it to
+    (14, 3) that turns the corner south to the stairs at (14, 9): a beast behind the robot is lost to sight once the
+    robot leaves the room (the dark shows the eight cells around), and comes round the corner after it."""
+    lv = Level(w, h)
+    x0, y0, x1, y1 = 1, 1, 6, 5
+    for x in range(x0 - 1, x1 + 2):
+        for y in range(y0 - 1, y1 + 2):
+            edge = x in (x0 - 1, x1 + 1) or y in (y0 - 1, y1 + 1)
+            lv.tiles[(x, y)] = ("|" if x in (x0 - 1, x1 + 1) else "-") if edge else "."
+            if not edge:
+                lv.lit.add((x, y))
+    lv.rooms.append((x0, y0, x1, y1))
+    lv.tiles[(7, 3)], lv.doors[(7, 3)] = "+", "doorway"
+    for x in range(8, 15):
+        lv.tiles[(x, 3)] = "#"
+    for y in range(4, 10):
+        lv.tiles[(14, y)] = "#"
+    lv.start, lv.stairs = (5, 3), (14, 9)
+    lv.tiles[lv.stairs] = ">"
+    return lv
+
+
 class Monster:
+    """SPEED: cells a turn, a float (NetHack's newt is half the player's speed: 0.5, a step every other turn)."""
+
     def __init__(self, name, pos, hostile=True, speed=1):
         self.name, self.pos, self.hostile, self.speed = name, pos, hostile, speed
+        self.due = 0.0
 
 
 class Sim:
@@ -309,7 +347,9 @@ class Sim:
                 if self.rng.random() < 0.5:
                     self.lv.doors[p], kind = "broken", "other"
         for m in list(self.monsters):
-            for _ in range(m.speed):
+            m.due += m.speed
+            steps, m.due = int(m.due), m.due - int(m.due)
+            for _ in range(steps):
                 if m.hostile:
                     path = self.lv.bfs(m.pos, self.ego, through_doors=False)
                     if len(path) > 2 and not any(o.pos == path[1] for o in self.monsters):

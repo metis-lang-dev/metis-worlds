@@ -13,8 +13,8 @@ The world's atoms are the perception's (one convention for NLE and the exerciser
 - The route: Dijkstra over the known passable cells with gate costs (a closed door +2, a locked one +6, a cell a
   hostile is believed on +3), NetHack's rule kept (no diagonal step into or out of a doorway); the goal is the
   stairs down, or the nearest frontier cell while they are unseen.
-- Motion (`models`): a hostile beast walks toward the ego (bayes.walk over the passable cells, biased by the
-  Chebyshev distance to the ego), a peaceful one holds (bayes.still); the alive decay is bayes.predict's.
+- Motion (`models`): a hostile beast chases the ego (bayes.walk over the passable cells, biased by the distance
+  to the ego along the map), a peaceful one holds (bayes.still); the alive decay is bayes.predict's.
 - The roles: `goal` (the route's end) and p1..pk (the ego's cell, the route's next cells, the beasts' cells) bound
   STABLY, thing roles `target` `other`, beast roles b1 b2; the facts the rules read are between bound cells:
   next(p, d, q), toward(p) (the route's next cell), step(p) (can be stepped on now), door(p, open|closed) and
@@ -36,6 +36,7 @@ PASSABLE = ("floor", "corridor", "stairs_down", "stairs_up", "door")
 STEP = ("floor", "corridor", "stairs_down", "stairs_up")
 RANK = {"stairs_down": 0, "stairs_up": 1, "door": 2, "corridor": 3, "wall": 4, "floor": 5}
 READ = ("agent_at", "floor", "door", "stairs_down", "obj", "monster", "holds", "said")
+CHASE = {"stay": 0.1, "bias": 3.0}           # a hostile: moves each turn, a step closer e³ likelier than one aside
 GATE_COST = {"closed": 2, "locked": 6}
 HOSTILE_COST = 3
 
@@ -81,16 +82,18 @@ class GridMap(core.SemanticMap):
     LOCATED = ("obj", "monster")
 
     @classmethod
-    def build(cls, path, size, des=None, view=False, k=K, want=(), peaceful=(), journal=None, cells=None, flat=False):
+    def build(cls, path, size, des=None, view=False, k=K, want=(), peaceful=(), journal=None, cells=None, flat=False, speeds=None):
         """The level's map: SIZE (w, h); `all` (view False) knows every cell from DES (or CELLS: {cell: kind}, a
         door's state in kind "door:<state>"); `view` knows nothing until seen. want: the things the task wants;
-        peaceful: the beasts that do not come for the ego. flat: no roles — the reading is the level's own cells with
+        peaceful: the beasts that do not come for the ego; speeds: {beast: cells a turn} where it is known (NetHack's
+        newt: half the player's, 0.5), else one. flat: no roles — the reading is the level's own cells with
         the route's next cell (a program compiled over the level itself: the comparison with roles)."""
         m = cls(path, journal)
         w, h = size
         d = {"w": w, "h": h, "view": bool(view), "k": k, "cells": {}, "doors": {}, "seen": [], "things": {}, "belief": {},
              "exists": {}, "looked": {}, "agent": {"at": None, "holding": None, "holds": []}, "binding": {}, "path": [],
-             "task": {"goal": "stairs_down", "want": sorted(want)}, "peaceful": sorted(peaceful), "look": None, "flat": bool(flat)}
+             "task": {"goal": "stairs_down", "want": sorted(want)}, "peaceful": sorted(peaceful), "look": None, "flat": bool(flat),
+             "speeds": dict(speeds or {})}
         if not view and des:
             kinds, doors, things, beasts = des_cells(des)
             d["cells"], d["doors"] = kinds, doors
@@ -178,12 +181,22 @@ class GridMap(core.SemanticMap):
         at = d["agent"]["at"]
         return [c for c in self._sight(d, at) if c in d["cells"]] if at else []
 
+    def cycle(self, atoms, dt=1, models=None, alive=None, save=True):
+        """The core's cycle with the map's clock (turns, a float: dt added): the last-seen times are on it."""
+        d = self.load()
+        d["clock"] = round(d.get("clock", 0.0) + dt, 6)
+        return super().cycle(atoms, dt, models, alive, save)
+
     def observe(self, atoms, save=True, predicted=False):
         """The core's observe; in `all` mode (the cells known, not the beasts) a beast not seen where it is believed,
         in view of the ego, is not there: negative evidence over the visible cells, its belief dropped when nothing
         is left (killed, or gone out of sight: the motion model and the alive decay carry it from there)."""
         changed = super().observe(atoms, save=False, predicted=predicted)
         d = self.load()
+        for a in atoms:                                  # a beast on the screen is in sight: its last sighting
+            if a.startswith("monster("):
+                n, c = ports.args(a)
+                d.setdefault("last_seen", {})[n] = [c, d.get("clock", 0.0)]
         if not d.get("view") and d["agent"]["at"]:
             from . import bayes
             seen = {ports.args(a)[0]: ports.args(a)[1] for a in atoms if a.startswith("monster(")}
@@ -201,6 +214,24 @@ class GridMap(core.SemanticMap):
             self.save()
             self.log("observe", at=d["agent"]["at"], holding=d["agent"]["holding"])
         return changed
+
+    def describe(self, thing, n=3):
+        """Where THING is believed, in the world's words: seen now, or last seen where and how long ago and the
+        likeliest cells now ("The newt, last seen at 5, 3 two turns ago: likely at 7, 3 (0.41), 6, 3 (0.33)"); lost
+        when no belief is left."""
+        d = self.load()
+        bel = d["belief"].get(thing) or {}
+        where = lambda c: "%d, %d" % xy(c)
+        name = "The " + thing.replace("_", " ")
+        c0, t0 = (d.get("last_seen") or {}).get(thing, (None, None))
+        ago = None if t0 is None else round(d.get("clock", 0.0) - t0, 3)
+        if ago == 0 and c0:
+            return "%s is at %s." % (name, where(c0))
+        when = "" if c0 is None else ", last seen at %s %s ago" % (where(c0), _turns(ago))
+        if not bel:
+            return "%s%s: lost." % (name, when)
+        top = sorted(bel.items(), key=lambda x: (-x[1], x[0]))[:n]
+        return "%s%s: likely at %s." % (name, when, ", ".join("%s (%.2f)" % (where(c), p) for c, p in top))
 
     def grow(self, d, thing):
         return {"in": None, "kind": "beast" if thing in d.get("_monsters", ()) else "item"}
@@ -364,17 +395,33 @@ class GridMap(core.SemanticMap):
         return out[::-1]
 
     def models(self, d=None):
-        """The movers' models for bayes.predict: a hostile beast walks toward the ego, a peaceful one holds."""
+        """The movers' models for bayes.predict: a hostile beast chases the ego — a walk over the passable cells
+        biased by the distance to the ego ALONG the map (breadth first from the ego: round walls, through
+        doorways), strongly (CHASE: a step closer is e³ likelier than a step aside), rarely holding (it moves
+        each turn, as NetHack's hostiles do) at its speed (`speeds`; a fraction: a step that turn with that
+        probability, bayes.walk's float dt); a peaceful one holds."""
         from . import bayes
         d = d or self.load()
         at = d["agent"]["at"]
-        ax, ay = xy(at) if at else (0, 0)
-        toward = (lambda c: max(abs(xy(c)[0] - ax), abs(xy(c)[1] - ay))) if at else None
+        dist = self._dist_from(d, at) if at else {}
+        far = max(dist.values(), default=0) + 1
+        toward = (lambda c: dist.get(c, far)) if at else None
         out = {}
         for n, t in d["things"].items():
             if t.get("kind") == "beast":
-                out[n] = bayes.still if n in d["peaceful"] else bayes.walk(lambda c: self.neighbours(c, d), toward)
+                out[n] = bayes.still if n in d["peaceful"] else bayes.walk(lambda c: self.neighbours(c, d), toward,
+                                                                           speed=(d.get("speeds") or {}).get(n, 1), **CHASE)
         return out
+
+    def _dist_from(self, d, at):
+        """Steps from AT to every known passable cell (NetHack's moves): {cell: steps}."""
+        dist, q = {at: 0}, [at]
+        for c in q:
+            for nb in self.neighbours(c, d):
+                if nb not in dist:
+                    dist[nb] = dist[c] + 1
+                    q.append(nb)
+        return dist
 
     # ── the binding ──
     def project(self, k=None):
@@ -452,6 +499,12 @@ class GridMap(core.SemanticMap):
         out = super().role_reading(reading, binding)
         out.update({a: n for a, n in reading.items() if a.startswith("said(")})   # the message: no role in it
         return out
+
+
+def _turns(t):
+    """A duration in turns, said: "a turn", "two turns", "2.5 turns"."""
+    words = {1: "a turn", 2: "two turns", 3: "three turns", 4: "four turns", 5: "five turns"}
+    return words.get(t) if t in words else "%g turns" % t
 
 
 def capacity(k=K):

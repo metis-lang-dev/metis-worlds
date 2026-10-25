@@ -25,6 +25,11 @@ from . import bayes, ports
 from .store import Store
 
 
+def _top(bel, n=3):
+    """A belief's N likeliest places, rounded: [[place, p], …]."""
+    return [[r, round(p, 3)] for r, p in sorted(bel.items(), key=lambda x: (-x[1], x[0]))[:n]]
+
+
 class SemanticMap(Store):
     OBJECT_ROLES = ()
     LOCATED = ()
@@ -75,6 +80,9 @@ class SemanticMap(Store):
         changed."""
         d = self.load()
         moved = bayes.predict(d, dt, models, alive)
+        if moved and save:                             # the movers' predicted beliefs, before the sighting (the journal)
+            self.log("predict", dt=dt, belief={t: _top(d["belief"].get(t) or {}) for t in sorted(models or {})},
+                     gone=list(d.get("gone", ())))
         return self.observe(atoms, save=save, predicted=moved)
 
     def observe(self, atoms, save=True, predicted=False):
