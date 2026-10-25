@@ -354,17 +354,8 @@ class AlfHost:
     def sync(self, counts):
         """The do-lines that bring the program's dynamic facts to the game's (the policy's
         own tokens untouched)."""
-        dos = []
-        reading = self.reading()
-        for a, n in sorted(reading.items()):
-            have = counts.get(a, 0)
-            if n > have:
-                dos.append("+%s %d" % (a, n - have))
-        for a, have in sorted(counts.items()):
-            base = a.split("(")[0]
-            if have > 0 and a not in reading and base in self.dynamic_preds():
-                dos.append("-%s %d" % (a, have))
-        return dos
+        from semantic_world import ports
+        return ports.sync_diff(self.reading(), counts, self.dynamic_preds())
 
     def world(self, lines):
         raise ValueError("world lines: the game is the world; set a scenario by choosing another game")
@@ -421,10 +412,10 @@ class AlfHost:
     def in_room(self, atom):
         """An atom of the program's roles with its roles as the things they are bound to (goto(p1) →
         goto(countertop3)): the hierarchy's chain as the page shows it; the atom itself without a map."""
-        if getattr(self, "smap", None) is None or "(" not in atom:
+        if getattr(self, "smap", None) is None:
             return atom
-        name, _, rest = atom.partition("(")
-        return "%s(%s)" % (name, ",".join(self.smap.handle(a.strip(), self.frozen) or a.strip() for a in rest.rstrip(")").split(",")))
+        from semantic_world import ports
+        return ports.in_room(atom, lambda r: self.smap.handle(r, self.frozen))
 
     def frames(self):
         """The world page's frames since the last call (metis-agent's service sends them on the wire)."""
