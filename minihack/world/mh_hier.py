@@ -44,7 +44,7 @@ DIRECTOR_OUT = ("wake", "sleep", "forward", "ask", "ended", "tick__grant", "tick
 STATUS = {"nav": {"success": ["reached"], "failure": []}, "act": {"success": ["opened", "cleared"], "failure": []},
           "task": {"success": ["done"], "failure": ["stuck"]}}
 RESOURCES = ("motion",)
-DIRECTOR_FIELDS = ("shared: {tick__status: in, tick__active: in, tick__done: in, tick__stuck: in, tick__grant: out, "
+DIRECTOR_FIELDS = ("shared: {tick__status: in, tick__active: in, tick__done: in, tick__stuck: in, tick__want: in, tick__release: in, tick__grant: out, "
                    "tick__goal: out, tick__revoke: out}\nresources: {motion: {count: 1, free: free, held_by: [holder]}}\n")
 HOLD_GRANT, HOLD_STATUS = 1, 1     # brief §9 rule 4: a grant is not revoked within k ticks, a status holds m ticks
 
@@ -63,10 +63,16 @@ def manifest_fields(spec, tree=False):
     shared.update({p: "out" for p in sp["out"]})
     if tree:
         shared.update({p: "out" for p in REPORTS[spec]})
+        shared.update({p: "world-private" for p in TREE_DYN.get(spec, ())})
+        if spec == "act":
+            shared.update({"tick__want": "out", "tick__release": "out"})
+        if spec != "task":
+            shared["tick__grant"] = "in"       # gating: program — the director's grant is an in-copy its rules read
     if spec != "task":
         shared["motion"] = "resource"
-    return "shared: {%s}\nstatus: {success: [%s], failure: [%s]}\n" % (
-        ", ".join("%s: %s" % kv for kv in shared.items()), ", ".join(STATUS[spec]["success"]), ", ".join(STATUS[spec]["failure"]))
+    return "shared: {%s}\nstatus: {success: [%s], failure: [%s]}\n%s" % (
+        ", ".join("%s: %s" % kv for kv in shared.items()), ", ".join(STATUS[spec]["success"]), ", ".join(STATUS[spec]["failure"]),
+        "gating: program\n" if tree and spec != "task" else "")
 
 
 def composition():
@@ -136,7 +142,8 @@ def _cases(spec, tree):
                 {"world": ["agent_at(p1)", "next(p1, e, p2)", "monster(b1, p2)"], "deliver": ["fight(p2)"], "grant": ["motion"],
                  "expect": {"out": A("act"), "status": "running", "fired": B("fight") + ["move_fight"]}},
                 {"world": ["agent_at(p1)", "next(p1, e, p2)", "step(p2)"],
-                 "expect": {"out": ["cleared(p2)"] + D("act"), "status": "success", "fired": ["clear"]}}]}}
+                 "expect": {"out": ["cleared(p2)"] + D("act"), "status": "success", "fired": ["clear"]}}]},
+            **({"guard": GUARD_CASE} if tree else {})}
     if spec == "task":
         return {
             "reach": {"case": "task asks nav for the goal and is done when it is reached", "boundaries": [
@@ -149,12 +156,23 @@ def _cases(spec, tree):
     return {}
 
 
+def _granted(spec, cases):
+    """gating: program (the tree): a boundary that grants motion delivers the director's grant too, the in-copy the
+    member's rules read (the stub's `grant` alone is the holder flag)."""
+    for c in cases.values():
+        for b in c["boundaries"]:
+            if "motion" in b.get("grant", ()):
+                b["deliver"] = b.get("deliver", []) + ["tick__grant(%s, motion)" % spec]
+    return cases
+
+
 def write_cases(pkg, spec, tree=False):
     """SPEC's cases into PKG/cases/ (one YAML file a case)."""
     import yaml
     d = os.path.join(pkg, "cases")
     os.makedirs(d, exist_ok=True)
-    for name, c in _cases(spec, tree).items():
+    cases = _cases(spec, tree)
+    for name, c in (_granted(spec, cases) if tree and spec != "task" else cases).items():
         with open(os.path.join(d, name + ".yaml"), "w") as f:
             yaml.safe_dump(c, f, sort_keys=False, default_flow_style=None, width=200)
 
@@ -162,6 +180,45 @@ def write_cases(pkg, spec, tree=False):
 def _tree(on, plain, treed):
     """A rule's text, plain or in the tree variant (the inversion: the member reports itself)."""
     return treed if on else plain
+
+
+# act's OWN trigger (specialist-tree s-404d001f step 3a, the beast case; steps/step3a-beast-brief.md): a beast the
+# situation layer finds coming at the robot (the host's oncoming(B): opposite direction and dangerous, semantic_world
+# .situation) wakes act by itself — it reports itself active and asks for the body (tick__want), which the director
+# grants by priority over nav (preempt); it strikes when the beast is beside the robot, and gives the body back
+# (tick__release, tick__done) once nothing is dangerous (the fold's resp_lon(none)). The director never calls it. The
+# trigger reads a braking response (brakes(R)), so it and the stand-down never hold together. While the beast is not
+# beside the robot (the host's closing(B), consumed: one wait a turn) act stands — the brake; the dungeon's turns pass
+# only on a command.
+GUARD = ["  %% {B} is coming at me: I take over.",
+         "  guard [dyn] : $oncoming(B) * $resp_lon(R) * $brakes(R) * idle -o busy * alert(B) * tick__active(act) * tick__want(act, motion).",
+         "  %% {B} is coming: I stand and let it come.",
+         "  wait_for [dyn] : $alert(B) * $busy * $tick__grant(act, motion) * closing(B) -o braced(B).",
+         "  %% {B} is beside me, {D}: I strike.",
+         "  move_strike [dyn] : alert(B) * $busy * $tick__grant(act, motion) * $agent_at(C) * $next(C, D, P) * $monster(B, P) -o struck(B).",
+         "  %% It still stands: again.",
+         "  strike_on [dyn] : struck(B) * said(hit) * $monster(B, P) -o alert(B).",
+         "  %% It is no danger now: the way is mine no more.",
+         "  stand_down [dyn] : alert(B) * busy * $resp_lon(none) -o idle * tick__done(act) * tick__release(act, motion).",
+         "  %% It is down: the way is clear.",
+         "  struck_down [dyn] : struck(B) * busy * $resp_lon(none) -o idle * tick__done(act) * tick__release(act, motion)."]
+GUARD_DECLS = ["type resp {none brake_min_correct brake_min}.",
+               "pred oncoming(beast) : act.              % the host's: the situation layer's opp_dir and dangerous, in roles",
+               "pred resp_lon(resp) : act.               % the host's: the fold's response along the way",
+               "pred brakes(resp) : act.                 % static: the responses that brake",
+               "pred closing(beast) : act.               % the host's: oncoming and not beside yet",
+               "pred alert(beast) : act.", "pred struck(beast) : act.", "pred braced(beast) : act."]
+GUARD_CASE = {"case": "a beast comes at the robot: act takes the body by itself, stands, strikes it beside, gives the body back",
+              "boundaries": [
+                  {"world": ["agent_at(p1)", "next(p1, e, p2)", "oncoming(b1)", "closing(b1)", "resp_lon(brake_min_correct)"],
+                   "expect": {"out": ["tick__active(act)", "tick__want(act, motion)"], "status": "running", "fired": ["guard"]}},
+                  {"world": ["agent_at(p1)", "next(p1, e, p2)", "oncoming(b1)", "closing(b1)", "resp_lon(brake_min_correct)"],
+                   "grant": ["motion"], "expect": {"out": [], "status": "running", "fired": ["wait_for"]}},
+                  {"world": ["agent_at(p1)", "next(p1, e, p2)", "monster(b1, p2)", "oncoming(b1)", "resp_lon(brake_min_correct)"],
+                   "expect": {"out": [], "status": "running", "fired": ["move_strike"]}},
+                  {"world": ["agent_at(p1)", "next(p1, e, p2)", "step(p2)", "resp_lon(none)"],
+                   "expect": {"out": ["tick__done(act)", "tick__release(act, motion)"], "status": "running", "fired": ["struck_down"]}}]}
+TREE_DYN = {"act": ("oncoming", "closing", "resp_lon")}     # the tree variant's own readings (the beast case)
 
 
 def base(spec, geometry="pred", tree=False):
@@ -190,33 +247,34 @@ def base(spec, geometry="pred", tree=False):
                   "  arrive [dyn] : goto(G) * busy * $agent_at(G) * $stairs_down(G) -o reached(G) * idle * tick__done(nav)."),
             "  %% I step {D}, to {P}.",
             _tree(t, "  move [dyn] : $goto(goal) * agent_at(C) * $next(C, D, P) * $toward(P) * $step(P) -o agent_at(P).   % only with its goal",
-                  "  move [dyn] : $goto(goal) * $busy * agent_at(C) * $next(C, D, P) * $toward(P) * $step(P) -o agent_at(P)."),
+                  "  move [dyn] : $goto(goal) * $busy * $tick__grant(nav, motion) * agent_at(C) * $next(C, D, P) * $toward(P) * $step(P) -o agent_at(P)."),
             "  %% The door {D} is closed.",
             _tree(t, "  shut [dyn] : goto(goal) * $agent_at(C) * $next(C, D, P) * $toward(P) * $door(P, closed) -o closed(P).   % the host's goal: its route's end",
-                  "  shut [dyn] : goto(goal) * busy * $agent_at(C) * $next(C, D, P) * $toward(P) * $door(P, closed) -o closed(P) * idle."),
+                  "  shut [dyn] : goto(goal) * busy * $tick__grant(nav, motion) * $agent_at(C) * $next(C, D, P) * $toward(P) * $door(P, closed) -o closed(P) * idle."),
             "  %% {B} is in my way, {D}.",
             _tree(t, "  in_way [dyn] : goto(goal) * $agent_at(C) * $next(C, D, P) * $toward(P) * $monster(B, P) -o guarded(P).",
-                  "  in_way [dyn] : goto(goal) * busy * $agent_at(C) * $next(C, D, P) * $toward(P) * $monster(B, P) -o guarded(P) * idle."),
+                  "  in_way [dyn] : goto(goal) * busy * $tick__grant(nav, motion) * $agent_at(C) * $next(C, D, P) * $toward(P) * $monster(B, P) -o guarded(P) * idle."),
             "}", ""])
     if spec == "act":
         done = " * idle * tick__done(act)" if t else ""
         busy = " * busy" if t else ""
         rbusy = " * $busy" if t else ""
+        grant = " * $tick__grant(act, motion)" if t else ""      # gating: program (specialist-tree 3a, the beast case)
         return "\n".join(_head("act_domain", "MiniHack's one-cell actions: a door, a beast beside the robot") + [
             "types (cell beast).", "type dir {n e s w ne se sw nw}.", "type doorstate {open closed}.",
             "type said_kind {%s}." % _said(), "namespace act produce (dyn).",
             "pred agent_at(cell) : act.", "pred step(cell) : act.", "pred door(cell, doorstate) : act.", "pred monster(beast, cell) : act.",
             "pred said(said_kind) : act.             % the world's message, one beat", geo,
             "pred open(cell) : act.", "pred fight(cell) : act.", "pred tried(cell) : act.", "pred kicked(cell) : act.", "pred swung(cell) : act.",
-            "pred opened(cell) : act.", "pred cleared(cell) : act."] + tok + [
+            "pred opened(cell) : act.", "pred cleared(cell) : act."] + tok + (GUARD_DECLS if t else []) + [
             "stage act {"] + (["  %% I see to {P}.", "  begin_open [dyn] : $open(P) * idle -o busy * tick__active(act).",
                                "  %% I take on {P}.", "  begin_fight [dyn] : $fight(P) * idle -o busy * tick__active(act)."] if t else []) + [
             "  %% The door {D} is closed: I open it.",
-            "  open_door [dyn] : open(P)%s * $agent_at(C) * $next(C, D, P) * $door(P, closed) -o tried(P)." % rbusy,
+            "  open_door [dyn] : open(P)%s%s * $agent_at(C) * $next(C, D, P) * $door(P, closed) -o tried(P)." % (rbusy, grant),
             "  %% The door {D} is locked: I kick it.",
-            "  kick_door [dyn] : tried(P) * said(door_locked) * $agent_at(C) * $next(C, D, P) * $door(P, closed) -o kicked(P).",
+            "  kick_door [dyn] : tried(P) * said(door_locked)%s * $agent_at(C) * $next(C, D, P) * $door(P, closed) -o kicked(P)." % grant,
             "  %% It holds: I kick it again.",
-            "  kick_on [dyn] : kicked(P) * said(whamm) * $agent_at(C) * $next(C, D, P) * $door(P, closed) -o kicked(P).",
+            "  kick_on [dyn] : kicked(P) * said(whamm)%s * $agent_at(C) * $next(C, D, P) * $door(P, closed) -o kicked(P)." % grant,
             "  %% The door is broken: the way is open.",
             "  door_gone [dyn] : kicked(P)%s * $step(P) -o opened(P)%s." % (busy, done),
             "  %% The door is open.",
@@ -224,13 +282,14 @@ def base(spec, geometry="pred", tree=False):
             "  %% The door is already open.",
             "  was_open [dyn] : open(P)%s * $door(P, open) -o opened(P)%s." % (busy, done),
             "  %% {B} is in my way, {D}: I fight it.",
-            "  move_fight [dyn] : fight(P)%s * $agent_at(C) * $next(C, D, P) * $monster(B, P) -o swung(P)." % rbusy,
+            "  move_fight [dyn] : fight(P)%s%s * $agent_at(C) * $next(C, D, P) * $monster(B, P) -o swung(P)." % (rbusy, grant),
             "  %% It still stands: again.",
             "  fight_on [dyn] : swung(P) * said(hit) * $monster(B, P) -o fight(P).",
             "  %% The way is clear.",
             "  clear [dyn] : swung(P)%s * $step(P) -o cleared(P)%s." % (busy, done),
             "  %% The way is clear.",
             "  was_clear [dyn] : fight(P)%s * $step(P) -o cleared(P)%s." % (busy, done),
+            ] + (GUARD if t else []) + [
             "}", ""])
     if spec == "task":
         return "\n".join(_head("task_domain", "MiniHack's task: walk onto the goal, the specialists asked one goal at a time") + [
@@ -257,7 +316,8 @@ def committed(spec, tree=False):
                       "catalog %s 1." % spec, 'provenance text "the %s specialist over roles" "2026-10-25".' % spec,
                       'include "../%s_domain.llp".' % spec, 'include "../capacity.llp".']
                      + (['include "iface/protocol_domain.llp".', 'include "../tick_types.llp".'] if tree else [])
-                     + (["", "#init idle 1"] if tree and spec != "task" else []) + [""])
+                     + (["", "#init idle 1"] if tree and spec != "task" else [])
+                     + (["#init brakes(brake_min) 1", "#init brakes(brake_min_correct) 1"] if tree and spec == "act" else []) + [""])
 
 
 def kinds():
@@ -340,7 +400,10 @@ def _director_base():
     return open(os.path.join(os.path.dirname(HERE), "domains", "director_domain.llp")).read()
 
 
-def install(level, root, view=False, k=K, seed=1, max_steps=600, name="level", tree=False):
+PRIORITY = (("act", "nav"),)      # the tree's strict order: act's own trigger (a beast coming) preempts nav's body
+
+
+def install(level, root, view=False, k=K, seed=1, max_steps=600, name="level", tree=False, priority=None):
     """LEVEL (a des text, or a room variant tuple) installed for the agent under ROOT: ROOT/domains/hier/{director,
     task, nav, act} over the lifted bases and the capacity, the level's map store (.map.json), one shared NLE
     process for every host (the same level.json `shared` key), the task's card and ROOT/.run/config.yaml for
@@ -383,7 +446,7 @@ def install(level, root, view=False, k=K, seed=1, max_steps=600, name="level", t
         os.makedirs(pkg, exist_ok=True)
         open(os.path.join(pkg, sp + ".llp"), "w").write(committed(sp, tree))
         json.dump({"des": des, "actions": ACTIONS, "seed": seed, "features": {"level": name}, "cells": info["cells"], "size": info["size"],
-                   "map": mp, "max_steps": max_steps, "spec": sp, "shared": mp, "observe": list(SPECS[sp]["dyn"]),
+                   "map": mp, "max_steps": max_steps, "spec": sp, "shared": mp, "observe": list(SPECS[sp]["dyn"]) + (list(TREE_DYN.get(sp, ())) if tree else []),
                    "out": list(SPECS[sp]["out"]), "continues": True}, open(os.path.join(pkg, "level.json"), "w"), indent=1)
         open(os.path.join(pkg, "domain.yaml"), "w").write(
             "# %s — MiniHack's %s over the role program (generated by world/mh_hier.py).\n"
@@ -395,7 +458,7 @@ def install(level, root, view=False, k=K, seed=1, max_steps=600, name="level", t
         out[sp] = pkg
     open(os.path.join(out["task"], "intent.yaml"), "w").write(TASK_CARD)
     _card_files(root, out["task"])
-    out["director"] = _director_package(root, hier, mp, tree)
+    out["director"] = _director_package(root, hier, mp, tree, priority=PRIORITY if priority is None and tree else priority or ())
     _config(root, tree)
     return out
 

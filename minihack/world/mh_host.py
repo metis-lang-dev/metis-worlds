@@ -68,6 +68,10 @@ class GymClient(GymChild):
 
 
 ALIVE = (0.2, -1.0)    # a beast out of sight fades (exists −0.2 a turn; dropped below −1: semantic_world.bayes)
+# the response time, in turns: the tree's, measured (the beast case) — act's want is relayed at one boundary, the
+# director's preempt grant latched at the next, so the body answers two turns after the trigger
+RHO = 2.0
+SITUATION = {"oncoming", "closing", "resp_lon"}       # the situation layer's facts (the beast case): the host's, retracted when gone
 ROLE_READ = {"agent_at", "floor", "door", "stairs_down", "obj", "monster", "holds", "said", "next", "toward", "step"}
 SHARED = {}            # a hierarchy's one NLE process (level.json `shared`: the map's path): {key: {"gym", "last", "won_at"}}
 
@@ -145,9 +149,38 @@ class MhHost:
         if seed != self.seed:
             self._reset(seed)
 
+    def situation(self):
+        """The situation layer's facts in roles (specialist-tree s-404d001f step 3a, the beast case; semantic_world
+        .situation over the map's pairs: reach for braking distance): oncoming(B) for a beast coming at the robot along
+        the map and dangerous (opposite direction, the gap within both reaches), closing(B) while it is not beside the
+        robot yet, resp_lon(R) the fold's response.
+        The numbers stay here; the memory of the axis safe before is this host's, across its beats."""
+        from semantic_world.situation import Dynamics, Situation
+        if getattr(self, "_sit", None) is None:
+            self._sit = Situation()
+        states = self._sit.check(self.cmap.pairs(rho=RHO))
+        fold = Situation.fold(states, Dynamics(vmax=1.0, rho=RHO, min_dist=1.0))
+        out = {"resp_lon(%s)" % fold["resp_lon"]: 1}
+        for st in states:
+            if st.role and st.type == "opp_dir" and st.dangerous:
+                out["oncoming(%s)" % st.role] = 1
+                if st.d_lon > 1:                           # not beside yet: a cell or more between
+                    out["closing(%s)" % st.role] = 1
+        return out
+
+    def gaps(self):
+        """The beasts' gaps along the way before a step, for the log (the beast case's safety check): [[role, type,
+        d_lon, dangerous]] from a fresh situation (no memory), None off a role level or with no log."""
+        if self.cmap is None or not os.environ.get("METIS_MH_LOG"):
+            return None
+        from semantic_world.situation import Situation
+        return [[st.role, st.type, st.d_lon, st.dangerous] for st in Situation().check(self.cmap.pairs(rho=RHO))]
+
     def reading(self):
         if self.cmap is not None:
             r = self.cmap.role_reading({a: 1 for a in self.atoms})
+            if self.observed is not None and self.observed & SITUATION:
+                r.update(self.situation())
             keep = self.observed if self.observed is not None else ROLE_READ   # what the domain declares
             return {a: n for a, n in r.items() if a.split("(")[0] in keep}
         return {a: 1 for a in self.atoms}
@@ -187,19 +220,28 @@ class MhHost:
             self.fired.append((name, self.cmap.binding()))
         if not acts or self.done or self.won:          # nothing steps a world that is over
             return
+        gaps = self.gaps()
         for a in acts:
             out = self.gym.call("step", action=a)
             self._take(out)
             self.t += 1
             self.actions.append(a)
             self._log({"beat": self.beat, "t": self.t, "rule": name, "action": a, "message": self.message,
-                       "events": self.events, "reward": self.reward, "done": self.done, "won": self.won})
+                       "events": self.events, "reward": self.reward, "done": self.done, "won": self.won,
+                       **({"gaps": gaps} if gaps is not None else {})})
             if self.won and getattr(self, "won_at", None) is None:
                 self.won_at = __import__("time").perf_counter()       # the winning step (a turn's end, before the episode's record)
                 if self.key:
                     SHARED[self.key]["won_at"] = self.won_at
             if self.done:
                 break
+        beast = bindings(name)[1].get("B")
+        if self.cmap is not None and beast and "said(killed)" in self.events:
+            # the world says the rule's beast is dead: out of the map (core.gone), so no motion model carries it on and
+            # the situation layer finds nothing coming (the beast case: act's release)
+            thing = self.cmap.handle(beast, self.fired[-1][1])
+            if thing:
+                self.cmap.gone(thing, "killed")
         self.pending_events += self.events
 
     def _log(self, rec):
@@ -241,7 +283,7 @@ class MhHost:
             have = counts.get(a, 0)
             if n > have:
                 dos.append("+%s %d" % (a, n - have))
-        owned = PERCEIVED | ({"next", "toward", "step"} if self.cmap is not None else set())   # a role level's geometry is the host's too
+        owned = PERCEIVED | ({"next", "toward", "step"} | SITUATION if self.cmap is not None else set())   # a role level's geometry is the host's too
         for a, have in sorted(counts.items()):
             if have > 0 and a not in reading and a.split("(")[0] in owned:
                 dos.append("-%s %d" % (a, have))
