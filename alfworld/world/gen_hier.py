@@ -294,7 +294,7 @@ def install(game_dir, root, person=True, k=K, view=False, tree=False):
     import shutil
     bases = os.path.join(os.path.dirname(HERE), "domains")        # the lifted bases the instances include, copied when the root is not this repo
     for src, dst in [(os.path.join(bases, b), os.path.join(root, "domains", b))
-                     for b in ("director_domain.llp", "director_tree_domain.llp", "protocol_domain.llp")] + \
+                     for b in ("director_domain.llp", "director_tree_domain.llp", "protocol_domain.llp", "protocol_domain.yaml")] + \
                     [(os.path.join(bases, "hier", sp + "_domain.llp"), os.path.join(hier, sp + "_domain.llp")) for sp in SPECS]:
         if os.path.abspath(src) != os.path.abspath(dst) and not os.path.exists(dst):
             shutil.copy(src, dst)

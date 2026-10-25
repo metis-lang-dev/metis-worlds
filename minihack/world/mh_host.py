@@ -130,6 +130,17 @@ class MhHost:
         if self.won and getattr(self, "continues", False):   # the hierarchy: the level won is not the run's end — nav reports
             self.done = False                                  # reached(goal), the task its done (alfworld's AlfHost the same)
 
+    def pending(self):
+        """Input waiting for this host's next tick (the tick's wake rule, specialist-tree step 2): the message's
+        events of its last steps, handed in as one-beat atoms then; or a STALE projection — the route the map would
+        bind now (the robot on its frontier goal, a beast moved) differs from the bound one: the binding moves at
+        the tick's input, so until this domain beats, its reading through the old binding shows no change."""
+        if self.pending_events:
+            return True
+        if self.cmap is None or self.cmap.load().get("flat"):
+            return False
+        return self.cmap.route() != self.cmap.load().get("path")
+
     def reseed(self, seed):
         if seed != self.seed:
             self._reset(seed)

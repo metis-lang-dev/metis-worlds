@@ -104,7 +104,7 @@ def base(spec, geometry="pred"):
             "  %% I am on {G}.",
             "  arrive [dyn] : goto(G) * $agent_at(G) * $stairs_down(G) -o reached(G).   % a frontier goal is no arrival: the host rebinds it",
             "  %% I step {D}, to {P}.",
-            "  move [dyn] : agent_at(C) * $next(C, D, P) * $toward(P) * $step(P) -o agent_at(P).   % awake only with a goal (the director)",
+            "  move [dyn] : $goto(goal) * agent_at(C) * $next(C, D, P) * $toward(P) * $step(P) -o agent_at(P).   % only with its goal",
             "  %% The door {D} is closed.",
             "  shut [dyn] : goto(goal) * $agent_at(C) * $next(C, D, P) * $toward(P) * $door(P, closed) -o closed(P).   % the host's goal: its route's end",
             "  %% {B} is in my way, {D}.",
@@ -266,7 +266,7 @@ def install(level, root, view=False, k=K, seed=1, max_steps=600, name="level", t
     os.makedirs(hier, exist_ok=True)
     open(os.path.join(root, "domains", "director_domain.llp"), "w").write(_director_base())
     if tree:                                                   # the tick: the tree director, the protocol, the composition's types
-        for b in ("director_tree_domain.llp", "protocol_domain.llp"):
+        for b in ("director_tree_domain.llp", "protocol_domain.llp", "protocol_domain.yaml"):
             open(os.path.join(root, "domains", b), "w").write(open(os.path.join(os.path.dirname(HERE), "domains", b)).read())
         open(os.path.join(hier, "composition.yaml"), "w").write(composition())
         open(os.path.join(hier, "tick_types.llp"), "w").write(

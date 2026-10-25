@@ -143,7 +143,7 @@ if __name__ == "__main__":
     elif sys.argv[1] == "one":                          # one case in this process: its record as JSON on stdout's last line
         sys.path.insert(0, str(WORLD))
         root = sys.argv[2]
-        r = run_case(root)
+        r = run_case(root, timeout=int(os.environ.get("SW2_TIMEOUT", "900")))
         r["ground"] = ground(root)
         print("RESULT " + json.dumps(r, default=str))
     else:

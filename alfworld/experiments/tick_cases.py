@@ -38,7 +38,7 @@ def setup(root, tree=False):
     if tree:
         import gen_hier
         install = gen_hier.install
-        gen_hier.install = lambda *a, **kw: install(*a, tree=True, **kw)
+        gen_hier.install = lambda *a, **kw: install(*a, **dict(kw, tree=True))
     sm_cases.setup(root, view=True)
     if tree:
         import yaml
