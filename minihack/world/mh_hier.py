@@ -143,7 +143,7 @@ def _cases(spec, tree):
                  "expect": {"out": A("act"), "status": "running", "fired": B("fight") + ["move_fight"]}},
                 {"world": ["agent_at(p1)", "next(p1, e, p2)", "step(p2)"],
                  "expect": {"out": ["cleared(p2)"] + D("act"), "status": "success", "fired": ["clear"]}}]},
-            **({"guard": GUARD_CASE} if tree else {})}
+            **({"guard": GUARD_CASE, "absorb": ABSORB_CASE} if tree else {})}
     if spec == "task":
         return {
             "reach": {"case": "task asks nav for the goal and is done when it is reached", "boundaries": [
@@ -201,13 +201,20 @@ GUARD = ["  %% {B} is coming at me: I take over.",
          "  %% It is no danger now: the way is mine no more.",
          "  stand_down [dyn] : alert(B) * busy * $resp_lon(none) -o idle * tick__done(act) * tick__release(act, motion).",
          "  %% It is down: the way is clear.",
-         "  struck_down [dyn] : struck(B) * busy * $resp_lon(none) -o idle * tick__done(act) * tick__release(act, motion)."]
+         "  struck_down [dyn] : struck(B) * busy * $resp_lon(none) -o idle * tick__done(act) * tick__release(act, motion).",
+         "  %% I was asked to clear {P}: it is the beast I am on already.",
+         "  absorb [dyn] : fight(P) * $alert(B) * $monster(B, P) -o owed(P).",
+         "  %% I was asked to clear {P}: it is the beast I am on already.",
+         "  absorb_struck [dyn] : fight(P) * $struck(B) * $monster(B, P) -o owed(P).",
+         "  %% Nothing is coming any more: {P} is clear.",
+         "  pay [dyn] : owed(P) * $resp_lon(none) -o cleared(P)."]
 GUARD_DECLS = ["type resp {none brake_min_correct brake_min}.",
                "pred oncoming(beast) : act.              % the host's: the situation layer's opp_dir and dangerous, in roles",
                "pred resp_lon(resp) : act.               % the host's: the fold's response along the way",
                "pred brakes(resp) : act.                 % static: the responses that brake",
                "pred closing(beast) : act.               % the host's: oncoming and not beside yet",
-               "pred alert(beast) : act.", "pred struck(beast) : act.", "pred braced(beast) : act."]
+               "pred alert(beast) : act.", "pred struck(beast) : act.", "pred braced(beast) : act.",
+               "pred fighting : act.", "pred owed(cell) : act."]
 GUARD_CASE = {"case": "a beast comes at the robot: act takes the body by itself, stands, strikes it beside, gives the body back",
               "boundaries": [
                   {"world": ["agent_at(p1)", "next(p1, e, p2)", "oncoming(b1)", "closing(b1)", "resp_lon(brake_min_correct)"],
@@ -218,6 +225,18 @@ GUARD_CASE = {"case": "a beast comes at the robot: act takes the body by itself,
                    "expect": {"out": [], "status": "running", "fired": ["move_strike"]}},
                   {"world": ["agent_at(p1)", "next(p1, e, p2)", "step(p2)", "resp_lon(none)"],
                    "expect": {"out": ["tick__done(act)", "tick__release(act, motion)"], "status": "running", "fired": ["struck_down"]}}]}
+ABSORB_CASE = {"case": "act, already on a beast by itself, is asked to fight it too: it takes the request into its own, strikes once, "
+                       "and answers it with cleared as well as its release",
+               "boundaries": [
+                   {"world": ["agent_at(p1)", "next(p1, e, p2)", "oncoming(b1)", "closing(b1)", "resp_lon(brake_min_correct)"],
+                    "expect": {"out": ["tick__active(act)", "tick__want(act, motion)"], "status": "running", "fired": ["guard"]}},
+                   {"world": ["agent_at(p1)", "next(p1, e, p2)", "monster(b1, p2)", "oncoming(b1)", "closing(b1) 0", "resp_lon(brake_min_correct)"],
+                    "deliver": ["fight(p2)"], "expect": {"out": [], "status": "running", "fired": ["absorb"]}},
+                   {"world": ["agent_at(p1)", "next(p1, e, p2)", "monster(b1, p2)", "oncoming(b1)", "resp_lon(brake_min_correct)"],
+                    "grant": ["motion"], "expect": {"out": [], "status": "running", "fired": ["move_strike"]}},
+                   {"world": ["agent_at(p1)", "next(p1, e, p2)", "step(p2)", "resp_lon(none)"],
+                    "expect": {"out": ["cleared(p2)", "tick__done(act)", "tick__release(act, motion)"], "status": "success",
+                               "fired": ["struck_down", "pay"]}}]}
 TREE_DYN = {"act": ("oncoming", "closing", "resp_lon")}     # the tree variant's own readings (the beast case)
 
 
@@ -260,6 +279,10 @@ def base(spec, geometry="pred", tree=False):
         busy = " * busy" if t else ""
         rbusy = " * $busy" if t else ""
         grant = " * $tick__grant(act, motion)" if t else ""      # gating: program (specialist-tree 3a, the beast case)
+        # the forwarded fight's own token (the tree): a fight act was asked for, not one it took up itself on its guard
+        # (alert) — the two routes to one beast never both strike (the architect's ruling (b), the beast case)
+        fight = " * fighting" if t else ""
+        rfight = " * $fighting" if t else ""
         return "\n".join(_head("act_domain", "MiniHack's one-cell actions: a door, a beast beside the robot") + [
             "types (cell beast).", "type dir {n e s w ne se sw nw}.", "type doorstate {open closed}.",
             "type said_kind {%s}." % _said(), "namespace act produce (dyn).",
@@ -268,7 +291,7 @@ def base(spec, geometry="pred", tree=False):
             "pred open(cell) : act.", "pred fight(cell) : act.", "pred tried(cell) : act.", "pred kicked(cell) : act.", "pred swung(cell) : act.",
             "pred opened(cell) : act.", "pred cleared(cell) : act."] + tok + (GUARD_DECLS if t else []) + [
             "stage act {"] + (["  %% I see to {P}.", "  begin_open [dyn] : $open(P) * idle -o busy * tick__active(act).",
-                               "  %% I take on {P}.", "  begin_fight [dyn] : $fight(P) * idle -o busy * tick__active(act)."] if t else []) + [
+                               "  %% I take on {P}.", "  begin_fight [dyn] : $fight(P) * idle -o busy * fighting * tick__active(act)."] if t else []) + [
             "  %% The door {D} is closed: I open it.",
             "  open_door [dyn] : open(P)%s%s * $agent_at(C) * $next(C, D, P) * $door(P, closed) -o tried(P)." % (rbusy, grant),
             "  %% The door {D} is locked: I kick it.",
@@ -282,13 +305,13 @@ def base(spec, geometry="pred", tree=False):
             "  %% The door is already open.",
             "  was_open [dyn] : open(P)%s * $door(P, open) -o opened(P)%s." % (busy, done),
             "  %% {B} is in my way, {D}: I fight it.",
-            "  move_fight [dyn] : fight(P)%s%s * $agent_at(C) * $next(C, D, P) * $monster(B, P) -o swung(P)." % (rbusy, grant),
+            "  move_fight [dyn] : fight(P)%s%s * $agent_at(C) * $next(C, D, P) * $monster(B, P) -o swung(P)." % (rbusy + rfight, grant),
             "  %% It still stands: again.",
             "  fight_on [dyn] : swung(P) * said(hit) * $monster(B, P) -o fight(P).",
             "  %% The way is clear.",
-            "  clear [dyn] : swung(P)%s * $step(P) -o cleared(P)%s." % (busy, done),
+            "  clear [dyn] : swung(P)%s * $step(P) -o cleared(P)%s." % (busy + fight, done),
             "  %% The way is clear.",
-            "  was_clear [dyn] : fight(P)%s * $step(P) -o cleared(P)%s." % (busy, done),
+            "  was_clear [dyn] : fight(P)%s * $step(P) -o cleared(P)%s." % (busy + fight, done),
             ] + (GUARD if t else []) + [
             "}", ""])
     if spec == "task":
