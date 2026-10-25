@@ -24,6 +24,9 @@ python3 -m pytest libs/semantic-world/tests -q          # the library alone: no 
 METISC=../metis-lang/src/metisc ../.worlds/sw/bin/python -m pytest scienceworld/tests -q
 ```
 
+A branch's tests (a worktree) need `PYTHONPATH=libs/semantic-world` until it is merged: the venvs import main's
+library (the editable install), not the branch's.
+
 Nothing here goes into metis-catalog: a world's plug code is the world's own.
 
 History: merged on 2026-10-22 from `metis-world-alfworld` and `metis-world-minihack` with
