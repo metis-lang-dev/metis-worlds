@@ -72,6 +72,13 @@ ALIVE = (0.2, -1.0)    # a beast out of sight fades (exists −0.2 a turn; dropp
 # director's preempt grant latched at the next, so the body answers two turns after the trigger
 RHO = 2.0
 SITUATION = {"oncoming", "closing", "resp_lon"}       # the situation layer's facts (the beast case): the host's, retracted when gone
+# nav-belief s-794cf4c1 step 1: a map that tracks intents (GridMap.build(intents=…)) — the bound beasts' intent level
+# (semantic_world.intent HOSTILE_SURE / HOSTILE_MAYBE), closing level (P(closing within RHO) at CLOSING_LEVELS, as
+# belief-levels-mh) and position support, for a domain that declares them; every step's record and per-step table
+# (PREDICT_H ticks) in the step log
+INTENT_FACTS = {"hostile_sure", "hostile_maybe", "closing_sure", "closing_maybe", "support"}
+CLOSING_LEVELS = (0.7, 0.3)
+PREDICT_H = 4
 ROLE_READ = {"agent_at", "floor", "door", "stairs_down", "obj", "monster", "holds", "said", "next", "toward", "step"}
 SHARED = {}            # a hierarchy's one NLE process (level.json `shared`: the map's path): {key: {"gym", "last", "won_at"}}
 
@@ -125,6 +132,12 @@ class MhHost:
             SHARED[self.key]["last"] = out
         if getattr(self, "cmap", None) is not None and fresh:   # the map follows what the robot sees, step by step:
             self.cmap.cycle(self.atoms, 1, self.cmap.models(), ALIVE)   # the beasts predicted a turn, then the sighting
+            d = self.cmap.load()
+            if d.get("intents") is not None:                # the intent belief's trace, a record per world step
+                from semantic_world import intent
+                self._log({"t": getattr(self, "t", 0), "intents": self.cmap.intent_record(RHO, d), "table": self.cmap.predict_table(PREDICT_H, d),
+                           "levels": {"hostile": [intent.HOSTILE_SURE, intent.HOSTILE_MAYBE], "closing": list(CLOSING_LEVELS),
+                                      "temper": intent.TEMPER, "rho": RHO}, "agent": d["agent"]["at"]})
         msg = out.get("message", "")
         # NLE keeps the last message on the line: it is an event only when it is new
         self.events = list(out.get("events", [])) if msg != getattr(self, "message", None) else []
@@ -181,6 +194,8 @@ class MhHost:
             r = self.cmap.role_reading({a: 1 for a in self.atoms})
             if self.observed is not None and self.observed & SITUATION:
                 r.update(self.situation())
+            if self.observed is not None and self.observed & INTENT_FACTS:
+                r.update(self.cmap.intent_facts(CLOSING_LEVELS, RHO))
             keep = self.observed if self.observed is not None else ROLE_READ   # what the domain declares
             return {a: n for a, n in r.items() if a.split("(")[0] in keep}
         return {a: 1 for a in self.atoms}
@@ -283,7 +298,7 @@ class MhHost:
             have = counts.get(a, 0)
             if n > have:
                 dos.append("+%s %d" % (a, n - have))
-        owned = PERCEIVED | ({"next", "toward", "step"} | SITUATION if self.cmap is not None else set())   # a role level's geometry is the host's too
+        owned = PERCEIVED | ({"next", "toward", "step"} | SITUATION | INTENT_FACTS if self.cmap is not None else set())   # a role level's geometry is the host's too
         for a, have in sorted(counts.items()):
             if have > 0 and a not in reading and a.split("(")[0] in owned:
                 dos.append("-%s %d" % (a, have))
