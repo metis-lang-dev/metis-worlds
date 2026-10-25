@@ -17,7 +17,7 @@ sys.path.insert(0, HERE)
 import mh_host  # noqa: E402
 from semantic_world.grid import GridMap  # noqa: E402  (libs/semantic-world, installed editable)
 
-OUT = ("wake", "sleep", "forward", "ask", "ended")
+OUT = ("wake", "sleep", "forward", "ask", "ended", "tick__grant", "tick__revoke")   # the last two: the tree director's
 WORLD = {"agent_at", "step", "door", "monster", "next", "toward", "said", "floor", "stairs_down", "obj", "holds"}
 
 

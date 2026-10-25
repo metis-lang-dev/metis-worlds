@@ -44,13 +44,14 @@ def cases():
             "beast": (corridor_des(), False, 8, 200)}
 
 
-def setup(out):
+def setup(out, tree=False):
+    """tree: the tick's roots (specialist-tree s-404d001f step 2: the tree director, the protocol, domains.tick)."""
     sys.path.insert(0, str(WORLD))
     import mh_hier
     out = Path(out)
     for c, (lv, view, k, steps) in cases().items():
         root = out / c
-        mh_hier.install(lv, str(root), view=view, k=k, name=c, max_steps=steps)
+        mh_hier.install(lv, str(root), view=view, k=k, name=c, max_steps=steps, tree=tree)
         print(c, root)
 
 
@@ -138,7 +139,7 @@ def ground(root):
 
 if __name__ == "__main__":
     if sys.argv[1] == "setup":
-        setup(sys.argv[2])
+        setup(sys.argv[2], tree="--tree" in sys.argv)
     elif sys.argv[1] == "one":                          # one case in this process: its record as JSON on stdout's last line
         sys.path.insert(0, str(WORLD))
         root = sys.argv[2]
@@ -147,11 +148,16 @@ if __name__ == "__main__":
         print("RESULT " + json.dumps(r, default=str))
     else:
         dest = sys.argv[sys.argv.index("--out") + 1] if "--out" in sys.argv else None
-        names = [a for a in sys.argv[3:] if not a.startswith("--") and a != dest] or ["room", "mines", "mines-k16", "gates", "view", "beast"]
+        logd = sys.argv[sys.argv.index("--log") + 1] if "--log" in sys.argv else None
+        names = [a for a in sys.argv[3:] if not a.startswith("--") and a not in (dest, logd)] or ["room", "mines", "mines-k16", "gates", "view", "beast"]
         res = {}
         for c in names:
             root = Path(sys.argv[2]) / c
-            p = subprocess.run([sys.executable, __file__, "one", str(root)], capture_output=True, text=True)
+            env = dict(os.environ)
+            if "--log" in sys.argv:                   # every NLE step of the case (mh_host's METIS_MH_LOG): the world's input
+                env["METIS_MH_LOG"] = str(Path(sys.argv[sys.argv.index("--log") + 1]) / ("%s.jsonl" % c))
+                Path(env["METIS_MH_LOG"]).unlink(missing_ok=True)
+            p = subprocess.run([sys.executable, __file__, "one", str(root)], capture_output=True, text=True, env=env)
             line = next((l for l in p.stdout.splitlines()[::-1] if l.startswith("RESULT ")), None)
             if line is None:
                 print("== %s: FAILED rc %d\n%s" % (c, p.returncode, (p.stderr or p.stdout)[-3000:]))

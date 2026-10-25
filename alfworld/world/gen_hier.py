@@ -39,6 +39,31 @@ SPECS = {
 HANDLES = {"goto": "nav", "open": "access", "take": "grasp", "put": "place"}
 
 
+# the specialists' interface (specialist-tree s-404d001f step 2; metis-lang spec/15): what each reads (in: a peer's
+# out or the person's; world-private: the world through its own binding), what it puts out (out), the token it acts with (motion,
+# the body: every specialist but the planner moves or handles), and the statuses its outs mean
+STATUS = {"nav": {"success": ["reached"], "failure": []},
+          "access": {"success": ["accessible"], "failure": ["refused"]},
+          "grasp": {"success": ["taken"], "failure": ["refused"]},
+          "place": {"success": ["placed"], "failure": ["refused"]},
+          "task": {"success": ["done"], "failure": ["stuck", "wrong_dest", "wrong_object"]}}
+
+
+def manifest_fields(spec):
+    """SPEC's manifest lines (metis-lang spec/15 §2.1): shared {pred: in|out|resource|world-private} and status
+    {success, failure}. The world readings are world-private: each session reads them through its own binding
+    (a specialist the one it was woken with, the planner the map's live one)."""
+    sp = SPECS[spec]
+    shared = {p: "world-private" for p in sp["dyn"]}
+    shared[sp["goal"]] = "in"
+    shared.update({p: "in" for p in sp.get("takes", ())})
+    shared.update({p: "out" for p in sp["out"]})
+    if spec != "task":
+        shared["motion"] = "resource"
+    return "shared: {%s}\nstatus: {success: [%s], failure: [%s]}\n" % (
+        ", ".join("%s: %s" % kv for kv in shared.items()), ", ".join(STATUS[spec]["success"]), ", ".join(STATUS[spec]["failure"]))
+
+
 def args_of(atom):
     i = atom.find("(")
     return [x.strip() for x in atom[i + 1:-1].split(",")] if i >= 0 else []
@@ -179,7 +204,7 @@ def build_map(path, info, mirror, k=K, view=False):
 
 
 # ── the director (alf-hierarchy step 3): the instance's facts from the specialists' declared ports ──
-DIRECTOR_OUT = ("wake", "sleep", "forward", "ask", "ended")
+DIRECTOR_OUT = ("wake", "sleep", "forward", "ask", "ended", "tick__grant", "tick__revoke")   # the last two: the tree director's (the tick)
 ENDS = ("done", "stuck", "wrong_dest", "wrong_object")
 
 
@@ -222,7 +247,7 @@ def generate_director(out_dir, k, init, domain_rel="../../director_domain.llp"):
     return path
 
 
-def generate_director_package(root, game_dir, flat_pkg, commands_log, domain_rel="../../director_domain.llp"):
+def generate_director_package(root, game_dir, flat_pkg, commands_log, domain_rel="../../director_domain.llp", tree=False):
     """The director as an INSTALLED package (alf-hierarchy step 3, the agent): domains/hier/director/
     — the instance's facts and start over the lifted base, a manifest, a host shim, and game.json
     naming the game, the flat package (the host's mirror) and the shared commands log."""
@@ -235,7 +260,9 @@ def generate_director_package(root, game_dir, flat_pkg, commands_log, domain_rel
              'include "%s".' % domain_rel,
              "type domain {%s}." % " ".join(SPECS), "type kind {%s}." % " ".join(kinds), ""]
     lines += [f + "." for f in facts] + [""]
-    lines += ["#init %s 1" % a for a in director_start()] + ["#steps 6", "#seeds 1"]
+    if tree:                                                # the composition's resource, the hysteresis (brief §9 rule 4)
+        lines += ["type resource {%s}." % " ".join(RESOURCES)] + [f + "." for f in hysteresis()] + [""]
+    lines += ["#init %s 1" % a for a in director_start(tree)] + ["#steps 6", "#seeds 1"]
     open(os.path.join(pkg, "director.llp"), "w").write("\n".join(lines) + "\n")
     json.dump({"game": os.path.join(game_dir, "game.tw-pddl"), "game_dir": game_dir, "flat": flat_pkg, "root": root,
                "commands_log": commands_log, "out": list(DIRECTOR_OUT), "kinds": kinds},
@@ -249,7 +276,7 @@ def generate_director_package(root, game_dir, flat_pkg, commands_log, domain_rel
     return pkg
 
 
-def install(game_dir, root, person=True, k=K, view=False):
+def install(game_dir, root, person=True, k=K, view=False, tree=False):
     """A game installed for the agent under ROOT: domains/hier/_flat (the mirror's package), the
     director, the semantic map (domains/hier/.map.json: the room as data, bound to the roles for the
     game's own task until a goal re-projects it), the task (continues; `person`: no seeded fetch — the
@@ -258,12 +285,15 @@ def install(game_dir, root, person=True, k=K, view=False):
     capacity.llp), no room in its source: the director's forward delivers it its goal on the live
     session. view: the map sees only what the robot sees (semantic-map step 3; default every fact).
     Every host appends its commands to domains/hier/.commands.jsonl, the shared world state.
+    tree (specialist-tree s-404d001f step 2, the tick): the director over director_tree_domain.llp (the path, the
+    motion's grants) and every specialist's extensions/tick.llp declaring the `motion` token it is granted.
     → {name: package dir}."""
     hier = os.path.join(root, "domains", "hier")
     os.makedirs(hier, exist_ok=True)
     import shutil
     bases = os.path.join(os.path.dirname(HERE), "domains")        # the lifted bases the instances include, copied when the root is not this repo
-    for src, dst in [(os.path.join(bases, "director_domain.llp"), os.path.join(root, "domains", "director_domain.llp"))] + \
+    for src, dst in [(os.path.join(bases, b), os.path.join(root, "domains", b))
+                     for b in ("director_domain.llp", "director_tree_domain.llp", "protocol_domain.llp")] + \
                     [(os.path.join(bases, "hier", sp + "_domain.llp"), os.path.join(hier, sp + "_domain.llp")) for sp in SPECS]:
         if os.path.abspath(src) != os.path.abspath(dst) and not os.path.exists(dst):
             shutil.copy(src, dst)
@@ -283,19 +313,62 @@ def install(game_dir, root, person=True, k=K, view=False):
     finally:
         mirror.gym.close()
     smap.project(*args_of(seed(info)[0]))                          # the game's own task until a goal says otherwise
-    out = {"_flat": flat_pkg, "director": generate_director_package(root, game_dir, flat_pkg, log)}
+    out = {"_flat": flat_pkg, "director": generate_director_package(
+        root, game_dir, flat_pkg, log, domain_rel="../../director_tree_domain.llp" if tree else "../../director_domain.llp", tree=tree)}
     for spec in SPECS:
         # the task's goal: a person's FETCH arrives by intent (person=True: no seed), else the driver's seed
         inits = [smap.intent_atom(seed(info)[0])] if spec == "task" and not person else []
         path = generate(game_dir, hier, spec, 0, info, smap, reading, inits, [], intents=(spec == "task"), continues=True, fixed=True,
                         commands_log=log, places=k)
         out[spec] = os.path.dirname(path)
+        if tree:                                                   # the protocol: the specialist reads its grant from it
+            prog = os.path.join(out[spec], spec + ".llp")
+            t = open(prog).read()
+            inc = 'include "../capacity.llp".\n'
+            t = t.replace(inc, inc + 'include "../../protocol_domain.llp".\ninclude "../tick_types.llp".\n', 1)
+            open(prog, "w").write(t)
+    if tree:
+        open(os.path.join(hier, "composition.yaml"), "w").write(composition())
+        open(os.path.join(hier, "tick_types.llp"), "w").write(
+            "%% tick_types — the composition's specialists and resources (specialist-tree step 2): the protocol's\n"
+            "%% abstract domain and resource made concrete (generated by world/gen_hier.py).\n"
+            "catalog tick_types 1.\ntype domain {%s}.\ntype resource {%s}.\n" % (" ".join(SPECS), " ".join(RESOURCES)))
     return out
 
 
-def director_start():
-    """The director's state before the first arrival: the planner up, the specialists down."""
-    return ["active(task)", "attention(task)", "fresh"] + ["inactive(%s)" % d for d in SPECS if d != "task"]
+def director_start(tree=False):
+    """The director's state before the first arrival: the planner up, the specialists down (tree: the motion free,
+    the planner on the path, the specialists off it)."""
+    out = ["active(task)", "attention(task)", "fresh"] + ["inactive(%s)" % d for d in SPECS if d != "task"]
+    if tree:
+        sp = [d for d in SPECS if d != "task"]
+        out += ["free(%s)" % r for r in RESOURCES] + ["path(task)"] + ["offpath(%s)" % d for d in sp]
+        out += ["nowant(%s)" % d for d in sp] + ["nolate(%s)" % d for d in sp] + ["age_of(%s,a0)" % d for d in SPECS]
+    return out
+
+
+RESOURCES = ("motion",)            # the body: one specialist moves or handles at a time
+
+
+def composition():
+    """The composition file (spec/15 §2.3, domains/hier/composition.yaml): the capacity, the protocol, the
+    specialists in the tick's order, the direct domain, the world's ports (out: what the host writes into the
+    sessions — the world-private readings and the person's fetch; in: the goals whose specialists' commands it
+    executes). Flow maps and lists, one key a line, no anchors."""
+    order = ["task"] + [d for d in SPECS if d != "task"]
+    out = sorted({p for sp in SPECS.values() for p in sp["dyn"]} | {"fetch"})
+    cmds = [SPECS[d]["goal"] for d in order if d != "task"]
+    return ("# composition — the ALFWorld hierarchy as one package (specialist-tree s-404d001f; generated by world/gen_hier.py)\n"
+            "capacity: capacity.llp\nprotocol: ../protocol_domain.llp\nspecialists: [%s]\ndirect: director\n"
+            "world: {out: [%s], in: [%s]}\n" % (", ".join(order), ", ".join(out), ", ".join(cmds)))
+HOLD_GRANT, HOLD_STATUS = 1, 1     # brief §9 rule 4: a grant is not revoked within k ticks, a status holds m ticks
+
+
+def hysteresis(k=HOLD_GRANT, m=HOLD_STATUS, ages=4):
+    """The tree director's hysteresis facts over its ages a0..a3: mature_grant / young_grant (k), mature_status (m)."""
+    a = ["a%d" % i for i in range(ages)]
+    return (["mature_grant(%s)" % x for x in a[k:]] + ["young_grant(%s)" % x for x in a[:k]]
+            + ["mature_status(%s)" % x for x in a[m:]])
 
 
 def seed(info):
@@ -336,6 +409,7 @@ def generate(game_dir, out_dir, spec, k, info, smap, reading, init, replay, doma
         "# %s — the %s specialist on an ALFWorld game over the role vocabulary (generated by world/gen_hier.py).\n"
         "program: %s.llp\nhost: alf_host.py:make\nclock: {beats: 1}\nrecords: records/\n"
         "display: ALFWorld %s (%s)\nline: \"%s\"\nvoice: own\n" % (spec, spec, spec, spec, iid, spec))
+    open(os.path.join(pkg, "domain.yaml"), "a").write(manifest_fields(spec))
     c = write_card(pkg, spec, smap) if intents else None   # the agent's package (step 2); the driver's stays four files
     if c is not None:
         open(os.path.join(pkg, "domain.yaml"), "a").write("intent: {spec: intent.yaml}\n")

@@ -43,13 +43,13 @@ WEB = WORLD.parent / "web"
 GAME = "train/pick_and_place_simple-Tomato-None-Microwave-13"        # the fixtures' kitchen (web/fixtures)
 
 
-def setup(game, root, port=8398, view=False):
+def setup(game, root, port=8398, view=False, tree=False):
     """ROOT as the demo's catalog; → (config path, the map, the task's fetch). view: the semantic map sees
     only what the robot sees (semantic-map step 3)."""
     root = Path(root)
     if root.exists():
         shutil.rmtree(root)
-    out = gen_hier.install(str(game), str(root), person=True, view=view)
+    out = gen_hier.install(str(game), str(root), person=True, view=view, tree=tree)
     for spec in hda.NAMES[1:]:                 # metis-agent loads a host from <name>_host.py, or the manifest's host: file
         shutil.copy(Path(out[spec]) / "alf_host.py", Path(out[spec]) / ("%s_host.py" % spec))
     hda.card_files(root, out["task"])
@@ -70,6 +70,8 @@ def setup(game, root, port=8398, view=False):
     c["domains"]["names"] = names
     c["domains"]["clocks"] = [{"domain": n, "n": 1} for n in names]
     c["ws"]["ui"] = str(WEB)
+    if tree:                                   # the tick (specialist-tree s-404d001f step 2): the tree director, domains.tick
+        c["domains"]["tick"] = True
     import yaml
     (run / "config.yaml").write_text(yaml.safe_dump(c, sort_keys=False))
     return run / "config.yaml", m, hda.fetch_of(out["_flat"]), out
@@ -163,7 +165,7 @@ def as_replay(fs, path, map_url):
     return out
 
 
-def check(game, out_dir, port):
+def check(game, out_dir, port, tree=False):
     """The five-turn script (DEMO.md §5), twice: the win, and the disengagement. → the report."""
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -171,7 +173,7 @@ def check(game, out_dir, port):
     o, r = None, None
     for name, words_of_fetch in (("win", None), ("fridge", ("tomato 1", "fridge 1"))):
         root = out_dir / ("root-" + name)
-        cfg, m, (o, r), inst = setup(game, root, port=port)
+        cfg, m, (o, r), inst = setup(game, root, port=port, tree=tree)
         words = "put the %s in the %s" % (words_of_fetch or (hda.words_of(o), hda.words_of(r)))
         s = Session(root, cfg, port)
         try:
@@ -384,6 +386,7 @@ def main(argv=None):
     c.add_argument("--game", default=None)
     c.add_argument("--out", default=str(HERE / "records" / "demo-check"))
     c.add_argument("--port", type=int, default=8398)
+    c.add_argument("--tree", action="store_true", help="the tick: the tree director, domains.tick (specialist-tree step 2)")
     g = sub.add_parser("games")
     g.add_argument("--n", type=int, default=10)
     g.add_argument("--split", default="train")
@@ -396,7 +399,7 @@ def main(argv=None):
         return 0
     if a.cmd == "check":
         game = a.game or str(Path(families.data_root()) / GAME / sorted(os.listdir(Path(families.data_root()) / GAME))[0])
-        rep = check(game, a.out, a.port)
+        rep = check(game, a.out, a.port, tree=a.tree)
         for name in ("win", "fridge"):
             r = rep[name]
             print("%s: %r → %s; %s; %d world/delta, %d beats; said %d; cornered %s" % (
