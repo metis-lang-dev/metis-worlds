@@ -84,7 +84,6 @@ pred want(domain) : dir.                  % woken while the holder's grant is yo
 pred nowant(domain) : dir.
 pred late(domain) : dir.                  % asleep while its grant is young: the release waits
 pred nolate(domain) : dir.
-pred tick__revoke(domain, resource) : dir.      % out: D no longer holds R (grant/2 is the protocol's)
 pred path(domain) : dir.                  % D is on the running branch
 pred offpath(domain) : dir.
 pred tick : dir.                          % the boundary's token for the grants' ages (the agent's)

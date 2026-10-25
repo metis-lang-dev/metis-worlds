@@ -44,6 +44,8 @@ DIRECTOR_OUT = ("wake", "sleep", "forward", "ask", "ended", "tick__grant", "tick
 STATUS = {"nav": {"success": ["reached"], "failure": []}, "act": {"success": ["opened", "cleared"], "failure": ["refused"]},
           "task": {"success": ["done"], "failure": ["stuck"]}}
 RESOURCES = ("motion",)
+DIRECTOR_FIELDS = ("shared: {tick__status: in, tick__active: in, tick__done: in, tick__stuck: in, tick__grant: out, "
+                   "tick__goal: out, tick__revoke: out}\nresources: {motion: {count: 1, free: free, held_by: [holder]}}\n")
 HOLD_GRANT, HOLD_STATUS = 1, 1     # brief §9 rule 4: a grant is not revoked within k ticks, a status holds m ticks
 
 
@@ -329,7 +331,8 @@ def _director_package(root, hier, mp, tree=False):
     open(os.path.join(pkg, "domain.yaml"), "w").write(
         "# director — activation from context as a domain (world/mh_hier.py).\n"
         "program: director.llp\nhost: director_host.py:make\nclock: {beats: 1}\nrecords: records/\n"
-        "display: the director\nline: \"the director: who is woken for what arrives\"\nvoice: line\n")
+        "display: the director\nline: \"the director: who is woken for what arrives\"\nvoice: line\n"
+        + (DIRECTOR_FIELDS if tree else ""))
     shim = open(os.path.join(HERE, "package_host.py")).read().replace("__WORLD__", HERE).replace('"mh_host"', '"mh_director_host"') \
         .replace("MhHost", "DirectorHost")
     open(os.path.join(pkg, "director_host.py"), "w").write(shim)

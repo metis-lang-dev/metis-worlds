@@ -20,3 +20,4 @@ pred tick__stuck(domain) : proto.                  % D cannot go on
 % ── the grants (the director's, read by a specialist) ──
 pred tick__grant(domain, resource) : proto.        % D holds R: only the holder's commands reach the world
 pred tick__goal(domain) : proto.                   % D has a goal from the director (the path's running branch)
+pred tick__revoke(domain, resource) : proto.       % the director's: D no longer holds R (the agent retracts the grant)
