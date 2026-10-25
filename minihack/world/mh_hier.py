@@ -109,7 +109,7 @@ def _head(name, what):
 IFACE = os.path.join(os.path.dirname(HERE), "domains", "hier", "iface")
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(HERE)), "tools"))
 import iface_gen  # noqa: E402
-import protocol_stub  # noqa: E402
+from metis.catalog import protocol_stub  # noqa: E402  (metispy's: a member's cancels, step 3c)
 
 
 def crossing():
@@ -286,7 +286,7 @@ TREE_DYN = {"act": ("oncoming", "closing", "resp_lon")}     # the tree variant's
 
 def base(spec, geometry="pred", tree=False):
     """SPEC's base (_base); the tree variant with its cancel rules after its begin rules (a stop, step 3c: generated
-    by tools/protocol_stub.py from the member's own rules and goal kinds)."""
+    by metis.catalog.protocol_stub from the member's own rules and goal kinds)."""
     t = _base(spec, geometry, tree)
     if not tree:
         return t
