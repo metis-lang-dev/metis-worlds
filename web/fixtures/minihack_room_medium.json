@@ -164,6 +164,56 @@
   "goal": "down",
   "source": "metis-worlds minihack: the room family (levels.py)"
  },
+ "card": {
+  "title": "MiniHack room",
+  "about": [
+   "MiniHack: a NetHack level on a grid; the agent walks, picks up, opens and unlocks, and goes down the stairs.",
+   "3 things on the level (3 kinds)."
+  ],
+  "room": [],
+  "things": [
+   {
+    "type": "monster",
+    "n": 1,
+    "ids": [
+     "newt@c2_3"
+    ]
+   },
+   {
+    "type": "object",
+    "n": 1,
+    "ids": [
+     "apple@c1_4"
+    ]
+   },
+   {
+    "type": "place",
+    "n": 1,
+    "ids": [
+     "door@c3_1"
+    ]
+   }
+  ],
+  "asks": [
+   {
+    "say": "find the stairs down and go down them",
+    "what": "the level's task: the one that wins"
+   },
+   {
+    "say": "stop",
+    "what": "the agent stops and waits"
+   },
+   {
+    "say": "new game",
+    "what": "the level from its start"
+   }
+  ],
+  "cannot": [
+   "a single step on its own",
+   "a thing that is not on this level"
+  ],
+  "source": "generated from the level by world/map_export.py"
+ },
  "tileset": {
   "index": []
  }
