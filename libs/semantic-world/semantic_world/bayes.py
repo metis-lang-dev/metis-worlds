@@ -130,3 +130,114 @@ def normalized(bel, among):
     """The belief over AMONG only, normalized (1.0 flat when it holds none of them): → {place: p}."""
     z = sum(p for r, p in bel.items() if r in among)
     return {r: (bel.get(r, 0.0) / z if z > 0 else 1.0) for r in among}
+
+
+# ── the reachable set: RSS's worst case as a motion model (semantic-world step 3a, the user's amendment) ──
+
+def travel(v, dt, accel=0.0, brake=None, vmax=None):
+    """The distance a mover at speed V covers in DT under a constant ACCEL (≥ 0: speeding up, capped at VMAX) or,
+    with BRAKE (> 0), braking from V until it stops: the two ends of RSS's kinematic interval. → a distance ≥ 0."""
+    if brake:
+        t = min(dt, v / brake) if brake > 0 else dt
+        return max(0.0, v * t - 0.5 * brake * t * t)
+    if vmax is not None and accel > 0 and v + accel * dt > vmax:
+        t = max(0.0, (vmax - v) / accel)
+        return v * t + 0.5 * accel * t * t + vmax * (dt - t)
+    return v * dt + 0.5 * accel * dt * dt
+
+
+def interval(dt, vmin=0.0, vmax=1.0, accel=0.0, brake=0.0, vcap=None):
+    """RSS's kinematic interval over DT for a mover whose speed lies in [VMIN, VMAX]: the least distance (from VMIN,
+    braking at BRAKE; no braking: VMIN · DT) and the most (from VMAX, accelerating at ACCEL up to VCAP). Car
+    dynamics: a road's speeds and bounds; a dungeon's beast: speed in cells a turn, no accel, it may stop
+    (vmin 0). → (lo, hi)."""
+    lo = travel(vmin, dt, brake=brake) if brake else vmin * dt
+    hi = travel(vmax, dt, accel=accel, vmax=vcap)
+    return lo, max(lo, hi)
+
+
+def distances(neighbours, start, limit, length=None):
+    """Graph distance from START to every place within LIMIT (LENGTH(a, b): an edge's length, else 1): {place: d}."""
+    import heapq
+    dist, q = {start: 0.0}, [(0.0, start)]
+    while q:
+        g, p = heapq.heappop(q)
+        if g > dist[p]:
+            continue
+        for n in neighbours(p):
+            g2 = g + (length(p, n) if length else 1.0)
+            if g2 <= limit + 1e-9 and g2 < dist.get(n, 1e18):
+                dist[n] = g2
+                heapq.heappush(q, (g2, n))
+    return dist
+
+
+def reachable(neighbours, vmin=0.0, vmax=1.0, accel=0.0, brake=0.0, vcap=None, length=None, eps=1e-4):
+    """The reachable-set motion model: every place's mass spread evenly over the places inside the mover's
+    kinematic interval for dt (`interval`: speed range × time with braking and acceleration bounds, RSS's worst
+    case) along the adapter's graph (NEIGHBOURS; LENGTH an edge's length, else one: a cell). Not a walk biased
+    toward a place: no intent assumed, only what the body allows, so it is the set a safety check must clear.
+    → model(belief, dt)."""
+    def model(bel, dt):
+        lo, hi = interval(dt, vmin, vmax, accel, brake, vcap)
+        new = {}
+        for p, m in bel.items():
+            ring = [q for q, g in distances(neighbours, p, hi, length).items() if g >= lo - 1e-9]
+            ring = ring or [p]
+            for q in ring:
+                new[q] = new.get(q, 0.0) + m / len(ring)
+        keep = {q: m for q, m in new.items() if m >= eps}
+        z = sum(keep.values())
+        return {q: m / z for q, m in sorted(keep.items())} if z > 0 else bel
+    return model
+
+
+def mass_within(bel, neighbours, target, reach, length=None):
+    """The belief's mass on the places from which TARGET is within REACH (a mover's worst-case distance over a
+    horizon): P(it can be at TARGET by then), the `reach(B)` / P(hazard) reading."""
+    near = distances(neighbours, target, reach, length)
+    return round(sum(p for q, p in bel.items() if q in near), 6)
+
+
+# ── the association gate: which instance a sighting of a kind is (SuperMap's reprojection prior) ──
+
+def associate(d, sightings, neighbours, radius, kind_of=None):
+    """SIGHTINGS [(kind, place)] of things that look alike (two newts read `monster(newt, …)` both) matched to the
+    instances of their kind: an instance's prior for a sighting is its predicted mass within RADIUS(instance)
+    of the place (the motion model's belief: the reprojection prior), the pairs taken greedily, likeliest first;
+    a sighting no instance has mass near is a new instance (kind, kind_2, kind_3, …). KIND_OF(thing) → its kind
+    (default: d["things"][t]["of"], else the name). → [(instance, place)] in SIGHTINGS' order; new instances are
+    entered in d["things"] (with "of") by the caller's grow."""
+    kind_of = kind_of or (lambda t: d["things"][t].get("of", t))
+    cands = {}
+    for t in sorted(d["things"]):
+        cands.setdefault(kind_of(t), []).append(t)
+    pairs = []
+    for i, (kind, place) in enumerate(sightings):
+        for t in cands.get(kind, ()):
+            bel = d["belief"].get(t) or {}
+            near = distances(neighbours, place, radius(t)) if bel else {}
+            score = sum(p for q, p in bel.items() if q in near)
+            if score > 0:
+                pairs.append((-score, i, t))
+    out, used, taken = [None] * len(sightings), set(), set()
+    for _, i, t in sorted(pairs):
+        if i not in taken and t not in used:
+            out[i] = t
+            taken.add(i)
+            used.add(t)
+    names = set(d["things"])
+    for i, (kind, place) in enumerate(sightings):
+        if out[i] is None:
+            free = [t for t in cands.get(kind, ()) if t not in used and not d["belief"].get(t)]
+            if free:                                       # an instance with no belief left (lost): the sighting is it
+                out[i] = free[0]
+            else:
+                n, name = 1, kind
+                while name in names:
+                    n += 1
+                    name = "%s_%d" % (kind, n)
+                out[i] = name
+                names.add(name)
+            used.add(out[i])
+    return list(zip(out, [p for _, p in sightings]))

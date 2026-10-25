@@ -262,6 +262,40 @@ def corner(w=24, h=12):
     return lv
 
 
+def lanes(w=30, h=12, detour=True):
+    """Two lit rooms joined by a one-wide dark lane: room A (floor 1..5 × 1..5, doorway (6, 3)), the lane east along
+    y = 3 to room B's doorway (20, 3) (floor 21..25 × 1..5, the stairs at (25, 5)). With DETOUR a junction at (10, 3)
+    opens a second, longer way: south to y = 8, east to x = 23, north into room B by a doorway at (23, 6). The RSS
+    cases of a one-lane road: an oncoming beast in the lane (the passing place: room A), a stopped one (yield, then
+    back to the junction and the other way)."""
+    lv = Level(w, h)
+
+    def room(x0, y0, x1, y1):
+        for x in range(x0 - 1, x1 + 2):
+            for y in range(y0 - 1, y1 + 2):
+                edge = x in (x0 - 1, x1 + 1) or y in (y0 - 1, y1 + 1)
+                lv.tiles[(x, y)] = ("|" if x in (x0 - 1, x1 + 1) else "-") if edge else "."
+                if not edge:
+                    lv.lit.add((x, y))
+        lv.rooms.append((x0, y0, x1, y1))
+    room(1, 1, 5, 5)
+    room(21, 1, 25, 5)
+    lv.tiles[(6, 3)], lv.doors[(6, 3)] = "+", "doorway"
+    lv.tiles[(20, 3)], lv.doors[(20, 3)] = "+", "doorway"
+    for x in range(7, 20):
+        lv.tiles[(x, 3)] = "#"
+    if detour:
+        for y in range(4, 9):
+            lv.tiles[(10, y)] = "#"
+        for x in range(11, 24):
+            lv.tiles[(x, 8)] = "#"
+        lv.tiles[(23, 7)] = "#"
+        lv.tiles[(23, 6)], lv.doors[(23, 6)] = "+", "doorway"
+    lv.start, lv.stairs = (3, 3), (25, 5)
+    lv.tiles[lv.stairs] = ">"
+    return lv
+
+
 class Monster:
     """SPEED: cells a turn, a float (NetHack's newt is half the player's speed: 0.5, a step every other turn)."""
 

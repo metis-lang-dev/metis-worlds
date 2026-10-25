@@ -136,6 +136,19 @@ class SemanticMap(Store):
             changed = self.looked_at(d, r, seen) or changed
         return changed
 
+    def gone(self, thing, why):
+        """THING is out of the world, the world says so (a beast killed, an item used up): its belief dropped and
+        recorded `gone`, its exists at the floor — no motion model carries it any more. → changed."""
+        d = self.load()
+        if thing not in d["things"] or thing in d.get("gone", ()):
+            return False
+        d["belief"].pop(thing, None)
+        d.setdefault("gone", []).append(thing)
+        bayes._exists(d, thing, -2 * bayes.L_MAX)
+        self.save()
+        self.log("gone", thing=thing, why=why)
+        return True
+
     def lost(self, thing):
         """No place left to look for THING: the belief is empty and it is not in hand (view mode)."""
         d = self.load()

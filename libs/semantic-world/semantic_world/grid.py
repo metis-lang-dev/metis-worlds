@@ -38,6 +38,7 @@ RANK = {"stairs_down": 0, "stairs_up": 1, "door": 2, "corridor": 3, "wall": 4, "
 READ = ("agent_at", "floor", "door", "stairs_down", "obj", "monster", "holds", "said")
 CHASE = {"stay": 0.1, "bias": 3.0}           # a hostile: moves each turn, a step closer e³ likelier than one aside
 GATE_COST = {"closed": 2, "locked": 6}
+REFUGE = {"area": ("area",), "junction": ("junction", "area")}     # a passing place: where one can stand aside
 HOSTILE_COST = 3
 
 
@@ -124,7 +125,7 @@ class GridMap(core.SemanticMap):
     def evidence(self, d, atoms):
         """The cells the atoms name (their most specific kind: a door or the stairs never downgraded to the floor
         of what stands on them), the doors' states, the ego's cell and kit, the items and beasts seen."""
-        kind, named, monsters = {}, {}, set()
+        kind, named, monsters, sightings = {}, {}, set(), []
         changed = False
         at = d["agent"]["at"]
         for a in atoms:
@@ -137,13 +138,18 @@ class GridMap(core.SemanticMap):
                     st = ports.args(a)[1]
                     if d["doors"].get(c) != st and not (st == "closed" and d["doors"].get(c) == "locked"):
                         d["doors"][c], changed = st, True
-            elif p in ("obj", "monster"):
+            elif p == "obj":
                 n, c = ports.args(a)
                 named[n] = c
-                if p == "monster":
-                    monsters.add(n)
+            elif p == "monster":
+                sightings.append(tuple(ports.args(a)))
             elif p == "agent_at":
                 at = ports.args(a)[0]
+        # beasts that look alike (two newts both read monster(newt, …)): the association gate names the instance
+        for n, c in self.associate(d, sightings):
+            named[n] = c
+            monsters.add(n)
+        d["_beasts_seen"] = {n: named[n] for n in sorted(monsters)}
         on = {named[n] for n in named if named[n]} | ({at} if at else set())      # cells something stands on
         for c, k2 in kind.items():
             # what stands on a door or the stairs draws over it: not a downgrade; a door seen as floor with nothing
@@ -164,6 +170,22 @@ class GridMap(core.SemanticMap):
         for n in holds:
             named.setdefault(n, None)
         return at, None, named, changed
+
+    def associate(self, d, sightings):
+        """SIGHTINGS [(kind, cell)] → [(instance, cell)]: bayes.associate over the passable cells, an instance's gate
+        its reach since it was last seen (its speed × the turns since, plus one cell) — the reachable set's radius,
+        so a beast is never taken for another while it could have walked there."""
+        from . import bayes
+        if not sightings:
+            return []
+        speeds, clock, last = d.get("speeds") or {}, d.get("clock", 0.0), d.get("last_seen") or {}
+
+        def radius(t):
+            t0 = (last.get(t) or (None, 0.0))[1]
+            return 1.0 + speeds.get(d["things"][t].get("of", t), speeds.get(t, 1.0)) * max(0.0, clock - t0)
+        kinds = {t: d["things"][t].get("of", t) for t in d["things"] if d["things"][t].get("kind") == "beast"}
+        sub = {"things": {t: d["things"][t] for t in kinds}, "belief": d["belief"]}
+        return bayes.associate(sub, sightings, lambda c: self.neighbours(c, d), radius, kind_of=lambda t: kinds[t])
 
     def _sight(self, d, at):
         """Every cell in view from AT, known or not: its area with the area's rim (a lit room), else the eight around."""
@@ -193,13 +215,11 @@ class GridMap(core.SemanticMap):
         is left (killed, or gone out of sight: the motion model and the alive decay carry it from there)."""
         changed = super().observe(atoms, save=False, predicted=predicted)
         d = self.load()
-        for a in atoms:                                  # a beast on the screen is in sight: its last sighting
-            if a.startswith("monster("):
-                n, c = ports.args(a)
-                d.setdefault("last_seen", {})[n] = [c, d.get("clock", 0.0)]
+        for n, c in (d.get("_beasts_seen") or {}).items():     # a beast on the screen is in sight: its last sighting
+            d.setdefault("last_seen", {})[n] = [c, d.get("clock", 0.0)]
         if not d.get("view") and d["agent"]["at"]:
             from . import bayes
-            seen = {ports.args(a)[0]: ports.args(a)[1] for a in atoms if a.startswith("monster(")}
+            seen = dict(d.get("_beasts_seen") or {})
             beasts = {n: d["belief"][n] for n, t in d["things"].items() if t.get("kind") == "beast" and d["belief"].get(n)}
             sub = {"belief": beasts, "looked": d.setdefault("looked", {}), "exists": d.setdefault("exists", {})}
             for c in self.visible(d):
@@ -234,7 +254,10 @@ class GridMap(core.SemanticMap):
         return "%s%s: likely at %s." % (name, when, ", ".join("%s (%.2f)" % (where(c), p) for c, p in top))
 
     def grow(self, d, thing):
-        return {"in": None, "kind": "beast" if thing in d.get("_monsters", ()) else "item"}
+        if thing in d.get("_monsters", ()):            # a beast: of its kind (newt_2 is a newt)
+            kind = thing.rsplit("_", 1)[0] if re.match(r".+_\d+$", thing) else thing
+            return {"in": None, "kind": "beast", "of": kind}
+        return {"in": None, "kind": "item"}
 
     def reproject(self, d):
         self._project(d, save=False)
@@ -372,6 +395,17 @@ class GridMap(core.SemanticMap):
         frontier = set(self.segments()["frontier"]) - {at} if not goals else set()
         hostile = {c for n, t in d["things"].items() if t.get("kind") == "beast" and n not in d["peaceful"]
                    for c, p in (d["belief"].get(n) or {}).items() if p >= 0.5}
+        blocked = {c for n in d["task"].get("avoid") or () for c, p in (d["belief"].get(n) or {}).items() if p >= 0.5}
+        refuge = d["task"].get("refuge")
+        if refuge:                                       # the passing place: the nearest cell of that kind, away from
+            seg = self.segments()                        # every beast (their cells closed to the route)
+            kinds = REFUGE[refuge]
+            blocked = {c for n, t in d["things"].items() if t.get("kind") == "beast"
+                       for c, p in (d["belief"].get(n) or {}).items() if p >= 0.5}
+            goals = {c for c, sid in seg["of"].items() if seg["segments"][sid]["kind"] in kinds and c not in blocked}
+            if at in goals:
+                return [at]
+            frontier = set()
         dist, prev, q = {at: 0}, {at: None}, [(0, at)]
         end = None
         while q:
@@ -382,6 +416,8 @@ class GridMap(core.SemanticMap):
                 end = c
                 break
             for n in self.neighbours(c, d):
+                if n in blocked:
+                    continue
                 cost = 1 + GATE_COST.get(d["doors"].get(n), 0) * (d["cells"].get(n) == "door") + HOSTILE_COST * (n in hostile)
                 if g + cost < dist.get(n, 1e18):
                     dist[n], prev[n] = g + cost, c
@@ -394,12 +430,13 @@ class GridMap(core.SemanticMap):
             end = prev[end]
         return out[::-1]
 
-    def models(self, d=None):
+    def models(self, d=None, reach=False):
         """The movers' models for bayes.predict: a hostile beast chases the ego — a walk over the passable cells
         biased by the distance to the ego ALONG the map (breadth first from the ego: round walls, through
         doorways), strongly (CHASE: a step closer is e³ likelier than a step aside), rarely holding (it moves
         each turn, as NetHack's hostiles do) at its speed (`speeds`; a fraction: a step that turn with that
-        probability, bayes.walk's float dt); a peaceful one holds."""
+        probability, bayes.walk's float dt); a peaceful one holds. REACH: a hostile's model is the reachable set
+        (bayes.reachable: its mass over every cell within its speed's reach, evenly)."""
         from . import bayes
         d = d or self.load()
         at = d["agent"]["at"]
@@ -408,7 +445,12 @@ class GridMap(core.SemanticMap):
         toward = (lambda c: dist.get(c, far)) if at else None
         out = {}
         for n, t in d["things"].items():
-            if t.get("kind") == "beast":
+            if t.get("kind") == "beast" and reach and n not in d["peaceful"]:
+                # REACH: the reachable set instead of the chase (RSS's worst case: anywhere its speed allows, no
+                # intent assumed) — the belief a safety check must clear rather than the likeliest track
+                out[n] = bayes.reachable(lambda c: self.neighbours(c, d), vmin=0.0,
+                                         vmax=(d.get("speeds") or {}).get(t.get("of", n), (d.get("speeds") or {}).get(n, 1)))
+            elif t.get("kind") == "beast":
                 out[n] = bayes.still if n in d["peaceful"] else bayes.walk(lambda c: self.neighbours(c, d), toward,
                                                                            speed=(d.get("speeds") or {}).get(n, 1), **CHASE)
         return out
@@ -422,6 +464,60 @@ class GridMap(core.SemanticMap):
                     dist[nb] = dist[c] + 1
                     q.append(nb)
         return dist
+
+    # ── the situation layer's pairs (semantic_world.situation; RSS on a dungeon: reach for braking) ──
+    def pairs(self, horizon=6, rho=1.0, min_dist=1.0, d=None):
+        """The RSS pairs of the ego and each beast believed within HORIZON steps, at its likeliest cell. Along the
+        ego's way (its route ahead): lon in_front, the gap the route's steps to it; a hostile comes at the ego
+        (opp_dir), a peaceful stands in the way (same_dir, speed 0 to its own). Off the way: beside it (lat at_left,
+        the gap across the steps between them, along the way overlapping). Lateral room only in an area (a lane, a
+        junction, a doorway: one-wide). The ego steps one cell a turn and stops at will; a beast moves at its
+        `speeds` (cells a turn), from rest. The pair's id is the beast and its type (stable while both stand), its
+        role the beast's role. → [situation.Pair]."""
+        from .situation import Dynamics, Pair
+        d = d or self.load()
+        at = d["agent"]["at"]
+        if not at:
+            return []
+        dist = self._dist_from(d, at)
+        path = d["path"] or [at]
+        seg = self.segments()
+        room = seg["segments"].get(seg["of"].get(at), {}).get("kind") == "area"
+        inv = {h: r for r, h in d["binding"].items()}
+        ego = Dynamics(vmin=0.0, vmax=1.0, rho=rho, min_dist=min_dist)
+        out = []
+        for n in sorted(d["things"]):
+            t = d["things"][n]
+            bel = d["belief"].get(n)
+            if t.get("kind") != "beast" or not bel:
+                continue
+            c = sorted(bel.items(), key=lambda x: (-x[1], x[0]))[0][0]
+            g = dist.get(c)
+            if g is None or g > horizon:
+                continue
+            speed = (d.get("speeds") or {}).get(t.get("of", n), (d.get("speeds") or {}).get(n, 1.0))
+            hostile = n not in d["peaceful"]
+            obj = Dynamics(vmin=0.0, vmax=speed if hostile else 0.0, rho=rho, min_dist=min_dist,
+                           lat_v=speed if hostile else 0.0)   # across an area it comes at the ego as fast as along
+            kind = "opp_dir" if hostile else "same_dir"
+            if c in path[1:]:
+                out.append(Pair("%s:%s" % (n, kind), kind, "in_front", "overlap", float(path.index(c)), 0.0, ego, obj,
+                                lateral_room=room, role=inv.get(n)))
+            elif hostile:                                  # off the way, it still comes at the ego: along the map
+                out.append(Pair("%s:%s" % (n, kind), kind, "in_front", "at_left" if room else "overlap", float(g),
+                                float(g) if room else 0.0, ego, obj, lateral_room=room, role=inv.get(n)))
+            else:                                          # a peaceful off the way: in nobody's way
+                out.append(Pair("%s:not_relevant" % n, "not_relevant", role=inv.get(n), ego=ego, obj=obj))
+        return out
+
+    def hazard(self, thing, horizon=1.0, d=None):
+        """P(THING can be at the ego's cell within HORIZON turns): its belief's mass within its reach of the ego (the
+        reachable set's radius: its speed × HORIZON), a weight port's reading (`reach(B)`)."""
+        from . import bayes
+        d = d or self.load()
+        at, bel = d["agent"]["at"], d["belief"].get(thing) or {}
+        speed = (d.get("speeds") or {}).get(d["things"].get(thing, {}).get("of", thing), 1.0)
+        return bayes.mass_within(bel, lambda c: self.neighbours(c, d), at, speed * horizon) if at else 0.0
 
     # ── the binding ──
     def project(self, k=None):

@@ -7,15 +7,17 @@ an intent back in the world's terms.
 
     store    the map file (mtime cache, one writer) and its journal
     core     the cycle every adapter shares: cycle / observe / sync / role_reading, the adapter's hooks
-    bayes    predict / seen / missed, exists log-odds
+    bayes    predict / seen / missed, exists log-odds; the reachable set (RSS's worst case); the association gate
     project  stable slots and location roles, freeze
     ports    translate, sync_diff, in_room, say_in_roles, names
     room     the adapter for a household of receptacles (ALFWorld)
     grid     the adapter for a level of cells (NetHack, MiniHack): the segment graph, the route, sight, the movers
-    dungeon  a pure-python exerciser: cave and rooms levels, monsters, sight, NLE's perception
+    dungeon  a pure-python exerciser: cave, rooms and lanes levels, monsters, sight, NLE's perception
+    situation the RSS layer: pairs, safe distances, the memory of the axis safe before, the fold, facts over roles
+    lane     the road's adapter skeleton: lanes, (lane, s) positions, conflict zones, the pairs
 
 Pure python, no dependency: the library never knows a world's names or a rule program; adapters do."""
-from . import bayes, core, ports, project, store  # noqa: F401  (room, grid, dungeon: imported by name)
+from . import bayes, core, ports, project, store  # noqa: F401  (room, grid, dungeon, situation, lane: imported by name)
 from .store import Store  # noqa: F401
 
 __version__ = "0.1.0"
