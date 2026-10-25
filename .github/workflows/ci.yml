@@ -1,0 +1,18 @@
+# metis-worlds CI: the libraries the worlds share (libs/), pure python — the worlds themselves need their game data
+# and engines (ALFWorld's 2.3 GB of games, NetHack's NLE) and run on the dev machine (each world's setup.sh, tests/).
+name: ci
+on:
+  push:
+  pull_request:
+jobs:
+  libs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: semantic-world (installed editable, as the worlds' setup.sh does)
+        run: |
+          python -m pip install -q -e libs/semantic-world pytest
+          python -m pytest -q libs/semantic-world/tests

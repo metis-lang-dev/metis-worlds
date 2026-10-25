@@ -24,9 +24,9 @@ alf_host.py, as the driver does) and traj_data.json:
   generator resolves (`target(O)` / `dest(R)`): fetch(O, R).
 Ids are the program's handles (`countertop3`), names the game's spoken form ("countertop 3").
 
-The store, the belief, the projection and the ports are the semantic_world library's (semantic-world s-227b8e1b:
-its `room` adapter holds the ALFWorld side); this module re-exports them, and keeps what needs the game itself
-(text_map: the game's facts through the host, traj_data.json).
+The store, the belief, the projection and the ports are the semantic_world library's (metis-worlds libs/semantic-world,
+semantic-world s-227b8e1b: its `room` adapter holds the ALFWorld side); this module re-exports them, and keeps what
+needs the game itself (text_map: the game's facts through the host, traj_data.json).
 """
 import json
 import os
@@ -39,25 +39,8 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 
 
-def _library():
-    """semantic_world: installed (the world's venv: a path dependency), else the sibling checkout beside this repo
-    (the agent's venv runs the hosts too)."""
-    try:
-        import semantic_world  # noqa: F401
-        return
-    except ImportError:
-        pass
-    d = HERE
-    for _ in range(5):
-        d = os.path.dirname(d)
-        if os.path.isdir(os.path.join(d, "semantic-world", "semantic_world")):
-            sys.path.insert(0, os.path.join(d, "semantic-world"))
-            return
-
-
-_library()
 from semantic_world.room import (CELL, K, OBJECT_ROLES, ON, SemanticMap, _args, _kinds, location_roles,  # noqa: E402,F401
-                                 place_roles, prep, spoken, thor_id, want_handle, world_card)
+                                 place_roles, prep, spoken, thor_id, want_handle, world_card)   # libs/semantic-world, installed editable (setup.sh)
 
 
 def text_map(game_dir, index=None):

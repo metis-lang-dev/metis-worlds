@@ -1,0 +1,15 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "semantic-world"
+version = "0.1.0"
+description = "A host library for rule programs over a role vocabulary: the semantic map (places, things, belief, the binding of roles to the world's names), its Bayesian update, the projection, and the port contract (facts between bound roles, weight-port readings, intents)."
+readme = "README.md"
+license = {text = "Apache-2.0"}
+requires-python = ">=3.10"
+dependencies = []
+
+[tool.setuptools]
+packages = ["semantic_world"]
