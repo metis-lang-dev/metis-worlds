@@ -27,5 +27,7 @@ def test_the_pairs_of_a_road():
     assert ps["x"].type == "xing_ego_prio" and ps["x"].d_enter == 130.0 and ps["x"].o_enter == 20.0
     states = {s.id.split(":")[0]: s for s in Situation().check(list(ps.values()))}
     assert states["lead"].safe_long                       # 45.5 m against Lemma 2's 15.1 m
-    assert states["x"].safe_long                          # no time overlap: it leaves the zone long before the ego arrives
+    assert states["x"].safe_long and states["x"].xing == "safe_long"   # Def 17 case 2: it is through the zone (it leaves 27 m
+    # on) long before the ego, 130 m off, enters: 103 m apart against Lemma 2's 15.1 m (case 3, no time overlap, no
+    # longer holds: braking at brake_max it might stop inside the zone, ad-rss's latest leave)
     assert states["on"].safe_lat and not states["on"].dangerous   # the oncoming car is in its own lane: laterally safe

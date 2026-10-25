@@ -43,14 +43,27 @@ class Dynamics:
     lat_accel: float = 0.0
     lat_brake: float = None
     mu: float = 0.0                    # the lateral fluctuation margin
+    vcap: float = None                 # max_speed_on_acceleration: the speed accelerating stops at (a lane's limit)
 
 
-def stated(v, accel, rho, brake):
+def stated(v, accel, rho, brake, vcap=None):
     """The distance covered in the response time at ACCEL, then braking at BRAKE to a stop (RSS's stated braking
-    distance); BRAKE None: it stops at will after the response time."""
-    v1 = v + accel * rho
-    d = v * rho + 0.5 * accel * rho * rho
+    distance); BRAKE None: it stops at will after the response time. VCAP (ad-rss max_speed_on_acceleration): the
+    acceleration stops at VCAP, and a mover already at or above it does not accelerate."""
+    if vcap is not None and accel > 0 and v + accel * rho > vcap:
+        if v >= vcap:                                           # no acceleration at all: the response time at v
+            v1, d = v, v * rho
+        else:                                                   # up to vcap, then on at vcap
+            tc = (vcap - v) / accel
+            v1, d = vcap, v * tc + 0.5 * accel * tc * tc + vcap * (rho - tc)
+    else:
+        v1, d = v + accel * rho, v * rho + 0.5 * accel * rho * rho
     return d + (v1 * v1 / (2 * brake) if brake else 0.0)
+
+
+def stated_of(dyn, brake):
+    """A side's stated braking distance from its top speed, with its own vcap."""
+    return stated(dyn.vmax, dyn.accel, dyn.rho, brake, dyn.vcap)
 
 
 def stop(v, brake):
@@ -61,15 +74,15 @@ def stop(v, brake):
 def safe_same_dir(follower, leader):
     """Lemma 2 with speed ranges and a floor: the follower's stated braking from its top speed less the leader's
     stop from its least, never below zero, plus the follower's floor."""
-    return max(stated(follower.vmax, follower.accel, follower.rho, follower.brake_min) - stop(leader.vmin, leader.brake_max), 0.0) \
+    return max(stated_of(follower, follower.brake_min) - stop(leader.vmin, leader.brake_max), 0.0) \
         + follower.min_dist
 
 
 def safe_opp_dir(correct, opposite):
     """Lemma 3: both stated braking distances, the one in its correct lane at its own (gentler) bound, plus the
     larger floor."""
-    return stated(correct.vmax, correct.accel, correct.rho, correct.brake_min_correct or correct.brake_min) \
-        + stated(opposite.vmax, opposite.accel, opposite.rho, opposite.brake_min) + max(correct.min_dist, opposite.min_dist)
+    return stated_of(correct, correct.brake_min_correct or correct.brake_min) \
+        + stated_of(opposite, opposite.brake_min) + max(correct.min_dist, opposite.min_dist)
 
 
 def safe_lat_dist(left, right):
@@ -85,12 +98,29 @@ def time_to(d, v, accel, vcap=None):
     if accel <= 0:
         return d / v if v > 0 else None
     import math
+    if vcap is not None and v >= vcap:                          # at or above its cap: no acceleration
+        return d / v if v > 0 else None
     t = (-v + math.sqrt(v * v + 2 * accel * d)) / accel
     if vcap is not None and v + accel * t > vcap:
         tc = (vcap - v) / accel
         dc = v * tc + 0.5 * accel * tc * tc
         return tc + (d - dc) / vcap if vcap > 0 else None
     return t
+
+
+def time_to_brake(d, v, brake):
+    """The latest time a mover at V braking at BRAKE covers D (ad-rss's latest leave: the least speed, braking as
+    hard as it might): None if it stops first (it may never leave); BRAKE None: it stops at will, so None unless
+    D ≤ 0."""
+    if d <= 0:
+        return 0.0
+    if not brake:
+        return None
+    import math
+    disc = v * v - 2 * brake * d
+    if v <= 0 or disc < 0:
+        return None
+    return (v - math.sqrt(disc)) / brake
 
 
 @dataclass
@@ -114,6 +144,9 @@ class Pair:
     role: str = None
 
 
+XING = ("able_to_stop", "safe_long", "no_overlap")    # Def 17's three cases, the one that held (Def 18's memory)
+
+
 @dataclass
 class State:
     """One pair's verdict this cycle."""
@@ -128,6 +161,12 @@ class State:
     resp_lat: str
     d_lon: float
     d_safe: float
+    safe_lat_left: bool = True         # the lateral split (ad-rss lateral_state_left/right): the side the object is on
+    safe_lat_right: bool = True
+    resp_lat_left: str = "none"        # the pair's lateral response, per side (brake only toward the other)
+    resp_lat_right: str = "none"
+    xing: str = None                   # a crossing: the Def 17 case that holds now (None: none holds, or not a crossing)
+    xing_before: tuple = None          # a crossing: (case, ego in front) at the last safe cycle (Def 18); None: never safe
 
 
 def check_long(p):
@@ -150,50 +189,93 @@ def check_long(p):
 
 def check_lat(p):
     """→ safe across the way: never in a one-wide lane or at a crossing (the lib's: lateral conflict assumed)."""
+    left, right = check_lat_sides(p)
+    return left and right
+
+
+def check_lat_sides(p):
+    """→ (safe on the ego's left, safe on its right): ad-rss's lateral_state_left / _right. The object at (or
+    overlapping) the ego's left is judged on the left side only, with it as the left one of Lemma 4; at the right,
+    on the right side; overlapping, or at a crossing, or in a one-wide lane, neither side is safe."""
     if p.type == "not_relevant":
-        return True
+        return True, True
     if not p.lateral_room or p.type.startswith("xing") or p.lat == "overlap":
-        return False
-    return p.d_lat > safe_lat_dist(p.obj if p.lat in ("at_left", "overlap_left") else p.ego,
-                                   p.ego if p.lat in ("at_left", "overlap_left") else p.obj)
+        return False, False
+    if p.lat in ("at_left", "overlap_left"):
+        return p.d_lat > safe_lat_dist(p.obj, p.ego), True
+    return True, p.d_lat > safe_lat_dist(p.ego, p.obj)
 
 
 def check_xing(p):
-    """Def 17's cascade at a conflict zone: the one without priority able to stop before it; else the same-direction
-    distance; else no time overlap (one leaves before the other can arrive). → (safe, d_safe)."""
-    ego_stop = stated(p.ego.vmax, p.ego.accel, p.ego.rho, p.ego.brake_min) + p.ego.min_dist
-    obj_stop = stated(p.obj.vmax, p.obj.accel, p.obj.rho, p.obj.brake_min) + p.obj.min_dist
+    """Def 17's cascade at a conflict zone (ad-rss checkIntersectionSafe). → (safe, d_safe)."""
+    safe, ds, _case, _front = xing_case(p)
+    return safe, ds
+
+
+def ego_in_front(p):
+    """Def 16 on different routes: True when the ego is in front (it leaves the zone before the object reaches it),
+    False when the object is, None when neither is wholly in front."""
+    if None in (p.d_enter, p.d_leave, p.o_enter, p.o_leave):
+        return None
+    if p.d_leave < p.o_enter:
+        return True
+    if p.o_leave < p.d_enter:
+        return False
+    return None
+
+
+def xing_case(p):
+    """Def 17's cascade → (safe, d_safe, the case that holds or None, ego in front or None):
+    (1) the one without priority is able to stop before entering the zone (its stated braking plus its floor);
+    (2) one is wholly in front (Def 16: it leaves the zone before the other reaches it), and the rear one keeps
+        Lemma 2's distance to it through the zone: the distance from the rear one's entry to the front one's leave;
+    (3) no time overlap: the earliest arrival of one after the latest leave of the other."""
+    ego_stop = stated_of(p.ego, p.ego.brake_min) + p.ego.min_dist
+    obj_stop = stated_of(p.obj, p.obj.brake_min) + p.obj.min_dist
+    front = ego_in_front(p)
     if p.type in ("xing_obj_prio", "xing_same_prio") and p.d_enter is not None and ego_stop < p.d_enter:
-        return True, ego_stop
+        return True, ego_stop, "able_to_stop", front
     if p.type in ("xing_ego_prio", "xing_same_prio") and p.o_enter is not None and obj_stop < p.o_enter:
-        return True, obj_stop
+        return True, obj_stop, "able_to_stop", front
+    if front is True:                                       # the ego in front: the object follows it through
+        ds = safe_same_dir(p.obj, p.ego)
+        if p.o_enter - p.d_leave > ds:
+            return True, ds, "safe_long", front
+    elif front is False:                                    # the object in front: the ego follows it
+        ds = safe_same_dir(p.ego, p.obj)
+        if p.d_enter - p.o_leave > ds:
+            return True, ds, "safe_long", front
     if no_time_overlap(p):
-        return True, 0.0
-    return False, ego_stop
+        return True, 0.0, "no_overlap", front
+    return False, ego_stop, None, front
 
 
 def no_time_overlap(p):
-    """The ego's earliest arrival after the object's latest leave, or the other way round, or neither ever arrives."""
+    """The ego's earliest arrival after the object's latest leave, or the other way round, or one never arrives.
+    The earliest arrival accelerates from the top speed up to the side's vcap; the latest leave brakes from the least
+    speed at brake_max (ad-rss checkLateralIntersect): one that may stop inside the zone never surely leaves."""
     if None in (p.d_enter, p.d_leave, p.o_enter, p.o_leave):
         return False
-    e_in, o_in = time_to(p.d_enter, p.ego.vmax, p.ego.accel), time_to(p.o_enter, p.obj.vmax, p.obj.accel)
-    e_out = time_to(p.d_leave, p.ego.vmin, 0.0) if p.ego.vmin > 0 else None
-    o_out = time_to(p.o_leave, p.obj.vmin, 0.0) if p.obj.vmin > 0 else None
+    e_in = time_to(p.d_enter, p.ego.vmax, p.ego.accel, p.ego.vcap)
+    o_in = time_to(p.o_enter, p.obj.vmax, p.obj.accel, p.obj.vcap)
     if e_in is None or o_in is None:
         return True
+    e_out = time_to_brake(p.d_leave, p.ego.vmin, p.ego.brake_max)
+    o_out = time_to_brake(p.o_leave, p.obj.vmin, p.obj.brake_max)
     return (o_out is not None and e_in > o_out) or (e_out is not None and o_in > e_out)
 
 
 def able_to_stop(dyn, d_enter):
     """X able to stop before a zone D_ENTER away (its stated braking plus its floor)."""
-    return stated(dyn.vmax, dyn.accel, dyn.rho, dyn.brake_min) + dyn.min_dist < d_enter
+    return stated_of(dyn, dyn.brake_min) + dyn.min_dist < d_enter
 
 
 class Situation:
     """The per-pair memory across cycles and the fold. One per ego; `check(pairs)` every cycle, in order."""
 
-    def __init__(self, memory=None):
+    def __init__(self, memory=None, xmemory=None):
         self.memory = dict(memory or {})          # pair id -> (long safe, lat safe) at its last safe cycle
+        self.xmemory = dict(xmemory or {})        # a crossing's id -> (Def 17 case, ego in front) at its last safe cycle
 
     def check(self, pairs):
         """→ [State] for PAIRS (the memory updated: rewritten while safe, frozen while dangerous, dropped for pairs
@@ -201,16 +283,29 @@ class Situation:
         out, seen = [], set()
         for p in pairs:
             seen.add(p.id)
-            lon, ds = check_long(p)
-            lat = check_lat(p)
+            xing = front = None
+            if p.type.startswith("xing"):
+                lon, ds, xing, front = xing_case(p)
+            else:
+                lon, ds = check_long(p)
+            left, right = check_lat_sides(p)
+            lat = left and right
             dangerous = not lon and not lat
             before = self.memory.get(p.id)
+            xbefore = self.xmemory.get(p.id)
             if not dangerous:
                 self.memory[p.id] = (lon, lat)
+                if xing:
+                    self.xmemory[p.id] = (xing, front)
+            r_lon, r_lat = respond(p, dangerous, before, xbefore)
             out.append(State(p.id, p.type, p.role, lon, lat, dangerous, before if dangerous else (lon, lat),
-                             *respond(p, dangerous, before), round(p.d_lon, 6), round(ds, 6)))
+                             r_lon, r_lat, round(p.d_lon, 6), round(ds, 6), left, right,
+                             r_lat if not left else "none", r_lat if not right else "none",
+                             xing, xbefore if dangerous else ((xing, front) if xing else xbefore)))
         for k in [k for k in self.memory if k not in seen]:
             self.memory.pop(k)
+        for k in [k for k in self.xmemory if k not in seen]:
+            self.xmemory.pop(k)
         return out
 
     @staticmethod
@@ -220,9 +315,11 @@ class Situation:
         −brake_min_correct), lateral likewise. → {"resp_lon", "resp_lat", "lon_range", "lat_max", "dangerous":
         [roles or ids]}."""
         r_lon, r_lat = "none", "none"
+        r_left, r_right = "none", "none"
         lo = -(ego.brake_max if ego.brake_max else float("inf"))
         hi = ego.accel
         lat_hi = ego.lat_accel
+        left_hi = right_hi = ego.lat_accel
         bad = []
         for s in states:
             if not s.dangerous:
@@ -236,12 +333,24 @@ class Situation:
                 hi = min(hi, -(ego.brake_min_correct or ego.brake_min or 0.0))
             if s.resp_lat == "brake_min":
                 lat_hi = min(lat_hi, -(ego.lat_brake or 0.0))
-        return {"resp_lon": r_lon, "resp_lat": r_lat, "lon_range": [lo, hi], "lat_max": lat_hi, "dangerous": bad}
+            r_left = max(r_left, s.resp_lat_left, key=RESP_LAT.index)
+            r_right = max(r_right, s.resp_lat_right, key=RESP_LAT.index)
+            if s.resp_lat_left == "brake_min":
+                left_hi = min(left_hi, -(ego.lat_brake or 0.0))
+            if s.resp_lat_right == "brake_min":
+                right_hi = min(right_hi, -(ego.lat_brake or 0.0))
+        return {"resp_lon": r_lon, "resp_lat": r_lat, "lon_range": [lo, hi], "lat_max": lat_hi, "dangerous": bad,
+                "resp_lat_left": r_left, "resp_lat_right": r_right,
+                "lat_left_max": left_hi, "lat_right_max": right_hi}
 
     @staticmethod
-    def facts(states, folded=None):
+    def facts(states, folded=None, detail=False):
         """The program's atoms over the bound roles (a pair whose object has no role is not said): the type, the
-        booleans, the memory, the pair's response, and the folded response once (resp_lon(R), resp_lat(R))."""
+        booleans, the memory, the pair's response, and the folded response once (resp_lon(R), resp_lat(R)).
+        DETAIL (a program that declares them; the road's): also the lateral split, safe_lat_left(o) /
+        safe_lat_right(o); the pair's lateral response, resp_lat(o, left|right, brake_min); at a crossing the
+        Def 17 case that holds, xing_case(o, able_to_stop|safe_long|no_overlap), and when dangerous the case held
+        before (Def 18), xing_before(o, …|none); and the fold's resp_lat_left(R), resp_lat_right(R)."""
         out = {}
         for s in states:
             if not s.role:
@@ -259,17 +368,43 @@ class Situation:
                                              else "lat" if before[1] and not before[0] else "both")] = 1
             if s.resp_lon != "none":
                 out["resp(%s,%s)" % (o, s.resp_lon)] = 1
+            if detail:
+                if s.safe_lat_left:
+                    out["safe_lat_left(%s)" % o] = 1
+                if s.safe_lat_right:
+                    out["safe_lat_right(%s)" % o] = 1
+                if s.resp_lat_left != "none":
+                    out["resp_lat(%s,left,%s)" % (o, s.resp_lat_left)] = 1
+                if s.resp_lat_right != "none":
+                    out["resp_lat(%s,right,%s)" % (o, s.resp_lat_right)] = 1
+                if s.type.startswith("xing"):
+                    if s.xing:
+                        out["xing_case(%s,%s)" % (o, s.xing)] = 1
+                    if s.dangerous:
+                        out["xing_before(%s,%s)" % (o, s.xing_before[0] if s.xing_before else "none")] = 1
         if folded is not None:
             out["resp_lon(%s)" % folded["resp_lon"]] = 1
             out["resp_lat(%s)" % folded["resp_lat"]] = 1
+            if detail:
+                out["resp_lat_left(%s)" % folded.get("resp_lat_left", "none")] = 1
+                out["resp_lat_right(%s)" % folded.get("resp_lat_right", "none")] = 1
         return out
 
 
-def respond(p, dangerous, before):
-    """The pair's responses (§B, the lib's realization of Def 10/18). → (resp_lon, resp_lat)."""
+def respond(p, dangerous, before, xbefore=None):
+    """The pair's responses (§B, the lib's realization of Def 10/18). → (resp_lon, resp_lat).
+    At a crossing, Def 18 by the case that held at the last safe cycle (XBEFORE = (case, ego in front)): the
+    non-priority one was able to stop and the ego has priority → none (the other brakes); one was in front at a safe
+    distance and it was the ego → none (the front one drives on); otherwise (no time overlap held, the ego was the
+    rear one or the non-priority one, or never safe) → brake_min. Lateral: none (a conflict is assumed)."""
     if not dangerous or p.type == "not_relevant":
         return "none", "none"
     if p.type.startswith("xing"):
+        case, front = xbefore or (None, None)
+        if case == "able_to_stop" and p.type == "xing_ego_prio":
+            return "none", "none"
+        if case == "safe_long" and front is True:
+            return "none", "none"
         return "brake_min", "none"
     lon = "brake_min_correct" if p.type == "opp_dir" and p.ego_correct else "brake_min"
     if p.type == "same_dir" and p.lon in ("at_back", "overlap_back"):
