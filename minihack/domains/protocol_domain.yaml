@@ -1,2 +1,0 @@
-# protocol_domain — the natures of the protocol's preds (metis-lang spec/15 I11; specialist-tree step 2)
-nature: {tick__status: report, tick__active: report, tick__done: report, tick__stuck: report, tick__grant: signal, tick__goal: signal, tick__revoke: signal}
