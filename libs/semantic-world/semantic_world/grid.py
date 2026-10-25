@@ -17,7 +17,8 @@ The world's atoms are the perception's (one convention for NLE and the exerciser
   Chebyshev distance to the ego), a peaceful one holds (bayes.still); the alive decay is bayes.predict's.
 - The roles: `goal` (the route's end) and p1..pk (the ego's cell, the route's next cells, the beasts' cells) bound
   STABLY, thing roles `target` `other`, beast roles b1 b2; the facts the rules read are between bound cells:
-  next(p, d, q), toward(p) (the route's next cell), step(p) (can be stepped on now), and the segment kinds
+  next(p, d, q), toward(p) (the route's next cell), step(p) (can be stepped on now), door(p, open|closed) and
+  stairs_down(p) (the map's), the message said(K) as it is, and the segment kinds
   lane(p) junction(p) gate(p) area(p) deadend(p). The directions stay the action's own constants."""
 import heapq
 import re
@@ -177,6 +178,30 @@ class GridMap(core.SemanticMap):
         at = d["agent"]["at"]
         return [c for c in self._sight(d, at) if c in d["cells"]] if at else []
 
+    def observe(self, atoms, save=True, predicted=False):
+        """The core's observe; in `all` mode (the cells known, not the beasts) a beast not seen where it is believed,
+        in view of the ego, is not there: negative evidence over the visible cells, its belief dropped when nothing
+        is left (killed, or gone out of sight: the motion model and the alive decay carry it from there)."""
+        changed = super().observe(atoms, save=False, predicted=predicted)
+        d = self.load()
+        if not d.get("view") and d["agent"]["at"]:
+            from . import bayes
+            seen = {ports.args(a)[0]: ports.args(a)[1] for a in atoms if a.startswith("monster(")}
+            beasts = {n: d["belief"][n] for n, t in d["things"].items() if t.get("kind") == "beast" and d["belief"].get(n)}
+            sub = {"belief": beasts, "looked": d.setdefault("looked", {}), "exists": d.setdefault("exists", {})}
+            for c in self.visible(d):
+                if bayes.missed(sub, c, seen, lambda t: {}):
+                    changed = True
+            for n in beasts:
+                if sub["belief"].get(n):
+                    d["belief"][n] = sub["belief"][n]
+                else:
+                    d["belief"].pop(n, None)
+        if changed and save:
+            self.save()
+            self.log("observe", at=d["agent"]["at"], holding=d["agent"]["holding"])
+        return changed
+
     def grow(self, d, thing):
         return {"in": None, "kind": "beast" if thing in d.get("_monsters", ()) else "item"}
 
@@ -210,6 +235,10 @@ class GridMap(core.SemanticMap):
                     if (x1 + dx, y1 + dy) == (x2, y2) and self._step_ok(d, h1, h2, dx, dy):
                         out["next(%s,%s,%s)" % (r1, dn, r2)] = 1
             k = d["cells"].get(h1)
+            if k == "door":                              # the map's state (a locked door reads closed: the message tells)
+                out["door(%s,%s)" % (r1, "open" if d["doors"].get(h1) == "open" else "closed")] = 1
+            elif k == "stairs_down":                     # the map's: the screen draws the ego over the stairs it stands on
+                out["stairs_down(%s)" % r1] = 1
             if (k in STEP or k == "door" and d["doors"].get(h1) == "open") and h1 not in beasts:
                 out["step(%s)" % r1] = 1
             sid = seg["of"].get(h1)
@@ -420,12 +449,14 @@ class GridMap(core.SemanticMap):
             if len(d["path"]) > 1:
                 out["toward(%s)" % d["path"][1]] = 1
             return out
-        return super().role_reading(reading, binding)
+        out = super().role_reading(reading, binding)
+        out.update({a: n for a, n in reading.items() if a.startswith("said(")})   # the message: no role in it
+        return out
 
 
 def capacity(k=K):
     """The role vocabulary as an LLP capacity instance's text (the world keeps the file)."""
-    return "\n".join(["% capacity — a grid's roles (semantic_world.grid, k = %d): the cells a goal needs, the things" % k,
+    return "\n".join(["%% capacity — a grid's roles (semantic_world.grid, k = %d): the cells a goal needs, the things" % k,
                       "% and the beasts; the level is the host's map.",
                       "catalog capacity 1.", 'provenance text "the grid role vocabulary at capacity %d" "2026-10-25".' % k,
                       "type cell {%s}." % " ".join(cell_roles(k)), "type thing {%s}." % " ".join(THING_ROLES),

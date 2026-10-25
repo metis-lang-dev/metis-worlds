@@ -6,7 +6,7 @@ of roles onto the world's names, and the port contract between them and the prog
 A world's host runs one cycle every turn:
 
 1. **predict** (`bayes.predict`): the movers' motion. Identity today, since a household's things move only by
-   the robot's hand. A model per mover is the hook (a dungeon's beasts, next).
+   the robot's hand. A model per mover is the hook (`grid.models`: a dungeon's beasts).
 2. **observe** (`bayes.seen`, `bayes.missed`): a sighting collapses the belief. A place looked into without the
    thing is negative evidence: 0 there, the rest renormalized, and the prior again when nothing is left. A place
    not looked into is unchanged. `exists` keeps a log-odds per thing.
@@ -26,8 +26,8 @@ A world's host runs one cycle every turn:
 | `project` | stable slots and location roles, freeze |
 | `ports` | translate, sync_diff, in_room, say_in_roles, names |
 | `room` | the adapter for a household of receptacles (ALFWorld): THOR's names, the world card, the receptacle kinds, the projection's ranking (target, dest, p0, p1..pk, the locations), view mode (the cancontain prior, believed / absent / lost) |
-| `grid` | the adapter for a level of cells (NetHack, MiniHack): the segment graph (areas, lanes, junctions, gates, dead ends, frontier), sight, a route with gate costs, the movers' models, the stable projection (goal, p1..pk, b1 b2, target) |
-| `dungeon` | an exerciser, not a world: cave and rooms-and-corridors levels (from the published algorithm, never NetHack's NGPL source), monsters, sight, NLE's perception |
+| `grid` | the adapter for a level of cells (NetHack, MiniHack): the segment graph (areas, lanes, junctions, gates, dead ends, frontier), sight, a route with gate costs, the movers' models (a hostile walks toward the ego, a peaceful holds; with the cells known, a beast not seen in view is not there), the stable projection (goal, p1..pk, b1 b2, target), the facts between bound cells (`next`, `toward`, `step`, `door`, `stairs_down`, the segment kinds) |
+| `dungeon` | an exerciser, not a world: cave and rooms-and-corridors levels (from the published algorithm, never NetHack's NGPL source), monsters, sight, NLE's perception; `Level.des()` makes the same level a MiniHack des |
 
 The library never knows a world's names or a rule program. Adapters do.
 

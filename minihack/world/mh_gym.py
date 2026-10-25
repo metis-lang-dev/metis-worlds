@@ -28,6 +28,15 @@ def map_size(des):
     return (max(len(r) for r in rows), len(rows))
 
 
+def map_start(des):
+    """The robot's start cell in the MAP's coordinates when the des pins it to one cell (BRANCH:(x,y,x,y)), else None."""
+    import re
+    m = re.search(r"^BRANCH:\s*\((\d+),\s*(\d+),\s*(\d+),\s*(\d+)\)", des, re.M)
+    if m and m.group(1) == m.group(3) and m.group(2) == m.group(4):
+        return int(m.group(1)), int(m.group(2))
+    return None
+
+
 class World:
     def __init__(self):
         self.env, self.p, self.names = None, None, []
@@ -53,7 +62,7 @@ class World:
         self.names = [getattr(a, "name", str(a)) for a in self.env.unwrapped.actions]
         self.codes = [int(a) for a in self.env.unwrapped.actions]
         obs, info = self._reset(seed)
-        self.p = Perceiver(obs["chars"], size=map_size(des) if des else None)
+        self.p = Perceiver(obs["chars"], size=map_size(des) if des else None, start=map_start(des) if des else None)
         per = self.p.perceive(obs)
         return {"cells": self.p.cells(), "size": [self.p.w, self.p.h], "actions": self.names, "init": per}
 

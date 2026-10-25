@@ -1,0 +1,301 @@
+"""mh_hier.py — MiniHack as a hierarchy of domains over roles (semantic-map s-d4270bed step 4, the user's
+amendment: structured as ALFWorld's alf-hierarchy, not one flat base; semantic-world s-227b8e1b step 2: on the
+library's grid map).
+
+    task   the planner: the person's REACH (walk onto the goal) → goto(goal) to nav; reached(goal) → done
+    nav    walks the host's route: one step toward its next cell a beat; on the stairs, reached(goal) (a frontier
+           goal in view mode is no arrival: the host rebinds `goal` as the map grows); the next step a closed door →
+           closed(p), a beast on it → guarded(p) (its refusals: the director detours)
+    act    the one-cell actions: open(p) a door beside the robot → opened(p) (locked: kicked until it gives, then
+           the cell steps: opened(p)); fight(p) a beast beside it → cleared(p) once the cell is free
+    director  the lifted director (domains/director_domain.llp, metis-catalog's, byte-equal): closed(p) is
+           answered by act's open(p), guarded(p) by act's fight(p), then nav gets its goal back (resume) — as
+           ALFWorld's elsewhere(R) is answered by nav's goto(R) for access
+
+The host owns the geometry (semantic_world.grid, libs/semantic-world: the map, the segment graph, the route with
+gate costs over the known cells, the beasts predicted, the binding — stable — and next(p, d, q) between bound cells); the rules own the roles. Every domain is compiled
+once over the capacity (no level in any source); a level is its map store and one shared NLE process.
+
+    install(des_or_variant, root, view=False, k=K, seed=1) → {name: package dir} and ROOT/.run/config.yaml
+"""
+import json
+import os
+import shutil
+import sys
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, HERE)
+from semantic_world import grid  # noqa: E402  (libs/semantic-world, installed editable)
+
+K = grid.K
+SPECS = {
+    "nav": dict(types=("cell", "beast"), goal="goto", out=("reached", "closed", "guarded"),
+                dyn=("agent_at", "step", "door", "monster", "next", "toward", "stairs_down")),
+    "act": dict(types=("cell", "beast"), goal="open", goals=("open", "fight"), out=("opened", "cleared", "refused"),
+                dyn=("agent_at", "step", "door", "monster", "next", "said")),
+    "task": dict(types=("cell",), goal="reach", takes=("reached", "opened", "cleared", "refused"), out=("goto", "done", "stuck"),
+                 dyn=()),
+}
+NAMES = ("director", "task", "nav", "act")
+DIRECTOR_OUT = ("wake", "sleep", "forward", "ask", "ended")
+
+
+def _said():
+    return " ".join(sorted({k for _, k in __import__("perceive").MESSAGES} | {"other"}))
+
+
+def _head(name, what):
+    return ["%% %s — %s (semantic-world s-227b8e1b step 2, world/mh_hier.py): over roles, the level the host's map." % (name, what),
+            "catalog %s 1." % name, 'provenance text "%s" "2026-10-25".' % what, "layers (dyn).", "stages (act)."]
+
+
+def base(spec, geometry="pred"):
+    """SPEC's lifted base over the capacity's types. geometry pred: next(p, d, q) is the host's projection's;
+    bwd: a static table (a level's own cells: the flat comparison)."""
+    geo = ("pred next(cell, dir, cell) : %s.        %% the host's: between bound cells, on the live session" % spec) if geometry == "pred" \
+        else "bwd next(cell, dir, cell)."
+    if spec == "nav":
+        return "\n".join(_head("nav_domain", "MiniHack's navigator: the host's path, one step a beat") + [
+            "types (cell beast).", "type dir {n e s w ne se sw nw}.", "type doorstate {open closed}.", "namespace nav produce (dyn).",
+            "pred agent_at(cell) : nav.", "pred step(cell) : nav.                     % the host's: the cell can be stepped on now (floor or an open door, no beast)",
+            "pred door(cell, doorstate) : nav.", "pred monster(beast, cell) : nav.",
+            "pred stairs_down(cell) : nav.              % the host's map: the stairs, under the robot too", geo,
+            "pred toward(cell) : nav.                   % the host's: the next cell of its path",
+            "pred goto(cell) : nav.", "pred reached(cell) : nav.", "pred closed(cell) : nav.", "pred guarded(cell) : nav.",
+            "stage act {",
+            "  %% I am on {G}.",
+            "  arrive [dyn] : goto(G) * $agent_at(G) * $stairs_down(G) -o reached(G).   % a frontier goal is no arrival: the host rebinds it",
+            "  %% I step {D}, to {P}.",
+            "  move [dyn] : agent_at(C) * $next(C, D, P) * $toward(P) * $step(P) -o agent_at(P).   % awake only with a goal (the director)",
+            "  %% The door {D} is closed.",
+            "  shut [dyn] : goto(goal) * $agent_at(C) * $next(C, D, P) * $toward(P) * $door(P, closed) -o closed(P).   % the host's goal: its route's end",
+            "  %% {B} is in my way, {D}.",
+            "  in_way [dyn] : goto(goal) * $agent_at(C) * $next(C, D, P) * $toward(P) * $monster(B, P) -o guarded(P).",
+            "}", ""])
+    if spec == "act":
+        return "\n".join(_head("act_domain", "MiniHack's one-cell actions: a door, a beast beside the robot") + [
+            "types (cell beast).", "type dir {n e s w ne se sw nw}.", "type doorstate {open closed}.",
+            "type said_kind {%s}." % _said(), "namespace act produce (dyn).",
+            "pred agent_at(cell) : act.", "pred step(cell) : act.", "pred door(cell, doorstate) : act.", "pred monster(beast, cell) : act.",
+            "pred said(said_kind) : act.             % the world's message, one beat", geo,
+            "pred open(cell) : act.", "pred fight(cell) : act.", "pred tried(cell) : act.", "pred kicked(cell) : act.", "pred swung(cell) : act.",
+            "pred opened(cell) : act.", "pred cleared(cell) : act.", "pred refused(cell) : act.",
+            "stage act {",
+            "  %% The door {D} is closed: I open it.",
+            "  open_door [dyn] : open(P) * $agent_at(C) * $next(C, D, P) * $door(P, closed) -o tried(P).",
+            "  %% The door {D} is locked: I kick it.",
+            "  kick_door [dyn] : tried(P) * said(door_locked) * $agent_at(C) * $next(C, D, P) * $door(P, closed) -o kicked(P).",
+            "  %% It holds: I kick it again.",
+            "  kick_on [dyn] : kicked(P) * said(whamm) * $agent_at(C) * $next(C, D, P) * $door(P, closed) -o kicked(P).",
+            "  %% The door is broken: the way is open.",
+            "  door_gone [dyn] : kicked(P) * $step(P) -o opened(P).",
+            "  %% The door is open.",
+            "  door_open [dyn] : tried(P) * $door(P, open) -o opened(P).",
+            "  %% The door is already open.",
+            "  was_open [dyn] : open(P) * $door(P, open) -o opened(P).",
+            "  %% {B} is in my way, {D}: I fight it.",
+            "  move_fight [dyn] : fight(P) * $agent_at(C) * $next(C, D, P) * $monster(B, P) -o swung(P).",
+            "  %% It still stands: again.",
+            "  fight_on [dyn] : swung(P) * said(hit) * $monster(B, P) -o fight(P).",
+            "  %% The way is clear.",
+            "  clear [dyn] : swung(P) * $step(P) -o cleared(P).",
+            "  %% The way is clear.",
+            "  was_clear [dyn] : fight(P) * $step(P) -o cleared(P).",
+            "}", ""])
+    if spec == "task":
+        return "\n".join(_head("task_domain", "MiniHack's task: walk onto the goal, the specialists asked one goal at a time") + [
+            "types (cell).", "namespace task produce (dyn).",
+            "pred reach(cell) : task.                   % the one way in: the person's REACH",
+            "pred want(cell) : task.", "pred goto(cell) : task.",
+            "pred reached(cell) : task.", "pred opened(cell) : task.", "pred cleared(cell) : task.", "pred refused(cell) : task.",
+            "pred done : task.", "pred stuck(cell) : task.",
+            "stage act {",
+            "  %% I'll walk onto {G}.",
+            "  go [dyn] : reach(G) -o want(G) * goto(G).",
+            "  %% I am on {G}: done.",
+            "  arrived [dyn] : want(G) * reached(G) -o done.",
+            "  %% {X} was refused and I have no rule for it: I stop and ask.",
+            "  stuck_on [dyn] : want(G) * refused(X) -o stuck(X).",
+            "}", ""])
+    raise ValueError(spec)
+
+
+def committed(spec):
+    """SPEC's instance: the base and the capacity, no level (byte-equal for every level)."""
+    return "\n".join(["% " + spec + " — MiniHack's " + spec + " over the role vocabulary (world/mh_hier.py): compiled once, the level the host's map.",
+                      "catalog %s 1." % spec, 'provenance text "the %s specialist over roles" "2026-10-25".' % spec,
+                      'include "../%s_domain.llp".' % spec, 'include "../capacity.llp".', ""])
+
+
+def kinds():
+    out = {sp["goal"] for sp in SPECS.values()} | {g for sp in SPECS.values() for g in sp.get("goals", ())}
+    return sorted(out | {k for sp in SPECS.values() for k in sp["out"]})
+
+
+def director_facts():
+    """The instance's facts (the lifted director's roles, as gen_hier.director_facts for ALFWorld)."""
+    ks = kinds()
+    f = ["specialist(nav)", "specialist(act)", "planner(task)", "handles(nav, goto)", "handles(act, open)", "handles(act, fight)",
+         "handles(task, reach)"] + ["handles(task, %s)" % k for k in SPECS["task"]["takes"]]
+    f += ["result(reached)", "result(opened)", "result(cleared)", "end(stuck)", "finished(done)"]
+    f += ["detour(closed, open)", "detour(guarded, fight)", "escalate(closed, refused)", "escalate(guarded, refused)"]
+    f += ["rename(closed, open, open)", "rename(guarded, fight, fight)", "rename(closed, refused, refused)", "rename(guarded, refused, refused)"]
+    handled = {"goto", "open", "fight", "reach"} | set(SPECS["task"]["takes"])
+    f += ["nohandler(%s)" % k for k in ks if k not in handled and k not in ("done", "stuck", "closed", "guarded")]
+    return ks, f
+
+
+def director_start():
+    return ["active(task)", "attention(task)", "fresh", "inactive(nav)", "inactive(act)"]
+
+
+TASK_CARD = """# task's intents (semantic-map step 4): what the person asks MiniHack's robot — one verb, REACH, whose atom is the
+# task domain's goal reach(goal): the planner asks nav to walk there, the director detours a door to act. The goal is a
+# role the host binds to the stairs down (or, while they are unseen, the nearest frontier cell).
+persona: |
+  You are a robot in a NetHack room. The person asks you to walk onto the goal (the stairs down). Map what
+  they say to exactly one intent JSON per utterance. Respond with only the JSON.
+
+verbs:
+  - {verb: REACH, meaning: "walk onto the goal: the stairs down (standing on it wins)"}
+  - {verb: CHITCHAT, meaning: "small talk, not an errand: an acknowledgement, thanks, a greeting, a comment"}
+  - {verb: UNKNOWN, meaning: "anything else: one step on its own, an action you cannot do here"}
+
+slots: {}
+
+guidance: |
+  Going to the stairs, the goal, the way down, the exit, or winning the level is REACH. Words that ask for no
+  errand at all (okay, thanks, hello) are CHITCHAT.
+
+examples:
+  - ["walk onto the goal", {"intent":"REACH"}]
+  - ["go to the stairs", {"intent":"REACH"}]
+  - ["find the way down", {"intent":"REACH"}]
+  - ["hello there", {"intent":"CHITCHAT"}]
+  - ["step north", {"intent":"UNKNOWN"}]
+
+spoken:
+  heading: Spoken response (after the JSON)
+  text: |
+    After the JSON comes "Spoken response:" and one short sentence the robot says, in the first person.
+    Never JSON, never an intent name.
+  examples:
+    - ["walk onto the goal", {"intent":"REACH"}, "I'll walk to the stairs."]
+    - ["hello there", {"intent":"CHITCHAT"}, "Hello."]
+
+map:
+  - {verb: REACH, atom: "reach(goal)", act: reach}
+values: {}
+
+asks: []
+outcomes: {goto: progress, done: done, stuck: refused}
+alternatives:
+  max: 0
+  rules: {}
+"""
+
+
+def _director_base():
+    """The lifted director: metis-catalog's domains/director/director_domain.llp (this world carries a byte copy,
+    domains/director_domain.llp, as the alfworld world does)."""
+    return open(os.path.join(os.path.dirname(HERE), "domains", "director_domain.llp")).read()
+
+
+def install(level, root, view=False, k=K, seed=1, max_steps=600, name="level"):
+    """LEVEL (a des text, or a room variant tuple) installed for the agent under ROOT: ROOT/domains/hier/{director,
+    task, nav, act} over the lifted bases and the capacity, the level's map store (.map.json), one shared NLE
+    process for every host (the same level.json `shared` key), the task's card and ROOT/.run/config.yaml for
+    metis-agent's service. → {name: package dir}."""
+    import gen_level
+    import levels
+    from mh_gym import World
+    from mh_host import ACTIONS
+    des = level if isinstance(level, str) else levels.level(level, seed)["des"]
+    w = World()
+    try:
+        info = w.open(des=des, actions=ACTIONS, max_steps=100, seed=seed)
+    finally:
+        if w.env is not None:
+            w.env.close()
+    hier = os.path.join(root, "domains", "hier")
+    os.makedirs(hier, exist_ok=True)
+    open(os.path.join(root, "domains", "director_domain.llp"), "w").write(_director_base())
+    for sp in SPECS:
+        open(os.path.join(hier, "%s_domain.llp" % sp), "w").write(base(sp))
+    open(os.path.join(hier, "capacity.llp"), "w").write(grid.capacity(k))
+    mp = os.path.abspath(os.path.join(hier, ".map.json"))
+    grid.GridMap.build(mp, info["size"], des=des, view=view, k=k)
+    shim = open(os.path.join(HERE, "package_host.py")).read().replace("__WORLD__", HERE)
+    out = {}
+    for sp in SPECS:
+        pkg = os.path.join(hier, sp)
+        os.makedirs(pkg, exist_ok=True)
+        open(os.path.join(pkg, sp + ".llp"), "w").write(committed(sp))
+        json.dump({"des": des, "actions": ACTIONS, "seed": seed, "features": {"level": name}, "cells": info["cells"], "size": info["size"],
+                   "map": mp, "max_steps": max_steps, "spec": sp, "shared": mp, "observe": list(SPECS[sp]["dyn"]),
+                   "out": list(SPECS[sp]["out"]), "continues": True}, open(os.path.join(pkg, "level.json"), "w"), indent=1)
+        open(os.path.join(pkg, "domain.yaml"), "w").write(
+            "# %s — MiniHack's %s over the role program (generated by world/mh_hier.py).\n"
+            "program: %s.llp\nhost: mh_host.py:make\nclock: {beats: 1}\nrecords: records/\n"
+            "display: MiniHack %s\nline: \"the %s\"\nvoice: own\n" % (sp, sp, sp, sp, sp)
+            + ("intent: {spec: intent.yaml}\n" if sp == "task" else ""))
+        open(os.path.join(pkg, "mh_host.py"), "w").write(shim)
+        out[sp] = pkg
+    open(os.path.join(out["task"], "intent.yaml"), "w").write(TASK_CARD)
+    _card_files(root, out["task"])
+    out["director"] = _director_package(root, hier, mp)
+    _config(root)
+    return out
+
+
+def _card_files(root, task_dir):
+    from pathlib import Path
+    from metis import intents
+    intents.ROOT = Path(root)
+    spec, name = intents.load_from(task_dir), Path(task_dir).name
+    d = Path(task_dir) / "intent"
+    d.mkdir(exist_ok=True)
+    for fn, text in [("%s.gbnf" % name, intents.grammar(spec)), ("%s-prompt.txt" % name, intents.prompt(spec)),
+                     ("%s-spoken.txt" % name, intents.spoken(spec))]:
+        (d / fn).write_text(text)
+
+
+def _director_package(root, hier, mp):
+    ks, facts = director_facts()
+    pkg = os.path.join(hier, "director")
+    os.makedirs(pkg, exist_ok=True)
+    lines = ["% director — the director over MiniHack's hierarchy, installed for the agent (world/mh_hier.py).",
+             "catalog director 1.", 'provenance text "generated: the director over nav/act/task" "2026-10-25".',
+             'include "../../director_domain.llp".',
+             "type domain {%s}." % " ".join(SPECS), "type kind {%s}." % " ".join(ks), ""]
+    lines += [f + "." for f in facts] + [""]
+    lines += ["#init %s 1" % a for a in director_start()] + ["#steps 6", "#seeds 1"]
+    open(os.path.join(pkg, "director.llp"), "w").write("\n".join(lines) + "\n")
+    json.dump({"root": root, "map": mp, "out": list(DIRECTOR_OUT), "kinds": ks, "specs": {s: {"dyn": list(v["dyn"]), "out": list(v["out"])}
+                                                                                         for s, v in SPECS.items()}},
+              open(os.path.join(pkg, "game.json"), "w"), indent=1)
+    open(os.path.join(pkg, "domain.yaml"), "w").write(
+        "# director — activation from context as a domain (world/mh_hier.py).\n"
+        "program: director.llp\nhost: director_host.py:make\nclock: {beats: 1}\nrecords: records/\n"
+        "display: the director\nline: \"the director: who is woken for what arrives\"\nvoice: line\n")
+    shim = open(os.path.join(HERE, "package_host.py")).read().replace("__WORLD__", HERE).replace('"mh_host"', '"mh_director_host"') \
+        .replace("MhHost", "DirectorHost")
+    open(os.path.join(pkg, "director_host.py"), "w").write(shim)
+    return pkg
+
+
+def _config(root):
+    """metis-agent's service config over the hierarchy (the director, serve: active) — alfworld's shape."""
+    import yaml
+    run = os.path.join(root, ".run")
+    os.makedirs(run, exist_ok=True)
+    names = list(NAMES)
+    c = {"model": "../go/models/gemma4/gemma-4-E2B-it-Q4_K_M.gguf", "template": "gemma4",
+         "stop_words": ["stop", "halt", "freeze", "quiet"],
+         "v3": {"prompt": ["../go/grammar/v3-orchestrator.txt"], "catalog": names, "loaded": ["director", "task"],
+                "serve": "active", "director": "director", "n_ctx": 16384, "tick_ms": 300,
+                "journal": os.path.join(run, "journal.jsonl")},
+         "domains": {"names": names, "case": "live", "seed": 1, "clocks": [{"domain": n, "n": 1} for n in names],
+                     "trace": True, "records": os.path.join(run, "records"), "narrator_n_ctx": 8192, "seat_n_ctx": 8192},
+         "ws": {"addr": "127.0.0.1:8399"}}
+    open(os.path.join(run, "config.yaml"), "w").write(yaml.safe_dump(c, sort_keys=False))

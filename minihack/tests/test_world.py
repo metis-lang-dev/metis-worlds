@@ -280,3 +280,42 @@ def test_the_loops_base_compiles_alone(tmp_path):
     (tmp_path / "mh.llp").write_text(gen_level.base_source())
     out = subprocess.run([os.environ["METISC"], str(tmp_path / "mh.llp")], capture_output=True, text=True, timeout=120)
     assert out.returncode == 0 and "; abstract cell thing beast " in out.stdout, out.stderr[-600:]
+
+
+def test_an_exerciser_level_opens_in_its_own_coordinates():
+    """semantic-world step 2: the exerciser's levels (semantic_world.dungeon, the article's algorithms) as NLE levels
+    through Level.des(): a dark cave and lit rooms, 76 x 21, the robot on the start cell, every cell on the first
+    screen the des's own (the perceiver's top-left from the robot's pinned start: a dark level shows eight cells)."""
+    from semantic_world import dungeon
+    for lv in (dungeon.cave(76, 21, 1), dungeon.rooms(76, 21, 4)):
+        w = World()
+        try:
+            info = w.open(des=lv.des(), actions=ACTIONS, max_steps=10, seed=1)
+            atoms = info["init"]["atoms"]
+            assert info["size"] == [76, 21] and "agent_at(c%d_%d)" % lv.start in atoms
+            for a in atoms:
+                p = a.split("(")[0]
+                if p in ("floor", "corridor", "wall"):
+                    x, y = map(int, a[a.index("(") + 2:-1].split("_"))
+                    assert lv.tiles.get((x, y)) in ({"wall": "-|"}.get(p, ".#>+")), a
+        finally:
+            w.env.close()
+
+
+def test_the_hierarchy_is_one_program_for_every_level(tmp_path):
+    """semantic-world step 2: MiniHack's hierarchy (world/mh_hier.py: director, task, nav, act over roles) installs the
+    same sources for a room and for a 76 x 21 cave — the level is the host's map (semantic_world.grid), never the
+    program's; each domain compiles (METISC)."""
+    import mh_hier
+    from semantic_world import dungeon
+    roots = {"room": VARIANT, "cave": dungeon.cave(76, 21, 1).des()}
+    for n, lv in roots.items():
+        mh_hier.install(lv, str(tmp_path / n), name=n)
+    hier = lambda n, f: (tmp_path / n / "domains" / "hier" / f).read_bytes()
+    for f in ("nav_domain.llp", "act_domain.llp", "task_domain.llp", "capacity.llp", "nav/nav.llp", "director/director.llp"):
+        assert hier("room", f) == hier("cave", f), f
+    if os.environ.get("METISC"):
+        for d in mh_hier.NAMES:
+            p = tmp_path / "cave" / "domains" / "hier" / d / ("%s.llp" % d)
+            out = subprocess.run([os.environ["METISC"], "--diagnostics-json", str(p)], capture_output=True, text=True, timeout=120)
+            assert out.returncode == 0 and '"error"' not in out.stdout, (d, out.stdout[-2000:], out.stderr[-2000:])

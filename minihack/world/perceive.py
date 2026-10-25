@@ -21,7 +21,7 @@ HUNGER = {0: "satiated", 1: "normal", 2: "hungry", 3: "weak", 4: "fainting", 5: 
 
 MESSAGES = [
     (r"solid stone", "blocked"), (r"you see here (an? |the )?(.+?)\.", "see_here"), (r"there is (an? )?(open|closed|broken) door", "door_here"),
-    (r"the door is closed", "door_closed"), (r"the door opens", "door_opened"), (r"this door is locked", "door_locked"), (r"you succeed in unlocking", "unlocked"), (r"you don't have anything to use", "nothing_to_apply"),
+    (r"the door is closed", "door_closed"), (r"the door opens", "door_opened"), (r"this door is locked", "door_locked"), (r"whamm", "whamm"), (r"you succeed in unlocking", "unlocked"), (r"you don't have anything to use", "nothing_to_apply"),
     (r"you kill (the )?(.+?)!", "killed"), (r"you (hit|miss) (the )?(.+?)[.!]", "hit"), (r"(bites|hits|kicks|stings)!?", "hurt"),
     (r"you fall into a pit", "fell_pit"), (r"a trap door opens", "trap_door"), (r"you (eat|finish eating)", "ate"),
     (r"(\w) - (.+?)\.", "picked"), (r"there is nothing here to pick up", "nothing_here"), (r"you can.?t (go|move) ", "cant"),
@@ -37,12 +37,17 @@ def cell(x, y):
 class Perceiver:
     """Fixed per level: the map's bounding box on the screen (so cells are level coordinates)."""
 
-    def __init__(self, chars, size=None):
+    def __init__(self, chars, size=None, start=None):
         """The level's bounding box: its top-left from the first screen (the agent's lit room
         starts at the map's edge), its size from the des MAP when the gym knows it — a room
-        behind a closed door is not on the first screen (M2), so the screen cannot say."""
+        behind a closed door is not on the first screen (M2), so the screen cannot say. START: the
+        robot's start cell in the MAP when the des pins it — the top-left is then where the robot
+        stands less its start (a dark level: the first screen is the eight cells around it)."""
         ys, xs = np.where(chars != 32)
         self.y0, self.x0 = int(ys.min()), int(xs.min())
+        at = np.argwhere(chars == ord("@"))
+        if start is not None and len(at) == 1:
+            self.y0, self.x0 = int(at[0][0]) - int(start[1]), int(at[0][1]) - int(start[0])
         self.h, self.w = int(ys.max() - ys.min() + 1), int(xs.max() - xs.min() + 1)
         if size:
             self.w, self.h = max(self.w, int(size[0])), max(self.h, int(size[1]))

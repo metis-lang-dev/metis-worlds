@@ -3,7 +3,7 @@ the route with gate costs and NetHack's doorway rule, predict for movers (a host
 holds, the alive decay forgets), and the whole cycle on the exerciser — the ego through doors closed and locked to
 the stairs, the binding stable, view mode to the frontier first."""
 from semantic_world import bayes, dungeon
-from semantic_world.grid import GridMap, cell_roles, xy
+from semantic_world.grid import GridMap, capacity, cell_roles, xy
 
 ALIVE = (0.1, -2.0)
 
@@ -169,3 +169,23 @@ def test_the_reading_is_in_roles(tmp_path):
         for x in re.findall(r"[(,]([^,()]+)", a):
             assert x in roles or x in ("n", "e", "s", "w", "ne", "se", "sw", "nw", "open", "closed", "locked"), a
     assert any(a.startswith("toward(") for a in r) and any(a.startswith("next(") for a in r) and "step(p1)" in r
+
+
+def test_a_door_reads_its_state_the_message_passes_a_beast_gone_from_view_is_dropped(tmp_path):
+    cells = {"c%d_1" % x: "floor" for x in range(6)}
+    cells.update({"c3_1": "door:locked", "c6_1": "stairs_down"})
+    m = GridMap.build(str(tmp_path / "m.json"), (8, 3), cells=cells, k=8)
+    m.cycle(["agent_at(c2_1)", "monster(newt,c0_1)", "said(door_locked)"])
+    m.project()
+    inv = {h: r for r, h in m.binding().items()}
+    r = m.role_reading({"agent_at(c2_1)": 1, "said(door_locked)": 1, "door(c3_1,closed)": 1})
+    assert "door(%s,closed)" % inv["c3_1"] in r and "said(door_locked)" in r      # a locked door reads closed
+    assert m.load()["belief"]["newt"] == {"c0_1": 1.0}
+    m.cycle(["agent_at(c1_1)"], models=m.models(), alive=ALIVE)                    # killed: every cell it may be on in view, empty
+    assert "newt" not in m.load()["belief"]
+
+
+def test_the_capacity_text():
+    t = capacity(16)
+    assert t.startswith("% capacity") and "k = 16" in t
+    assert "type cell {goal %s}." % " ".join("p%d" % i for i in range(1, 17)) in t and "type beast {b1 b2}." in t

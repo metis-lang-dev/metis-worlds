@@ -29,6 +29,21 @@ discovery.
 
 **The journals** (`agent_run.py run OUT`): one file per episode, `OUT/<variant>.jsonl`, **plain JSON lines**, the shape metis-agent's actor writes (docs/WIRE.md, "Act without a rule"): a `step` row per step (`reading` the perception atoms, `text` what the model was given, `j` the intent it typed, `words`, `command` the mapped atom, `result` the world's answer: `acted`, `events`, `reward`, `done`, `won`), then one `episode` row (`variant`, `seed`, `steps`, `end`, `won`, `refusals`, `intents`, `cost: 0`). They are what step 2b's extraction (the loop's pi driver) reads: keep the shape plain.
 
+## Over roles: the level is the host's map (semantic-world s-227b8e1b step 2)
+
+| path | what |
+|---|---|
+| `world/mh_hier.py` | MiniHack as a hierarchy, ALFWorld's shape: `director` (the lifted `domains/director_domain.llp`, metis-catalog's byte copy), `task` (the person's REACH → `goto(goal)`; `reached(goal)` → done), `nav` (one step a beat along the host's route; a closed door → `closed(p)`, a beast → `guarded(p)`; on the stairs `reached(goal)`), `act` (open a door — told it is locked, kick it until it gives —; fight a beast). Every domain compiled once over the capacity (`goal p1..pk`, `target other`, `b1 b2`): the same bytes for a 4 × 5 room and a 76 × 21 cave (`tests/test_the_hierarchy_is_one_program_for_every_level`). `install(level, root, view, k)` writes the packages, the map store, one shared NLE process and metis-agent's `.run/config.yaml` |
+| `world/mh_director_host.py` | the director's host: the arrivals, a domain's activation as the world in roles through the map's binding |
+| `world/mh_host.py` | a level with a `map` (level.json) is read through `semantic_world.grid.GridMap` (libs/semantic-world): each step `cycle`s the map (the beasts predicted — a hostile walks toward the robot, a peaceful holds, the unseen fade —, then the sighting), the binding moves at the beat's input (`tick`), the reading is in roles (`next(p, d, q)`, `toward`, `step`, `door`, `stairs_down` between bound cells); a hierarchy's hosts share one NLE process; the level won is not the run's end (`continues`) |
+| `world/gen_level.py` `generate_roles` | one role program for the room family (a STAND-IN base: MiniHack's domain is what the loop extracts), or `flat`: the same rules over the level's own cells (the comparison) |
+| `world/perceive.py` | a des that pins the start to one cell (`BRANCH:(x,y,x,y)`) places the screen's top-left by the robot (a dark level's first screen is the eight cells around it); `said(whamm)` (a kicked door holds) |
+| `experiments/sw2_hier.py` | the hierarchy's cases (design §4: 1 the room, 2 the exerciser's 76 × 21 cave, 3 a closed then a locked door, 7 view mode: the frontier first; a beast in a corridor), one process per case, on CPU, no model: `setup OUT`, then `run OUT` under metis-agent's venv |
+| `experiments/sw2_roles.py` | one role program against the flat instance: the room's win turn, the grounding at load |
+
+The exerciser's levels (`semantic_world.dungeon`: caves from the article's algorithm, rooms and corridors) are NLE
+levels through `Level.des()` (`tests/test_an_exerciser_level_opens_in_its_own_coordinates`).
+
 ## Findings while building (step 1)
 
 - **The map is the level's, not the screen's.** NLE draws the level inside a 21×79

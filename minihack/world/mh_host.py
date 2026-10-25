@@ -67,6 +67,11 @@ class GymClient(GymChild):
                                     "actions": level.get("actions") or ACTIONS, "max_steps": max_steps, "seed": seed})
 
 
+ALIVE = (0.2, -1.0)    # a beast out of sight fades (exists −0.2 a turn; dropped below −1: semantic_world.bayes)
+ROLE_READ = {"agent_at", "floor", "door", "stairs_down", "obj", "monster", "holds", "said", "next", "toward", "step"}
+SHARED = {}            # a hierarchy's one NLE process (level.json `shared`: the map's path): {key: {"gym", "last", "won_at"}}
+
+
 class MhHost:
     """bind(reg) · tick(counts) -> do-lines | None · on_event(name, args) · observe(counts) -> {atom: n}
     · snapshot() / restore(snap) · ports() · reseed(seed). The message's events ride one beat:
@@ -78,35 +83,68 @@ class MhHost:
         self.package_dir, self.case = package_dir, case
         self.level = json.load(open(os.path.join(package_dir, "level.json")))
         self.seed = int(self.level.get("seed", 1))
-        self.max_steps = max_steps
-        self.gym = GymClient(self.level, max_steps, self.seed)
-        self.cells = self.gym.info["cells"]
+        self.max_steps = int(self.level.get("max_steps", max_steps))
+        # a level over the role program (semantic-world step 2): the level is the host's map (semantic_world.grid,
+        # libs/semantic-world), read through its binding; the program speaks roles and is never the level's
+        from semantic_world.grid import GridMap
+        self.cmap = GridMap(self.level["map"]) if self.level.get("map") else None
+        self.fired = []                                 # (rule, the binding it fired under)
+        # a hierarchy's domain (mh_hier): its spec, what it reads, the world one process shared by the hierarchy's hosts
+        self.spec, self.observed = self.level.get("spec"), set(self.level["observe"]) if "observe" in self.level else None
+        self.continues, self.key = bool(self.level.get("continues")), self.level.get("shared")
         self.beat, self.due, self.script, self.last = 0, (), {}, None
+        if self.key and self.key in SHARED:             # another host of the hierarchy opened the world: no reset
+            self.gym = SHARED[self.key]["gym"]
+            self.cells = self.gym.info["cells"]
+            self._take(SHARED[self.key]["last"], fresh=False)
+            self.actions, self.t, self.pending_events, self.handed = [], 0, [], []
+            return
+        self.gym = GymClient(self.level, self.max_steps, self.seed)
+        self.cells = self.gym.info["cells"]
+        if self.key:
+            SHARED[self.key] = {"gym": self.gym, "last": None}
         self._reset(self.seed)
 
     def _reset(self, seed):
         self.seed = seed
         out = self.gym.call("reset", seed=seed)
         self._take(out)
+        if self.cmap is not None:                       # the episode's first binding (then the beat's: tick)
+            self.cmap.project()
         self.actions, self.t = [], 0
         self.pending_events = list(out.get("events", []))
         self.handed = []
 
-    def _take(self, out):
+    def _take(self, out, fresh=True):
         self.atoms = set(out["atoms"])
+        if fresh and getattr(self, "key", None):        # the shared world's latest, for every host of the hierarchy
+            SHARED[self.key]["last"] = out
+        if getattr(self, "cmap", None) is not None and fresh:   # the map follows what the robot sees, step by step:
+            self.cmap.cycle(self.atoms, 1, self.cmap.models(), ALIVE)   # the beasts predicted a turn, then the sighting
         msg = out.get("message", "")
         # NLE keeps the last message on the line: it is an event only when it is new
         self.events = list(out.get("events", [])) if msg != getattr(self, "message", None) else []
         self.message = msg
         self.done, self.won = bool(out.get("done")), bool(out.get("won"))
         self.reward = float(out.get("reward", 0.0))
+        if self.won and getattr(self, "continues", False):   # the hierarchy: the level won is not the run's end — nav reports
+            self.done = False                                  # reached(goal), the task its done (alfworld's AlfHost the same)
 
     def reseed(self, seed):
         if seed != self.seed:
             self._reset(seed)
 
     def reading(self):
+        if self.cmap is not None:
+            r = self.cmap.role_reading({a: 1 for a in self.atoms})
+            keep = self.observed if self.observed is not None else ROLE_READ   # what the domain declares
+            return {a: n for a, n in r.items() if a.split("(")[0] in keep}
         return {a: 1 for a in self.atoms}
+
+    def speak(self, text, binding=None):
+        """A rule's line said in the world's words (the binding's — the one its rule fired under, when given:
+        "the door at 3, 1", "east")."""
+        return self.cmap.say(text, binding) if self.cmap is not None else text
 
     def action_of(self, name, args):
         """The fired RULE's name says the command: a rule consuming cmd_X(...) is named X or X_<why>
@@ -134,7 +172,9 @@ class MhHost:
 
     def on_event(self, name, args):
         acts = self.action_of(name, args)
-        if not acts or self.done:
+        if self.cmap is not None:                       # the binding the rule fired under (its line is said in it)
+            self.fired.append((name, self.cmap.binding()))
+        if not acts or self.done or self.won:          # nothing steps a world that is over
             return
         for a in acts:
             out = self.gym.call("step", action=a)
@@ -143,6 +183,10 @@ class MhHost:
             self.actions.append(a)
             self._log({"beat": self.beat, "t": self.t, "rule": name, "action": a, "message": self.message,
                        "events": self.events, "reward": self.reward, "done": self.done, "won": self.won})
+            if self.won and getattr(self, "won_at", None) is None:
+                self.won_at = __import__("time").perf_counter()       # the winning step (a turn's end, before the episode's record)
+                if self.key:
+                    SHARED[self.key]["won_at"] = self.won_at
             if self.done:
                 break
         self.pending_events += self.events
@@ -159,9 +203,16 @@ class MhHost:
         return self.reading()
 
     def tick(self, counts):
+        if self.key and SHARED.get(self.key, {}).get("last") is not None:
+            self._take(SHARED[self.key]["last"], fresh=False)  # the world as another host of the hierarchy left it
         if self.done:
             return None
         self.beat += 1
+        if self.cmap is not None:
+            # the binding moves at the beat's input, never mid-pass (the architect's ruling, as step 3's refresh): the
+            # pass's reading is said in the binding its rules fired under, so a step the rules predicted (agent_at the
+            # cell they moved to) reads as predicted; the sync below then brings the new binding in as the beat's input
+            self.cmap.project()
         dos = self.sync(counts)
         for e in self.handed:                              # last beat's events are over
             dos.append("-%s 1" % e)
@@ -179,8 +230,9 @@ class MhHost:
             have = counts.get(a, 0)
             if n > have:
                 dos.append("+%s %d" % (a, n - have))
+        owned = PERCEIVED | ({"next", "toward", "step"} if self.cmap is not None else set())   # a role level's geometry is the host's too
         for a, have in sorted(counts.items()):
-            if have > 0 and a not in reading and a.split("(")[0] in PERCEIVED:
+            if have > 0 and a not in reading and a.split("(")[0] in owned:
                 dos.append("-%s %d" % (a, have))
         return dos
 

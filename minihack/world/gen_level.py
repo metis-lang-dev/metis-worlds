@@ -135,6 +135,109 @@ def generate(variant, seed, out_dir, max_steps=40, domain_rel=None, name=None):
     return pkg, len(per["atoms"])
 
 
+# ── the room in roles (semantic_world.grid, libs/semantic-world) ──
+# A STAND-IN program (the architect: say so): MiniHack's domain is what the loop extracts (none is on file); these
+# six rules are what an extracted one would read over roles — the room family's errand (walk onto the stairs),
+# through a closed door, past a beast. The program is compiled once (domains/_roles: committed); a level is its
+# map store and its host, never its source.
+ROLES_DIR = os.path.join(os.path.dirname(HERE), "domains", "_roles")
+
+
+def stand_in_base(geometry="pred"):
+    """The lifted base over (cell thing beast). geometry "pred": next(p, d, q) is the host's projection's, between
+    bound cells; "bwd": a static table, the instance's facts (today's form: the flat comparison)."""
+    said = " ".join(sorted({k for _, k in __import__("perceive").MESSAGES} | {"other"}))
+    geo = "pred next(cell, dir, cell) : mh.            % the host's projection: between bound cells, on the live session" \
+        if geometry == "pred" else "bwd next(cell, dir, cell).                   % a static table: the instance's facts"
+    return "\n".join([
+        "% mh_base — a STAND-IN for MiniHack's extracted domain (semantic-map s-d4270bed step 4, world/gen_level.py):",
+        "% the room family's errand over roles — the cell the robot stands on, the next cells of the host's path,",
+        "% the beasts and things in view. The host plans the path; the rules take the next step, open the door on",
+        "% it, fight what stands on it, pick up what the task wants.",
+        "catalog mh_base 1.",
+        'provenance text "a stand-in MiniHack base over roles (the loop extracts the real one)" "2026-10-25".',
+        "layers (dyn).", "stages (act).",
+        "types (cell thing beast).   % the instance's: the capacity's roles (or a level's own cells: flat)",
+        "type dir {n e s w ne se sw nw}.",
+        "type doorstate {open closed}.",
+        "type said_kind {%s}." % said,
+        "namespace mh produce (dyn).",
+        "pred agent_at(cell) : mh.", "pred floor(cell) : mh.", "pred door(cell, doorstate) : mh.", "pred stairs_down(cell) : mh.",
+        "pred obj(thing, cell) : mh.", "pred monster(beast, cell) : mh.", "pred holds(thing) : mh.", "pred said(said_kind) : mh.",
+        geo,
+        "pred toward(cell) : mh.                      % the next cell of the host's path",
+        "pred fought(beast) : mh.",
+        "bwd want(thing).",
+        "stage act {",
+        "  %% I step {D}, to {P}.",
+        "  move [dyn] : agent_at(C) * $next(C, D, P) * $toward(P) * $floor(P) -o agent_at(P).",
+        "  %% I step {D}, through the door.",
+        "  move_door [dyn] : agent_at(C) * $next(C, D, P) * $toward(P) * $door(P, open) -o agent_at(P).",
+        "  %% The door {D} is closed: I open it.",
+        "  open_door [dyn] : agent_at(C) * $next(C, D, P) * $toward(P) * door(P, closed) -o agent_at(C) * door(P, open).",
+        "  %% The door {D} is locked: I kick it.",
+        "  kick_door [dyn] : agent_at(C) * $next(C, D, P) * $toward(P) * door(P, closed) * $said(door_locked) -o agent_at(C) * door(P, open).",
+        "  %% {B} is in my way, {D}: I fight it.",
+        "  move_fight [dyn] : agent_at(C) * $next(C, D, P) * $toward(P) * $monster(B, P) -o fought(B).",
+        "  %% I pick up {T}.",
+        "  pickup [dyn] : agent_at(C) * $obj(T, C) * $want(T) -o holds(T).",
+        "}", ""])
+
+
+def roles_files(k=None):
+    """The committed role program: {file: text} (domains/_roles)."""
+    from semantic_world import grid
+    return {"mh_base.llp": stand_in_base("pred"), "capacity.llp": grid.capacity(k or grid.K)}
+
+
+def generate_roles(variant, seed, out_dir, view=False, k=None, flat=False, des=None, name=None, max_steps=200):
+    """A level over the committed role program: domains/<name>/{<name>.llp (the includes, no room), level.json (its
+    `map`: the store), .map.json (the des's, or empty in view mode), mh_host.py, domain.yaml}. flat: the same
+    stand-in base over the level's own cells with the geometry a static table (today's form; the comparison).
+    des: a level's des of its own (the large one); else the room family's variant. → the package dir."""
+    from semantic_world import grid
+    lv = levels.level(variant, seed) if des is None else {"name": name, "des": des, "actions": __import__("mh_host").ACTIONS,
+                                                          "seed": seed, "features": {"des": "own"}}
+    name = name or lv["name"] + ("_flat" if flat else "_roles")
+    w = World()
+    try:
+        info = w.open(des=lv["des"], actions=lv["actions"], max_steps=100, seed=seed)
+    finally:
+        if w.env is not None:
+            w.env.close()
+    pkg = os.path.join(out_dir, name)
+    os.makedirs(pkg, exist_ok=True)
+    head = ["% " + name + " — MiniHack level " + lv["name"] + " seed %d (world/gen_level.py generate_roles)." % seed]
+    if flat:
+        open(os.path.join(out_dir, "mh_base_flat.llp"), "w").write(stand_in_base("bwd"))
+        names = info["init"]["names"]
+        things = sorted(set(names["objects"]) | {"apple", "key"})
+        beasts = sorted(set(names["monsters"]) | {"newt", "rat"})
+        lines = head + ["catalog %s 1." % name, 'provenance text "flat: the level\'s cells, the geometry static" "2026-10-25".',
+                        'include "../mh_base_flat.llp".', "type cell {%s}." % " ".join(info["cells"]),
+                        "type thing {%s}." % " ".join(things), "type beast {%s}." % " ".join(beasts), ""] + \
+            [l for l in geometry(info["cells"])]
+    else:
+        rd = os.path.join(out_dir, "_roles")
+        os.makedirs(rd, exist_ok=True)
+        for f, t in roles_files(k).items():
+            open(os.path.join(rd, f), "w").write(t)
+        lines = head + ["catalog %s 1." % name, 'provenance text "over the committed role program: no room in its source" "2026-10-25".',
+                        'include "../_roles/mh_base.llp".', 'include "../_roles/capacity.llp".', "want(target)."]
+    open(os.path.join(pkg, name + ".llp"), "w").write("\n".join(lines) + "\n")
+    mp = os.path.abspath(os.path.join(pkg, ".map.json"))
+    grid.GridMap.build(mp, info["size"], des=lv["des"], view=view, k=k or grid.K, flat=flat)
+    json.dump({"des": lv["des"], "actions": lv["actions"], "seed": seed, "features": lv["features"], "cells": info["cells"],
+               "size": info["size"], "map": mp, "max_steps": max_steps}, open(os.path.join(pkg, "level.json"), "w"), indent=1)
+    open(os.path.join(pkg, "domain.yaml"), "w").write(
+        "# %s — a MiniHack level over the role program (generated by world/gen_level.py generate_roles).\n"
+        "program: %s.llp\nhost: mh_host.py:make\nclock: {beats: 1}\nrecords: records/\n"
+        "display: MiniHack %s\nline: %s\nvoice: own\n" % (name, name, name, json.dumps("the room: walk onto the stairs")))
+    shim = open(os.path.join(HERE, "package_host.py")).read().replace("__WORLD__", HERE)
+    open(os.path.join(pkg, "mh_host.py"), "w").write(shim)
+    return pkg
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser()
     ap.add_argument("size"); ap.add_argument("item"); ap.add_argument("monster"); ap.add_argument("door"); ap.add_argument("trap")

@@ -73,11 +73,14 @@ class Level:
         return out[::-1]
 
     def des(self):
-        """The level as a MiniHack des (MAP, the doors, the stairs): the same level for NLE."""
+        """The level as a MiniHack des (MAP, the doors, the stairs): the same level for NLE. The stairs are a STAIR line
+        (a '>' in the MAP is no map character: the level does not load), the whole map an unlit region under the lit
+        rooms, the level named mylevel (MiniHack loads its des under that name; its own LevelGenerator writes the same)."""
         rows = []
         for y in range(self.h):
-            rows.append("".join(self.tiles.get((x, y), " ") if self.tiles.get((x, y)) != "+" else "+" for x in range(self.w)))
-        out = ["MAZE: \"exerciser\", ' '", "FLAGS:hardfloor", "INIT_MAP: solidfill,' '", "GEOMETRY:center,center", "MAP"] + rows + ["ENDMAP"]
+            rows.append("".join({">": "."}.get(self.tiles.get((x, y), " "), self.tiles.get((x, y), " ")) for x in range(self.w)))
+        out = ["MAZE: \"mylevel\", ' '", "FLAGS:hardfloor", "INIT_MAP: solidfill,' '", "GEOMETRY:center,center", "MAP"] + rows + ["ENDMAP"]
+        out.append("REGION:(0,0,%d,%d),unlit,\"ordinary\"" % (self.w, self.h))
         for (x0, y0, x1, y1) in self.rooms:
             out.append("REGION:(%d,%d,%d,%d),lit,\"ordinary\"" % (x0, y0, x1, y1))
         for (x, y), st in sorted(self.doors.items()):
