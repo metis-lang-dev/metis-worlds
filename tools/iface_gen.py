@@ -11,7 +11,8 @@ the same tool). No world's names in here: the cut and the members' own declarati
    every pred that crosses between the members, the director, the world — with its nature and its producers and
    consumers. The first run, when the composition's `interfaces:` names the package not written yet, checks a
    copy of the composition without it.
-2. The family's vocabulary: the cut's preds but the protocol's (tick__*) and the resources.
+2. The family's vocabulary: the cut's preds but the protocol's (tick__*) and the resources. None (the members share
+   only the protocol and resources: an empty cut): no package; the tool says so and writes nothing.
 3. Each pred's signature from the members' declarations (`pred NAME(T1, …) : ns.` in their bases, or in the
    family package when it exists already). Several signatures: REFUSED with the list — the one manual step is
    the rename the check demands (refused_take / refused_put …). A pred in the package that no longer crosses:
@@ -149,12 +150,15 @@ def types_of(sigs):
 def generate(composition, family, bases, out_dir=None, metisc="metisc", env=None, write=False):
     """The cut (of the installed COMPOSITION) → the family package and the stripped bases. BASES: {member: base
     file} (the sources to rewrite: the repo's, or the install's); OUT_DIR: where iface/FAMILY.llp goes (default
-    beside the composition). → (iface text, natures, {member: new base text}, problems)."""
+    beside the composition). → (iface text, natures, {member: new base text}, problems); an empty cut → (None,
+    None, the bases unchanged, []): no package to write."""
     c = cut(composition, metisc, env)
     preds = vocabulary(c)
     hier = Path(out_dir).resolve() if out_dir else Path(composition).resolve().parent
     texts = {m: Path(b).read_text() for m, b in bases.items()}
     fam = hier / "iface" / ("%s.llp" % family)
+    if not preds:
+        return None, None, texts, []
     if fam.exists():
         texts["iface"] = fam.read_text()
     sigs = signatures(preds, texts)
@@ -188,5 +192,10 @@ if __name__ == "__main__":
     if problems:
         print("\n".join("REFUSED " + p for p in problems))
         sys.exit(1)
+    if it is None:
+        fam = out / "iface" / ("%s.llp" % family)
+        print("empty cut, no package: the members share only the protocol (tick__*) and resources" +
+              ("; %s exists from before — remove it and its includes by hand" % fam if fam.exists() else ""))
+        sys.exit(0)
     print(it, end="")
     print("stripped:", ", ".join(m for m in bases if new[m] != before[m]) or "none")
