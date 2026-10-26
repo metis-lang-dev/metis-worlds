@@ -105,3 +105,29 @@ def test_cases_4_and_5_on_the_exerciser(tmp_path):
     on = next(x for x in r5["rows"] if any(f.startswith("go_on") for f in x["fired"]))
     assert on["ego"] == "c10_3" and on["t"] > back["t"]                        # backed off to the junction, then round
     assert any(x["ego"] == "c15_8" for x in r5["rows"])                        # the way round (y = 8)
+
+
+
+def test_a_priority_holder_responds_once_the_other_cannot_stop():
+    """road step 5b (RSS rule 5: right of way is given, not taken): at a crossing the ego has priority over, the
+    onset decision (Def 18: the other was able to stop) keeps the blame the other's and the response none while the
+    other can still stop braking its hardest from its speed; once it is past that last point (past_last_stop), the
+    ego brakes (brake_min) and keeps braking while the pair is dangerous; dropped once safe."""
+    from semantic_world.situation import Dynamics, Pair, Situation
+    ego = Dynamics(vmin=16.67, vmax=16.67, accel=2.0, brake_min=4.0, brake_max=8.0, rho=0.5, min_dist=1.0)
+    def pair(o_v, o_enter, d_enter):
+        obj = Dynamics(vmin=o_v, vmax=o_v, accel=2.0, brake_min=4.0, brake_max=8.0, rho=0.5, min_dist=1.0)
+        return Pair("x:xing_ego_prio:j", "xing_ego_prio", ego=ego, obj=obj,
+                    d_enter=d_enter, d_leave=d_enter + 8.0, o_enter=o_enter, o_leave=o_enter + 8.0)
+    sit = Situation()
+    [s] = sit.check([pair(2.0, 20.0, 80.0)])                   # it can stop: safe (Def 17 case 1)
+    assert not s.dangerous and s.xing == "able_to_stop" and s.resp_lon == "none"
+    [s] = sit.check([pair(6.0, 6.0, 40.0)])                    # dangerous (its stated distance passes the line), but
+    assert s.dangerous and s.xing_before[0] == "able_to_stop"  # braking hard from 6 m/s it stops in 3.25 m < 6: none,
+    assert s.resp_lon == "none"                                # the right of way the ego's, the other must brake
+    [s] = sit.check([pair(10.0, 5.0, 30.0)])                   # 10 m/s, 5 m off: past its last stop (7.25 m)
+    assert s.dangerous and s.resp_lon == "brake_min" and s.xing_before[0] == "able_to_stop"   # blame unchanged
+    [s] = sit.check([pair(3.0, 4.0, 22.0)])                    # it brakes late: still dangerous, held
+    assert s.dangerous and s.resp_lon == "brake_min"
+    [s] = sit.check([pair(0.0, 30.0, 80.0)])                   # safe again: the escalation dropped
+    assert not s.dangerous and s.resp_lon == "none" and not sit.escalated
