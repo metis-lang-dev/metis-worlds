@@ -3,7 +3,8 @@ of metis-catalog domains/road (responder, planner; the director has its own) get
 one RoadWorld (SHARED, keyed by the run). The world's facts come from road_facts (the projection every road host makes),
 the commands go through restrict (the one restrictor), so the SUMO host (step 4) speaks the same interface.
 
-    the run: $METIS_ROAD_RUN, a JSON file {"scenario", "seed", "log"?}; without it, the cruise scenario, seed 1
+    the run: $METIS_ROAD_RUN, a JSON file {"scenario", "seed", "log"?, "world"?, ...}; without it, the cruise
+                       scenario, seed 1; "world": "sumo" runs sumo_host.Loop(run) instead of the exerciser (new_world)
     reading(counts)    the world's facts (road_facts.facts), filtered to the member's world-private preds, latched at
                        the member's clock period (the planner sees the world every tenth step)
     tick(counts)       the responder's host steps the world one DT (the fast member is the world's clock); then the
@@ -34,6 +35,15 @@ def run_spec():
     return {"scenario": "cruise", "seed": 1, "key": "default"}
 
 
+def new_world(run):
+    """The run's world: the exerciser (RoadWorld), or with "world": "sumo" nina's sumo_host.Loop, which presents
+    RoadWorld's face (observe, command, step, tick, t, log, arrived, summary)."""
+    if run.get("world") == "sumo":
+        import sumo_host
+        return sumo_host.Loop(run)
+    return road_world.RoadWorld(run.get("scenario", "cruise"), int(run.get("seed", 1)))
+
+
 def manifest(package_dir):
     p = os.path.join(package_dir, "domain.yaml")
     if not os.path.exists(p):
@@ -54,8 +64,7 @@ class RoadHost:
         self.steps = self.spec == "responder"
         run = run_spec()
         if run["key"] not in SHARED:
-            SHARED[run["key"]] = {"world": road_world.RoadWorld(run.get("scenario", "cruise"), int(run.get("seed", 1))),
-                                  "log": run.get("log") or os.environ.get("METIS_ROAD_LOG")}
+            SHARED[run["key"]] = {"world": new_world(run), "log": run.get("log") or os.environ.get("METIS_ROAD_LOG")}
         self.shared = SHARED[run["key"]]
         self.road = self.shared["world"]           # (the world(lines) face is AgentHost's: no attribute of that name)
         self.beat, self.due, self.script, self.last = 0, (), {}, None

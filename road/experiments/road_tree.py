@@ -5,7 +5,10 @@ exerciser (road/world: road_world through road_host). No model, no person: the p
 destination, the responder answers the situation layer.
 
     cd metis-agent/py && METIS_CATALOG=<metis-catalog> PYTHONPATH=$PWD:<worlds>/libs/semantic-world \\
-        .venv/bin/python <worlds>/road/experiments/road_tree.py SCENARIO SEED [SEED …] [--ticks N] [--out DIR]
+        .venv/bin/python <worlds>/road/experiments/road_tree.py SCENARIO SEED [SEED …] [--ticks N] [--out DIR] \\
+        [--world sumo] [--vehicles N]
+
+--world sumo runs nina's SUMO loop (road_host.new_world) in place of the exerciser; --vehicles goes into its run spec.
 
 One process runs the seeds one after another (a run is its own key in road_host.SHARED). Per run, one JSON line: the
 world's summary (collisions, violations, restricted, arrived, t), the journal's (grants, preempts, the responder's
@@ -38,7 +41,7 @@ class NoModel:
         raise RuntimeError("the model is not loaded (%s)" % name)
 
 
-def run(scenario, seed, out_dir, ticks=1500):
+def run(scenario, seed, out_dir, ticks=1500, world_kind=None, vehicles=None):
     from metis_agent import service as S
     import road_host
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -46,7 +49,12 @@ def run(scenario, seed, out_dir, ticks=1500):
     log = out_dir / ("%s-%d.jsonl" % (scenario, seed))
     if log.exists():
         log.unlink()
-    spec.write_text(json.dumps({"scenario": scenario, "seed": seed, "log": str(log), "key": "%s-%d-%f" % (scenario, seed, time.time())}))
+    run_spec = {"scenario": scenario, "seed": seed, "log": str(log), "key": "%s-%d-%f" % (scenario, seed, time.time())}
+    if world_kind:
+        run_spec["world"] = world_kind
+    if vehicles is not None:
+        run_spec["vehicles"] = vehicles
+    spec.write_text(json.dumps(run_spec))
     os.environ["METIS_ROAD_RUN"] = str(spec)
     agent = Path(S.__file__).resolve().parents[1]
     cfg = S.load_config(agent / "config.live.yaml")
@@ -66,7 +74,12 @@ def run(scenario, seed, out_dir, ticks=1500):
             break
     wall = time.perf_counter() - t0
     recs = list(lv.journal.recs)
-    return report(world, recs, log, wall)
+    out = report(world, recs, log, wall)
+    close = getattr(world, "close", None)          # one SUMO at a time: the next seed's world opens after this one shuts
+    if close:
+        close()
+    road_host.SHARED.pop(key, None)
+    return out
 
 
 def report(world, recs, log, wall):
@@ -113,10 +126,12 @@ def main(argv):
         else:
             args.append(a)
     ticks = int(opts.get("--ticks", 1500))
+    world_kind = opts.get("--world")
+    vehicles = int(opts["--vehicles"]) if "--vehicles" in opts else None
     out = Path(opts["--out"]) if "--out" in opts else Path(tempfile.mkdtemp(prefix="road-tree-"))
     scenario, seeds = args[0], [int(x) for x in args[1:]] or [1]
     for seed in seeds:
-        print(json.dumps(run(scenario, seed, out, ticks)))
+        print(json.dumps(run(scenario, seed, out, ticks, world_kind, vehicles)))
         sys.stdout.flush()
 
 
