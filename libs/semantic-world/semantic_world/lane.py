@@ -14,7 +14,7 @@ build the situation layer's pairs; no road runtime, no simulator, and the parked
   not_relevant. The lateral gap is the lanes' centre offset less the cars' half-widths (overlap within one lane).
 
 The roles a road program reads (design §2: ego, lead, leadleft, leadright, follower, a1..ak, nextzone) are bound by
-the projection the road subject will write; here only `role_of` in pairs.
+`roles` (road-world step 2, opus's spec), so that every host projects alike; `pairs` takes the caller's `role_of`.
 
 Road-world step 3 (s-e812715d) adds, keeping every name above: a lane's speed limit, shape, edge and index, the
 junction of an internal lane and the vClasses allowed (filled by net.load_net from a SUMO net); a zone's junction and
@@ -93,6 +93,10 @@ VCLASS = {
 VCLASS_ALIAS = {"private": "passenger", "taxi": "passenger", "evehicle": "passenger", "emergency": "passenger",
                 "delivery": "truck", "bus": "truck", "coach": "truck", "trailer": "truck", "moped": "bicycle"}
 EGO_RHO = 1.0
+
+# The roles `LaneMap.roles` binds, in the order a mover takes the first that fits (then a1..ak, vru1..vruj).
+NEAR_ROLES = ("lead", "follower", "leadleft", "followleft", "leadright", "followright")
+VRU = ("pedestrian", "bicycle")
 
 
 def dynamics_for(vclass, v=None, vmin=None, vmax=None, lane=None, ego=False, vcap_factor=1.0):
@@ -309,3 +313,66 @@ class LaneMap:
                 continue
             out.append(Pair("%s:not_relevant" % o.id, "not_relevant", role=role_of(o), ego=ego.dyn, obj=o.dyn))
         return out
+
+    def roles(self, ego, movers, k=3, j=1, lights=None):
+        """The road roles of MOVERS around EGO → {role: mover id}, a role nobody fills left out. In NEAR_ROLES order,
+        then a1..aK, then vru1..vruJ, a mover taking the first role that fits and no mover two; ties by mover id.
+        - lead: the nearest ahead (`ahead` ≥ 0) on the ego's way, its lane or a later lane of its route; follower:
+          the nearest behind on the ego's lane.
+        - leadleft / followleft: the nearest ahead / behind (by s relative to the ego's) on the ego lane's left
+          neighbour, a same-direction one only; leadright / followright likewise on the right.
+        - a1..aK: the remaining vehicles whose pair (`pairs`, under LIGHTS) is not not_relevant, nearest first by d_lon,
+          at a crossing by d_enter (the ego's: equal for one junction's objects, so then by their own o_enter);
+          vru1..vruJ: the remaining movers of a VRU vClass, by the same rule."""
+        route = ego.route or [ego.lane]
+        la = self.lanes[ego.lane]
+        sides = (("left", None if la.left_opposite else la.left), ("right", None if la.right_opposite else la.right))
+        cand = {r: [] for r in NEAR_ROLES}
+        movers = [o for o in movers if o.id != ego.id]
+        for o in movers:
+            d = self.ahead(route, ego.s, o.lane, o.s)
+            if d is not None and d >= 0:
+                cand["lead"].append((d, o.id))
+            if o.lane == ego.lane and o.s < ego.s:
+                cand["follower"].append((ego.s - o.s, o.id))
+            for side, nb in sides:
+                if nb is not None and o.lane == nb:
+                    rel = o.s - ego.s
+                    cand[("lead" if rel >= 0 else "follow") + side].append((abs(rel), o.id))
+        out, taken = {}, set()
+
+        def take(role, ranked):
+            for _, oid in sorted(ranked):
+                if oid not in taken:
+                    out[role] = oid
+                    taken.add(oid)
+                    return
+        for r in NEAR_ROLES:
+            take(r, cand[r])
+        rest = [o for o in movers if o.id not in taken]
+        near = {False: [], True: []}
+        for o, p in zip(rest, self.pairs(ego, rest, lights=lights)):
+            if p.type != "not_relevant":
+                x = p.type.startswith("xing")
+                near[o.vclass in VRU].append((p.d_enter if x else p.d_lon, p.o_enter if x else 0.0, o.id))
+        for prefix, n, ranked in (("a", k, near[False]), ("vru", j, near[True])):
+            for i, (_, _, oid) in enumerate(sorted(ranked)[:n]):
+                out["%s%d" % (prefix, i + 1)] = oid
+        return out
+
+    def zone_roles(self, ego, movers, roles):
+        """{"nextzone": the id of the zone nearest ahead on EGO's route and not yet left (`nearest_zone`) or None,
+        "holder": the role (in ROLES {role: mover id}, in its order) of a mover inside it, any part of the mover
+        between s_enter and s_leave on a zone lane, or None}."""
+        hit = self.nearest_zone(ego.route or [ego.lane], ego.s, length=ego.length)
+        if hit is None:
+            return {"nextzone": None, "holder": None}
+        z = hit[0]
+        by_id = {o.id: o for o in movers}
+        for role, oid in roles.items():
+            o = by_id.get(oid)
+            if o is not None and o.lane in z.lanes:
+                a, b = z.lanes[o.lane]
+                if o.s >= a and o.s - o.length <= b:
+                    return {"nextzone": z.id, "holder": role}
+        return {"nextzone": z.id, "holder": None}
