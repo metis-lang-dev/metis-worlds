@@ -6,7 +6,7 @@ exception to the grant hysteresis —, strikes the newt when it is beside the ro
 kept its goal and its queued request, resumes with no director call.
 
     .worlds/mh/bin/python experiments/beast_case.py setup OUT [SEED …]
-    cd metis-agent/py && METIS_MH_PY=… PYTHONPATH=$PWD:… .venv/bin/python …/experiments/beast_case.py run OUT [SEED …]
+    cd metis-agent/py && METIS_MH_PY=… .venv/bin/python …/experiments/beast_case.py run OUT [SEED …]
 
 run prints, per seed, the record and the brief's conditions checked off the journal and the NLE steps."""
 import json

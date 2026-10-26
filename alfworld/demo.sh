@@ -9,7 +9,7 @@
 #   --view: the semantic map sees only what the robot sees (semantic-map step 3): it knows the places, a
 #   thing once seen; "a tomato" is looked for place by place, the belief choosing where first.
 #
-#   ADDR (default 127.0.0.1:8398), METIS_AGENT (default the sibling checkout: its py/.venv and models),
+#   ADDR (default 127.0.0.1:8398), METIS_AGENT (default the sibling checkout: its py/.venv and models; METIS_AGENT_DIR: its code, a worktree's),
 #   ROOT (default alfworld/.metis/demo: the catalog the service runs on, rebuilt each start)
 # Say "put the tomato in the microwave"; "put the tomato in the fridge" is the disengagement (the band asks).
 set -euo pipefail
@@ -39,7 +39,9 @@ mkdir -p "$(dirname "$ROOT")"
 cd "$HERE"
 "$PY" experiments/demo.py setup "$GAME" "$ROOT" --port "${ADDR##*:}" ${VIEW[@]+"${VIEW[@]}"}
 export METIS_CATALOG="$ROOT" METIS_ALF_PY="$PY"
-export PYTHONPATH="${METIS_AGENT_DIR:-$AGENT}/py${PYTHONPATH:+:$PYTHONPATH}"
+for p in "$AGENT/py/.venv/bin/python" "$PY"; do      # metis_agent installed in both: the service's venv and the world's (setup.sh)
+  "$p" -c "import metis_agent" 2>/dev/null || { echo "demo.sh: $p lacks metis_agent: $p -m pip install --no-deps -e $AGENT/py" >&2; exit 1; }
+done
 echo "the world page: http://$ADDR/world.html?live=1"
 cd "${METIS_AGENT_DIR:-$AGENT}/py"
 CAP=()

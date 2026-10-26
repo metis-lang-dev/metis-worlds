@@ -45,7 +45,7 @@ def sibling(name):
 
 
 AGENT_HOME = sibling("metis-agent")                                         # its venv and its models
-AGENT_PY = Path(os.environ.get("METIS_AGENT_DIR") or AGENT_HOME) / "py"     # its code (a worktree's, on PYTHONPATH)
+AGENT_PY = Path(os.environ.get("METIS_AGENT_DIR") or AGENT_HOME) / "py"     # its code: the service runs `-m` there (a worktree's)
 
 
 def words_of(h):
@@ -103,7 +103,7 @@ def run_game(game, run, port, timeout):
         shutil.copy(Path(out[spec]) / "alf_host.py", Path(out[spec]) / ("%s_host.py" % spec))
     card_files(run / "root", out["task"])
     words = "bring the %s to the %s" % (words_of(o), words_of(r))
-    env = dict(os.environ, METIS_CATALOG=str(run / "root"), PYTHONPATH=str(AGENT_PY),
+    env = dict(os.environ, METIS_CATALOG=str(run / "root"),
                METIS_ALF_PY=os.environ.get("METIS_ALF_PY", sys.executable))
     svc = subprocess.Popen(["systemd-run", "--user", "--scope", "-q", "-p", "MemoryMax=6G", "nice",
                             str(AGENT_HOME / "py" / ".venv" / "bin" / "python"), "-m", "metis_agent.service",

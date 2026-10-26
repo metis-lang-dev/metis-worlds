@@ -3,7 +3,7 @@ grid map in semantic-world s-227b8e1b step 2: the room's win turn on roles again
 through metis-agent's own DomainAgent (the session the service runs; no model: the program's rules act).
 
     .worlds/mh/bin/python experiments/sw2_roles.py setup OUT
-    cd metis-agent/py && PYTHONPATH=$PWD .venv/bin/python …/experiments/sw2_roles.py run OUT [CASE …] [--out OUT.json]
+    cd metis-agent/py && .venv/bin/python …/experiments/sw2_roles.py run OUT [CASE …] [--out OUT.json]
 
 setup writes the packages under OUT (world/gen_level.generate_roles):
 - medium:     room_medium_apple_newt_closed_none over the role program (the des's map): a door, a newt;

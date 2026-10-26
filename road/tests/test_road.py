@@ -1,6 +1,6 @@
 """The road exerciser's pieces (road-world s-e812715d step 2): the commands and the restrictor (restrict.py, every road
 host's), the facts over roles (road_facts.py), the world (road_world.py). No Live here: the tree demo is
-road/experiments/road_tree.py. Run with libs/semantic-world on the path."""
+road/experiments/road_tree.py. Run in a python with libs/semantic-world installed (metis-agent's venv, or a world's)."""
 import sys
 from pathlib import Path
 

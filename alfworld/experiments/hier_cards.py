@@ -3,7 +3,7 @@ examples and grammar, as metis_agent.intent_check serves one domain) and the fiv
 (the orchestrator's intent_turn + intent_grammar, as it serves several domains), every corpus
 row; a row is right when its verb is AND its mapped atom is the corpus's expected goal atom.
 
-    cd metis-agent/py && PYTHONPATH=$PWD .venv/bin/python …/experiments/hier_cards.py DOMAINS_ROOT CORPORA_DIR OUT_PREFIX [alone|union|both|attended]
+    cd metis-agent/py && .venv/bin/python …/experiments/hier_cards.py DOMAINS_ROOT CORPORA_DIR OUT_PREFIX [alone|union|both|attended]
 
 Runs under metis-agent's venv (the orchestrator's intent_turn/intent_grammar, the mapper, the
 model). DOMAINS_ROOT/<spec>/{<spec>.llp, intent.yaml, domain.yaml}: the reference game's

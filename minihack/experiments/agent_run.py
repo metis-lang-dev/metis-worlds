@@ -2,7 +2,7 @@
 split once, Gemma E2B acting from the card through metis-agent's domain agent (act without a rule:
 the package's manifest `actor: {max_steps, task}`), every step journaled; then the measures.
 
-    cd metis-agent/py && PYTHONPATH=$PWD .venv/bin/python …/minihack/experiments/agent_run.py run OUT_DIR [--split discovery] [--max-steps 40] [--n N]
+    cd metis-agent/py && .venv/bin/python …/minihack/experiments/agent_run.py run OUT_DIR [--split discovery] [--max-steps 40] [--n N]
     …/agent_run.py report OUT_DIR            (no model: the journals → OUT_DIR/report.json and the REPORT §2a tables)
 
 Runs under metis-agent's venv (the domain agent, the mapper, the model); the level's gym is the world's

@@ -9,4 +9,6 @@ if [ "${1:-}" = --check ]; then java -version 2>&1 | head -1; "$V/bin/python" -c
 [ -x "$V/bin/python" ] || python3 -m venv "$V"
 "$V/bin/pip" install -q --upgrade pip
 "$V/bin/pip" install -q 'scienceworld==1.2.3' 'metispy>=0.1.3'
+"$V/bin/pip" install -q -e "$HERE/../libs/semantic-world"   # semantic_world: the library every world's venv has (libs/)
+"$V/bin/pip" install -q -e "$HERE"      # the world's own modules (world/: pyproject.toml), as the policy driver imports them
 "$V/bin/python" -c "from scienceworld import ScienceWorldEnv; e = ScienceWorldEnv('', envStepLimit=10); print('scienceworld ok,', len(e.get_task_names()), 'task types'); e.close()"

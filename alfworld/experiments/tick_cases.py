@@ -4,7 +4,7 @@ direct stage), each run recorded whole, then compared on the WORLD-FACING stream
 trace (brief v2 §8 D).
 
     ALFWORLD_DATA=… .worlds/alf/bin/python experiments/tick_cases.py setup ROOT
-    cd metis-agent/py && METIS_CATALOG=ROOT METIS_ALF_PY=… ALFWORLD_DATA=… PYTHONPATH=$PWD \\
+    cd metis-agent/py && METIS_CATALOG=ROOT METIS_ALF_PY=… ALFWORLD_DATA=… \\
         .venv/bin/python …/experiments/tick_cases.py run ROOT OUT.jsonl [--tick] [CASE …]
     python3 experiments/tick_cases.py compare A.jsonl B.jsonl
 

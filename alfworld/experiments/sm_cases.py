@@ -4,7 +4,7 @@ typed (WIRE.md intent{domain, id, j}: no model), the map in view mode (the robot
 before it: the architect's RULING 1).
 
     ALFWORLD_DATA=… .worlds/alf/bin/python experiments/sm_cases.py setup ROOT [--all]
-    cd metis-agent/py && METIS_CATALOG=ROOT METIS_ALF_PY=… ALFWORLD_DATA=… PYTHONPATH=$PWD \\
+    cd metis-agent/py && METIS_CATALOG=ROOT METIS_ALF_PY=… ALFWORLD_DATA=… \\
         .venv/bin/python …/experiments/sm_cases.py run ROOT [CASE …] [--out OUT.json]
 
 setup: demo.setup over the fixtures' kitchen (Tomato-Microwave-13) with view=True (--all: every fact).

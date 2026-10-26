@@ -6,7 +6,7 @@ position predicted along the lanes while unseen, NLE's line of sight as the obse
 unchanged (the CONTROL): the host logs, per world step, each beast's intent belief and levels and the per-step table.
 
     .worlds/mh/bin/python experiments/nav_belief.py setup OUT [SEED …]
-    cd metis-agent/py && METIS_MH_PY=… PYTHONPATH=$PWD:… .venv/bin/python …/experiments/nav_belief.py run OUT [SEED …]
+    cd metis-agent/py && METIS_MH_PY=… .venv/bin/python …/experiments/nav_belief.py run OUT [SEED …]
 
 run prints per seed: steps, waits, the outcome, and the levels per tick (from OUT/seedN/.run/steps.jsonl)."""
 import json

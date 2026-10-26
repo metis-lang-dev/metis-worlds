@@ -22,10 +22,13 @@ METISC=../metis-lang/src/metisc ALFWORLD_DATA=../.worlds/alfworld-data ../.world
 ../.worlds/mh/bin/python -m pytest minihack/tests -q
 python3 -m pytest libs/semantic-world/tests -q          # the library alone: no world, no game (CI runs it)
 METISC=../metis-lang/src/metisc ../.worlds/sw/bin/python -m pytest scienceworld/tests -q
+../metis-agent/py/.venv/bin/python -m pytest road/tests -q --deselect road/tests/test_sumo_world.py   # road: no venv of its own
 ```
 
-A branch's tests (a worktree) need `PYTHONPATH=libs/semantic-world` until it is merged: the venvs import main's
-library (the editable install), not the branch's.
+Each world's venv (its `setup.sh`) has `libs/semantic-world` and the world itself (`<world>/pyproject.toml`:
+world/'s modules, which pi's policy driver imports) installed editable, so nothing here goes on a
+`PYTHONPATH`. The editable installs are main's: a branch (a worktree) is tested in a venv that has the
+branch's installed (`pip install -e <worktree>/libs/semantic-world -e <worktree>/<world>`), not by a path.
 
 Nothing here goes into metis-catalog: a world's plug code is the world's own.
 

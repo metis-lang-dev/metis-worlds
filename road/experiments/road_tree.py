@@ -4,8 +4,7 @@ grants, priority(responder, planner), the responder's clock every step, the plan
 exerciser (road/world: road_world through road_host). No model, no person: the planner drives itself to the
 destination, the responder answers the situation layer.
 
-    cd metis-agent/py && PYTHONPATH=$PWD:<worlds>/libs/semantic-world \\
-        .venv/bin/python <worlds>/road/experiments/road_tree.py SCENARIO SEED [SEED …] [--ticks N] [--out DIR] \\
+    cd metis-agent/py && .venv/bin/python <worlds>/road/experiments/road_tree.py SCENARIO SEED [SEED …] [--ticks N] [--out DIR] \\
         [--world sumo] [--vehicles N]
 
 --world sumo runs nina's SUMO loop (road_host.new_world) in place of the exerciser; --vehicles goes into its run spec.

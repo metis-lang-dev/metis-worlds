@@ -4,7 +4,7 @@ own service object (Live: the director, the domains, the journal; the person's R
 id, j}, no model). Each case runs in its own process (the domain modules are cached per process).
 
     .worlds/mh/bin/python experiments/sw2_hier.py setup OUT
-    cd metis-agent/py && PYTHONPATH=$PWD .venv/bin/python …/experiments/sw2_hier.py run OUT [CASE …] [--out F]
+    cd metis-agent/py && .venv/bin/python …/experiments/sw2_hier.py run OUT [CASE …] [--out F]
 
 Cases (each its own root OUT/<case>; every domain compiled over the capacity, no level in any source):
 - room (1):    room_medium_apple_newt_closed_none: a closed door on the way (nav → closed → act opens → nav again)

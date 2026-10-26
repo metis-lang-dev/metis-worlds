@@ -60,4 +60,4 @@ hosts run in the agent's process.
 
 ## Test
 
-`python -m pytest -q tests` (on a branch: `PYTHONPATH=libs/semantic-world`, since the worlds' venvs install main's library; the cases test runs where metispy is importable)
+`python -m pytest -q tests` in a python that has this library installed (`pip install -e libs/semantic-world`: a branch's own, for a branch; the cases test runs where metispy is importable)
