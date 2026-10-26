@@ -184,6 +184,9 @@ def test_loop_projects_the_belief_and_restricts(straight, tmp_path):
     assert acc and acc[0][2] == -4.0                                             # accel capped at −brake_min
     assert loop.restricted == 1 and loop.latency == [1] and loop.violations == [] and loop.life == 9
     assert loop.log[-1]["resp"] == "brake_min" and loop.log[-1]["cmd"] == ["accel", None]
+    assert loop.level_dest == 950.0 and not loop.arrived()
+    loop.proj["ego"].s = 951.0
+    assert loop.arrived()                                                        # s at dest, still in the net
     sm = loop.summary()
     assert sm["collisions"] == 0 and sm["ticks"] == 1 and set(sm["ms"]) >= {"perceive", "project"}
     loop.close()

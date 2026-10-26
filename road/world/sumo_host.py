@@ -29,7 +29,7 @@ from semantic_world.sensing import Sensor
 from semantic_world.situation import Situation
 
 from sumo_perceive import Perception
-from sumo_world import EGO, SumoWorld
+from sumo_world import DESTS, EGO, SumoWorld
 
 
 
@@ -54,7 +54,7 @@ class Loop:
         self.changing = None                          # (side, source lane index, ticks left)
         self.proj = {"binding": {}, "facts": {"now": 1}, "fold": None, "states": [], "ego": None}
         self.tick, self.t, self.warmup = 0, 0.0, 0
-        self.level_dest = level.get("dest")
+        self.level_dest = level.get("dest", DESTS.get(level.get("scenario", "straight")))
         self.violations, self.restricted, self.latency, self.ms = [], 0, [], []
         self.danger_since = None                      # the tick a truth pair first turned dangerous (latency)
         self.prev_truth = {}
@@ -76,6 +76,10 @@ class Loop:
         self.cmd, self.life = cmd, int(life)
 
     def arrived(self):
+        """The exerciser's meaning: the ego's s at the destination (else, with none, the ego off the net)."""
+        ego = self.proj.get("ego")
+        if self.level_dest is not None and ego is not None and ego.s >= self.level_dest:
+            return True
         return self.world.ego_done
 
     def perceive_project(self):
@@ -196,7 +200,9 @@ class Loop:
         def mean(k):
             xs = [m[k] for m in self.ms]
             return round(1000 * sum(xs) / len(xs), 3) if xs else None
-        return {"seed": w.seed, "ticks": self.tick, "t": self.t, "sumo_t": w.t, "ego_done": w.ego_done, "collisions": w.ego_collisions,
+        ego = self.proj.get("ego")
+        return {"seed": w.seed, "ticks": self.tick, "t": self.t, "sumo_t": w.t, "arrived": self.arrived(),
+                "s": round(ego.s, 1) if ego is not None else None, "dest": self.level_dest, "ego_done": w.ego_done, "collisions": w.ego_collisions,
                 "all_collisions": len(w.collisions), "violations": len(self.violations), "restricted": self.restricted,
                 "latency_ticks": self.latency, "first": self.violations[:3],
                 "ms": {k: mean(k) for k in ("restrict", "sumo", "perceive", "project", "account")},

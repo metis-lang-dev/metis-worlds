@@ -38,7 +38,7 @@ def run(out, seed, driver="plain", scenario="straight", ticks=1500, vehicles=10)
     try:
         while loop.tick < ticks:
             DRIVERS[driver](loop)
-            if not loop.step():
+            if not loop.step() or loop.arrived():
                 break
     finally:
         loop.close()
@@ -65,8 +65,8 @@ if __name__ == "__main__":
     for s in a.seeds:
         sm = run(a.out, s, a.driver, a.scenario, a.ticks, a.vehicles)
         lat = sm["latency_ticks"]
-        print("== seed %d: ticks %d done %s collisions %d (all %d) violations %d restricted %d latency max %s n %d; "
-              "ms %s; vehicles ≤ %d" % (s, sm["ticks"], sm["ego_done"], sm["collisions"], sm["all_collisions"],
+        print("== seed %d: ticks %d arrived %s collisions %d (all %d) violations %d restricted %d latency max %s n %d; "
+              "ms %s; vehicles ≤ %d" % (s, sm["ticks"], sm["arrived"], sm["collisions"], sm["all_collisions"],
                                         sm["violations"], sm["restricted"], max(lat) if lat else None, len(lat),
                                         sm["ms"], sm["vehicles_max"]))
         for v in sm["first"]:

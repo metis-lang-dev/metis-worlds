@@ -70,6 +70,8 @@ def straight(work, seed, n=40):
 
 
 SCENARIOS = {"straight": straight}
+DESTS = {"straight": 950.0}       # the ego's destination (s on its lane), short of the net's end: arrived
+                                  # while it is still in the net (TraCI drops a vehicle that leaves)
 
 
 class SumoWorld:
