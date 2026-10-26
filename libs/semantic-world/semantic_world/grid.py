@@ -708,8 +708,8 @@ class GridMap(core.SemanticMap):
 
     # ── the binding ──
     def project(self, k=None):
-        """Bind the roles as the ego stands now, stably: `goal` the route's end, p1..pk the ego's cell, the most likely
-        cell of a beast within two cells, the route's next cells and the cells the beasts are believed on (most
+        """Bind the roles as the ego stands now, stably: `goal` the route's end, p1..pk the ego's cell, the cell of a beast
+        seen within two cells, the route's next cells and the cells the beasts are believed on (most
         likely first); b1 b2 the beasts nearest, target the
         wanted thing. Saved; → the binding."""
         d = self.load()
@@ -733,9 +733,11 @@ class GridMap(core.SemanticMap):
         near = sorted(beasts, key=lambda n: (min(max(abs(xy(c)[0] - ax), abs(xy(c)[1] - ay)) for c in d["belief"][n]), n))[:len(BEAST_ROLES)]
         want = [n for n in d["task"]["want"] if n in d["things"]][:1]
         work = []
-        # a beast within two cells of the ego binds its most likely cell before the route (nav-belief step 3: the
-        # route bends round a beast beside the robot and fills the window, and act cannot name what it would strike)
-        close = [max(d["belief"][n].items(), key=lambda x: (x[1], x[0]))[0] for n in near]
+        # a beast SEEN within two cells of the ego binds its cell before the route (nav-belief step 3: the route bends
+        # round a beast beside the robot and fills the window, and act cannot name what it would strike); a believed
+        # cell never does (step 3b: an unseen jackal's likeliest cell was stone, and act struck it)
+        seen = d.get("_beasts_seen") or {}
+        close = [seen[n] for n in near if n in seen]
         close = [c for c in close if at and max(abs(xy(c)[0] - ax), abs(xy(c)[1] - ay)) <= 2]
         for c in ([at] if at else []) + close + p[1:] + [c for n in near + want
                                                  for c, _ in sorted((d["belief"].get(n) or {}).items(), key=lambda x: (-x[1], x[0]))]:

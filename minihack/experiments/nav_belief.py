@@ -5,7 +5,7 @@ gnome that wanders, a white unicorn that keeps its distance — and the map's ca
 position predicted along the lanes while unseen, NLE's line of sight as the observation). Today's nav and act run
 unchanged (the CONTROL): the host logs, per world step, each beast's intent belief and levels and the per-step table.
 
-    .worlds/mh/bin/python experiments/nav_belief.py setup OUT [SEED …] [--policy belief|worst] [--level mines|cross]
+    .worlds/mh/bin/python experiments/nav_belief.py setup OUT [SEED …] [--policy belief|worst] [--level mines|cross|gnome]
     cd metis-agent/py && METIS_MH_PY=… .venv/bin/python …/experiments/nav_belief.py run OUT [SEED …]
 
 run prints per seed: steps, waits, the outcome, and the levels per tick (from OUT/seedN/.run/steps.jsonl).
@@ -37,7 +37,10 @@ CHAMBERS = ((11, 15), (21, 25), (33, 37))
 # north lane (glimpsed up the branches); the peaceful gnome off the main lane (walking into it asks "Really attack?")
 BEASTS = [("jackal", (31, 4), ()), ("gnome", (14, 1), ("peaceful",)), ("white unicorn", (27, 1), ())]
 LEVELS = {"mines": BEASTS,
-          "cross": [("gnome", (23, 7), ("peaceful",)), ("white unicorn", (35, 8), ()), ("jackal", (24, 1), ())]}
+          "cross": [("gnome", (23, 7), ("peaceful",)), ("white unicorn", (35, 8), ()), ("jackal", (24, 1), ())],
+          # step 3b (the ruling): mines with the peaceful gnome loitering beside the route's junction c19_4 (its north
+          # branch): the belief should cross it where the worst case waits
+          "gnome": [("jackal", (31, 4), ()), ("gnome", (19, 3), ("peaceful",)), ("white unicorn", (27, 1), ())]}
 # the beasts' intent priors (hand-set from NetHack's behaviour: a jackal chases, a gnome here wanders, a unicorn
 # keeps its distance) and their speeds (cells a turn, the hero's 12 = 1): the map's only knowledge of them
 PRIORS = {"jackal": {"hostile": 0.5, "wandering": 0.3, "fleeing": 0.2},
