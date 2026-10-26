@@ -402,5 +402,17 @@ def demo(rng):
                        {"id": "ramp1", "lane": "r_0", "s": 420.0 + rng.uniform(0, 20), "v": 9.0}]}
 
 
+def junction_rb_early(rng):
+    """The rule-breaker revealed early (road-2 1b): the main road has priority, and a 15 m truck from the side road
+    does not yield; from rest 13.5 m before its line (s 20; the line at s 33.5) to 5 m/s it is past its last point to
+    stop (5²/16 + 1 = 2.6 m before the line) at about t 3.4, when the ego (s 300, the planner accelerating it) is
+    still about 53 m out against its 35.7 m stop-short distance; it occupies the zone from about t 4.0 to t 7.7,
+    over the ego's unbraked arrival (t 6.1). The rule-5 response can stop the ego short."""
+    go = rng.uniform(0.0, 0.3)
+    return {"ego": _ego(rng, s=300.0, v=11.1), "dest": 460.0, "side_prio": False,
+            "agents": [{"id": "truck", "lane": "c_0", "s": 20.0, "v": 0.0, "moving": False, "breaks_rules": True,
+                        "length": 15.0, "width": 2.5, "script": [(go, "go", None), (go, "v", 5.0)]}]}
+
+
 SCENARIOS = {"cruise": cruise, "lead_brake": lead_brake, "lead_lanes_free": lead_lanes_free, "junction": junction,
-             "junction_side": junction_side, "junction_rb": junction_rb, "cpna25": cpna25, "cpfa50": cpfa50, "merge": merge, "demo": demo}
+             "junction_side": junction_side, "junction_rb": junction_rb, "junction_rb_early": junction_rb_early, "cpna25": cpna25, "cpfa50": cpfa50, "merge": merge, "demo": demo}
