@@ -71,7 +71,7 @@ ALIVE = (0.2, -1.0)    # a beast out of sight fades (exists −0.2 a turn; dropp
 # the response time, in turns: the tree's, measured (the beast case) — act's want is relayed at one boundary, the
 # director's preempt grant latched at the next, so the body answers two turns after the trigger
 RHO = 2.0
-SITUATION = {"oncoming", "closing", "resp_lon"}       # the situation layer's facts (the beast case): the host's, retracted when gone
+SITUATION = {"oncoming", "closing", "resp_lon", "lost"}   # the situation layer's facts (the beast case): the host's, retracted when gone
 # nav-belief s-794cf4c1 step 1: a map that tracks intents (GridMap.build(intents=…)) — the bound beasts' intent level
 # (semantic_world.intent HOSTILE_SURE / HOSTILE_MAYBE), closing level (P(closing within RHO) at CLOSING_LEVELS, as
 # belief-levels-mh) and position support, for a domain that declares them; every step's record and per-step table
@@ -177,7 +177,9 @@ class MhHost:
         """The situation layer's facts in roles (specialist-tree s-404d001f step 3a, the beast case; semantic_world
         .situation over the map's pairs: reach for braking distance): oncoming(B) for a beast coming at the robot along
         the map and dangerous (opposite direction, the gap within both reaches), closing(B) while it is not beside the
-        robot yet, resp_lon(R) the fold's response.
+        robot yet, resp_lon(R) the fold's response, lost(B) for a bound beast no monster(B, P) names this step (out of
+        sight, or on a cell the window does not bind: the route bent round it; act stood for it
+        and would wait on a closing(B) that no longer comes: nav-belief step 3, the belief policy's stall).
         The numbers stay here; the memory of the axis safe before is this host's, across its beats."""
         from semantic_world.situation import Dynamics, Situation
         if getattr(self, "_sit", None) is None:
@@ -185,8 +187,15 @@ class MhHost:
         states = self._sit.check(self.cmap.pairs(rho=RHO))
         fold = Situation.fold(states, Dynamics(vmax=1.0, rho=RHO, min_dist=1.0))
         out = {"resp_lon(%s)" % fold["resp_lon"]: 1}
-        for st in states:
-            if st.role and st.type == "opp_dir" and st.dangerous:
+        d = self.cmap.load()
+        seen, bind = d.get("_beasts_seen") or {}, d.get("binding") or {}
+        cells = set(bind.values())
+        lost = {role for role, n in bind.items()   # in the roles no more: out of sight, or on a cell no role names
+                if d.get("things", {}).get(n, {}).get("kind") == "beast" and seen.get(n) not in cells}
+        for role in lost:
+            out["lost(%s)" % role] = 1
+        for st in states:                          # what act acts on, it can name: a lost beast is neither
+            if st.role and st.role not in lost and st.type == "opp_dir" and st.dangerous:
                 out["oncoming(%s)" % st.role] = 1
                 if st.d_lon > 1:                           # not beside yet: a cell or more between
                     out["closing(%s)" % st.role] = 1

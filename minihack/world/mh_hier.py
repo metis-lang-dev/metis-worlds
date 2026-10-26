@@ -274,6 +274,10 @@ GUARD = ["  %% {B} is coming at me: I take over.",
          "  strike_on [dyn] : struck(B) * said(hit) * $monster(B, P) -o alert(B).",
          "  %% It is no danger now: the way is mine no more.",
          "  stand_down [dyn] : alert(B) * busy * $resp_lon(none) -o idle * tick__done(act) * tick__release(act, motion).",
+         "  %% {B} is out of my sight: I give the way back.",
+         "  lose_sight [dyn] : alert(B) * busy * $lost(B) -o idle * tick__done(act) * tick__release(act, motion).",
+         "  %% It went out of my sight: I give the way back.",
+         "  lose_struck [dyn] : struck(B) * busy * $lost(B) -o idle * tick__done(act) * tick__release(act, motion).",
          "  %% It is down: the way is clear.",
          "  struck_down [dyn] : struck(B) * busy * $resp_lon(none) -o idle * tick__done(act) * tick__release(act, motion).",
          "  %% I was asked to clear {P}: it is the beast I am on already.",
@@ -287,6 +291,7 @@ GUARD_DECLS = ["type resp {none brake_min_correct brake_min}.",
                "pred resp_lon(resp) : act.               % the host's: the fold's response along the way",
                "pred brakes(resp) : act.                 % static: the responses that brake",
                "pred closing(beast) : act.               % the host's: oncoming and not beside yet",
+               "pred lost(beast) : act.                  % the host's: a bound beast out of sight this step",
                "pred alert(beast) : act.", "pred struck(beast) : act.", "pred braced(beast) : act.",
                "pred fighting : act.", "pred owed(cell) : act."]
 GUARD_CASE = {"case": "a beast comes at the robot: act takes the body by itself, stands, strikes it beside, gives the body back",
@@ -311,7 +316,7 @@ ABSORB_CASE = {"case": "act, already on a beast by itself, is asked to fight it 
                    {"world": ["agent_at(p1)", "next(p1, e, p2)", "step(p2)", "resp_lon(none)"],
                     "expect": {"out": ["cleared(p2)", "tick__done(act)", "tick__release(act, motion)"], "status": "success",
                                "fired": ["struck_down", "pay"]}}]}
-TREE_DYN = {"act": ("oncoming", "closing", "resp_lon")}     # the tree variant's own readings (the beast case)
+TREE_DYN = {"act": ("oncoming", "closing", "resp_lon", "lost")}     # the tree variant's own readings (the beast case; lost: nav-belief step 3)
 
 
 def base(spec, geometry="pred", tree=False, policy=None):
