@@ -14,7 +14,6 @@ PATH="$V/pybin:$PATH" "$V/bin/pip" install -q --upgrade pip
 PATH="$V/pybin:$PATH" "$V/bin/pip" install -q 'alfworld[full]==0.4.2'
 PATH="$V/pybin:$PATH" "$V/bin/pip" install -q 'metispy>=0.1.3'      # metis.host, metis.repl: the world's host and the experiments (metis-packages)
 PATH="$V/pybin:$PATH" "$V/bin/pip" install -q -e "$HERE/../libs/semantic-world"   # semantic_world: the map, its belief, the ports (libs/)
-PATH="$V/pybin:$PATH" "$V/bin/pip" install -q -e "$HERE"      # the world's own modules (world/: pyproject.toml), as the policy driver imports them
 AGENT="${METIS_AGENT:-$(cd "$HERE/../.." && pwd)/metis-agent}"   # metis_agent (its py/): demo.sh and the experiments that drive the service
 if [ -f "$AGENT/py/pyproject.toml" ]; then PATH="$V/pybin:$PATH" "$V/bin/pip" install -q --no-deps -e "$AGENT/py"
 else echo "setup.sh: no metis-agent at $AGENT (METIS_AGENT): pip install --no-deps -e <metis-agent>/py into $V for demo.sh" >&2; fi

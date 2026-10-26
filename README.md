@@ -25,10 +25,10 @@ METISC=../metis-lang/src/metisc ../.worlds/sw/bin/python -m pytest scienceworld/
 ../metis-agent/py/.venv/bin/python -m pytest road/tests -q --deselect road/tests/test_sumo_world.py   # road: no venv of its own
 ```
 
-Each world's venv (its `setup.sh`) has `libs/semantic-world` and the world itself (`<world>/pyproject.toml`:
-world/'s modules, which pi's policy driver imports) installed editable, so nothing here goes on a
-`PYTHONPATH`. The editable installs are main's: a branch (a worktree) is tested in a venv that has the
-branch's installed (`pip install -e <worktree>/libs/semantic-world -e <worktree>/<world>`), not by a path.
+Each world's venv (its `setup.sh`) has `libs/semantic-world` installed editable (a package: never on a
+`PYTHONPATH`); a world's runtime (`<world>/world`) is reached by its path. The editable install is main's:
+a branch (a worktree) that changes the library is tested in a venv with the branch's installed
+(`pip install -e <worktree>/libs/semantic-world`).
 
 Nothing here goes into metis-catalog: a world's plug code is the world's own.
 
