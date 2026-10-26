@@ -1,7 +1,7 @@
 """sumo_loop.py — the road's closed loop on SUMO (road-world s-e812715d step 4): the SUMO host's Loop per seed, the
 ego's commands from a DRIVER, the accounting per seed and the ms table.
 
-    python3 road/experiments/sumo_loop.py OUT [SEED …] [--driver plain] [--scenario straight] [--ticks N]
+    python3 road/experiments/sumo_loop.py OUT [SEED …] [--driver plain] [--scenario straight] [--ticks N] [--vehicles 10]
 
 Drivers:
   plain   the shield alone: a planner that asks `accel` every planner tick (10 responder ticks), no responder;
@@ -32,9 +32,9 @@ def plain(loop):
 DRIVERS = {"plain": plain}
 
 
-def run(out, seed, driver="plain", scenario="straight", ticks=1500):
-    level = {"scenario": scenario, "seed": seed, "sensor": {"range": 60.0, "miss": 0.0}}
-    loop = sumo_host.Loop(level, os.path.join(out, "work"))
+def run(out, seed, driver="plain", scenario="straight", ticks=1500, vehicles=10):
+    level = {"scenario": scenario, "seed": seed, "sensor": {"range": 60.0, "miss": 0.0}, "scenario_args": {"n": vehicles}}
+    loop = sumo_host.Loop(level, os.path.join(out, "work_%d" % vehicles))
     try:
         while loop.tick < ticks:
             DRIVERS[driver](loop)
@@ -43,7 +43,7 @@ def run(out, seed, driver="plain", scenario="straight", ticks=1500):
     finally:
         loop.close()
     sm = loop.summary()
-    sm["driver"], sm["scenario"] = driver, scenario
+    sm["driver"], sm["scenario"], sm["vehicles"] = driver, scenario, vehicles
     with open(os.path.join(out, "seed%d.json" % seed), "w") as f:
         json.dump(dict(sm, violations_all=loop.violations), f, indent=1)
     with open(os.path.join(out, "log_%d.jsonl" % seed), "w") as f:
@@ -59,10 +59,11 @@ if __name__ == "__main__":
     ap.add_argument("--driver", default="plain")
     ap.add_argument("--scenario", default="straight")
     ap.add_argument("--ticks", type=int, default=1500)
+    ap.add_argument("--vehicles", type=int, default=10)
     a = ap.parse_args()
     os.makedirs(a.out, exist_ok=True)
     for s in a.seeds:
-        sm = run(a.out, s, a.driver, a.scenario, a.ticks)
+        sm = run(a.out, s, a.driver, a.scenario, a.ticks, a.vehicles)
         lat = sm["latency_ticks"]
         print("== seed %d: ticks %d done %s collisions %d (all %d) violations %d restricted %d latency max %s n %d; "
               "ms %s; vehicles ≤ %d" % (s, sm["ticks"], sm["ego_done"], sm["collisions"], sm["all_collisions"],
