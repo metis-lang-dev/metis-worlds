@@ -32,6 +32,9 @@ pred resp_lat(resp) : responder.
 pred resp_lat_left(resp) : responder.       % … the lateral one toward each side
 pred resp_lat_right(resp) : responder.
 pred changing(side) : responder.            % a lane change toward the side runs
+pred signalled(obj, side) : responder.      % what a car shows: its indicator (the host's, road-2 item 2), never a belief
+pred settled_to(obj, side) : responder.     % ... its lane change seen complete: a pair settled away released from the
+                                            %     fold, one settled into my lane decided afresh (the host's situation input)
 pred now : responder.                       % the host's beat: one command a tick
 % the responder's own
 pred idle : responder.
