@@ -139,8 +139,10 @@ class MhHost:
                            "levels": {"hostile": [intent.HOSTILE_SURE, intent.HOSTILE_MAYBE], "closing": list(CLOSING_LEVELS),
                                       "temper": intent.TEMPER, "rho": RHO}, "agent": d["agent"]["at"]})
         msg = out.get("message", "")
-        # NLE keeps the last message on the line: it is an event only when it is new
-        self.events = list(out.get("events", [])) if msg != getattr(self, "message", None) else []
+        # a step's message is that step's own (NLE clears the line each step: '' when nothing was said), so a fresh step
+        # saying what the last one said is a new event — the second "You miss the jackal." is a second miss (nav-belief
+        # step 3: act's strike_on waited on said(hit) forever); the world as another host left it is no new event
+        self.events = list(out.get("events", [])) if fresh or msg != getattr(self, "message", None) else []
         self.message = msg
         self.done, self.won = bool(out.get("done")), bool(out.get("won"))
         self.reward = float(out.get("reward", 0.0))
@@ -325,7 +327,7 @@ class MhHost:
         self.on_event(name, ())
         after = {a for a in self.atoms if a.split("(")[0] not in ("turn", "hunger", "hp")}
         # refused: nothing in the perception changed, nothing won, and the action was not one that changes nothing by
-        # design (WAIT, SEARCH). NLE keeps a repeated message on the line, so the message alone cannot say it twice
+        # design (WAIT, SEARCH). A fight changes no perception, so its events say it was taken
         acted = after != before or self.done or self.reward > 0 or acts[0] in ("WAIT", "SEARCH") \
             or bool(set(self.events) & {"said(hit)", "said(killed)", "said(hurt)"})   # a fight is taken (opus's N4)
         return {"acted": acted, "action": acts, "message": self.message, "events": list(self.events), "reward": self.reward,

@@ -319,3 +319,16 @@ def test_the_hierarchy_is_one_program_for_every_level(tmp_path):
             p = tmp_path / "cave" / "domains" / "hier" / d / ("%s.llp" % d)
             out = subprocess.run([os.environ["METISC"], "--diagnostics-json", str(p)], capture_output=True, text=True, timeout=120)
             assert out.returncode == 0 and '"error"' not in out.stdout, (d, out.stdout[-2000:], out.stderr[-2000:])
+
+
+def test_a_step_that_says_it_again_is_a_new_event():
+    # nav-belief step 3, act's stall: NLE clears its message line each step, so a second "You miss the jackal." after a
+    # second strike is a second miss; dropping it as a repeat left act's strike_on waiting on said(hit) forever
+    h = MhHost.__new__(MhHost)
+    miss = {"atoms": [], "message": "You miss the jackal.", "events": ["said(hit)"]}
+    h._take(miss)
+    assert h.events == ["said(hit)"]
+    h._take(dict(miss))                                  # the next strike, the same words
+    assert h.events == ["said(hit)"]
+    h._take(dict(miss), fresh=False)                     # the world as another host left it: nothing new here
+    assert h.events == []
