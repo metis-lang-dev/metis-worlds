@@ -15,7 +15,8 @@ a1..a3, vru1). The facts (every number stays here; the rules read classes):
   vacant role is no danger;
 - the lanes: adjacent(D) for a same-direction neighbour on side D; changing(D) while a lane change to D runs;
 - progress: below_limit (the ego under its lane's speed limit by more than 0.5 m/s), else at_limit; lead_slow (the
-  lead within SLOW_RANGE ahead and slower than the ego's limit by more than SLOW_MARGIN), else lead_ok; accel_ok when
+  lead within SLOW_RANGE ahead, slower than the ego's limit by more than SLOW_MARGIN, and the ego not slower than it
+  by more than SLOW_MARGIN: nothing to gain behind it), else lead_ok (accel_ok then brings the ego up to it); accel_ok when
   two plans (2 PLAN_T) of full acceleration keep the lead at a safe distance (gap_room), else accel_no; keep_ok when
   two plans at the speed it has do, else keep_no; at_dest;
 - the next zone on the ego's route (role nextzone): zone_at(nextzone, C) with C far | near | at | in (the ego's
@@ -94,7 +95,7 @@ def facts(lm, ego, v, movers, sit, changing=None, dest=None, turn=None, lights=N
         lead = by_id[roles["lead"]]
         d = lm.ahead(ego.route, ego.s, lead.lane, lead.s)
         lv = (speeds or {}).get(lead.id, lead.dyn.vmax)
-        if d is not None and 0 <= d <= SLOW_RANGE and lv < cap - SLOW_MARGIN:
+        if d is not None and 0 <= d <= SLOW_RANGE and lv < cap - SLOW_MARGIN and v >= lv - SLOW_MARGIN:
             out["lead_slow"] = 1
     if "lead_slow" not in out:
         out["lead_ok"] = 1

@@ -96,3 +96,14 @@ def test_a_car_yields_only_from_another_lane_to_an_ego_with_the_priority():
     assert w._must_yield(side) == j.lanes["c_0"][0]           # the side road to the main road's ego
     same = road_world.Agent(Mover("b", "e_1", j.lanes["e_1"][0] - 10.0), 10.0)
     assert w._must_yield(same) is None                        # the ego's lane, the priority's: it drives on
+
+
+def test_a_lead_slower_than_the_limit_but_faster_than_the_ego_is_no_slow_lead():
+    # nina's SUMO run: the ego at 3.6 behind a lead at 6.7 (the limit 16.67) read lead_slow, so it never accelerated
+    w = road_world.RoadWorld("cruise", 1)
+    lead = Mover("l", "e_1", w.ego.m.s + 30.0)
+    def facts(v_ego, v_lead):
+        return road_facts.facts(w.map, w.ego.m, v_ego, [lead], Situation(), speeds={"l": v_lead})[0]
+    assert "lead_ok" in facts(3.6, 6.7) and "lead_slow" not in facts(3.6, 6.7)    # gaining on it: speed up
+    assert "lead_slow" in facts(6.7, 6.7)                                         # at its speed: follow or change
+    assert "lead_slow" in facts(5.0, 6.7)                                         # within the margin
