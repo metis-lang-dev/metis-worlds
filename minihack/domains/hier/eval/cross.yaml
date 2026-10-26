@@ -1,0 +1,13 @@
+# nav's crossing instrument (nav-belief s-794cf4c1 step 3): the beasts' intent belief, the risk of a contact within
+# four ticks (the predict table's horizon), its level. The cases' manifest; nav's own manifest carries the same
+# fields with model: eval/cross.llp (world/mh_hier.py NAV_INSTRUMENT).
+program: cross.llp
+beliefs:
+  intent: {port: mind, one: I}
+evaluate:
+  contact: {risk: met(_), within: 4, tick: robot}
+levels:
+  cross_risk:
+    from: {evaluate: contact}
+    at: [0.1, 0.3]
+    names: [low, mid, high]

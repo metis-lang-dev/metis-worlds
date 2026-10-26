@@ -79,6 +79,14 @@ SITUATION = {"oncoming", "closing", "resp_lon"}       # the situation layer's fa
 INTENT_FACTS = {"hostile_sure", "hostile_maybe", "closing_sure", "closing_maybe", "support"}
 CLOSING_LEVELS = (0.7, 0.3)
 PREDICT_H = 4
+# nav-belief s-794cf4c1 step 3: nav's crossing policy (level.json "policy": belief | worst; world/mh_hier.py
+# POLICY_RULES): the kind of every bound cell (junction | lane: GridMap.segments' junctions) and the instrument's
+# level cross_risk, from nav's manifest (its world model eval/cross.llp) once a beat over the map's intent belief
+# (mind) and the beasts' contact hazards by tick along the route (contact: GridMap.predict_table, path=route). The
+# instrument: metispy's LevelHook on nav's manifest (CROSS_BACKEND "hook", >= ada88be: tick: and tables by step), or
+# metisc --evaluate on a case written per beat ("metisc": the cross-check). "worst" binds every bound beast hostile.
+POLICY_FACTS = {"cross_risk", "junction", "lane"}
+CROSS_BACKEND = os.environ.get("METIS_CROSS_BACKEND", "hook")
 ROLE_READ = {"agent_at", "floor", "door", "stairs_down", "obj", "monster", "holds", "said", "next", "toward", "step"}
 SHARED = {}            # a hierarchy's one NLE process (level.json `shared`: the map's path): {key: {"gym", "last", "won_at"}}
 
@@ -102,6 +110,7 @@ class MhHost:
         self.fired = []                                 # (rule, the binding it fired under)
         # a hierarchy's domain (mh_hier): its spec, what it reads, the world one process shared by the hierarchy's hosts
         self.spec, self.observed = self.level.get("spec"), set(self.level["observe"]) if "observe" in self.level else None
+        self.policy = self.level.get("policy")             # nav's crossing policy (nav-belief step 3), or None
         self.continues, self.key = bool(self.level.get("continues")), self.level.get("shared")
         self.beat, self.due, self.script, self.last = 0, (), {}, None
         if self.key and self.key in SHARED:             # another host of the hierarchy opened the world: no reset
@@ -198,9 +207,119 @@ class MhHost:
                 r.update(self.situation())
             if self.observed is not None and self.observed & INTENT_FACTS:
                 r.update(self.cmap.intent_facts(CLOSING_LEVELS, RHO))
+            if self.observed is not None and self.observed & POLICY_FACTS:
+                r.update(self.cell_kinds())
+                r.update(getattr(self, "cross_atoms", {}))
             keep = self.observed if self.observed is not None else ROLE_READ   # what the domain declares
             return {a: n for a, n in r.items() if a.split("(")[0] in keep}
         return {a: 1 for a in self.atoms}
+
+    # ── nav's crossing policy (nav-belief step 3) ──
+    def cell_kinds(self):
+        """junction(P) / lane(P) for every bound cell role P: junction for a cell of a junction's crossing zone (the
+        junction, GridMap.segments' lane cell where a branch meets it, and the cells beside it: a diagonal step past
+        the junction crosses it too), lane otherwise."""
+        from semantic_world.grid import cell_roles, name, xy
+        d = self.cmap.load()
+        junctions = {name(x + dx, y + dy) for x, y in map(xy, self.cmap.segments()["junctions"])
+                     for dx in (-1, 0, 1) for dy in (-1, 0, 1)}
+        out = {}
+        for r in cell_roles(d["k"]):
+            c = d["binding"].get(r)
+            if c:
+                out["%s(%s)" % ("junction" if c in junctions else "lane", r)] = 1
+        return out
+
+    def cross_case(self):
+        """The instrument's start and ports for this beat: (init, ports, table) — or None when no beast is bound (the
+        risk is nil: no case). mind from the map's intent belief ("worst": hostile 1), contact by tick from the table
+        along the route; an unbound beast role is bound wandering with no hazard (it is not free: no event)."""
+        from semantic_world import intent
+        from semantic_world.grid import BEAST_ROLES
+        d = self.cmap.load()
+        t = self.cmap.predict_table(PREDICT_H, d, path=self.cmap.route())
+        bound = [b for b in BEAST_ROLES if b in t["roles"]]
+        if not bound:
+            return None
+        mind, rows = {}, [{} for _ in t["rows"]]
+        for b in BEAST_ROLES:
+            p = t["intent"][t["roles"][b]] if b in bound else {"wandering": 1.0}
+            if b in bound and self.policy == "worst":
+                p = {"hostile": 1.0}
+            z = sum(p.get(i, 0.0) for i in intent.INTENTS)
+            for i in intent.INTENTS:
+                mind["mind(%s,%s)" % (b, i)] = round(p.get(i, 0.0) / z, 6)
+            for k, r in enumerate(t["rows"]):
+                for i in intent.INTENTS:
+                    rows[k]["contact(%s,%s)" % (b, i)] = r.get("contact(%s,%s)" % (b, i), 0.0) if b in bound else 0.0
+        for b in BEAST_ROLES:                                  # each group sums to 1 exactly (the rounding's rest)
+            keys = ["mind(%s,%s)" % (b, i) for i in intent.INTENTS]
+            top = max(keys, key=lambda a: mind[a])
+            mind[top] = round(1.0 - sum(mind[a] for a in keys if a != top), 6)
+        init = ["turn"] + ["free(%s)" % b for b in bound] + ["fuel %d" % (PREDICT_H + 1)]
+        return init, {"mind": mind, "contact": rows}, t
+
+    def update_cross(self):
+        """Once a beat: cross_risk from the instrument (CROSS_BACKEND) over cross_case(); low with no beast bound. A
+        refusal or an error asserts no level (nav then neither crosses nor waits at a junction: the report says why)."""
+        t0 = __import__("time").perf_counter()
+        case = self.cross_case()
+        rep = {}
+        if case is None:
+            self.cross_atoms, rep = {"cross_risk(low)": 1}, {"levels": ["cross_risk(low)"], "values": {}, "why": "no beast bound"}
+        else:
+            try:
+                self.cross_atoms, rep = self._cross_metisc(*case[:2]) if CROSS_BACKEND == "metisc" else self._cross_hook(*case[:2])
+            except Exception as e:
+                self.cross_atoms, rep = {}, {"error": "%s: %s" % (type(e).__name__, e)}
+            if os.environ.get("METIS_CROSS_CHECK") and "error" not in rep:   # the other backend, the same case: equal?
+                try:
+                    other = (self._cross_hook if CROSS_BACKEND == "metisc" else self._cross_metisc)(*case[:2])[1]
+                    rep["check"] = {"equal": other.get("values") == rep.get("values") and other.get("levels") == rep.get("levels"),
+                                    "other": other.get("values")}
+                except Exception as e:
+                    rep["check"] = {"equal": False, "error": "%s: %s" % (type(e).__name__, e)}
+            rep["table"] = case[2]["rows"]
+            rep["mind"] = case[1]["mind"]
+        rep["ms"] = round((__import__("time").perf_counter() - t0) * 1000.0, 1)
+        self._log({"beat": self.beat, "t": self.t, "cross": rep, "policy": self.policy})
+
+    def _cross_metisc(self, init, ports):
+        import subprocess
+        ev = os.path.join(self.package_dir, "eval")
+        flow = lambda m: "{" + ", ".join("%s: %r" % (a, v) for a, v in m.items()) + "}"
+        text = ("manifest: ../cross.yaml\ninit: [%s]\nports:\n  mind: %s\n  contact:\n    step: [%s]\n"
+                % (", ".join(init), flow(ports["mind"]), ",\n           ".join(flow(r) for r in ports["contact"])))
+        os.makedirs(os.path.join(ev, "cases"), exist_ok=True)
+        path = os.path.join(ev, "cases", "beat.yaml")
+        open(path, "w").write(text)
+        metisc = os.environ.get("METISC") or os.path.join(os.path.dirname(HERE), "..", "..", "metis-lang", "src", "metisc")
+        r = subprocess.run([metisc, "--evaluate", path], cwd=ev, capture_output=True, text=True, timeout=30)
+        if r.returncode not in (0, 1):
+            raise RuntimeError((r.stderr or r.stdout).strip()[:300])
+        atoms, values = {}, {}
+        for line in r.stdout.splitlines():
+            if line.startswith("V "):
+                w = line.split()
+                values[w[1]] = w[w.index("=") + 1] if "=" in w else line.split(" in ", 1)[1].split(" ~ ")[0]
+            elif line.startswith("L ") and not line.endswith(" cut"):
+                atoms[line[2:]] = 1
+        return atoms, {"values": values, "levels": sorted(atoms), "backend": "metisc"}
+
+    def _cross_hook(self, init, ports):
+        if getattr(self, "cross_hook", None) is None:
+            import yaml
+            from metis.kernel.evaluate import LevelHook
+            self.cross_hook = LevelHook(yaml.safe_load(open(os.path.join(self.package_dir, "domain.yaml"))), self.package_dir)
+        counts = {}
+        for a in init:
+            atom, _, n = a.partition(" ")
+            counts[atom] = int(n or 1)
+        args = lambda a: tuple(a[a.index("(") + 1:-1].split(","))
+        contact = {args(a): [r[a] for r in ports["contact"]] for a in ports["contact"][0]}
+        atoms, rep = self.cross_hook.levels(counts, {"mind": {args(a): v for a, v in ports["mind"].items()}, "contact": contact})
+        rep["backend"] = "hook"
+        return atoms, rep
 
     def speak(self, text, binding=None):
         """A rule's line said in the world's words (the binding's — the one its rule fired under, when given:
@@ -283,6 +402,8 @@ class MhHost:
             # pass's reading is said in the binding its rules fired under, so a step the rules predicted (agent_at the
             # cell they moved to) reads as predicted; the sync below then brings the new binding in as the beat's input
             self.cmap.project()
+            if getattr(self, "policy", None):              # nav's crossing level, this beat's (nav-belief step 3)
+                self.update_cross()
         dos = self.sync(counts)
         for e in self.handed:                              # last beat's events are over
             dos.append("-%s 1" % e)
@@ -300,7 +421,7 @@ class MhHost:
             have = counts.get(a, 0)
             if n > have:
                 dos.append("+%s %d" % (a, n - have))
-        owned = PERCEIVED | ({"next", "toward", "step"} | SITUATION | INTENT_FACTS if self.cmap is not None else set())   # a role level's geometry is the host's too
+        owned = PERCEIVED | ({"next", "toward", "step"} | SITUATION | INTENT_FACTS | POLICY_FACTS if self.cmap is not None else set())   # a role level's geometry is the host's too
         for a, have in sorted(counts.items()):
             if have > 0 and a not in reading and a.split("(")[0] in owned:
                 dos.append("-%s %d" % (a, have))

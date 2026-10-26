@@ -350,7 +350,9 @@ class GridMap(core.SemanticMap):
                     out["support(%s,%s)" % (role, inv[c])] = 1
         return out
 
-    def predict_table(self, h, d=None):
+    CONTACT = 1                          # a beast in contact: within this many steps of the ego (beside it)
+
+    def predict_table(self, h, d=None, path=None):
         """The belief per step over the next H ticks, for the instrument (nav-belief step 2; metis-lang spec/16 §10.1,
         the architect's ruling on the shape). The ego stands. → {"h": H, "unit": "tick", "beasts": [names], "roles":
         {role: name}, "intent": {name: {intent: p}} (the categorical belief intent(B, I), at this tick: drawn once by
@@ -358,7 +360,10 @@ class GridMap(core.SemanticMap):
         nearer the ego at step t given it has not before and where it is (its belief rolled under intent I's model
         alone, the paths that have not closed yet kept), B its role when bound, else its name — and "marginals":
         {"closing": [[P(nearer than now at t) per beast] …], "near": [[P(within one step at t)] …]} under the intent
-        mixture, for the levels only. Rows are TICKS (one NLE turn): the instrument's events per tick are step 3's."""
+        mixture, for the levels only. Rows are TICKS (one NLE turn): the instrument's events per tick are step 3's.
+        Each row also has the HAZARD of contact, "contact(B,I)": that B, its intent I, comes within CONTACT steps of the
+        ego at step t given it has not before (nav-belief step 3, the crossing's risk) — the ego walking PATH (its
+        route: at PATH[t] at step t, its last cell after its end), else standing."""
         from . import intent
         d = d or self.load()
         at = d["agent"]["at"]
@@ -369,7 +374,25 @@ class GridMap(core.SemanticMap):
         label = {n: r for r, n in roles.items()}
         ims = {n: self._intent_models(d, n) for n in names}
         rows = [{} for _ in range(int(h))]
+        way = list(path or [])[1:] if path and path[0] == at else list(path or [])
+        egos = [way[min(t, len(way) - 1)] if way else at for t in range(int(h))]   # the ego's cell at step t + 1
+        dists = {c: (dist if c == at else self._dist_from(d, c)) for c in set(egos) if c}
         for n in names:
+            for i in intent.INTENTS:
+                bel = dict(d["belief"][n])
+                for t in range(int(h)):
+                    de = dists.get(egos[t], {})
+                    hit, keep = 0.0, {}
+                    for c, m in bel.items():
+                        for c2, q in ims[n][i]({c: 1.0}, 1).items():
+                            if de.get(c2, far) <= self.CONTACT:
+                                hit += m * q
+                            else:
+                                keep[c2] = keep.get(c2, 0.0) + m * q
+                    z = sum(bel.values())
+                    rows[t]["contact(%s,%s)" % (label.get(n, n), i)] = round(hit / z, 4) if z > 0 else 0.0
+                    zk = sum(keep.values())
+                    bel = {c: m / zk for c, m in keep.items()} if zk > 0 else bel
             for i in intent.INTENTS:
                 bel = dict(d["belief"][n])
                 for t in range(int(h)):

@@ -117,3 +117,19 @@ def test_the_per_step_table(tmp_path):
     assert t["intent"]["jackal"]["hostile"] >= intent.HOSTILE_SURE and set(t["intent"]["jackal"]) == set(intent.INTENTS)
     near = [r[0] for r in t["marginals"]["near"]]
     assert near == sorted(near) and near[-1] > near[0]
+
+
+def test_the_contact_hazard_follows_the_ego_along_its_path(tmp_path):
+    """nav-belief step 3: contact(B, I), the first passage of B to within CONTACT of the ego per intent. A chaser four
+    cells away reaches a standing ego within a few steps under hostile, rarely under fleeing; an ego walking
+    toward it meets it sooner."""
+    m = level(tmp_path, ["...........", "    .      ", "    .      "])
+    for c in ("c8_0", "c7_0", "c6_0", "c5_0"):
+        m.cycle({"agent_at(c0_0)", "monster(jackal,%s)" % c}, 1, m.models())
+    stand = m.predict_table(4)
+    walk = m.predict_table(4, path=["c0_0", "c1_0", "c2_0", "c3_0", "c4_0"])
+    survive = lambda t, i: __import__("math").prod(1 - r["contact(jackal,%s)" % i] for r in t["rows"])
+    assert 1 - survive(stand, "hostile") > 0.5 > 1 - survive(stand, "fleeing")
+    assert survive(walk, "hostile") < survive(stand, "hostile")       # walking into it: contact sooner
+    assert all(0.0 <= r["contact(jackal,wandering)"] <= 1.0 for r in walk["rows"])
+    assert [k for k in stand["rows"][0] if k.startswith("closing(")] == [k for k in walk["rows"][0] if k.startswith("closing(")]

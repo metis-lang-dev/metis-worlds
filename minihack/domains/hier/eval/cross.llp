@@ -1,0 +1,42 @@
+% cross — nav's crossing risk, the instrument's world model (nav-belief s-794cf4c1 step 3; metis-lang spec/16 §10.1,
+% rows by tick, and the crossing fixture's cycle). A tick opens at stage robot (the robot's one step along its route,
+% and the beasts held last tick are free again), then stage beasts (one meet-or-pass per free beast). Form (a): a
+% beast that meets the robot is met for good, one contact per beast; its position is not in the state. The host binds
+%   mind(B, I)       the map's categorical intent belief per bound beast (intent(B, I), one I: drawn once a world)
+%   contact(B, I)    by tick: the hazard that B, its intent I, comes within one step of the robot at tick t given it
+%                    has not before, the robot walking its route (semantic_world GridMap.predict_table, path=route)
+% and the start: turn, free(B) for each bound beast, fuel (the ticks it may run). The query: the risk of a contact
+% within the horizon; its level, cross_risk, is what nav reads before it steps onto a junction.
+catalog nav_cross 1.
+provenance text "nav's crossing risk over the beasts' contact hazards by tick" "2026-10-26".
+layers (dyn).
+stages (robot beasts).
+type beast {b1 b2}.
+type intent {hostile wandering fleeing}.
+type risk {low mid high}.
+namespace nx produce (dyn).
+pred turn : nx.
+pred fuel : nx.
+pred free(beast) : nx.
+pred held(beast) : nx.
+pred met(beast) : nx.
+pred intent(beast, intent) : nx.
+pred cross_risk(risk) : nx.
+weight mind(B, I) reads {intent(B, I)}.
+weight contact(B, I) reads {intent(B, I)}.
+stage robot {
+  %% I take my step.
+  go [dyn] : turn -o ().
+  %% {B} is free again.
+  wake [dyn] : held(B) -o free(B).
+}
+%% I have stepped: the beasts' turn.
+qui to_beasts [dyn] : robot -o beasts.
+stage beasts {
+  %% {B}, {I}, reaches me.
+  meet [dyn] : free(B) * $intent(B, I) -o met(B)  @w contact(B, I).
+  %% {B}, {I}, keeps off this tick.
+  pass [dyn] : free(B) * $intent(B, I) -o held(B)  @w ~contact(B, I).
+}
+%% The beasts have moved: the next tick opens at the robot.
+qui to_robot [dyn] : beasts * fuel -o robot * turn.

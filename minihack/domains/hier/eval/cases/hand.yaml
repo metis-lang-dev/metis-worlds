@@ -1,0 +1,10 @@
+# a hand table: one beast b1 believed hostile 0.9, its contact hazards rising as it comes; b2 unbound (no free(b2))
+manifest: ../cross.yaml
+init: [turn, free(b1), fuel 5]
+ports:
+  mind: {mind(b1, hostile): 0.9, mind(b1, wandering): 0.08, mind(b1, fleeing): 0.02, mind(b2, hostile): 0, mind(b2, wandering): 1, mind(b2, fleeing): 0}
+  contact:
+    step: [{contact(b1, hostile): 0.1, contact(b1, wandering): 0.02, contact(b1, fleeing): 0.0, contact(b2, hostile): 0, contact(b2, wandering): 0, contact(b2, fleeing): 0},
+           {contact(b1, hostile): 0.3, contact(b1, wandering): 0.03, contact(b1, fleeing): 0.0, contact(b2, hostile): 0, contact(b2, wandering): 0, contact(b2, fleeing): 0},
+           {contact(b1, hostile): 0.6, contact(b1, wandering): 0.05, contact(b1, fleeing): 0.01, contact(b2, hostile): 0, contact(b2, wandering): 0, contact(b2, fleeing): 0},
+           {contact(b1, hostile): 0.8, contact(b1, wandering): 0.05, contact(b1, fleeing): 0.01, contact(b2, hostile): 0, contact(b2, wandering): 0, contact(b2, fleeing): 0}]
