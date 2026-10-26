@@ -29,7 +29,7 @@ The accounting, ground truth:
 
 Scenarios (SCENARIOS, by name; `seed` varies the traffic's speeds and times within each): cruise, lead_brake
 (road-close: the lead brakes hard), lead_lanes_free (prodcat: a slow lead, the adjacent lanes free), junction (a car
-crosses at the side road; `side_prio`: the side road has priority), cpna25 / cpfa50 (Euro NCAP AEB VRU, metispy
+crosses at the side road; `side_prio`: the side road has priority; junction_rb: it does not yield), cpna25 / cpfa50 (Euro NCAP AEB VRU, metispy
 euroncap_vru.py: a walking adult from the nearside, a running adult from the farside), merge (the zipper), demo (the
 tree demo: all of the above on one road, in turn)."""
 import math
@@ -80,6 +80,7 @@ class Agent:
     target: float = None
     moving: bool = True
     done: bool = False                  # left the map
+    breaks_rules: bool = False          # junction_rb: never yields to an ego with the priority
 
 
 @dataclass
@@ -92,6 +93,7 @@ class Ego:
     changing: str = None                # the lane it leaves while it changes lane
     change_side: str = None             # … and the side it moves to
     change_t: float = 0.0
+    left_from: tuple = None             # (the side the last change left, its start t): settled(D)
     yield_s: float = None               # yield: stop before this s
 
 
@@ -106,7 +108,8 @@ class RoadWorld:
         self.agents = [Agent(Mover(a["id"], a["lane"], a["s"], route=a.get("route"), vclass=a.get("vclass", "passenger"),
                                    length=a.get("length", 0.5 if a.get("vclass") == "pedestrian" else 4.5),
                                    width=a.get("width", 0.5 if a.get("vclass") == "pedestrian" else 1.8)),
-                             a["v"], sorted(a.get("script", [])), moving=a.get("moving", True))
+                             a["v"], sorted(a.get("script", [])), moving=a.get("moving", True),
+                             breaks_rules=a.get("breaks_rules", False))
                        for a in spec["agents"]]
         self.dest = spec.get("dest", 580.0)
         self.sit = Situation()
@@ -136,6 +139,7 @@ class RoadWorld:
             live = self.live()
             self._obs = road_facts.facts(self.map, self.ego.m, self.ego.v, [ag.m for ag in live], self.sit,
                                          changing=self.ego.change_side, dest=self.dest, turn=self.zone_turn,
+                                         left_from=(self.ego.left_from[0], self.t - self.ego.left_from[1]) if self.ego.left_from else None,
                                          speeds={ag.m.id: ag.v for ag in live})
             self._obs_tick = self.tick
         return self._obs
@@ -179,6 +183,7 @@ class RoadWorld:
             to = getattr(self.map.lanes[self.ego.m.lane], lane)
             if to:
                 self.ego.changing, self.ego.change_side, self.ego.change_t = self.ego.m.lane, lane, 0.0
+                self.ego.left_from = ("right" if lane == "left" else "left", self.t)
                 self.ego.m.lane, began = to, True
         prev = {s.id: s for s in states}
         v = max(0.0, min(v0 + a * DT, self.map.vcap(self.ego.m.lane)))
@@ -219,7 +224,7 @@ class RoadWorld:
                 ag.moving = True
         if not ag.moving:
             return
-        line = self._must_yield(ag)
+        line = None if ag.breaks_rules else self._must_yield(ag)
         if line is not None:                                      # right of way is given: it holds before the line
             if ag.m.s >= line - 0.5:
                 ag.v, ag.a = 0.0, 0.0
@@ -343,6 +348,19 @@ def junction_side(rng):
     return junction(rng, side_prio=True)
 
 
+def junction_rb(rng):
+    """The rule-breaker (road step 5): the main road has priority, and the side road's car does not yield — it
+    goes so that, unbraked, it reaches the junction as the ego does (the gate: 0 ego-blamed collisions, the
+    response within rho)."""
+    # the ego (s 300, the planner accelerating it to the limit) reaches the junction line (s 400) at about t 6.1; the
+    # car, from rest at s 5 (about 2 m/s² to 10 m/s), its line at s 33.5 about 5.5 s after it goes: it enters just
+    # before the ego and takes its right of way
+    start = 0.4 + rng.uniform(0.0, 0.4)
+    return {"ego": _ego(rng, s=300.0, v=11.1), "dest": 460.0, "side_prio": False,
+            "agents": [{"id": "xcar", "lane": "c_0", "s": 5.0, "v": 0.0, "moving": False, "breaks_rules": True,
+                        "script": [(start, "go", None), (start, "v", 10.0)]}]}
+
+
 def _walker(rng, speed_kmh, farside, ego_v_kmh=40.0):
     """A Euro NCAP AEB VRU crossing: the walker starts so that, unbraked, it meets the ego at the crosswalk."""
     v = ego_v_kmh * KMH
@@ -385,4 +403,4 @@ def demo(rng):
 
 
 SCENARIOS = {"cruise": cruise, "lead_brake": lead_brake, "lead_lanes_free": lead_lanes_free, "junction": junction,
-             "junction_side": junction_side, "cpna25": cpna25, "cpfa50": cpfa50, "merge": merge, "demo": demo}
+             "junction_side": junction_side, "junction_rb": junction_rb, "cpna25": cpna25, "cpfa50": cpfa50, "merge": merge, "demo": demo}

@@ -1,0 +1,7 @@
+case: "road step 5, the settled side: a slow lead, the lane on the left free but just left (no settled(left)) — the planner does not change back to it, it follows the lead"
+boundaries:
+  - world: [below_limit, lead_slow, accel_ok, keep_ok, adjacent(left), safe_long(leadleft), safe_lat(leadleft), safe_long(followleft), safe_lat(followleft), zone_at(nextzone, none), now]
+    expect: {out: [tick__active(planner), tick__want(planner, controls)], status: running, fired: [drive]}
+  - grant: [controls]
+    deliver: [tick__grant(planner, controls)]
+    expect: {status: running, fired: [decide, keep_lead, back]}

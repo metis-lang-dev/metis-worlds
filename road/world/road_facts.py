@@ -14,6 +14,9 @@ a1..a3, vru1). The facts (every number stays here; the rules read classes):
 - a role nobody fills: type(o, not_relevant), safe_long(o), safe_lat(o), safe_lat_left(o), safe_lat_right(o) — a
   vacant role is no danger;
 - the lanes: adjacent(D) for a same-direction neighbour on side D; changing(D) while a lane change to D runs;
+  settled(D) when no change runs and the ego did not leave side D within SETTLE_S (LEFT_FROM: the world's (side, age
+  s) of its last change): an observed fact of its own manoeuvre, never a belief (road step 5: the planner's change
+  ping-pong between two lanes whose leads both read slow);
 - progress: below_limit (the ego under its lane's speed limit by more than 0.5 m/s), else at_limit; lead_slow (the
   lead within SLOW_RANGE ahead, slower than the ego's limit by more than SLOW_MARGIN, and the ego not slower than it
   by more than SLOW_MARGIN: nothing to gain behind it), else lead_ok (accel_ok then brings the ego up to it); accel_ok when
@@ -27,8 +30,9 @@ a1..a3, vru1). The facts (every number stays here; the rules read classes):
   at all is inside (every mover, not the bound ones only), and holder(nextzone, O) for zone_roles' holder; zclear(nextzone) when it is free and no
   mover on another of its lanes is within APPROACH of it, else zbusy(nextzone); conflict(nextzone) for crossing axes (a zone with a
   priority), share(nextzone) for a merge's (none); turn(nextzone) at a merge when the last to enter came from
-  another lane (the zipper's alternation, TURN: the host's {zone: the lane of the last entrant}), else
-  wait_turn(nextzone);
+  another lane (the zipper's alternation, TURN: the host's {zone: the lane of the last entrant}) and no mover on
+  another of its lanes reaches the line first, else wait_turn(nextzone) (road step 5, yield_merge: the alternation
+  alone gave the ego the turn while the ramp's car arrived first, and the responder braked for its cut-in);
 - the walker: crossing(vru1, on) while it is on a crosswalk lane that crosses the ego's route ahead, near when
   it waits within NEAR_WALK of it;
 - the beat: now (one a tick; the command rules consume it)."""
@@ -64,8 +68,12 @@ def gap_room(pairs, ego, v, cap, accel, t=2 * PLAN_T):
     return gap1 > safe_same_dir(replace(ego.dyn, vmin=v1, vmax=v1), lead.obj)
 
 
-def facts(lm, ego, v, movers, sit, changing=None, dest=None, turn=None, lights=None, speeds=None):
-    """SPEEDS {mover id: v}: the movers' speeds (the lead's for lead_slow)."""
+SETTLE_S = 10.0                 # s: the side the ego left is not settled again before this
+
+
+def facts(lm, ego, v, movers, sit, changing=None, dest=None, turn=None, lights=None, speeds=None, left_from=None):
+    """SPEEDS {mover id: v}: the movers' speeds (the lead's for lead_slow). LEFT_FROM (side, age s): the side the
+    ego's last lane change left, and how long ago."""
     ego.route = ego.route or [ego.lane]
     roles = lm.roles(ego, movers, lights=lights)
     role_of = {m: r for r, m in roles.items()}
@@ -88,6 +96,10 @@ def facts(lm, ego, v, movers, sit, changing=None, dest=None, turn=None, lights=N
             out["adjacent(%s)" % side] = 1
     if changing:
         out["changing(%s)" % changing] = 1
+    else:
+        for side in ("left", "right"):
+            if not (left_from and left_from[0] == side and left_from[1] < SETTLE_S):
+                out["settled(%s)" % side] = 1
     cap = lm.vcap(ego.lane)
     out["below_limit" if v < cap - 0.5 else "at_limit"] = 1
     by_id = {m.id: m for m in movers}
@@ -133,7 +145,11 @@ def facts(lm, ego, v, movers, sit, changing=None, dest=None, turn=None, lights=N
         if prio is None:
             out["share(nextzone)"] = 1
             last = (turn or {}).get(z.id)
-            out["turn(nextzone)" if last is None or last != rl else "wait_turn(nextzone)"] = 1
+            t_ego = max(0.0, front) / max(v, 0.1)
+            first = any(0 <= z.lanes[m.lane][0] - m.s <= APPROACH
+                        and (z.lanes[m.lane][0] - m.s) / max((speeds or {}).get(m.id, 0.0), 0.1) <= t_ego
+                        for m in movers if m.lane in z.lanes and m.lane != rl and not inside(z, m))
+            out["turn(nextzone)" if (last is None or last != rl) and not first else "wait_turn(nextzone)"] = 1
         else:
             out["conflict(nextzone)"] = 1
     else:

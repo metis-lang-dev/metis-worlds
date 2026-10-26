@@ -27,6 +27,7 @@ pred safe_long(obj) : planner.
 pred safe_lat(obj) : planner.
 pred adjacent(side) : planner.              % a same-direction lane on that side
 pred changing(side) : planner.
+pred settled(side) : planner.               % no change runs, and the ego did not leave that side lately (the host's)
 pred below_limit : planner.
 pred at_limit : planner.
 pred lead_slow : planner.                   % a slow lead within reach ahead
@@ -94,8 +95,8 @@ stage safety {
 %% Nothing calls for a yield, the controls are mine: I go on with the plan.
 qui decide [dyn] : safety * $tick__grant(planner, controls) * now -o progress * go.
 stage progress {
-  %% The lead is slow and the {D} lane is safe ahead and behind: I change to it.
-  change [dyn] : $busy * $tick__grant(planner, controls) * $lead_slow * $adjacent(D) * $side_lead(D, L) * $safe_long(L) * $safe_lat(L) * $side_follow(D, F) * $safe_long(F) * $safe_lat(F) * $zone_at(nextzone, C) * $roomy(C) * go -o ().
+  %% The lead is slow and the {D} lane is safe ahead and behind, and I did not just leave it: I change to it.
+  change [dyn] : $busy * $tick__grant(planner, controls) * $lead_slow * $adjacent(D) * $settled(D) * $side_lead(D, L) * $safe_long(L) * $safe_lat(L) * $side_follow(D, F) * $safe_long(F) * $safe_lat(F) * $zone_at(nextzone, C) * $roomy(C) * go -o ().
   %% Below the limit, nothing slow ahead, room before the lead: I speed up.
   accel [dyn] : $busy * $tick__grant(planner, controls) * $below_limit * $lead_ok * $accel_ok * go -o ().
   %% Below the limit, but no room to speed up before the lead: I keep my speed.

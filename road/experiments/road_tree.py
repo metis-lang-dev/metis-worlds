@@ -108,13 +108,21 @@ def report(world, recs, log, wall):
             last = ("planner", r["command"])
         elif r["member"] == "responder":
             last = ("responder", last[1] if last else None)
+    # planner-vs-planner (road step 5): a change to one side, then a change back within SETTLE_S
+    flips, prev = 0, None
+    for r in cmds:
+        if r["member"] == "planner" and r["command"][0] == "change":
+            side, at = r["command"][1], r["t"]
+            if prev and prev[0] != side and at - prev[1] <= 10.0:           # SETTLE_S
+                flips += 1
+            prev = (side, at)
     s = world.summary()
     s.update({"wall_s": round(wall, 2), "ticks": world.tick, "grants": len([g for g in grants if g[1] == "grant"]),
               "preempts": pre, "responder_cmds": sum(1 for r in cmds if r["member"] == "responder"),
               "planner_cmds": sum(1 for r in cmds if r["member"] == "planner"),
               "planner_kinds": sorted({r["command"][0] for r in cmds if r["member"] == "planner"}),
               "responder_kinds": sorted({r["command"][0] for r in cmds if r["member"] == "responder"}),
-              "latency_ticks": lat, "ping_pong": pp, "trace_rows": beats})
+              "latency_ticks": lat, "ping_pong": pp, "change_flips": flips, "trace_rows": beats})
     return s
 
 

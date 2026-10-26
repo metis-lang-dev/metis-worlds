@@ -92,7 +92,9 @@ class Loop:
         f, binding, fold, states = road_facts.facts(self.lanemap, ego, ego.dyn.vmax, movers, self.sit,
                                                     changing=self.changing[0] if self.changing else None,
                                                     dest=self.level_dest, lights=lights,
-                                                    speeds={m.id: m.dyn.vmax for m in movers})
+                                                    speeds={m.id: m.dyn.vmax for m in movers},
+                                                    left_from=(self.left_from[0], self.t - self.left_from[1])
+                                                    if getattr(self, "left_from", None) else None)
         self.proj = {"binding": binding, "facts": f, "fold": fold, "states": states, "ego": ego}
         self.prev_truth = truth
         return truth, movers, ego, lights, t3
@@ -112,6 +114,7 @@ class Loop:
         elif lane in ("left", "right") and getattr(self.lanemap.lanes[ego.lane], lane):
             target = idx + (1 if lane == "left" else -1)             # SUMO's index 0 is the rightmost
             self.changing = (lane, idx, int(round(restrict.CHANGE_S / self.world.dt)))
+            self.left_from = ("right" if lane == "left" else "left", self.t)     # settled(D): the side it left
         self.world.control(a, target)
         if self.life > 0:
             self.life -= 1

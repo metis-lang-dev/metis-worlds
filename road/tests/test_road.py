@@ -107,3 +107,25 @@ def test_a_lead_slower_than_the_limit_but_faster_than_the_ego_is_no_slow_lead():
     assert "lead_ok" in facts(3.6, 6.7) and "lead_slow" not in facts(3.6, 6.7)    # gaining on it: speed up
     assert "lead_slow" in facts(6.7, 6.7)                                         # at its speed: follow or change
     assert "lead_slow" in facts(5.0, 6.7)                                         # within the margin
+
+
+def test_the_merge_waits_when_the_other_lane_arrives_first():
+    # road step 5 (yield_merge): the alternation alone gave the ego the turn while the ramp's car reached the line first
+    w = road_world.RoadWorld("merge", 1)
+    m = next(z for z in w.map.zones if z.priority is None and "r_0" in z.lanes)
+    a_ego, a_ramp = m.lanes["e_0"][0], m.lanes["r_0"][0]
+    w.ego.m.s = a_ego - 30.0
+    def facts(ramp_gap):
+        ramp = Mover("r", "r_0", a_ramp - ramp_gap)
+        return road_facts.facts(w.map, w.ego.m, 11.0, [ramp], Situation(), speeds={"r": 11.0}, turn={m.id: None})[0]
+    assert "wait_turn(nextzone)" in facts(10.0) and "turn(nextzone)" not in facts(10.0)    # it is there first
+    assert "turn(nextzone)" in facts(45.0)                                                 # the ego is first
+
+
+def test_the_side_just_left_is_not_settled():
+    w = road_world.RoadWorld("cruise", 1)
+    f = lambda lf, ch=None: road_facts.facts(w.map, w.ego.m, 11.0, [], Situation(), left_from=lf, changing=ch)[0]
+    assert "settled(left)" in f(None) and "settled(right)" in f(None)
+    assert "settled(left)" not in f(("left", 3.0)) and "settled(right)" in f(("left", 3.0))
+    assert "settled(left)" in f(("left", road_facts.SETTLE_S + 1))
+    assert not any(k.startswith("settled(") for k in f(None, "left"))                     # while a change runs
