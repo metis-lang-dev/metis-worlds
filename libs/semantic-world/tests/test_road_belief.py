@@ -72,3 +72,22 @@ def test_the_table_hazard_follows_the_intent(tmp_path):
     assert t["unit"] == "tick" and len(t["rows"]) == 4
     assert cr[0] > 0.1 and all(k < 0.02 for k in kp), (cr, kp)
     assert set(t["intent"][n]) == set(road.INTENTS)
+
+
+def test_cars_a_bin_apart_keep_their_tracks_by_exact_sighting():
+    """Three cars on one lane a few metres apart, moving together: each keeps its track tick after tick (the exact
+    association; a cell gate swapped them, and the situation layer's pair memory followed the wrong car)."""
+    from semantic_world.lane import Lane, LaneMap
+    from semantic_world.road import RoadMap
+    import tempfile, os
+    lm = LaneMap([Lane("a", 500.0, left="b"), Lane("b", 500.0, right="a")])
+    m = RoadMap.build(os.path.join(tempfile.mkdtemp(), "m.json"), lm, dt=0.1)
+    cars = {"x": 20.0, "y": 27.0, "z": 33.0}
+    names = None
+    for k in range(30):
+        dets = [{"class": "passenger", "lane": "a", "s": s + 0.7 * k, "speed": 7.0} for s in cars.values()]
+        m.cycle(dets, (), {"lane": "a", "s": 0.0, "speed": 7.0, "route": ["a"]})
+        d = m.load()
+        order = sorted(d["pos"], key=lambda t: d["pos"][t]["s"])
+        names = names or order
+        assert order == names and len(d["pos"]) == 3

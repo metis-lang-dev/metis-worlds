@@ -37,6 +37,7 @@ PRIORS = {"passenger": {"keep": 0.7, "change_left": 0.1, "change_right": 0.1, "y
           "pedestrian": {"keep": 0.2, "change_left": 0.0, "change_right": 0.0, "yield": 0.3, "cross": 0.5}}
 ALIVE = (0.05, -4.0)                           # an unseen track's exists falls 0.05 a tick, dropped below -4
 EPS = 1e-4
+GATE_MIN, LANE_COST = 3.0, 2.0                # the exact association's gate (m) and a lane crossed's cost (m)
 
 
 def cell(lane, s):
@@ -190,8 +191,7 @@ class RoadMap(core.SemanticMap):
             gap = clock - (last.get(t) or (None, clock))[1]
             return 1 + int(math.ceil(max(1.0, d["speed"].get(t, 0.0)) * dt * max(1, gap) / BIN * 1.5))
         kinds = {t: d["things"][t]["class"] for t in d["things"]}
-        sub = {"things": d["things"], "belief": d["belief"]}
-        named = bayes.associate(sub, sightings, self.neighbours, radius, kind_of=lambda t: kinds[t]) if sightings else []
+        named = self.associate(d, detections, sightings, radius) if sightings else []
         seen = {}
         for (t, c), x in zip(named, detections):
             if t not in d["things"]:
@@ -237,6 +237,70 @@ class RoadMap(core.SemanticMap):
         if save:
             self.save()
         return True
+
+    def offset(self, lane, s, lane2, s2):
+        """The along-road offset from (LANE, S) to (LANE2, S2) and the lanes crossed: (ds, 0) on the lane or a successor
+        (ds through the lane's end), (ds, 1) on a side neighbour (the same s), None otherwise."""
+        la = self.lanemap.lanes.get(lane)
+        if la is None:
+            return None
+        if lane2 == lane:
+            return s2 - s, 0
+        if lane2 in la.succ:
+            return la.length - s + s2, 0
+        if lane2 in (la.left, la.right):
+            return s2 - s, 1
+        for nxt in la.succ:                                  # a successor's neighbour (a change across a lane's end)
+            ln = self.lanemap.lanes.get(nxt)
+            if ln is not None and lane2 in (ln.left, ln.right):
+                return la.length - s + s2, 1
+        return None
+
+    def associate(self, d, detections, sightings, radius):
+        """DETECTIONS matched to the tracks by their EXACT sightings (d["pos"]): each track's s predicted at its speed
+        over the ticks since last seen, the cost the |offset| of the detection from it plus LANE_COST a lane crossed,
+        within the gate max(GATE_MIN, 1.5 · speed · dt · gap + GATE_MIN) along and one lane across; pairs taken
+        greedily, cheapest first (a cell-level gate swaps two cars a bin apart: the pair memory keyed by track
+        follows the wrong car). A track without an exact sighting goes through bayes.associate's cell gate; a
+        detection no track takes is a new track (bayes's naming: class, class_2, …). → [(track, cell)]."""
+        dt, clock, last, pos = d["dt"], d["clock"], d["last_seen"], d.setdefault("pos", {})
+        cands = []
+        for i, x in enumerate(detections):
+            for t in sorted(d["things"]):
+                if d["things"][t]["class"] != x["class"] or t not in pos or not d["belief"].get(t) and t not in last:
+                    continue
+                gap = max(1, clock - (last.get(t) or (None, clock - 1))[1])
+                v = d["speed"].get(t, 0.0)
+                p = pos[t]
+                off = self.offset(p["lane"], p["s"] + v * dt * gap, x["lane"], x["s"])
+                if off is None:
+                    continue
+                ds, lanes = off
+                if abs(ds) > max(GATE_MIN, 1.5 * v * dt * gap + GATE_MIN):
+                    continue
+                cands.append((abs(ds) + LANE_COST * lanes, i, t))
+        out, used = [None] * len(detections), set()
+        for _, i, t in sorted(cands):
+            if out[i] is None and t not in used:
+                out[i] = t
+                used.add(t)
+        rest = [i for i in range(len(detections)) if out[i] is None]
+        if rest:                                             # the rest by the cell gate, over the tracks not taken
+            sub = {"things": {t: v for t, v in d["things"].items() if t not in used},
+                   "belief": {t: b for t, b in d["belief"].items() if t not in used}}
+            names = set(d["things"])
+            more = bayes.associate(sub, [sightings[i] for i in rest], self.neighbours, radius,
+                                   kind_of=lambda t: d["things"][t]["class"] if t in d["things"] else t)
+            for i, (t, _) in zip(rest, more):
+                if t not in sub["things"] or t in used:      # a new track: bayes's naming over every track's name
+                    k, n, t = detections[i]["class"], 1, detections[i]["class"]
+                    while t in names or t in used:
+                        n += 1
+                        t = "%s_%d" % (k, n)
+                out[i] = t
+                used.add(t)
+                names.add(t)
+        return list(zip(out, [c for _, c in sightings]))
 
     # ── the readings ──
     def danger(self, ego, t, vt, dt):

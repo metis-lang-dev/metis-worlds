@@ -15,8 +15,8 @@ perceived and projected once. One tick (dt 0.1 s, the SUMO step; road_host's res
   4. PROJECT    road_facts.facts over the BELIEF's movers (never the truth): LaneMap.roles, the situation layer
                 (one memory across ticks), the fold, the facts — every road host's projection, no other
   5. ACCOUNT    on the TRUTH: SUMO's collisions with the ego; the RSS violations by the exerciser's definitions
-                (road_world: the applied acceleration above the truth fold's bound, or a pair the ego's own act
-                made dangerous); the latency from a truth pair's first dangerous tick to the first braking applied;
+                (road_world: the applied acceleration above the bound of the truth's fold when it was decided, or a
+                pair the ego's own act made dangerous); the latency from a truth pair's first dangerous tick to the first braking applied;
                 the ms of each stage."""
 import os
 import time
@@ -166,12 +166,14 @@ class Loop:
         pairs = {p.id: p for p in self.lanemap.pairs(ego, others, lights=lights)}
         states = self.truth_sit.check(list(pairs.values()))
         fold = Situation.fold(states, ego.dyn)
-        if applied is not None:
+        before = getattr(self, "_truth_fold", None)       # the truth as it stood when the command was decided
+        if applied is not None and before is not None:
             a, lane, _ = applied
-            hi = restrict.bound(fold, ego.dyn)
+            hi = restrict.bound(before, ego.dyn)
             if a > hi + 1e-9:
                 self.violations.append({"tick": self.tick, "what": "accel above the truth response", "a": a, "max": hi,
-                                        "dangerous": fold["dangerous"]})
+                                        "dangerous": before["dangerous"]})
+        self._truth_fold = fold
         prev = getattr(self, "_prev_states", {})
         for s in states:
             p = prev.get(s.id)
