@@ -64,7 +64,7 @@ if __name__ == "__main__":
     os.makedirs(a.out, exist_ok=True)
     for s in a.seeds:
         sm = run(a.out, s, a.driver, a.scenario, a.ticks, a.vehicles)
-        lat = sm["latency_ticks"]
+        lat = sm["latency_truth"]
         print("== seed %d: ticks %d arrived %s collisions %d (all %d) violations %d optimistic %d restricted %d latency max %s n %d; "
               "ms %s; vehicles ≤ %d" % (s, sm["ticks"], sm["arrived"], sm["collisions"], sm["all_collisions"],
                                         sm["violations"], sm["optimistic"], sm["restricted"], max(lat) if lat else None, len(lat),

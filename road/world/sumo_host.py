@@ -212,7 +212,7 @@ class Loop:
         return {"seed": w.seed, "ticks": self.tick, "t": self.t, "sumo_t": w.t, "arrived": self.arrived(),
                 "s": round(ego.s, 1) if ego is not None else None, "dest": self.level_dest, "ego_done": w.ego_done, "collisions": w.ego_collisions,
                 "all_collisions": len(w.collisions), "violations": len(self.violations), "optimistic": len(self.optimistic), "restricted": self.restricted,
-                "latency_ticks": self.latency, "first": self.violations[:3],
+                "latency_truth": self.latency, "first": self.violations[:3],
                 "ms": {k: mean(k) for k in ("restrict", "sumo", "perceive", "project", "account")},
                 "vehicles_max": max((m["vehicles"] for m in self.ms), default=0)}
 
