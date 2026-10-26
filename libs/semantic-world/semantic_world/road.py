@@ -168,9 +168,10 @@ class RoadMap(core.SemanticMap):
     # ── the cycle ──
     def cycle(self, detections, visible=(), ego=None, save=True):
         """One tick: every track predicted under its intent mixture (the alive decay on the unseen), then the
-        DETECTIONS [{class, lane, s, speed}] associated through the gate and folded in (a new one a new track at its
+        DETECTIONS [{class, lane, s, speed, (length, width)}] associated through the gate and folded in (a new one a new track at its
         class's prior), each seen track's intent updated from its displacement since last seen, the VISIBLE cells
-        with nothing detected negative evidence. EGO {lane, s, speed, route}: the ego's state. → changed."""
+        with nothing detected negative evidence. EGO {lane, s, speed, route}: the ego's state. A seen track's exact
+        sighting is kept in d["pos"] (lane, s) and its size in d["things"]. → changed."""
         d = self.load()
         dt = d["dt"]
         d["clock"] = d.get("clock", 0) + 1
@@ -212,6 +213,10 @@ class RoadMap(core.SemanticMap):
                 if z > 0:
                     d["intent"][t] = {i: round(v / z, 6) for i, v in post.items()}
             d["belief"][t] = {c: 1.0}
+            d.setdefault("pos", {})[t] = {"lane": x["lane"], "s": float(x["s"])}     # the exact sighting (a cell
+            for k in ("length", "width"):                                           # is too coarse for RSS)
+                if k in x:
+                    d["things"][t][k] = float(x[k])
             d["speed"][t] = float(x.get("speed", d["speed"].get(t, 0.0)))
             d["exists"][t] = min(bayes.L_MAX if hasattr(bayes, "L_MAX") else 4.0, d["exists"].get(t, 0.0) + 1.0)
             last[t] = [c, clock]
