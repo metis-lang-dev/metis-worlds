@@ -82,3 +82,17 @@ def test_every_scenario_is_safe_under_the_restrictor_alone(scenario):
         w.step()
     s = w.summary()
     assert s["collisions"] == 0 and s["violations"] == 0, s
+
+
+def test_a_car_yields_only_from_another_lane_to_an_ego_with_the_priority():
+    w = road_world.RoadWorld("cruise", 1)
+    cw = next(z for z in w.map.zones if z.priority == "w_0" and "e_1" in z.lanes)
+    j = next(z for z in w.map.zones if z.priority == "e_1")
+    ahead = road_world.Agent(Mover("a", "e_1", cw.lanes["e_1"][0] - 10.0), 10.0)   # the ego's lane, at the crosswalk
+    w.ego.m.s = cw.lanes["e_1"][0] - 40.0
+    assert w._must_yield(ahead) is None                       # neither has the crosswalk: no yielding to the ego
+    side = road_world.Agent(Mover("x", "c_0", j.lanes["c_0"][0] - 10.0), 10.0)
+    w.ego.m.s = j.lanes["e_1"][0] - 40.0
+    assert w._must_yield(side) == j.lanes["c_0"][0]           # the side road to the main road's ego
+    same = road_world.Agent(Mover("b", "e_1", j.lanes["e_1"][0] - 10.0), 10.0)
+    assert w._must_yield(same) is None                        # the ego's lane, the priority's: it drives on

@@ -240,14 +240,14 @@ class RoadWorld:
                 ag.done = True
 
     def _must_yield(self, ag, band=60.0):
-        """A scripted car without priority at the next zone on its lane yields to the ego approaching or inside it
-        (an other that keeps the rules): → the s of its line, or None."""
+        """A scripted car at the next zone on its lane yields to the ego approaching or inside it when the ego's lane
+        has the zone's priority (an other that keeps the rules): → the s of its line, or None."""
         if ag.m.vclass in ("pedestrian", "bicycle"):
             return None
         ego = self.ego.m
         for z in self.map.zones:
-            if ag.m.lane not in z.lanes or z.priority in (None, ag.m.lane) or ego.lane not in z.lanes:
-                continue
+            if ag.m.lane not in z.lanes or ego.lane not in z.lanes or z.priority != ego.lane or ag.m.lane == ego.lane:
+                continue                                          # only on another lane, to an ego with the priority
             a, _ = z.lanes[ag.m.lane]
             if ag.m.s >= a or a - ag.m.s > band:
                 continue                                          # its front at the line or past it (it clears), or far
