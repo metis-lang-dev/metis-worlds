@@ -180,12 +180,13 @@ class LaneMap:
             return zone.priority
         return la if ra > rb else lb
 
-    def crossing(self, route, s0, ways, o_s, lights=None):
+    def crossing(self, route, s0, ways, o_s, lights=None, ego_len=0.0, o_len=0.0):
         """The object's crossing of ROUTE (from s0): every zone a route lane shares with a lane of one of the object's
         WAYS (from o_s on their first lane), not yet left by either, grouped by junction (a zone without one: by
         itself); the nearest group along the route, MERGED worst-case as ad-rss merges one object's constellations at
         one intersection: the ego's least enter and most leave, the object's likewise, and the least priority for the
-        ego (the object's anywhere → xing_obj_prio; else the same anywhere → xing_same_prio). → (key, type, d_enter,
+        ego (the object's anywhere → xing_obj_prio; else the same anywhere → xing_same_prio). A position is a mover's
+        front: each side leaves a zone when its rear does, its EGO_LEN / O_LEN past s_leave. → (key, type, d_enter,
         d_leave, o_enter, o_leave), or None."""
         groups = {}
         for z in self.zones:
@@ -194,16 +195,18 @@ class LaneMap:
                     continue
                 e_in, e_out = z.lanes[rl]
                 d_in, d_out = self.ahead(route, s0, rl, e_in), self.ahead(route, s0, rl, e_out)
-                if d_out is None or d_out < 0:
+                if d_out is None or d_out + ego_len < 0:
                     continue
+                d_out += ego_len
                 for w in ways:
                     for ol in w:
                         if ol == rl or ol not in z.lanes:
                             continue
                         a, b = z.lanes[ol]
                         oa, ob = self.ahead(w, o_s, ol, a), self.ahead(w, o_s, ol, b)
-                        if ob is None or ob < 0:
+                        if ob is None or ob + o_len < 0:
                             continue
+                        ob += o_len
                         prio = self.priority(z, lights)
                         kind = "xing_same_prio" if prio is None else ("xing_ego_prio" if prio == rl else "xing_obj_prio")
                         g = groups.setdefault(z.junction or z.id, [None, None, None, None, set()])
@@ -219,9 +222,10 @@ class LaneMap:
             else "xing_ego_prio"
         return key, kind, d_in, d_out, o_in, o_out
 
-    def nearest_zone(self, route, s0, lane=None, ways=None):
-        """The zone along ROUTE (from s0 on route[0]) nearest ahead and not yet left: → (zone, the route lane in it,
-        d_enter, d_leave), or None. LANE / WAYS: only zones an object on LANE (or on one of WAYS) shares."""
+    def nearest_zone(self, route, s0, lane=None, ways=None, length=0.0):
+        """The zone along ROUTE (from s0 on route[0]) nearest ahead and not yet left (by the rear of a mover of LENGTH
+        whose front is at s0): → (zone, the route lane in it, d_enter, d_leave), or None. LANE / WAYS: only zones an
+        object on LANE (or on one of WAYS) shares."""
         other = set(l for w in (ways or ([[lane]] if lane else [])) for l in w)
         best = None
         for z in self.zones:
@@ -230,7 +234,7 @@ class LaneMap:
                     continue
                 e_in, e_out = z.lanes[rl]
                 d_in, d_out = self.ahead(route, s0, rl, e_in), self.ahead(route, s0, rl, e_out)
-                if d_out is None or d_out < 0:
+                if d_out is None or d_out + length < 0:
                     continue
                 if best is None or d_in < best[2]:
                     best = (z, rl, d_in, d_out)
@@ -296,7 +300,7 @@ class LaneMap:
                 out.append(Pair("%s:%s" % (o.id, kind), kind, lon, lat, d_lon, d_lat, ego.dyn, o.dyn, role=role_of(o)))
                 continue
             ways = [o.route] if o.route else self.ways(o.lane)
-            hit = self.crossing(route, ego.s, ways, o.s, lights)
+            hit = self.crossing(route, ego.s, ways, o.s, lights, ego.length, o.length)
             if hit is not None:
                 key, kind, d_in, d_out, o_in, o_out = hit
                 out.append(Pair("%s:%s:%s" % (o.id, kind, key), kind, "in_front", "overlap", 0.0, 0.0, ego.dyn, o.dyn,

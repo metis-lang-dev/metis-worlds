@@ -150,3 +150,21 @@ def test_the_nets_are_netconvert_s(tmp_path):
     a, b = load_net(tmp_path / "cross_tls.net.xml"), load_net(DATA / "cross_tls.net.xml")
     assert {k: (v.length, v.succ) for k, v in a.lanes.items()} == {k: (v.length, v.succ) for k, v in b.lanes.items()}
     assert [z.lanes for z in a.zones()] == [z.lanes for z in b.zones()]
+
+
+def test_a_zone_is_left_by_the_rear(cross):
+    m = cross.lanemap()
+    route = m.route_through(["WC_0", "CE_0"])
+    z, rl, _, _ = m.nearest_zone(route, 70.0)
+    (ol,) = set(z.lanes) - {rl}
+    b = z.lanes[ol][1]
+    o = Mover("x", ol, b + 1.0, dynamics_for("passenger", v=8, lane=m.lanes[ol]), route=[ol])
+    (p,) = m.pairs(ego_on(m, route, 70.0), [o])
+    assert p.type.startswith("xing") and math.isclose(p.o_leave, o.length - 1.0)  # its front past, its rear inside
+    gone = Mover("x", ol, b + o.length + 0.1, o.dyn, route=[ol])
+    assert m.pairs(ego_on(m, route, 70.0), [gone])[0].type == "not_relevant"
+    e_in, e_out = z.lanes[rl]
+    ego = ego_on(m, route, 0.0)
+    ego.lane, ego.s = rl, e_out + 1.0
+    ego.route = route[route.index(rl):]
+    assert m.nearest_zone(ego.route, ego.s, length=ego.length)[0] is z            # the ego's rear still in it
