@@ -128,7 +128,8 @@ class Loop:
         t1 = time.perf_counter()
         on = self.world.step()
         t2 = time.perf_counter()
-        self.tick, self.t = self.tick + 1, self.world.t
+        self.tick = self.tick + 1
+        self.t = round(self.tick * self.world.dt, 6)    # the episode's clock (SUMO's own counts the ego's depart)
         if not on:
             self.prev_truth, self.proj["ego"] = {}, None
             return False
@@ -140,7 +141,7 @@ class Loop:
         t5 = time.perf_counter()
         self.ms.append({"restrict": t1 - t0, "sumo": t2 - t1, "perceive": t3 - t2, "project": t4 - t3, "account": t5 - t4,
                         "vehicles": len(truth)})
-        self.log.append({"tick": self.tick, "t": self.world.t, "s": round(ego.s, 2), "v": round(ego.dyn.vmax, 2),
+        self.log.append({"tick": self.tick, "t": self.t, "sumo_t": self.world.t, "s": round(ego.s, 2), "v": round(ego.dyn.vmax, 2),
                          "lane": ego.lane, "a": None if applied is None else round(applied[0], 2),
                          "cmd": None if applied is None else list(applied[2]), "resp": fold["resp_lon"],
                          "seen": len(self.perc.last["seen"]), "tracks": len(movers), "binding": binding})
@@ -195,7 +196,7 @@ class Loop:
         def mean(k):
             xs = [m[k] for m in self.ms]
             return round(1000 * sum(xs) / len(xs), 3) if xs else None
-        return {"seed": w.seed, "ticks": self.tick, "t": w.t, "ego_done": w.ego_done, "collisions": w.ego_collisions,
+        return {"seed": w.seed, "ticks": self.tick, "t": self.t, "sumo_t": w.t, "ego_done": w.ego_done, "collisions": w.ego_collisions,
                 "all_collisions": len(w.collisions), "violations": len(self.violations), "restricted": self.restricted,
                 "latency_ticks": self.latency, "first": self.violations[:3],
                 "ms": {k: mean(k) for k in ("restrict", "sumo", "perceive", "project", "account")},
