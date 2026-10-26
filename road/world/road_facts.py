@@ -13,6 +13,9 @@ a1..a3, vru1). The facts (every number stays here; the rules read classes):
   xing_before(o, C); and the fold's resp_lon(R), resp_lat(R), resp_lat_left(R), resp_lat_right(R);
 - a role nobody fills: type(o, not_relevant), safe_long(o), safe_lat(o), safe_lat_left(o), safe_lat_right(o) — a
   vacant role is no danger;
+- the other cars, as observed (road-2 item 2; a mover's `signal` / `settled`, sumo_perceive): signalled(R, S) while
+  the role's indicator shows side S, settled_to(R, D) for a while after its lane change to side D is seen complete;
+  a pair whose other has settled into a lane not the ego's is left out of the fold (released);
 - the lanes: adjacent(D) for a same-direction neighbour on side D; changing(D) while a lane change to D runs;
   settled(D) when no change runs and the ego did not leave side D within SETTLE_S (LEFT_FROM: the world's (side, age
   s) of its last change): an observed fact of its own manoeuvre, never a belief (road step 5: the planner's change
@@ -78,8 +81,18 @@ def facts(lm, ego, v, movers, sit, changing=None, dest=None, turn=None, lights=N
     roles = lm.roles(ego, movers, lights=lights)
     role_of = {m: r for r, m in roles.items()}
     pairs = lm.pairs(ego, movers, role_of=lambda o: role_of.get(o.id), lights=lights)
+    # a car seen settled INTO the ego's lane: its pair's memory ("laterally safe before", from the lane it came from)
+    # no longer says what the pair is; Def 10 decides it afresh (along the way) while settled_to holds (road-2 item 2)
+    for m in movers:
+        if getattr(m, "settled", None) and m.lane == ego.lane:
+            for p in pairs:
+                if p.id.split(":")[0] == m.id:
+                    sit.memory.pop(p.id, None)
     states = sit.check(pairs)
-    fold = Situation.fold(states, ego.dyn)
+    # road-2 item 2: what the other cars SHOW (sumo_perceive: a mover's signal and settled), world facts, never an
+    # intent belief: a dangerous pair whose other has settled into a lane not the ego's is released from the fold
+    released = {m.id for m in movers if getattr(m, "settled", None) and m.lane != ego.lane}
+    fold = Situation.fold([s for s in states if s.id.split(":")[0] not in released], ego.dyn)
     out = {}
     for a, n in Situation.facts(states, fold, detail=True).items():
         if a.startswith("resp_lat(") and a.count(",") == 2:        # the pair's lateral response: its own name (a
@@ -90,6 +103,13 @@ def facts(lm, ego, v, movers, sit, changing=None, dest=None, turn=None, lights=N
         if r not in bound:
             out.update({"type(%s,not_relevant)" % r: 1, "safe_long(%s)" % r: 1, "safe_lat(%s)" % r: 1,
                         "safe_lat_left(%s)" % r: 1, "safe_lat_right(%s)" % r: 1})
+    by_id = {m.id: m for m in movers}
+    for r, mid in roles.items():
+        m = by_id.get(mid)
+        if m is not None and getattr(m, "signal", None):
+            out["signalled(%s,%s)" % (r, m.signal)] = 1          # its indicator, this tick
+        if m is not None and getattr(m, "settled", None):
+            out["settled_to(%s,%s)" % (r, m.settled)] = 1        # its lane change, seen complete
     lane = lm.lanes[ego.lane]
     for side in ("left", "right"):
         if getattr(lane, side) and not getattr(lane, side + "_opposite"):

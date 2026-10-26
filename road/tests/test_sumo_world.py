@@ -190,3 +190,32 @@ def test_loop_projects_the_belief_and_restricts(straight, tmp_path):
     sm = loop.summary()
     assert sm["collisions"] == 0 and sm["ticks"] == 1 and set(sm["ms"]) >= {"perceive", "project"}
     loop.close()
+
+
+def test_what_a_car_shows_its_indicator_and_its_lane_change(straight):
+    """road-2 item 2: a seen track's indicator (latched over the blink: SIGNAL_TICKS) and its lane change seen
+    complete (the lane changed, the lane offset within SETTLED_LAT: settled to that side for SETTLED_TICKS); observed
+    facts, never an intent belief."""
+    import sumo_perceive as SP
+    lm = straight
+    p = Perception(lm, Sensor(range=60.0), dt=0.1)
+    def step(lane, s, signals=0, lat=0.0):
+        a = dict(pose(lm, lane, s, speed=8.0), signals=signals, lat=lat)
+        movers, _ = p.step({"ego": pose(lm, "E_0", 100.0), "a": a})
+        return movers[0]
+    m = step("E_0", 130.0)
+    assert m.signal is None and m.settled is None
+    m = step("E_0", 131.0, signals=SP.__dict__.get("BLINKER_LEFT", 2))
+    assert m.signal == "left"
+    m = step("E_0", 132.0, signals=0)                    # the blink's dark half: still signalled
+    assert m.signal == "left"
+    for k in range(SP.SIGNAL_TICKS):
+        m = step("E_0", 133.0 + k)
+    assert m.signal is None                              # dark for a second: no longer
+    m = step("E_1", 145.0, lat=-1.2)                     # the lane switched, the car still off the centre
+    assert m.settled is None
+    m = step("E_1", 146.0, lat=0.1)                      # centred: the change is complete, to the left
+    assert m.settled == "left" and m.lane == "E_1"
+    for k in range(SP.SETTLED_TICKS):
+        m = step("E_1", 147.0 + k)
+    assert m.settled is None

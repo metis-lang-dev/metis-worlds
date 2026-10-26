@@ -129,3 +129,33 @@ def test_the_side_just_left_is_not_settled():
     assert "settled(left)" not in f(("left", 3.0)) and "settled(right)" in f(("left", 3.0))
     assert "settled(left)" in f(("left", road_facts.SETTLE_S + 1))
     assert not any(k.startswith("settled(") for k in f(None, "left"))                     # while a change runs
+
+
+def test_what_the_other_cars_show_are_facts_and_a_settled_pair_is_released():
+    """road-2 item 2: signalled(R, S) and settled_to(R, D) from what a bound car shows (a mover's signal / settled);
+    a dangerous pair whose other settled into a lane not the ego's is left out of the fold, and one that settled
+    into the ego's lane is decided afresh (its memory from the lane it came from dropped)."""
+    w = road_world.RoadWorld("cruise", 1)
+    ego = w.ego.m
+    lead = Mover("l", "e_1", ego.s + 12.0, dynamics_for("passenger", v=4.0))
+    side = Mover("s", "e_2", ego.s + 15.0, dynamics_for("passenger", v=11.0))
+    side.signal, side.settled, lead.signal, lead.settled = "right", None, None, None
+    f, binding, fold, _ = road_facts.facts(w.map, ego, 11.0, [lead, side], Situation(), speeds={"l": 4.0, "s": 11.0})
+    role = {m: r for r, m in binding.items()}
+    assert f["signalled(%s,right)" % role["s"]] == 1 and fold["resp_lon"] != "none"      # the slow lead: brake
+    # the lead settles away (to e_0): its dangerous pair is released from the fold
+    lead.lane, lead.settled = "e_0", "right"
+    f, binding, fold, _ = road_facts.facts(w.map, ego, 11.0, [lead], Situation(), speeds={"l": 4.0})
+    role = {m: r for r, m in binding.items()}
+    assert f["settled_to(%s,right)" % role["l"]] == 1 and fold["resp_lon"] == "none"
+    # a car settled INTO the ego's lane: "laterally safe before" (from its lane) no longer holds, Def 10 afresh
+    sit = Situation()
+    cut = Mover("c", "e_2", ego.s + 8.0, dynamics_for("passenger", v=6.0))
+    cut.signal = cut.settled = None
+    road_facts.facts(w.map, ego, 11.0, [cut], sit, speeds={"c": 6.0})                  # beside: laterally safe
+    cut.lane = "e_1"
+    _, _, fold, _ = road_facts.facts(w.map, ego, 11.0, [cut], sit, speeds={"c": 6.0})
+    assert fold["resp_lon"] == "none"                                                   # the memory: lateral only
+    cut.settled = "right"
+    _, _, fold, _ = road_facts.facts(w.map, ego, 11.0, [cut], sit, speeds={"c": 6.0})
+    assert fold["resp_lon"] != "none"                                                   # settled in: along the way

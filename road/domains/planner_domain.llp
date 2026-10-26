@@ -27,7 +27,8 @@ pred safe_long(obj) : planner.
 pred safe_lat(obj) : planner.
 pred adjacent(side) : planner.              % a same-direction lane on that side
 pred changing(side) : planner.
-pred settled(side) : planner.               % no change runs, and the ego did not leave that side lately (the host's)
+pred settled(side) : planner.
+pred signalled(obj, side) : planner.        % its indicator, as shown (the host's: road-2 item 2), never a belief               % no change runs, and the ego did not leave that side lately (the host's)
 pred below_limit : planner.
 pred at_limit : planner.
 pred lead_slow : planner.                   % a slow lead within reach ahead
@@ -69,6 +70,9 @@ closing_in(at).
 bwd yields_to(prio).                        % whose zone the ego yields at
 yields_to(obj).
 yields_to(same).
+bwd toward(side, side).                     % a side lead signalling this way comes into my lane
+toward(left, right).
+toward(right, left).
 bwd soft(resp).                             % the planner's own braking (the responder's is brake_min)
 soft(brake_min_correct).
 bwd roomy(zclass).                          % where a lane change is allowed
@@ -89,6 +93,8 @@ stage safety {
   yield_zone [dyn] : $busy * $tick__grant(planner, controls) * $zone_at(nextzone, C) * $closing_in(C) * $zprio(nextzone, P) * $yields_to(P) * $conflict(nextzone) * $zbusy(nextzone) * now -o ().
   %% A walker is at the crossing ahead: I stop before it.
   yield_walker [dyn] : $busy * $tick__grant(planner, controls) * $crossing(vru1, W) * $zone_at(nextzone, C) * $closing_in(C) * now -o ().
+  %% {L} signals into my lane: I ease off, {R}.
+  brake_cut [dyn] : $busy * $tick__grant(planner, controls) * $side_lead(D, L) * $signalled(L, S) * $toward(D, S) * $soft(R) * now -o ().
   %% The merge ahead: not my turn, and the other lane comes: I let it in.
   yield_merge [dyn] : $busy * $tick__grant(planner, controls) * $zone_at(nextzone, C) * $closing_in(C) * $share(nextzone) * $wait_turn(nextzone) * $zbusy(nextzone) * now -o ().
 }

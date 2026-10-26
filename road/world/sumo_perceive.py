@@ -23,6 +23,9 @@ import tempfile
 from semantic_world import road, sensing
 from semantic_world.lane import Mover, dynamics_for
 
+SETTLED_TICKS = 20                              # settled_to(T, D) holds 2 s after the change is seen complete
+SETTLED_LAT = 0.3                               # m: the lane offset a change is complete within
+SIGNAL_TICKS = 10                               # an indicator blinks: signalled holds 1 s after it was last lit
 CLASS = {"pedestrian": "pedestrian"}            # the belief's classes: a walker, else a car (the priors' table)
 
 
@@ -61,6 +64,8 @@ class Perception:
         self.map = road.RoadMap.build(path, lanemap, dt=dt, priors=priors)
         self.points = sensing.cell_points(lanemap, road.BIN)
         self.last = {}
+        self.k = 0                                  # the tick (for settled_to's window)
+        self.track_lane, self.pending, self.settled, self.signal = {}, {}, {}, {}
 
     def near(self, ego, poses, pad):
         r = self.sensor.range + pad
@@ -76,7 +81,8 @@ class Perception:
                   for k, p in others.items() if math.hypot(p["x"] - e["x"], p["y"] - e["y"]) <= self.sensor.range + p["length"]}
         seen = self.sensor.sense(ego_b, bodies, self.occluders, ego_id=ego_id)
         dets = [{"class": belief_class(others[k]["vclass"]), "lane": others[k]["lane"], "s": others[k]["s"],
-                 "speed": others[k]["speed"], "length": others[k]["length"], "width": others[k]["width"]} for k in seen]
+                 "speed": others[k]["speed"], "length": others[k]["length"], "width": others[k]["width"],
+                 "signals": others[k].get("signals", 0), "lat": others[k].get("lat", 0.0)} for k in seen]
         pts = {c: xy for c, xy in self.points.items() if abs(xy[0] - e["x"]) <= self.sensor.range and abs(xy[1] - e["y"]) <= self.sensor.range}
         visible = set(self.sensor.visible(ego_b, pts, bodies, self.occluders, ego_id=ego_id))
         seen_cells = {road.cell(x["lane"], x["s"]) for x in dets}
@@ -84,11 +90,36 @@ class Perception:
         route = ego_route(self.lanemap, e["lane"], e.get("route") or []) if e["lane"] in self.lanemap.lanes else [e["lane"]]
         ego = {"lane": e["lane"], "s": e["s"], "speed": e["speed"], "route": route, "class": belief_class(e["vclass"])}
         self.map.cycle(dets, sorted(visible), ego)
+        self.observed(dets)
         self.last = {"seen": seen, "detections": dets, "visible": len(visible), "truth_ids": sorted(others)}
         lane_ = self.lanemap.lanes.get(e["lane"])
         ego_m = Mover(ego_id, e["lane"], e["s"], dynamics_for(e["vclass"], v=e["speed"], lane=lane_, ego=True),
                       route=route, length=e["length"], width=e["width"], vclass=e["vclass"])
         return self.movers(ego_m), ego_m
+
+    def observed(self, dets):
+        """What a seen track SHOWS this tick, never what it intends (road-2 item 2): its indicator (signal: left |
+        right | None) and a lane change seen complete (settled: the side it moved to, for SETTLED_TICKS once its lane
+        changed and its lane offset is within SETTLED_LAT). A track is matched to its detection by its exact sighting
+        (lane, s), the association's own rule."""
+        self.k += 1
+        d = self.map.load()
+        by = {(x["lane"], round(x["s"], 6)): x for x in dets}
+        for t in set(d.get("_seen") or ()):
+            pos = d["pos"].get(t)
+            x = by.get((pos["lane"], round(pos["s"], 6))) if pos else None
+            if x is None:
+                continue
+            bits = int(x.get("signals") or 0)
+            if bits & 3:
+                self.signal[t] = ("left" if bits & 2 else "right", self.k)
+            prev = self.track_lane.get(t)
+            if prev is not None and prev != x["lane"] and prev in self.lanemap.lanes and x["lane"] in self.lanemap.lanes:
+                a, b = self.lanemap.lanes[prev].index, self.lanemap.lanes[x["lane"]].index
+                self.pending[t] = "left" if b > a else "right"        # SUMO's index 0 is the rightmost
+            self.track_lane[t] = x["lane"]
+            if t in self.pending and abs(float(x.get("lat") or 0.0)) <= SETTLED_LAT:
+                self.settled[t] = (self.pending.pop(t), self.k)
 
     def movers(self, ego):
         d = self.map.load()
@@ -102,8 +133,15 @@ class Perception:
                 lane, s = d["pos"][t]["lane"], d["pos"][t]["s"]
             else:
                 lane, s = self.worst(ego, bel, th.get("length", 4.5))
-            out.append(Mover(t, lane, s, dynamics_for(th["class"], v=v, lane=self.lanemap.lanes.get(lane)),
-                             length=th.get("length", 4.5), width=th.get("width", 1.8), vclass=th["class"]))
+            m = Mover(t, lane, s, dynamics_for(th["class"], v=v, lane=self.lanemap.lanes.get(lane)),
+                      length=th.get("length", 4.5), width=th.get("width", 1.8), vclass=th["class"])
+            sg = self.signal.get(t)
+            m.signal = sg[0] if t in seen and sg and self.k - sg[1] < SIGNAL_TICKS else None   # lit within the last 1 s
+            st = self.settled.get(t)
+            m.settled = st[0] if st and self.k - st[1] < SETTLED_TICKS else None
+            if os.environ.get("ROAD_OBSERVED") == "0":                         # the comparison's control: shown nothing
+                m.signal = m.settled = None
+            out.append(m)
         return out
 
     def worst(self, ego, bel, length=4.5):
