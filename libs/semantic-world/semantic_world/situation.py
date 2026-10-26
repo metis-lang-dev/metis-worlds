@@ -270,12 +270,21 @@ def able_to_stop(dyn, d_enter):
     return stated_of(dyn, dyn.brake_min) + dyn.min_dist < d_enter
 
 
+def past_last_stop(dyn, d_enter):
+    """X past its last point to stop before a zone D_ENTER away: even braking its hardest (brake_max) from the speed
+    it has, with no response time, it would not stop short of the line + its floor. The evidence that it does not
+    yield (RSS rule 5's trigger; the stated distance, worst-case accelerating through its response time, is past the
+    line for every car that comes on, a yielding one too)."""
+    return stop(dyn.vmin if dyn.vmin is not None else dyn.vmax, dyn.brake_max) + dyn.min_dist >= d_enter
+
+
 class Situation:
     """The per-pair memory across cycles and the fold. One per ego; `check(pairs)` every cycle, in order."""
 
     def __init__(self, memory=None, xmemory=None):
         self.memory = dict(memory or {})          # pair id -> (long safe, lat safe) at its last safe cycle
         self.xmemory = dict(xmemory or {})        # a crossing's id -> (Def 17 case, ego in front) at its last safe cycle
+        self.escalated = set()                    # crossings whose priority holder's response escalated (RSS rule 5)
 
     def check(self, pairs):
         """→ [State] for PAIRS (the memory updated: rewritten while safe, frozen while dangerous, dropped for pairs
@@ -297,7 +306,11 @@ class Situation:
                 self.memory[p.id] = (lon, lat)
                 if xing:
                     self.xmemory[p.id] = (xing, front)
-            r_lon, r_lat = respond(p, dangerous, before, xbefore)
+            r_lon, r_lat = respond(p, dangerous, before, xbefore, escalated=p.id in self.escalated)
+            if dangerous and p.type == "xing_ego_prio" and r_lon == "brake_min":
+                self.escalated.add(p.id)          # held at least that while the pair stays dangerous
+            elif not dangerous:
+                self.escalated.discard(p.id)
             out.append(State(p.id, p.type, p.role, lon, lat, dangerous, before if dangerous else (lon, lat),
                              r_lon, r_lat, round(p.d_lon, 6), round(ds, 6), left, right,
                              r_lat if not left else "none", r_lat if not right else "none",
@@ -306,6 +319,7 @@ class Situation:
             self.memory.pop(k)
         for k in [k for k in self.xmemory if k not in seen]:
             self.xmemory.pop(k)
+        self.escalated &= seen
         return out
 
     @staticmethod
@@ -392,10 +406,13 @@ class Situation:
         return out
 
 
-def respond(p, dangerous, before, xbefore=None):
+def respond(p, dangerous, before, xbefore=None, escalated=False):
     """The pair's responses (§B, the lib's realization of Def 10/18). → (resp_lon, resp_lat).
     At a crossing, Def 18 by the case that held at the last safe cycle (XBEFORE = (case, ego in front)): the
-    non-priority one was able to stop and the ego has priority → none (the other brakes); one was in front at a safe
+    non-priority one was able to stop and the ego has priority → none (the other brakes), until it is past its last
+    point to stop (past_last_stop: braking its hardest from its speed it would not stop short of the line; RSS rule
+    5, right of way is given, not taken; road step 5b): then brake_min, held while the pair is dangerous
+    (ESCALATED; the blame stays Def 18's onset decision, the memory's); one was in front at a safe
     distance and it was the ego → none (the front one drives on); otherwise (no time overlap held, the ego was the
     rear one or the non-priority one, or never safe) → brake_min. Lateral: none (a conflict is assumed)."""
     if not dangerous or p.type == "not_relevant":
@@ -403,6 +420,8 @@ def respond(p, dangerous, before, xbefore=None):
     if p.type.startswith("xing"):
         case, front = xbefore or (None, None)
         if case == "able_to_stop" and p.type == "xing_ego_prio":
+            if escalated or (p.o_enter is not None and past_last_stop(p.obj, p.o_enter)):
+                return "brake_min", "none"                     # it does not yield: the ego avoids it if it can
             return "none", "none"
         if case == "safe_long" and front is True:
             return "none", "none"
