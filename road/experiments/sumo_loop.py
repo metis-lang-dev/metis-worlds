@@ -45,7 +45,7 @@ def run(out, seed, driver="plain", scenario="straight", ticks=1500, vehicles=10)
     sm = loop.summary()
     sm["driver"], sm["scenario"], sm["vehicles"] = driver, scenario, vehicles
     with open(os.path.join(out, "seed%d.json" % seed), "w") as f:
-        json.dump(dict(sm, violations_all=loop.violations), f, indent=1)
+        json.dump(dict(sm, violations_all=loop.violations, optimistic_all=loop.optimistic), f, indent=1)
     with open(os.path.join(out, "log_%d.jsonl" % seed), "w") as f:
         for r in loop.log:
             f.write(json.dumps(r) + "\n")
@@ -65,9 +65,9 @@ if __name__ == "__main__":
     for s in a.seeds:
         sm = run(a.out, s, a.driver, a.scenario, a.ticks, a.vehicles)
         lat = sm["latency_ticks"]
-        print("== seed %d: ticks %d arrived %s collisions %d (all %d) violations %d restricted %d latency max %s n %d; "
+        print("== seed %d: ticks %d arrived %s collisions %d (all %d) violations %d optimistic %d restricted %d latency max %s n %d; "
               "ms %s; vehicles ≤ %d" % (s, sm["ticks"], sm["arrived"], sm["collisions"], sm["all_collisions"],
-                                        sm["violations"], sm["restricted"], max(lat) if lat else None, len(lat),
+                                        sm["violations"], sm["optimistic"], sm["restricted"], max(lat) if lat else None, len(lat),
                                         sm["ms"], sm["vehicles_max"]))
         for v in sm["first"]:
             print("   ", v)

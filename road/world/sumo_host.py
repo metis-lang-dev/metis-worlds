@@ -15,8 +15,10 @@ perceived and projected once. One tick (dt 0.1 s, the SUMO step; road_host's res
   4. PROJECT    road_facts.facts over the BELIEF's movers (never the truth): LaneMap.roles, the situation layer
                 (one memory across ticks), the fold, the facts — every road host's projection, no other
   5. ACCOUNT    on the TRUTH: SUMO's collisions with the ego; the RSS violations by the exerciser's definitions
-                (road_world: the applied acceleration above the bound of the truth's fold when it was decided, or a
-                pair the ego's own act made dangerous); the latency from a truth pair's first dangerous tick to the first braking applied;
+                (road_world: the applied acceleration above the bound of the truth's fold when it was decided, a lane
+                change into a pair it made dangerous, a zone entered without priority unable to stop); beside them
+                the OPTIMISTIC accels (a same-direction pair made dangerous by the rear ego's accel: the architect's
+                ruling, its own column); the latency from a truth pair's first dangerous tick to the first braking applied;
                 the ms of each stage."""
 import os
 import time
@@ -55,7 +57,7 @@ class Loop:
         self.proj = {"binding": {}, "facts": {"now": 1}, "fold": None, "states": [], "ego": None}
         self.tick, self.t, self.warmup = 0, 0.0, 0
         self.level_dest = level.get("dest", DESTS.get(level.get("scenario", "straight")))
-        self.violations, self.restricted, self.latency, self.ms = [], 0, [], []
+        self.violations, self.optimistic, self.restricted, self.latency, self.ms = [], [], 0, [], []
         self.danger_since = None                      # the tick a truth pair first turned dangerous (latency)
         self.prev_truth = {}
         self.log = []
@@ -179,14 +181,15 @@ class Loop:
             p = prev.get(s.id)
             if not s.dangerous or p is None or p.dangerous or applied is None:
                 continue
-            blame = None
             a, lane, _ = applied
             if lane in ("left", "right") and s.type in ("same_dir", "opp_dir"):
-                blame = "a lane change into it"
+                self.violations.append({"tick": self.tick, "what": "a lane change into it", "pair": s.id})
+            elif s.type in ("xing_obj_prio", "xing_same_prio") and self.in_zone(ego) and p.xing != "able_to_stop":
+                self.violations.append({"tick": self.tick, "what": "entered a zone without priority, unable to stop",
+                                        "pair": s.id})
             elif s.type == "same_dir" and pairs[s.id].lon == "in_front" and a > 0:
-                blame = "accelerated as the rear one"
-            if blame:
-                self.violations.append({"tick": self.tick, "what": blame, "pair": s.id})
+                # the architect's ruling (2026-10-26): an OPTIMISTIC accel, its own column beside the violations
+                self.optimistic.append({"tick": self.tick, "what": "accelerated as the rear one", "pair": s.id})
         self._prev_states = {s.id: s for s in states}
         bad = [s for s in states if s.dangerous and s.resp_lon != "none"]
         if bad and self.danger_since is None:
@@ -197,6 +200,9 @@ class Loop:
         elif not bad:
             self.danger_since = None
 
+    def in_zone(self, ego):
+        return any(road_facts.inside(z, ego) for z in self.lanemap.zones)
+
     def summary(self):
         w = self.world
         def mean(k):
@@ -205,7 +211,7 @@ class Loop:
         ego = self.proj.get("ego")
         return {"seed": w.seed, "ticks": self.tick, "t": self.t, "sumo_t": w.t, "arrived": self.arrived(),
                 "s": round(ego.s, 1) if ego is not None else None, "dest": self.level_dest, "ego_done": w.ego_done, "collisions": w.ego_collisions,
-                "all_collisions": len(w.collisions), "violations": len(self.violations), "restricted": self.restricted,
+                "all_collisions": len(w.collisions), "violations": len(self.violations), "optimistic": len(self.optimistic), "restricted": self.restricted,
                 "latency_ticks": self.latency, "first": self.violations[:3],
                 "ms": {k: mean(k) for k in ("restrict", "sumo", "perceive", "project", "account")},
                 "vehicles_max": max((m["vehicles"] for m in self.ms), default=0)}
