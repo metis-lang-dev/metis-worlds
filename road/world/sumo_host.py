@@ -1,26 +1,23 @@
-"""sumo_host.py — the road on SUMO as a catalog host (road-world s-e812715d step 4), the shape of road_host.py (the
-exerciser's) and mh_host.py: the same roles, facts and commands, the world SUMO's truth seen through the sensing model.
+"""sumo_host.py — the road on SUMO (road-world s-e812715d step 4): `Loop`, a world in RoadWorld's interface (the
+exerciser's, road_world.py), so road_host.RoadHost serves both: the same members, readings latched at each member's
+clock, `now`, commands and restrictor; only the world differs, SUMO's truth seen through the sensing model.
+road_host picks it by the run spec (`"world": "sumo"`, with scenario, seed, sensor, vehicles, work).
 
-One responder tick (dt 0.1 s, the SUMO step), stepped by the host whose level.json says `steps: true` (the
-responder's; a hierarchy's other hosts share the world by `shared`, as mh_host's SHARED, and read the latest):
-  1. RESTRICT   the held command (restrict.command of the fired rule, held its issuer's period in responder ticks)
-                through restrict.restrict against the fold of the last projection → sumo_world.control(accel, lane)
+The interface (RoadWorld's): observe() → (facts, roles, fold, states) once a tick · command(cmd, life) · step() ·
+tick, t, log (a row a step: t, s, v, a, lane, cmd, resp) · arrived() · summary().
+
+The episode begins with the ego on the road: SUMO is stepped until the ego is inserted (its depart; not ticks), then
+perceived and projected once. One tick (dt 0.1 s, the SUMO step; road_host's responder steps it):
+  1. RESTRICT   the held command (held its issuer's period in responder ticks) through restrict.restrict against
+                the fold of the last projection → sumo_world.control(accel, lane)
   2. STEP       one SUMO step (sumo_world.step: the collisions, the ego in or out)
   3. PERCEIVE   the truth through the sensor into the belief (sumo_perceive.Perception: RoadMap.cycle, the movers)
-  4. PROJECT    LaneMap.roles / zone_roles over the BELIEF's movers (never the truth), the pairs with their roles,
-                Situation.check (one memory across ticks), the fold, the facts (`facts`: the one adapter)
-  5. SYNC       only the owned preds (the role facts and `now`) retracted / asserted; the members' tokens never
-  6. ACCOUNT    on the TRUTH: SUMO's collisions with the ego; the RSS violations by the exerciser's definitions
+  4. PROJECT    road_facts.facts over the BELIEF's movers (never the truth): LaneMap.roles, the situation layer
+                (one memory across ticks), the fold, the facts — every road host's projection, no other
+  5. ACCOUNT    on the TRUTH: SUMO's collisions with the ego; the RSS violations by the exerciser's definitions
                 (road_world: the applied acceleration above the truth fold's bound, or a pair the ego's own act
                 made dangerous); the latency from a truth pair's first dangerous tick to the first braking applied;
-                the ms of each stage.
-
-The facts the domains read come from ONE adapter, `facts()`: road_facts.facts, the projection every road host makes
-(opus's, beside restrict.py; the architect's ruling: no host writes its own), the roles through LaneMap.roles.
-
-    make(case, package_dir) -> SumoHost   (level.json: scenario, seed, work, sensor {range, miss}, steps, shared,
-                                           period, observe, max_ticks)"""
-import json
+                the ms of each stage."""
 import os
 import time
 
@@ -34,27 +31,20 @@ from semantic_world.situation import Situation
 from sumo_perceive import Perception
 from sumo_world import EGO, SumoWorld
 
-OWNED = {"type", "safe_long", "safe_lat", "dangerous", "safe_before", "resp", "safe_lat_left", "safe_lat_right",
-         "resp_lat", "xing_case", "xing_before", "resp_lon", "resp_lat_left", "resp_lat_right", "adjacent", "changing",
-         "below_limit", "lead_slow", "at_dest", "zone_at", "zprio", "can_stop", "zfree", "zclear", "holder", "share",
-         "conflict", "turn", "crossing", "now"}
-SHARED = {}                    # a hierarchy's one SUMO: {key: Loop}
-
-
-def facts(lm, ego, movers, sit, changing=None, lights=None, turn=None, dest=None):
-    """THE ADAPTER: road_facts.facts (opus's, every road host's) over the belief's movers. → (facts, roles, fold)."""
-    out, roles, fold, _ = road_facts.facts(lm, ego, ego.dyn.vmax, movers, sit, changing=changing, dest=dest, turn=turn,
-                                           lights=lights)
-    return out, roles, fold
 
 
 class Loop:
     """The world one hierarchy shares: the SUMO process, the perception, the situation memory, the held command, the
     last projection and the accounting."""
 
-    def __init__(self, level, work, traci=None):
+    def __init__(self, level, work=None, traci=None):
+        import tempfile
+        work = work or level.get("work") or tempfile.mkdtemp(prefix="road-sumo-")
+        args = dict(level.get("scenario_args", {}))
+        if "vehicles" in level:
+            args["n"] = int(level["vehicles"])
         self.world = SumoWorld(level.get("scenario", "straight"), work, seed=int(level.get("seed", 1)), traci=traci,
-                               **level.get("scenario_args", {}))
+                               **args)
         self.lanemap = netmod.load_net(self.world.net).lanemap()
         sen = level.get("sensor", {})
         self.perc = Perception(self.lanemap, Sensor(range=sen.get("range", 60.0), miss=sen.get("miss", 0.0),
@@ -62,14 +52,44 @@ class Loop:
         self.sit, self.truth_sit = Situation(), Situation()
         self.cmd, self.life = ("keep", None), 0
         self.changing = None                          # (side, source lane index, ticks left)
-        self.proj = {"binding": {}, "facts": {"now": 1}, "fold": None, "states": []}
-        self.tick = 0
+        self.proj = {"binding": {}, "facts": {"now": 1}, "fold": None, "states": [], "ego": None}
+        self.tick, self.t, self.warmup = 0, 0.0, 0
         self.level_dest = level.get("dest")
         self.violations, self.restricted, self.latency, self.ms = [], 0, [], []
         self.danger_since = None                      # the tick a truth pair first turned dangerous (latency)
         self.prev_truth = {}
         self.log = []
         self.world.start()
+        while not self.world.step():                  # the ego's depart: the episode begins with it on the road
+            self.warmup += 1
+            if self.warmup > int(level.get("max_warmup", 600)):
+                raise RuntimeError("sumo: the ego was not inserted in %d steps" % self.warmup)
+        truth, _, ego, lights, _ = self.perceive_project()
+        self.account(truth, ego, None, lights)       # tick 0's truth: a danger there starts the latency's clock
+
+    # ── RoadWorld's interface ──
+    def observe(self):
+        p = self.proj
+        return p["facts"], p["binding"], p["fold"] or {"resp_lon": "none"}, p["states"]
+
+    def command(self, cmd, life=1):
+        self.cmd, self.life = cmd, int(life)
+
+    def arrived(self):
+        return self.world.ego_done
+
+    def perceive_project(self):
+        truth = self.world.truth()
+        movers, ego = self.perc.step(truth, EGO)
+        t3 = time.perf_counter()
+        lights = self.world.lights()
+        f, binding, fold, states = road_facts.facts(self.lanemap, ego, ego.dyn.vmax, movers, self.sit,
+                                                    changing=self.changing[0] if self.changing else None,
+                                                    dest=self.level_dest, lights=lights,
+                                                    speeds={m.id: m.dyn.vmax for m in movers})
+        self.proj = {"binding": binding, "facts": f, "fold": fold, "states": states, "ego": ego}
+        self.prev_truth = truth
+        return truth, movers, ego, lights, t3
 
     # ── 1. restrict ──
     def restrict(self, ego):
@@ -94,41 +114,32 @@ class Loop:
         return a, lane, cmd
 
     def yield_gap(self, ego):
-        z = self.lanemap.nearest_zone(ego.route or [ego.lane], ego.s)
-        if not z:
-            return None
-        zone, lane = z[0], z[1]
-        d = self.lanemap.ahead(ego.route or [ego.lane], ego.s, lane, zone.lanes[lane][0])
-        return d
+        """The ego's front to the next zone's line on its way (LaneMap.nearest_zone's d_enter; restrict keeps min_dist)."""
+        z = self.lanemap.nearest_zone(ego.route or [ego.lane], ego.s, length=ego.length)
+        return z[2] if z else None
 
-    # ── 2-6 ──
+    # ── one tick ──
     def step(self):
-        """One responder tick. → whether the episode goes on."""
+        """One responder tick. → whether the ego is still on the road."""
         t0 = time.perf_counter()
-        ego_t = self.prev_truth.get(EGO)
         applied = None
-        if ego_t is not None and self.proj.get("ego") is not None:
+        if self.proj.get("ego") is not None and not self.world.ego_done:
             applied = self.restrict(self.proj["ego"])
         t1 = time.perf_counter()
         on = self.world.step()
         t2 = time.perf_counter()
-        self.tick += 1
+        self.tick, self.t = self.tick + 1, self.world.t
         if not on:
-            self.prev_truth = {}
-            return not self.world.ego_done
-        truth = self.world.truth()
-        movers, ego = self.perc.step(truth, EGO)
-        t3 = time.perf_counter()
-        lights = self.world.lights()
-        f, binding, fold = facts(self.lanemap, ego, movers, self.sit, changing=self.changing[0] if self.changing else None,
-                                 lights=lights, dest=self.level_dest)
-        self.proj = {"binding": binding, "facts": f, "fold": fold, "ego": ego}
+            self.prev_truth, self.proj["ego"] = {}, None
+            return False
+        truth, movers, ego, lights, t3 = self.perceive_project()
+        fold = self.proj["fold"]
+        binding = self.proj["binding"]
         t4 = time.perf_counter()
         self.account(truth, ego, applied, lights)
         t5 = time.perf_counter()
         self.ms.append({"restrict": t1 - t0, "sumo": t2 - t1, "perceive": t3 - t2, "project": t4 - t3, "account": t5 - t4,
                         "vehicles": len(truth)})
-        self.prev_truth = truth
         self.log.append({"tick": self.tick, "t": self.world.t, "s": round(ego.s, 2), "v": round(ego.dyn.vmax, 2),
                          "lane": ego.lane, "a": None if applied is None else round(applied[0], 2),
                          "cmd": None if applied is None else list(applied[2]), "resp": fold["resp_lon"],
@@ -192,88 +203,3 @@ class Loop:
 
     def close(self):
         self.world.close()
-
-
-class SumoHost:
-    """bind(reg) · tick(counts) -> do-lines | None · on_event(name, args) · observe(counts) -> {atom: n} · pending()
-    · ports() · snapshot() / restore(snap) (no replay: SUMO's episode is not reset mid-run)."""
-
-    def __init__(self, package_dir, case=None):
-        self.package_dir, self.case = package_dir, case
-        self.level = json.load(open(os.path.join(package_dir, "level.json")))
-        self.key = self.level.get("shared") or package_dir
-        self.steps = bool(self.level.get("steps", True))
-        self.period = int(self.level.get("period", 1))
-        self.max_ticks = int(self.level.get("max_ticks", 3000))
-        self.observed = set(self.level["observe"]) if "observe" in self.level else None
-        if self.key not in SHARED:
-            SHARED[self.key] = Loop(self.level, self.level.get("work") or os.path.join(package_dir, ".run", "sumo"))
-        self.loop = SHARED[self.key]
-        self.seen_tick, self.done = -1, False
-
-    def bind(self, reg):
-        pass
-
-    def pending(self):
-        return self.loop.tick != self.seen_tick
-
-    def reading(self):
-        f = self.loop.proj["facts"]
-        keep = self.observed if self.observed is not None else OWNED
-        return {a: 1 for a in f if a.split("(")[0] in keep}
-
-    def observe(self, counts):
-        return {} if self.done else self.reading()
-
-    def tick(self, counts):
-        if self.done:
-            return None
-        if self.steps:
-            go = self.loop.step() and self.loop.tick < self.max_ticks
-            if not go:
-                self.done = True
-                return None
-        self.seen_tick = self.loop.tick
-        return self.sync(counts)
-
-    def sync(self, counts):
-        dos, reading = [], self.reading()
-        for a, n in sorted(reading.items()):
-            if n > counts.get(a, 0):
-                dos.append("+%s %d" % (a, n - counts.get(a, 0)))
-        for a, have in sorted(counts.items()):
-            if have > 0 and a not in reading and a.split("(")[0] in OWNED:
-                dos.append("-%s %d" % (a, have))
-        return dos
-
-    def on_event(self, name, args):
-        cmd = restrict.command(name)
-        if cmd is not None:
-            self.loop.cmd, self.loop.life = cmd, self.period
-
-    def speak(self, text, binding=None):
-        return text
-
-    def world(self, lines):
-        raise ValueError("world lines: SUMO is the world; choose another scenario or seed")
-
-    def ports(self):
-        return {"level": {"scenario": self.level.get("scenario"), "seed": self.loop.world.seed, "tick": self.loop.tick,
-                          "done": self.done}, "observed": sorted(OWNED), "commands": list(restrict.KINDS)}
-
-    def snapshot(self):
-        return {"tick": self.loop.tick}
-
-    def restore(self, snap):
-        pass
-
-    def summary(self):
-        return self.loop.summary()
-
-    def close(self):
-        self.loop.close()
-        SHARED.pop(self.key, None)
-
-
-def make(case=None, package_dir=None):
-    return SumoHost(package_dir or os.getcwd(), case)

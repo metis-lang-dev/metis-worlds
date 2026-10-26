@@ -6,8 +6,8 @@ ego's commands from a DRIVER, the accounting per seed and the ms table.
 Drivers:
   plain   the shield alone: a planner that asks `accel` every planner tick (10 responder ticks), no responder;
           what reaches SUMO is the restrictor's cut of it (the proper response's bound over the belief's fold)
-The tree (opus's responder + planner under the director) runs through the agent's Live on the same host
-(sumo_host.make); that driver joins when the domains land.
+The tree (opus's responder + planner under the director) runs through road_tree.py on the agent's Live, road_host's
+members over the same Loop (the run spec's "world": "sumo").
 
 Prints per seed: ticks, ego done, collisions (the ego's), violations, restricted, the latency (ticks from a truth
 pair's first dangerous tick to the first braking applied; ρ = 10), ms per stage; writes OUT/seedN.json and OUT/log_N.jsonl.
@@ -33,7 +33,7 @@ DRIVERS = {"plain": plain}
 
 
 def run(out, seed, driver="plain", scenario="straight", ticks=1500, vehicles=10):
-    level = {"scenario": scenario, "seed": seed, "sensor": {"range": 60.0, "miss": 0.0}, "scenario_args": {"n": vehicles}}
+    level = {"scenario": scenario, "seed": seed, "sensor": {"range": 60.0, "miss": 0.0}, "vehicles": vehicles}
     loop = sumo_host.Loop(level, os.path.join(out, "work_%d" % vehicles))
     try:
         while loop.tick < ticks:

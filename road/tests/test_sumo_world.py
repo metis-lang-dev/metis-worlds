@@ -162,36 +162,28 @@ def lane_car(lm, lane, s, speed, length=5.0, route=("E",)):
     return car(x, y, speed=speed, lane=lane, s=s, index=lm.lanes[lane].index, length=length, route=route)
 
 
-def test_host_projects_the_belief_and_restricts(straight, tmp_path):
-    import json
+def test_loop_projects_the_belief_and_restricts(straight, tmp_path):
     import sumo_host
     lm = straight
     # the ego at 10 m/s closes on a stopped car 20 m ahead on its lane: dangerous at once; the planner's accel is
-    # cut to the proper response's braking, and the latency is the first tick
-    frames = []
+    # cut to the proper response's braking, and the latency is the first tick. Frame 0 is before the ego's depart
+    frames = [{"vehicles": {"stop": lane_car(lm, "E_0", 125.0, 0.0)}}]
     s_e = 100.0
     for k in range(4):
         frames.append({"vehicles": {"ego": lane_car(lm, "E_0", s_e, 10.0), "stop": lane_car(lm, "E_0", 125.0, 0.0)}})
         s_e += 1.0
-    pkg = tmp_path / "pkg"
-    pkg.mkdir()
-    (pkg / "level.json").write_text(json.dumps({"scenario": "straight", "seed": 1, "shared": "t1", "steps": True,
-                                                "work": str(tmp_path / "w"), "scenario_args": {"n": 2}}))
     tr = FakeTraci(frames)
-    sumo_host.SHARED["t1"] = sumo_host.Loop(json.load(open(pkg / "level.json")), str(tmp_path / "w"), traci=tr)
-    h = sumo_host.SumoHost(str(pkg))
-    dos = h.tick({})
-    assert "+now 1" in dos and "+type(lead,same_dir) 1" in dos and "+dangerous(lead) 1" in dos
-    assert "+resp_lon(brake_min) 1" in dos and "+type(vru1,not_relevant) 1" in dos
-    assert h.loop.proj["binding"]["lead"] != "stop"                              # a track's name, never the world's id
-    h.on_event("accel_free", ())
-    counts = {a.split(" ")[0][1:]: 1 for a in dos}
-    assert h.pending() is False
-    dos = h.tick(counts)
+    loop = sumo_host.Loop({"scenario": "straight", "seed": 1, "vehicles": 2}, str(tmp_path / "w"), traci=tr)
+    assert loop.warmup == 1 and loop.tick == 0                                    # the episode begins with the ego in
+    facts, roles, fold, _ = loop.observe()
+    assert {"now", "type(lead,same_dir)", "dangerous(lead)", "resp_lon(brake_min)", "type(vru1,not_relevant)"} <= set(facts)
+    assert roles["lead"] != "stop" and fold["resp_lon"] == "brake_min"             # a track's name, never the world's id
+    loop.command(("accel", None), life=10)
+    assert loop.step() is True
     acc = [c for c in tr.conn.calls if c[0] == "setAcceleration"]
     assert acc and acc[0][2] == -4.0                                             # accel capped at −brake_min
-    assert h.loop.restricted == 1 and h.loop.latency == [1] and h.loop.violations == []
-    assert not any(d.startswith("+now") for d in dos)                            # still held: not re-asserted
-    sm = h.summary()
-    assert sm["collisions"] == 0 and sm["ticks"] == 2 and set(sm["ms"]) >= {"perceive", "project"}
-    h.close()
+    assert loop.restricted == 1 and loop.latency == [1] and loop.violations == [] and loop.life == 9
+    assert loop.log[-1]["resp"] == "brake_min" and loop.log[-1]["cmd"] == ["accel", None]
+    sm = loop.summary()
+    assert sm["collisions"] == 0 and sm["ticks"] == 1 and set(sm["ms"]) >= {"perceive", "project"}
+    loop.close()
