@@ -219,3 +219,29 @@ def test_what_a_car_shows_its_indicator_and_its_lane_change(straight):
     for k in range(SP.SETTLED_TICKS):
         m = step("E_1", 147.0 + k)
     assert m.settled is None
+
+
+def test_no_responder_brake_without_a_dangerous_pair(straight, tmp_path):
+    """road-2 (the ruling): on the straight, a responder brake (brake_min) is applied only with a dangerous pair in the
+    fold it was decided on — the summary's undue_brakes counts the others (0 by construction); and the run card
+    prints the RSS parameters every pair used."""
+    import sumo_host
+    lm = straight
+    frames = [{"vehicles": {"stop": lane_car(lm, "E_0", 125.0, 0.0)}}]
+    s_e = 100.0
+    for k in range(4):
+        frames.append({"vehicles": {"ego": lane_car(lm, "E_0", s_e, 10.0), "stop": lane_car(lm, "E_0", 125.0, 0.0)}})
+        s_e += 1.0
+    loop = sumo_host.Loop({"scenario": "straight", "seed": 1, "vehicles": 2}, str(tmp_path / "w"), traci=FakeTraci(frames))
+    assert loop.proj["fold"]["dangerous"]                                          # the stopped car: dangerous
+    loop.command(("brake", "brake_min"), life=5)
+    loop.step()
+    assert loop.undue == []                                                        # braked with a dangerous pair
+    loop.proj["fold"] = {"resp_lon": "none", "dangerous": []}                      # a fold with nothing dangerous
+    loop.command(("brake", "brake_min"), life=5)
+    loop.step()
+    sm = loop.summary()
+    assert sm["undue_brakes"] == 1                                                 # ... a brake there is counted
+    card = sm["rss"]
+    assert card["ego_rho"] > 0 and {"rho", "brake_min", "brake_max", "min_dist"} <= set(card["classes"]["passenger"])
+    loop.close()

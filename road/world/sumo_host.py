@@ -58,6 +58,7 @@ class Loop:
         self.tick, self.t, self.warmup = 0, 0.0, 0
         self.level_dest = level.get("dest", DESTS.get(level.get("scenario", "straight")))
         self.violations, self.optimistic, self.restricted, self.latency, self.ms = [], [], 0, [], []
+        self.undue = []                               # a responder brake with no dangerous pair in its fold (road-2: none)
         self.danger_since = None                      # the tick a truth pair first turned dangerous (latency)
         self.prev_truth = {}
         self.log = []
@@ -133,7 +134,10 @@ class Loop:
         t0 = time.perf_counter()
         applied = None
         if self.proj.get("ego") is not None and not self.world.ego_done:
+            fold = self.proj["fold"] or {}                # the fold the command was decided on
             applied = self.restrict(self.proj["ego"])
+            if tuple(applied[2][:2]) == ("brake", "brake_min") and not fold.get("dangerous"):
+                self.undue.append(self.tick)              # the responder's brake (brake_min) without a dangerous pair
         t1 = time.perf_counter()
         on = self.world.step()
         t2 = time.perf_counter()
@@ -217,7 +221,17 @@ class Loop:
                 "all_collisions": len(w.collisions), "violations": len(self.violations), "optimistic": len(self.optimistic), "restricted": self.restricted,
                 "latency_truth": self.latency, "first": self.violations[:3],
                 "ms": {k: mean(k) for k in ("restrict", "sumo", "perceive", "project", "account")},
-                "vehicles_max": max((m["vehicles"] for m in self.ms), default=0)}
+                "vehicles_max": max((m["vehicles"] for m in self.ms), default=0),
+                "undue_brakes": len(self.undue), "rss": rss_card()}
+
 
     def close(self):
         self.world.close()
+
+
+def rss_card():
+    """The run card's RSS parameters: the ego's response time and, per class, ρ, brake_min, brake_max, min_dist
+    (semantic_world.lane VCLASS: the values every pair of the run used)."""
+    from semantic_world.lane import EGO_RHO, VCLASS
+    return {"ego_rho": EGO_RHO, "classes": {c: {k: p.get(k) for k in ("rho", "brake_min", "brake_max", "min_dist")}
+                                            for c, p in sorted(VCLASS.items())}}
