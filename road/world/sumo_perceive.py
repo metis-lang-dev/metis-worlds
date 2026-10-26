@@ -11,7 +11,7 @@ pairs with the ego. Nothing here talks to SUMO: the truth is sumo_world's {id: p
 - MOVERS: one lane.Mover per live track, the stack's view of the world:
     seen this tick   at its exact sighting (lane, s), its speed;
     unseen           at the WORST CASE of its belief's support: the cell nearest ahead of the ego along the ego's
-                     way, its rear at the cell's near edge (else the likeliest cell), its last speed.
+                     way, its front at the cell's near edge (else the likeliest cell), its last speed.
   A Mover's s is its front (SUMO's lane position is the front bumper too); its vclass the belief's class.
   The class's Dynamics (lane.dynamics_for at the track's lane's limit).
 
@@ -107,23 +107,25 @@ class Perception:
         return out
 
     def worst(self, ego, bel, length=4.5):
-        """The unseen track's position for the pairs (a Mover's s is its FRONT, its rear s − LENGTH): the support cell
-        nearest ahead of the ego on its way, the track's REAR at the cell's near edge (never nearer than the ego's
-        front on its own lane); else (nothing of it ahead on the way) its likeliest cell, its front at the cell's
-        far edge (a track behind: its front as near the ego as the cell allows)."""
+        """The unseen track's position for the pairs. A Mover's s is its FRONT (its rear s − LENGTH), and the belief's
+        cells hold the front's s (a detection's lane position): the support cell nearest ahead of the ego on its way,
+        the track's front at that cell's near edge — on the ego's own lane never nearer than its rear touching the
+        ego's front; else (nothing of it ahead on the way) its likeliest cell, the front at the cell's far edge (a
+        track behind: as near the ego as the cell allows)."""
         best = None
         way = ego.route or [ego.lane]
         for c in bel:
             lane, k = road.of(c)
-            edge = k * road.BIN
-            if self.lanemap.ahead(way, ego.s, lane, edge + road.BIN) is None:
+            front = k * road.BIN
+            if self.lanemap.ahead(way, ego.s, lane, front + road.BIN) is None:
                 continue
-            rear = max(edge, ego.s) if lane == ego.lane and edge < ego.s else edge
-            dd = self.lanemap.ahead(way, ego.s, lane, rear)
+            if lane == ego.lane:
+                front = max(front, min(front + road.BIN, ego.s + length))
+            dd = self.lanemap.ahead(way, ego.s, lane, front)
             if dd is not None and dd >= 0 and (best is None or dd < best[0]):
-                best = (dd, lane, rear + length)
+                best = (dd, lane, front)
         if best is not None:
-            return best[1], min(best[2], self.lanemap.lanes[best[1]].length + length)
+            return best[1], best[2]
         c = max(sorted(bel), key=bel.get)
         lane, k = road.of(c)
         return lane, min(self.lanemap.lanes[lane].length, (k + 1) * road.BIN)

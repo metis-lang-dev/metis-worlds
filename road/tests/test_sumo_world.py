@@ -140,7 +140,7 @@ def test_occluded_track_worst_case_ahead(straight):
     hidden = [m for m in movers if m.id != p.map.load()["_seen"][0]]
     assert len(hidden) == 1
     h = hidden[0]
-    assert h.lane == "E_0" and 140.0 - road.BIN <= h.s - h.length <= 140.0 - 5.0  # its rear at the support's near edge
+    assert h.lane == "E_0" and 140.0 - road.BIN <= h.s <= 140.0                  # its front at the support's near edge
     sit_ids = {m.id for m in movers}
     assert len(sit_ids) == 2
 
@@ -153,3 +153,45 @@ def test_negative_evidence_clears_a_seen_empty_cell(straight):
     del truth["a"]                                                               # gone from where the ego can see
     movers, _ = p.step(truth)
     assert movers == []
+
+
+def lane_car(lm, lane, s, speed, length=5.0, route=("E",)):
+    """A fake TraCI row for a car at (LANE, S) of the straight (SUMO's position: the front bumper)."""
+    from semantic_world.sensing import point_at
+    x, y = point_at(lm.lanes[lane].shape, s)
+    return car(x, y, speed=speed, lane=lane, s=s, index=lm.lanes[lane].index, length=length, route=route)
+
+
+def test_host_projects_the_belief_and_restricts(straight, tmp_path):
+    import json
+    import sumo_host
+    lm = straight
+    # the ego at 10 m/s closes on a stopped car 20 m ahead on its lane: dangerous at once; the planner's accel is
+    # cut to the proper response's braking, and the latency is the first tick
+    frames = []
+    s_e = 100.0
+    for k in range(4):
+        frames.append({"vehicles": {"ego": lane_car(lm, "E_0", s_e, 10.0), "stop": lane_car(lm, "E_0", 125.0, 0.0)}})
+        s_e += 1.0
+    pkg = tmp_path / "pkg"
+    pkg.mkdir()
+    (pkg / "level.json").write_text(json.dumps({"scenario": "straight", "seed": 1, "shared": "t1", "steps": True,
+                                                "work": str(tmp_path / "w"), "scenario_args": {"n": 2}}))
+    tr = FakeTraci(frames)
+    sumo_host.SHARED["t1"] = sumo_host.Loop(json.load(open(pkg / "level.json")), str(tmp_path / "w"), traci=tr)
+    h = sumo_host.SumoHost(str(pkg))
+    dos = h.tick({})
+    assert "+now 1" in dos and "+type(lead,same_dir) 1" in dos and "+dangerous(lead) 1" in dos
+    assert "+resp_lon(brake_min) 1" in dos and "+type(vru1,not_relevant) 1" in dos
+    assert h.loop.proj["binding"]["lead"] != "stop"                              # a track's name, never the world's id
+    h.on_event("accel_free", ())
+    counts = {a.split(" ")[0][1:]: 1 for a in dos}
+    assert h.pending() is False
+    dos = h.tick(counts)
+    acc = [c for c in tr.conn.calls if c[0] == "setAcceleration"]
+    assert acc and acc[0][2] == -4.0                                             # accel capped at −brake_min
+    assert h.loop.restricted == 1 and h.loop.latency == [1] and h.loop.violations == []
+    assert not any(d.startswith("+now") for d in dos)                            # still held: not re-asserted
+    sm = h.summary()
+    assert sm["collisions"] == 0 and sm["ticks"] == 2 and set(sm["ms"]) >= {"perceive", "project"}
+    h.close()
