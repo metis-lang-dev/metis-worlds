@@ -278,6 +278,15 @@ def past_last_stop(dyn, d_enter):
     return stop(dyn.vmin if dyn.vmin is not None else dyn.vmax, dyn.brake_max) + dyn.min_dist >= d_enter
 
 
+def ego_stops_short(dyn, d_enter):
+    """The ego can still stop short of a zone D_ENTER away braking at its proper response (brake_min) from the speed
+    it has: the floor kept. Inside the zone (D_ENTER 0), or past that point, braking would hold it in the conflict:
+    the proper response is to clear it (road-2 item 1, the step 6 ruling)."""
+    if d_enter is None or d_enter <= 0:
+        return False
+    return stop(dyn.vmax, dyn.brake_min) + dyn.min_dist < d_enter
+
+
 class Situation:
     """The per-pair memory across cycles and the fold. One per ego; `check(pairs)` every cycle, in order."""
 
@@ -309,8 +318,8 @@ class Situation:
             r_lon, r_lat = respond(p, dangerous, before, xbefore, escalated=p.id in self.escalated)
             if dangerous and p.type == "xing_ego_prio" and r_lon == "brake_min":
                 self.escalated.add(p.id)          # held at least that while the pair stays dangerous
-            elif not dangerous:
-                self.escalated.discard(p.id)
+            else:
+                self.escalated.discard(p.id)      # safe again, or released (the other stopped; the ego past stopping short)
             out.append(State(p.id, p.type, p.role, lon, lat, dangerous, before if dangerous else (lon, lat),
                              r_lon, r_lat, round(p.d_lon, 6), round(ds, 6), left, right,
                              r_lat if not left else "none", r_lat if not right else "none",
@@ -412,7 +421,9 @@ def respond(p, dangerous, before, xbefore=None, escalated=False):
     non-priority one was able to stop and the ego has priority → none (the other brakes), until it is past its last
     point to stop (past_last_stop: braking its hardest from its speed it would not stop short of the line; RSS rule
     5, right of way is given, not taken; road step 5b): then brake_min, held while the pair is dangerous
-    (ESCALATED; the blame stays Def 18's onset decision, the memory's); one was in front at a safe
+    (ESCALATED; the blame stays Def 18's onset decision, the memory's) — only while the ego can still stop short of
+    the zone (ego_stops_short: inside it, clear it, never hold), and released once the other has stopped (road-2
+    item 1); one was in front at a safe
     distance and it was the ego → none (the front one drives on); otherwise (no time overlap held, the ego was the
     rear one or the non-priority one, or never safe) → brake_min. Lateral: none (a conflict is assumed)."""
     if not dangerous or p.type == "not_relevant":
@@ -420,9 +431,11 @@ def respond(p, dangerous, before, xbefore=None, escalated=False):
     if p.type.startswith("xing"):
         case, front = xbefore or (None, None)
         if case == "able_to_stop" and p.type == "xing_ego_prio":
-            if escalated or (p.o_enter is not None and past_last_stop(p.obj, p.o_enter)):
+            stopped = (p.obj.vmax or 0.0) <= 0.0               # the other has stopped: it yields after all
+            if not stopped and ego_stops_short(p.ego, p.d_enter) and (
+                    escalated or (p.o_enter is not None and past_last_stop(p.obj, p.o_enter))):
                 return "brake_min", "none"                     # it does not yield: the ego avoids it if it can
-            return "none", "none"
+            return "none", "none"                              # inside, or past stopping short: clear it, never hold
         if case == "safe_long" and front is True:
             return "none", "none"
         return "brake_min", "none"
