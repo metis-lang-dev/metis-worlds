@@ -142,9 +142,9 @@ def test_the_lateral_response_brakes_toward_the_object_only():
     assert fold["resp_lat_left"] == "brake_min" and fold["resp_lat_right"] == "none"
     assert fold["lat_left_max"] == -0.8 and fold["lat_right_max"] == 0.2
     f = Situation.facts([s], fold, detail=True)
-    assert f["resp_lat(c1,left,brake_min)"] == 1 and "resp_lat(c1,right,brake_min)" not in f
+    assert f["resp_side(c1,left,brake_min)"] == 1 and "resp_side(c1,right,brake_min)" not in f
     assert f["safe_lat_right(c1)"] == 1 and "safe_lat_left(c1)" not in f
     assert f["resp_lat_left(brake_min)"] == 1 and f["resp_lat_right(none)"] == 1
     plain = Situation.facts([s], fold)                                          # without detail: as before
-    assert not any(k.startswith(("safe_lat_left", "safe_lat_right", "resp_lat(c1,", "resp_lat_left", "xing"))
+    assert not any(k.startswith(("safe_lat_left", "safe_lat_right", "resp_side", "resp_lat_left", "xing"))
                    for k in plain)

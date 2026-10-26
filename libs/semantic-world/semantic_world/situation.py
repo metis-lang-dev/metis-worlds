@@ -348,9 +348,10 @@ class Situation:
         """The program's atoms over the bound roles (a pair whose object has no role is not said): the type, the
         booleans, the memory, the pair's response, and the folded response once (resp_lon(R), resp_lat(R)).
         DETAIL (a program that declares them; the road's): also the lateral split, safe_lat_left(o) /
-        safe_lat_right(o); the pair's lateral response, resp_lat(o, left|right, brake_min); at a crossing the
-        Def 17 case that holds, xing_case(o, able_to_stop|safe_long|no_overlap), and when dangerous the case held
-        before (Def 18), xing_before(o, …|none); and the fold's resp_lat_left(R), resp_lat_right(R)."""
+        safe_lat_right(o); the pair's lateral response, resp_side(o, left|right, brake_min) (not resp_lat: a pred
+        has one arity, and resp_lat(R) is the fold's); at a crossing the Def 17 case that holds, xing_case(o,
+        able_to_stop|safe_long|no_overlap), and when dangerous the case held before (Def 18), xing_before(o, …|none);
+        and the fold's resp_lat_left(R), resp_lat_right(R)."""
         out = {}
         for s in states:
             if not s.role:
@@ -374,9 +375,9 @@ class Situation:
                 if s.safe_lat_right:
                     out["safe_lat_right(%s)" % o] = 1
                 if s.resp_lat_left != "none":
-                    out["resp_lat(%s,left,%s)" % (o, s.resp_lat_left)] = 1
+                    out["resp_side(%s,left,%s)" % (o, s.resp_lat_left)] = 1
                 if s.resp_lat_right != "none":
-                    out["resp_lat(%s,right,%s)" % (o, s.resp_lat_right)] = 1
+                    out["resp_side(%s,right,%s)" % (o, s.resp_lat_right)] = 1
                 if s.type.startswith("xing"):
                     if s.xing:
                         out["xing_case(%s,%s)" % (o, s.xing)] = 1
