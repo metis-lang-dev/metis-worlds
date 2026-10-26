@@ -1,0 +1,11 @@
+# responder — the road's fast domain (road-world s-e812715d step 2): the proper response, holding the controls by
+# priority; it beats at the world's step (period 1: the 0.1 s step).
+display: the responder
+line: "the road's proper response: it brakes as RSS asks and stops a lateral move, then hands the controls back"
+voice: third
+program: responder.llp
+host: road_host.py:make
+clock: {beats: 1, period: 1}
+shared: {type: world-private, safe_long: world-private, safe_lat: world-private, dangerous: world-private, safe_before: world-private, resp: world-private, safe_lat_left: world-private, safe_lat_right: world-private, resp_side: world-private, xing_case: world-private, xing_before: world-private, resp_lon: world-private, resp_lat: world-private, resp_lat_left: world-private, resp_lat_right: world-private, changing: world-private, now: world-private, tick__want: out, tick__release: out, tick__active: out, tick__done: out, tick__grant: in, tick__cancel: in, controls: resource}
+status: {success: [tick__done], failure: []}
+gating: program

@@ -1,0 +1,7 @@
+case: "a lane change to the left turns unsafe on the way: the responder takes the controls and stops the lateral move"
+boundaries:
+  - world: [resp_lon(none), resp_lat(brake_min), resp_lat_left(brake_min), resp_lat_right(none), changing(left), now]
+    expect: {out: [tick__active(responder), tick__want(responder, controls)], status: running, fired: [guard_left]}
+  - grant: [controls]
+    deliver: [tick__grant(responder, controls)]
+    expect: {out: [], status: running, fired: [stop_lat_left]}

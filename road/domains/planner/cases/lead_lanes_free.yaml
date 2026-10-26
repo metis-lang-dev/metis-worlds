@@ -1,0 +1,7 @@
+case: "prodcat lead-lanes-free (the old scene): a slow lead ahead, the lanes beside free — the planner changes lane (a change is preferred to following)"
+boundaries:
+  - world: [below_limit, lead_slow, accel_ok, keep_ok, adjacent(left), adjacent(right), safe_long(leadleft), safe_lat(leadleft), safe_long(followleft), safe_lat(followleft), safe_long(leadright), safe_lat(leadright), safe_long(followright), safe_lat(followright), zone_at(nextzone, none), now]
+    expect: {out: [tick__active(planner), tick__want(planner, controls)], status: running, fired: [drive]}
+  - grant: [controls]
+    deliver: [tick__grant(planner, controls)]
+    expect: {status: running, fired: [decide, change, back]}

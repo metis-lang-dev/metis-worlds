@@ -1,10 +1,10 @@
-"""road_tree.py — the road domains' TREE DEMO on the exerciser (road-world s-e812715d step 2): metis-catalog domains/road
+"""road_tree.py — the road domains' TREE DEMO on the exerciser (road-world s-e812715d step 2): road/domains
 (responder, planner, road_director) on metis-agent's Live with domains.tick (the specialist tree: the director's
 grants, priority(responder, planner), the responder's clock every step, the planner's every tenth), the world the
 exerciser (road/world: road_world through road_host). No model, no person: the planner drives itself to the
 destination, the responder answers the situation layer.
 
-    cd metis-agent/py && METIS_CATALOG=<metis-catalog> PYTHONPATH=$PWD:<worlds>/libs/semantic-world \\
+    cd metis-agent/py && PYTHONPATH=$PWD:<worlds>/libs/semantic-world \\
         .venv/bin/python <worlds>/road/experiments/road_tree.py SCENARIO SEED [SEED …] [--ticks N] [--out DIR] \\
         [--world sumo] [--vehicles N]
 
@@ -26,6 +26,7 @@ HERE = Path(__file__).resolve().parent
 WORLD = HERE.parent / "world"
 sys.path.insert(0, str(WORLD))
 os.environ.setdefault("METIS_ROAD_WORLD", str(WORLD))
+os.environ["METIS_CATALOG"] = str(HERE.parent)              # the road's catalog root: road/domains (road-move)
 NAMES = ["responder", "planner", "road_director"]
 
 

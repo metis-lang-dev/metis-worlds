@@ -1,0 +1,17 @@
+% capacity — the road domains' role vocabulary (road-world s-e812715d step 2), one per vehicle and never per scene, as
+% alfworld's capacity.llp: the ego's world in roles the host binds every tick (semantic_world.lane LaneMap.roles and
+% zone_roles; metis-worlds road/world/road_facts.py writes the facts). The objects: lead (ahead in the ego's way),
+% follower (behind it), leadleft / followleft and leadright / followright (the neighbour lanes'), a1..a3 (the others
+% by relevance), vru1 (the walker); the zone: nextzone (the next conflict zone on the ego's route); the sides.
+catalog road_capacity 1.
+provenance text "the road domains' roles: one capacity per vehicle, bound by the host each tick" "2026-10-26".
+type obj {lead follower leadleft followleft leadright followright a1 a2 a3 vru1}.
+type side {left right}.
+type constel {same_dir opp_dir xing_ego_prio xing_obj_prio xing_same_prio unstructured not_relevant}.
+type resp {none brake_min_correct brake_min}.
+type before {none long lat both}.
+type xcase {able_to_stop safe_long no_overlap none}.
+type zone {nextzone}.
+type zclass {none far near at in}.
+type prio {ego obj same}.
+type walk {near on}.

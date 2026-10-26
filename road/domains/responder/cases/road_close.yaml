@@ -1,0 +1,11 @@
+case: "road-close (the old scene): the lead brakes hard — the responder takes the controls, brakes at the proper response every tick it holds them, and hands them back when nothing is asked"
+boundaries:
+  - world: [resp_lon(brake_min), resp_lat(none), resp_lat_left(none), resp_lat_right(none), dangerous(lead), resp(lead, brake_min), now]
+    expect: {out: [tick__active(responder), tick__want(responder, controls)], status: running, fired: [guard]}
+  - grant: [controls]
+    deliver: [tick__grant(responder, controls)]
+    expect: {out: [], status: running, fired: [brake_lon]}
+  - world: [resp_lon(brake_min), resp_lat(none), resp_lat_left(none), resp_lat_right(none), dangerous(lead), resp(lead, brake_min), now]
+    expect: {out: [], status: running, fired: [brake_lon]}
+  - world: [resp_lon(none), resp_lat(none), resp_lat_left(none), resp_lat_right(none), safe_long(lead), safe_lat(lead), now]
+    expect: {out: [tick__done(responder), tick__release(responder, controls)], status: success, fired: [stand_down]}

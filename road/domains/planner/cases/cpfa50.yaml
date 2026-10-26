@@ -1,0 +1,7 @@
+case: "Euro NCAP AEB VRU CPFA-50 (the old scene, metispy euroncap_vru.py): an adult from the farside, running (8 km/h) on the crossing ahead — the planner stops before it"
+boundaries:
+  - world: [below_limit, lead_ok, accel_ok, keep_ok, zone_at(nextzone, near), zprio(nextzone, obj), conflict(nextzone), zbusy(nextzone), crossing(vru1, on), can_stop(nextzone), now]
+    expect: {out: [tick__active(planner), tick__want(planner, controls)], status: running, fired: [drive]}
+  - grant: [controls]
+    deliver: [tick__grant(planner, controls)]
+    expect: {status: running}

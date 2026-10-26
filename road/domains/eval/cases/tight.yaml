@@ -1,0 +1,16 @@
+# a lane change into a tight gap: the follower close behind and likely to close; the hazard comes early
+manifest: ../lane_change.yaml
+init: [phase(p0), turn, free(followleft), free(leadleft), clock 12]
+ports:
+  mind: {mind(followleft, gives): 0.1, mind(followleft, keeps): 0.4, mind(followleft, takes): 0.5, mind(leadleft, gives): 0.3, mind(leadleft, keeps): 0.6, mind(leadleft, takes): 0.1}
+  closing:
+    step: [{closing(followleft, gives): 0.0, closing(leadleft, gives): 0.0, closing(followleft, keeps): 0, closing(leadleft, keeps): 0.0, closing(followleft, takes): 0.1, closing(leadleft, takes): 0},
+           {closing(followleft, gives): 0.0, closing(leadleft, gives): 0.0, closing(followleft, keeps): 0, closing(leadleft, keeps): 0.0, closing(followleft, takes): 0.2, closing(leadleft, takes): 0},
+           {closing(followleft, gives): 0.0, closing(leadleft, gives): 0.0, closing(followleft, keeps): 0, closing(leadleft, keeps): 0.0, closing(followleft, takes): 0.3, closing(leadleft, takes): 0.05},
+           {closing(followleft, gives): 0.0, closing(leadleft, gives): 0.0, closing(followleft, keeps): 0.05, closing(leadleft, keeps): 0.0, closing(followleft, takes): 0.4, closing(leadleft, takes): 0.1},
+           {closing(followleft, gives): 0.0, closing(leadleft, gives): 0.0, closing(followleft, keeps): 0.1, closing(leadleft, keeps): 0.0, closing(followleft, takes): 0.5, closing(leadleft, takes): 0.2},
+           {closing(followleft, gives): 0.0, closing(leadleft, gives): 0.0, closing(followleft, keeps): 0.1, closing(leadleft, keeps): 0.0, closing(followleft, takes): 0.6, closing(leadleft, takes): 0.3},
+           {closing(followleft, gives): 0.0, closing(leadleft, gives): 0.0, closing(followleft, keeps): 0.2, closing(leadleft, keeps): 0.0, closing(followleft, takes): 0.6, closing(leadleft, takes): 0.4},
+           {closing(followleft, gives): 0.0, closing(leadleft, gives): 0.0, closing(followleft, keeps): 0.2, closing(leadleft, keeps): 0.0, closing(followleft, takes): 0.7, closing(leadleft, takes): 0.5},
+           {closing(followleft, gives): 0.0, closing(leadleft, gives): 0.0, closing(followleft, keeps): 0.3, closing(leadleft, keeps): 0.0, closing(followleft, takes): 0.7, closing(leadleft, takes): 0.5},
+           {closing(followleft, gives): 0.0, closing(leadleft, gives): 0.0, closing(followleft, keeps): 0.3, closing(leadleft, keeps): 0.0, closing(followleft, takes): 0.8, closing(leadleft, takes): 0.5}]

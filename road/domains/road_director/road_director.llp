@@ -1,0 +1,37 @@
+% road_director — the road composition's director (road-world s-e812715d step 2): the generic tree director (metispy's
+% iface/director_tree_domain.llp: requests queued and granted, released on report, the hysteresis, preemption, the
+% stop) and the road's instance: its two members, the one resource (the controls), priority(responder, planner) — the
+% proper response overrides the plan — k = 2, m = 1. It routes nothing: the members trigger themselves.
+catalog road_director 1.
+provenance text "the road's director: the controls by request, grant and release, the responder first" "2026-10-26".
+include "iface/director_tree_domain.llp".
+include "../tick_types.llp".
+
+type kind {none}.                         % it routes nothing (the Live still asks its arrival kinds)
+bwd specialist(domain).
+specialist(responder).
+specialist(planner).
+priority(responder, planner).
+
+% the hysteresis: a grant is not revoked before its age a2 (k = 2); a status is acted on from a1 (m = 1)
+young_grant(a0).
+young_grant(a1).
+mature_grant(a2).
+mature_grant(a3).
+mature_status(a1).
+mature_status(a2).
+mature_status(a3).
+
+#init free(controls) 1
+#init offpath(responder) 1
+#init offpath(planner) 1
+#init nowant(responder) 1
+#init nowant(planner) 1
+#init nolate(responder) 1
+#init nolate(planner) 1
+#init age_of(responder, a0) 1
+#init age_of(planner, a0) 1
+#init issue(controls, t0) 1
+#init serving(controls, t0) 1
+#steps 6
+#seeds 1

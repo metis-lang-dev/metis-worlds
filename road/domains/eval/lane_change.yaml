@@ -1,0 +1,13 @@
+# the lane change's instrument manifest (road-world step 2; spec/16 §2-§5, §10.1 tick: ego): the target lane's
+# traffic's intent, the risk of a contact within the change, its level
+program: lane_change.llp
+beliefs:
+  intent: {port: mind, one: I}
+evaluate:
+  contact: {risk: contact(_), within: 10, tick: ego}
+  merged: {reach: merged, within: 12, tick: ego}
+levels:
+  lc_risk:
+    from: {evaluate: contact}
+    at: [0.01, 0.1]
+    names: [low, mid, high]

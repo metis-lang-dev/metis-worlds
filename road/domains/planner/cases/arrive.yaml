@@ -1,0 +1,8 @@
+case: "at the destination: the planner gives the controls back and is done"
+boundaries:
+  - world: [below_limit, lead_ok, accel_ok, keep_ok, zone_at(nextzone, none), now]
+    expect: {out: [tick__active(planner), tick__want(planner, controls)], status: running, fired: [drive]}
+  - grant: [controls]
+    deliver: [tick__grant(planner, controls)]
+    world: [at_dest, below_limit, lead_ok, accel_ok, keep_ok, zone_at(nextzone, none), now]
+    expect: {out: [tick__done(planner), tick__release(planner, controls)], status: success}

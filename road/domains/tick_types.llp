@@ -1,0 +1,6 @@
+% tick_types — the road composition's specialists and resource (road-world step 2): the protocol's abstract domain
+% and resource made concrete.
+catalog road_tick_types 1.
+provenance text "the road composition's members and its one resource, the controls" "2026-10-26".
+type domain {responder planner}.
+type resource {controls}.

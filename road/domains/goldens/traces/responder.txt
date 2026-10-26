@@ -1,0 +1,4 @@
+case responder steps=6 seeds=1
+I idle 1
+T 1 -
+F 1 (done) idle:1

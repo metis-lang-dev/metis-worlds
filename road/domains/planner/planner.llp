@@ -1,0 +1,10 @@
+% planner — the road's planner over the role vocabulary (road-world s-e812715d step 2): the base, the capacity, the protocol.
+catalog planner 1.
+provenance text "the road's planner over roles: the host binds the world onto them each tick" "2026-10-26".
+include "../planner_domain.llp".
+include "../capacity.llp".
+include "../tick_types.llp".
+#init idle 1
+#init trip 1
+#steps 6
+#seeds 1

@@ -1,5 +1,5 @@
 """road_world — the road EXERCISER (road-world s-e812715d step 2): a pure-python lane world over semantic_world.lane and
-.situation, ground truth, no belief, no simulator. The road domains (metis-catalog domains/road) run on it through
+.situation, ground truth, no belief, no simulator. The road domains (road/domains) run on it through
 road_host.py exactly as they will on the SUMO host (step 4).
 
 The road: one edge `e`, three lanes e_0 (right) e_1 e_2 (left), 600 m at 16.67 m/s (60 km/h); a crosswalk w_0 over

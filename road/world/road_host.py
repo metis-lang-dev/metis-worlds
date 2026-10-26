@@ -1,5 +1,5 @@
 """road_host — the road domains' host on the EXERCISER (road-world s-e812715d step 2), in mh_host's shape: each member
-of metis-catalog domains/road (responder, planner; the director has its own) gets one, and every host of a run shares
+of road/domains (responder, planner; the director has its own) gets one, and every host of a run shares
 one RoadWorld (SHARED, keyed by the run). The world's facts come from road_facts (the projection every road host makes),
 the commands go through restrict (the one restrictor), so the SUMO host (step 4) speaks the same interface.
 

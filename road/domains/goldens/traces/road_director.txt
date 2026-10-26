@@ -1,0 +1,14 @@
+case road_director steps=6 seeds=1
+I free(controls) 1
+I offpath(responder) 1
+I offpath(planner) 1
+I nowant(responder) 1
+I nowant(planner) 1
+I nolate(responder) 1
+I nolate(planner) 1
+I age_of(responder,a0) 1
+I age_of(planner,a0) 1
+I issue(controls,t0) 1
+I serving(controls,t0) 1
+T 1 -
+F 1 (done) age_of(planner,a0):1 age_of(responder,a0):1 free(controls):1 issue(controls,t0):1 nolate(planner):1 nolate(responder):1 nowant(planner):1 nowant(responder):1 offpath(planner):1 offpath(responder):1 serving(controls,t0):1

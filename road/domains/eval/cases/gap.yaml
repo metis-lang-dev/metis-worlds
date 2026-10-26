@@ -1,0 +1,16 @@
+# a lane change into a gap: the follower far back, mostly making room or holding; only one that closes reaches the ego, late
+manifest: ../lane_change.yaml
+init: [phase(p0), turn, free(followleft), free(leadleft), clock 12]
+ports:
+  mind: {mind(followleft, gives): 0.3, mind(followleft, keeps): 0.6, mind(followleft, takes): 0.1, mind(leadleft, gives): 0.5, mind(leadleft, keeps): 0.45, mind(leadleft, takes): 0.05}
+  closing:
+    step: [{closing(followleft, gives): 0.0, closing(leadleft, gives): 0.0, closing(followleft, keeps): 0.0, closing(leadleft, keeps): 0.0, closing(followleft, takes): 0, closing(leadleft, takes): 0},
+           {closing(followleft, gives): 0.0, closing(leadleft, gives): 0.0, closing(followleft, keeps): 0.0, closing(leadleft, keeps): 0.0, closing(followleft, takes): 0, closing(leadleft, takes): 0},
+           {closing(followleft, gives): 0.0, closing(leadleft, gives): 0.0, closing(followleft, keeps): 0.0, closing(leadleft, keeps): 0.0, closing(followleft, takes): 0, closing(leadleft, takes): 0},
+           {closing(followleft, gives): 0.0, closing(leadleft, gives): 0.0, closing(followleft, keeps): 0.0, closing(leadleft, keeps): 0.0, closing(followleft, takes): 0, closing(leadleft, takes): 0},
+           {closing(followleft, gives): 0.0, closing(leadleft, gives): 0.0, closing(followleft, keeps): 0.0, closing(leadleft, keeps): 0.0, closing(followleft, takes): 0, closing(leadleft, takes): 0},
+           {closing(followleft, gives): 0.0, closing(leadleft, gives): 0.0, closing(followleft, keeps): 0.0, closing(leadleft, keeps): 0.0, closing(followleft, takes): 0, closing(leadleft, takes): 0},
+           {closing(followleft, gives): 0.0, closing(leadleft, gives): 0.0, closing(followleft, keeps): 0.0, closing(leadleft, keeps): 0.0, closing(followleft, takes): 0, closing(leadleft, takes): 0},
+           {closing(followleft, gives): 0.0, closing(leadleft, gives): 0.0, closing(followleft, keeps): 0.0, closing(leadleft, keeps): 0.0, closing(followleft, takes): 0.2, closing(leadleft, takes): 0},
+           {closing(followleft, gives): 0.0, closing(leadleft, gives): 0.0, closing(followleft, keeps): 0.0, closing(leadleft, keeps): 0.0, closing(followleft, takes): 0.3, closing(leadleft, takes): 0.1},
+           {closing(followleft, gives): 0.0, closing(leadleft, gives): 0.0, closing(followleft, keeps): 0.0, closing(leadleft, keeps): 0.0, closing(followleft, takes): 0.5, closing(leadleft, takes): 0.2}]

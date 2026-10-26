@@ -1,0 +1,9 @@
+case: "the side road has the right of way and a car comes: the planner stops before the zone line (right of way is given, not taken)"
+boundaries:
+  - world: [below_limit, lead_ok, accel_ok, keep_ok, zone_at(nextzone, near), zprio(nextzone, obj), conflict(nextzone), zbusy(nextzone), can_stop(nextzone), now]
+    expect: {out: [tick__active(planner), tick__want(planner, controls)], status: running, fired: [drive]}
+  - grant: [controls]
+    deliver: [tick__grant(planner, controls)]
+    expect: {status: running, fired: [yield_zone]}
+  - world: [below_limit, lead_ok, accel_ok, keep_ok, zone_at(nextzone, at), zprio(nextzone, obj), conflict(nextzone), zclear(nextzone), zfree(nextzone), can_stop(nextzone), zbusy(nextzone) 0, zone_at(nextzone, near) 0, now]
+    expect: {status: running, fired: [decide, accel, back]}

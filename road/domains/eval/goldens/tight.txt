@@ -1,0 +1,7 @@
+N belief-read close intent
+N belief-read hold intent
+N step-table closing rows 10
+V contact risk contact(_) within 10 tick ego = 6423625513949/7812500000000 ~ 0.82222406578547202 worlds 9 states 1010
+V merged reach merged within 12 tick ego = 1/1 ~ 1 worlds 9 states 3415
+L lc_risk(high)
+rc 0

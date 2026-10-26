@@ -1,0 +1,57 @@
+% lane_change — the world model of a lane change for the one-tick instrument (road-world s-e812715d step 2; metis-lang
+% spec/16 §3, §6, §10.1): the planner's change to the left, the risk that the target lane's traffic closes on the ego
+% before it is in the lane. A tick (the responder's, 0.1 s) opens at stage ego: the ego moves over one phase (ten
+% phases: the change's second), then stage traffic: each target-lane role still free either closes on the ego
+% (contact) or holds this tick, priced by its intent — a categorical belief, intent(B, I) one I by mind — and the
+% host's per-tick table closing(B, I) (the first-passage hazard: B closes at tick t given I, not before; spec/16 §10.1,
+% nina's predict_table shape). The query: the risk of a contact within the change (risk contact(_) within 10 tick
+% ego); the level lc_risk the planner may read.
+catalog lane_change 1.
+provenance text "a lane change's risk: the target lane's follower and lead, their intent, closing hazards by tick" "2026-10-26".
+layers (dyn).
+stages (ego traffic).
+type role {followleft leadleft}.
+type intent {gives keeps takes}.               % makes room, holds its speed, closes the gap
+type phase {p0 p1 p2 p3 p4 p5 p6 p7 p8 p9 p10}.
+type risk {low mid high}.
+namespace lc produce (dyn).
+pred phase(phase) : lc.                         % how far the ego is over
+pred merged : lc.                               % the change is done
+pred turn : lc.                                 % the ego's event this tick
+pred free(role) : lc.
+pred held(role) : lc.
+pred contact(role) : lc.                        % B closed on the ego in the change
+pred intent(role, intent) : lc.                 % the belief (drawn: one I by mind)
+pred clock : lc.                                % the ticks left in the world
+pred lc_risk(risk) : lc.                        % the level port's (the manifest's levels: lc_risk)
+bwd next(phase, phase).
+next(p0, p1).
+next(p1, p2).
+next(p2, p3).
+next(p3, p4).
+next(p4, p5).
+next(p5, p6).
+next(p6, p7).
+next(p7, p8).
+next(p8, p9).
+next(p9, p10).
+weight mind(B, I) reads {intent(B, I)}.
+weight closing(B, I) reads {intent(B, I)}.
+stage ego {
+  %% I move over, {P} to {Q}.
+  move [dyn] : turn * phase(P) * next(P, Q) -o phase(Q).
+  %% I am in the lane: the change is done.
+  merge [dyn] : turn * phase(p10) -o merged.
+  %% {B} is free again.
+  wake [dyn] : held(B) -o free(B).
+}
+%% The ego has moved: the traffic's turn.
+qui to_traffic [dyn] : ego -o traffic.
+stage traffic {
+  %% {B}, {I}, closes on me while I change lane.
+  close [dyn] : free(B) * $intent(B, I) * $phase(P) -o contact(B)  @w closing(B, I).
+  %% {B}, {I}, holds this tick.
+  hold [dyn] : free(B) * $intent(B, I) * $phase(P) -o held(B)  @w ~closing(B, I).
+}
+%% The traffic has moved: the next tick opens at the ego.
+qui to_ego [dyn] : traffic * clock -o ego * turn.
