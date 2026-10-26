@@ -372,9 +372,13 @@ class AlfHost:
                 f.write(json.dumps(rec) + "\n")
 
     def observe(self, counts):
+        """The reading the watch scores the program against: the world's, without the level hook's atoms (fetch_risk
+        and its kin). A level is the host's own world line, asserted by its tick; it is never part of a surprise
+        difference (belief-levels follow-up: after a stop the live level came back in the reading, and the watch
+        opened a surprise {fetch_risk(low): 1} on a change the model did not cause)."""
         if self.done and not self.won:
             return {}
-        return self.reading()
+        return {a: n for a, n in self.reading().items() if a.split("(")[0] not in self.level_preds}
 
     def tick(self, counts):
         if self.done and not self.out:

@@ -86,6 +86,7 @@ PREDICT_H = 4
 # instrument: metispy's LevelHook on nav's manifest (CROSS_BACKEND "hook", >= ada88be: tick: and tables by step), or
 # metisc --evaluate on a case written per beat ("metisc": the cross-check). "worst" binds every bound beast hostile.
 POLICY_FACTS = {"cross_risk", "junction", "lane"}
+LEVEL_PREDS = {"cross_risk"}           # the instrument's levels: in the reading (the session's), never in observe's
 CROSS_BACKEND = os.environ.get("METIS_CROSS_BACKEND", "hook")
 ROLE_READ = {"agent_at", "floor", "door", "stairs_down", "obj", "monster", "holds", "said", "next", "toward", "step"}
 SHARED = {}            # a hierarchy's one NLE process (level.json `shared`: the map's path): {key: {"gym", "last", "won_at"}}
@@ -396,9 +397,11 @@ class MhHost:
                 f.write(json.dumps(rec) + "\n")
 
     def observe(self, counts):
+        """The reading the watch scores the program against, without the instrument's level atoms (cross_risk): the
+        host's own world line, never part of a surprise difference (as alf_host.observe)."""
         if self.done and not self.won:
             return {}
-        return self.reading()
+        return {a: n for a, n in self.reading().items() if a.split("(")[0] not in LEVEL_PREDS}
 
     def tick(self, counts):
         if self.key and SHARED.get(self.key, {}).get("last") is not None:

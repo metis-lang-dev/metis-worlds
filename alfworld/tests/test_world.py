@@ -778,6 +778,12 @@ def test_a_rebinding_is_a_sync_on_the_live_session(tmp_path):
         # no fetch engaged, so its risk is high)
         assert th.tick(counts) == ["+fetch_risk(high) 1"]
         counts["fetch_risk(high)"] = 1
+        # the level is the host's world line: in the reading the session syncs, never in the watch's observe (a
+        # surprise difference) — not even when it moved while the member was stopped (the session still says high)
+        assert "fetch_risk(high)" in th.reading() and not any(a.startswith("fetch_risk(") for a in th.observe(counts))
+        th.level_atoms = {"fetch_risk(low)": 1}
+        assert not any(a.startswith("fetch_risk(") for a in th.observe(counts))
+        th.level_atoms = {"fetch_risk(high)": 1}
         d = th.smap.load()
         nd = sorted(r for r in d["places"] if r not in d["task"]["dests"] and r != th.smap.handle("p1"))[0]
         held = th.smap.handle("p1")
