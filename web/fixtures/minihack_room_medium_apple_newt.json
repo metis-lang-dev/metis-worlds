@@ -1,0 +1,260 @@
+{
+ "world": "minihack",
+ "level": "room_medium_apple_newt_none_none",
+ "cols": 7,
+ "rows": 5,
+ "cells": [
+  [
+   {
+    "t": 2378,
+    "ch": "."
+   },
+   {
+    "t": 2378,
+    "ch": "."
+   },
+   {
+    "t": 2378,
+    "ch": "."
+   },
+   {
+    "t": 2378,
+    "ch": "."
+   },
+   {
+    "t": 2378,
+    "ch": "."
+   },
+   {
+    "t": 2378,
+    "ch": "."
+   },
+   {
+    "t": 2378,
+    "ch": "."
+   }
+  ],
+  [
+   {
+    "t": 2378,
+    "ch": "."
+   },
+   {
+    "t": 2378,
+    "ch": "."
+   },
+   {
+    "t": 2378,
+    "ch": "."
+   },
+   {
+    "t": 2378,
+    "ch": "."
+   },
+   {
+    "t": 2378,
+    "ch": "."
+   },
+   {
+    "t": 2378,
+    "ch": "."
+   },
+   {
+    "t": 2378,
+    "ch": "."
+   }
+  ],
+  [
+   {
+    "t": 2378,
+    "ch": "."
+   },
+   {
+    "t": 2378,
+    "ch": "."
+   },
+   {
+    "t": 2378,
+    "ch": "."
+   },
+   {
+    "t": 2378,
+    "ch": "."
+   },
+   {
+    "t": 2378,
+    "ch": "."
+   },
+   {
+    "t": 2378,
+    "ch": "."
+   },
+   {
+    "t": 2378,
+    "ch": "."
+   }
+  ],
+  [
+   {
+    "t": 2378,
+    "ch": "."
+   },
+   {
+    "t": 2378,
+    "ch": "."
+   },
+   {
+    "t": 2378,
+    "ch": "."
+   },
+   {
+    "t": 2378,
+    "ch": "."
+   },
+   {
+    "t": 2378,
+    "ch": "."
+   },
+   {
+    "t": 2378,
+    "ch": "."
+   },
+   {
+    "t": 2378,
+    "ch": "."
+   }
+  ],
+  [
+   {
+    "t": 2383,
+    "ch": ">"
+   },
+   {
+    "t": 2378,
+    "ch": "."
+   },
+   {
+    "t": 2378,
+    "ch": "."
+   },
+   {
+    "t": 2378,
+    "ch": "."
+   },
+   {
+    "t": 2378,
+    "ch": "."
+   },
+   {
+    "t": 2378,
+    "ch": "."
+   },
+   {
+    "t": 2378,
+    "ch": "."
+   }
+  ]
+ ],
+ "entities": [
+  {
+   "id": "newt@c2_4",
+   "name": "newt",
+   "pos": [
+    2,
+    4
+   ],
+   "tile": 318,
+   "ch": ":",
+   "kind": "monster"
+  },
+  {
+   "id": "apple@c1_4",
+   "name": "apple",
+   "pos": [
+    1,
+    4
+   ],
+   "tile": 2158,
+   "ch": "%",
+   "kind": "object"
+  },
+  {
+   "id": "stairs_down@c0_4",
+   "name": "staircase down",
+   "pos": [
+    0,
+    4
+   ],
+   "tile": 2383,
+   "ch": ">",
+   "kind": "place"
+  }
+ ],
+ "agent": {
+  "pos": [
+   4,
+   4
+  ],
+  "yaw": null,
+  "tile": 329,
+  "ch": "@"
+ },
+ "task": {
+  "text": "Find the stairs down and go down them.",
+  "goal": "down",
+  "source": "metis-worlds minihack: the room family (levels.py)"
+ },
+ "card": {
+  "title": "MiniHack room",
+  "about": [
+   "MiniHack: a NetHack level on a grid; the agent walks, picks up, opens and unlocks, and goes down the stairs.",
+   "3 things on the level (3 kinds)."
+  ],
+  "room": [],
+  "things": [
+   {
+    "type": "monster",
+    "n": 1,
+    "ids": [
+     "newt@c2_4"
+    ]
+   },
+   {
+    "type": "object",
+    "n": 1,
+    "ids": [
+     "apple@c1_4"
+    ]
+   },
+   {
+    "type": "place",
+    "n": 1,
+    "ids": [
+     "stairs_down@c0_4"
+    ]
+   }
+  ],
+  "asks": [
+   {
+    "say": "find the stairs down and go down them",
+    "what": "the level's task: the one that wins"
+   },
+   {
+    "say": "stop",
+    "what": "the agent stops and waits"
+   },
+   {
+    "say": "new game",
+    "what": "the level from its start"
+   }
+  ],
+  "cannot": [
+   "a single step on its own",
+   "a thing that is not on this level"
+  ],
+  "source": "generated from the level by world/map_export.py"
+ },
+ "tileset": {
+  "index": []
+ }
+}
