@@ -33,7 +33,7 @@ DIRS = {"n": "N", "e": "E", "s": "S", "w": "W", "ne": "NE", "se": "SE", "sw": "S
 ACTIONS = ["N", "E", "S", "W", "NE", "SE", "SW", "NW", "PICKUP", "EAT", "DOWN", "WAIT", "OPEN", "KICK", "APPLY", "SEARCH", "MORE", "ESC"]
 # the perceived predicates the sync may retract (the agent's own tokens never)
 PERCEIVED = {"agent_at", "floor", "wall", "door", "corridor", "stairs_down", "stairs_up", "obj", "monster", "trap",
-             "unknown", "hp", "hpmax", "hunger", "turn", "holds"}
+             "unknown", "hp", "hpmax", "hunger", "turn", "holds", "peaceful", "bystander"}
 
 
 def interpreter():
@@ -71,7 +71,7 @@ ALIVE = (0.2, -1.0)    # a beast out of sight fades (exists −0.2 a turn; dropp
 # the response time, in turns: the tree's, measured (the beast case) — act's want is relayed at one boundary, the
 # director's preempt grant latched at the next, so the body answers two turns after the trigger
 RHO = 2.0
-SITUATION = {"oncoming", "closing", "resp_lon", "lost"}   # the situation layer's facts (the beast case): the host's, retracted when gone
+SITUATION = {"oncoming", "closing", "resp_lon", "lost", "peaceful"}   # the situation layer's facts (the beast case): the host's, retracted when gone
 # nav-belief s-794cf4c1 step 1: a map that tracks intents (GridMap.build(intents=…)) — the bound beasts' intent level
 # (semantic_world.intent HOSTILE_SURE / HOSTILE_MAYBE), closing level (P(closing within RHO) at CLOSING_LEVELS, as
 # belief-levels-mh) and position support, for a domain that declares them; every step's record and per-step table
@@ -88,7 +88,7 @@ PREDICT_H = 4
 POLICY_FACTS = {"cross_risk", "junction", "lane"}
 LEVEL_PREDS = {"cross_risk"}           # the instrument's levels: in the reading (the session's), never in observe's
 CROSS_BACKEND = os.environ.get("METIS_CROSS_BACKEND", "hook")
-ROLE_READ = {"agent_at", "floor", "door", "stairs_down", "obj", "monster", "holds", "said", "next", "toward", "step"}
+ROLE_READ = {"agent_at", "floor", "door", "stairs_down", "obj", "monster", "bystander", "holds", "said", "next", "toward", "step"}
 SHARED = {}            # a hierarchy's one NLE process (level.json `shared`: the map's path): {key: {"gym", "last", "won_at"}}
 
 
@@ -180,21 +180,29 @@ class MhHost:
         the map and dangerous (opposite direction, the gap within both reaches), closing(B) while it is not beside the
         robot yet, resp_lon(R) the fold's response, lost(B) for a bound beast no monster(B, P) names this step (out of
         sight, or on a cell the window does not bind: the route bent round it; act stood for it
-        and would wait on a closing(B) that no longer comes: nav-belief step 3, the belief policy's stall).
+        and would wait on a closing(B) that no longer comes: nav-belief step 3, the belief policy's stall),
+        peaceful(B) for a bound beast the screen called peaceful (perceive's peaceful(NAME, C): a world fact, never
+        the intent belief; nav-belief-2 (b)). A peaceful beast is in no RSS pair: never oncoming, never in the fold's
+        response, so act neither preempts for it nor strikes it; every other beast stays the worst case (intent-blind).
         The numbers stay here; the memory of the axis safe before is this host's, across its beats."""
         from semantic_world.situation import Dynamics, Situation
         if getattr(self, "_sit", None) is None:
             self._sit = Situation()
-        states = self._sit.check(self.cmap.pairs(rho=RHO))
+        d = self.cmap.load()
+        seen = d.get("_beasts_seen") or {}
+        self.calm(d)
+        states = self._sit.check([p for p in self.cmap.pairs(rho=RHO) if p.id.split(":")[0] not in self.peaceful])
         fold = Situation.fold(states, Dynamics(vmax=1.0, rho=RHO, min_dist=1.0))
         out = {"resp_lon(%s)" % fold["resp_lon"]: 1}
-        d = self.cmap.load()
-        seen, bind = d.get("_beasts_seen") or {}, d.get("binding") or {}
+        bind = d.get("binding") or {}
         cells = set(bind.values())
         lost = {role for role, n in bind.items()   # in the roles no more: out of sight, or on a cell no role names
                 if d.get("things", {}).get(n, {}).get("kind") == "beast" and seen.get(n) not in cells}
         for role in lost:
             out["lost(%s)" % role] = 1
+        for role, n in bind.items():
+            if n in self.peaceful:
+                out["peaceful(%s)" % role] = 1
         for st in states:                          # what act acts on, it can name: a lost beast is neither
             if st.role and st.role not in lost and st.type == "opp_dir" and st.dangerous:
                 out["oncoming(%s)" % st.role] = 1
@@ -202,13 +210,29 @@ class MhHost:
                     out["closing(%s)" % st.role] = 1
         return out
 
+    def calm(self, d=None):
+        """The beasts the screen called peaceful (perceive's peaceful(NAME, C) at a beast's sighting), held while out of
+        sight; a beast seen without the word (angered) is the worst case again. → the set (self.peaceful)."""
+        d = d or self.cmap.load()
+        things = d.get("things", {})
+        if not hasattr(self, "peaceful"):
+            self.peaceful = set()
+        for n, c in (d.get("_beasts_seen") or {}).items():
+            if "peaceful(%s,%s)" % (things.get(n, {}).get("of", n), c) in self.atoms:
+                self.peaceful.add(n)
+            else:
+                self.peaceful.discard(n)
+        return self.peaceful
+
     def gaps(self):
         """The beasts' gaps along the way before a step, for the log (the beast case's safety check): [[role, type,
         d_lon, dangerous]] from a fresh situation (no memory), None off a role level or with no log."""
         if self.cmap is None or not os.environ.get("METIS_MH_LOG"):
             return None
         from semantic_world.situation import Situation
-        return [[st.role, st.type, st.d_lon, st.dangerous] for st in Situation().check(self.cmap.pairs(rho=RHO))]
+        calm = self.calm()                                  # the screen's peaceful beasts are no danger (situation())
+        return [[st.role, st.type, st.d_lon, st.dangerous] for st in Situation().check(self.cmap.pairs(rho=RHO))
+                if st.id.split(":")[0] not in calm]
 
     def reading(self):
         if self.cmap is not None:
@@ -223,6 +247,13 @@ class MhHost:
                 r = {a: n for a, n in r.items() if a.split("(")[0] not in ("junction", "lane")}
                 r.update(self.cell_kinds())
                 r.update(getattr(self, "cross_atoms", {}))
+            calm = self.calm() if any(a.startswith("monster(") for a in r) else ()
+            if calm:                                   # a peaceful beast is a bystander: no strike or fight rule binds it
+                bind = self.cmap.load().get("binding") or {}
+                for a in [a for a in r if a.startswith("monster(")]:
+                    b, c = a[8:-1].split(",")
+                    if bind.get(b) in calm:
+                        r["bystander(%s,%s)" % (b, c)] = r.pop(a)
             keep = self.observed if self.observed is not None else ROLE_READ   # what the domain declares
             return {a: n for a, n in r.items() if a.split("(")[0] in keep}
         return {a: 1 for a in self.atoms}

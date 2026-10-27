@@ -30,7 +30,7 @@ from semantic_world import grid  # noqa: E402  (libs/semantic-world, installed e
 K = grid.K
 SPECS = {
     "nav": dict(types=("cell", "beast"), goal="goto", out=("reached", "closed", "guarded"),
-                dyn=("agent_at", "step", "door", "monster", "next", "toward", "stairs_down")),
+                dyn=("agent_at", "step", "door", "monster", "bystander", "next", "toward", "stairs_down")),
     "act": dict(types=("cell", "beast"), goal="open", goals=("open", "fight"), out=("opened", "cleared"),
                 dyn=("agent_at", "step", "door", "monster", "next", "said")),
     "task": dict(types=("cell",), goal="reach", takes=("reached", "opened", "cleared", "refused"), out=("goto", "done", "stuck"),
@@ -278,6 +278,12 @@ GUARD = ["  %% {B} is coming at me: I take over.",
          "  lose_sight [dyn] : alert(B) * busy * $lost(B) -o idle * tick__done(act) * tick__release(act, motion).",
          "  %% It went out of my sight: I give the way back.",
          "  lose_struck [dyn] : struck(B) * busy * $lost(B) -o idle * tick__done(act) * tick__release(act, motion).",
+         "  %% {B} is peaceful: no danger, I give the way back.",
+         "  stand_peace [dyn] : alert(B) * busy * $peaceful(B) -o idle * tick__done(act) * tick__release(act, motion).",
+         "  %% My strike went into stone: it is not there, I give the way back.",
+         "  strike_blocked [dyn] : struck(B) * busy * said(blocked) -o idle * tick__done(act) * tick__release(act, motion).",
+         "  %% The world asked whether to strike; it was answered no: I give the way back.",
+         "  strike_asked [dyn] : struck(B) * busy * said(asked) -o idle * tick__done(act) * tick__release(act, motion).",
          "  %% It is down: the way is clear.",
          "  struck_down [dyn] : struck(B) * busy * $resp_lon(none) -o idle * tick__done(act) * tick__release(act, motion).",
          "  %% I was asked to clear {P}: it is the beast I am on already.",
@@ -292,6 +298,7 @@ GUARD_DECLS = ["type resp {none brake_min_correct brake_min}.",
                "pred brakes(resp) : act.                 % static: the responses that brake",
                "pred closing(beast) : act.               % the host's: oncoming and not beside yet",
                "pred lost(beast) : act.                  % the host's: a bound beast out of sight this step",
+               "pred peaceful(beast) : act.              % the host's: the screen calls the beast peaceful (a world fact)",
                "pred alert(beast) : act.", "pred struck(beast) : act.", "pred braced(beast) : act.",
                "pred fighting : act.", "pred owed(cell) : act."]
 GUARD_CASE = {"case": "a beast comes at the robot: act takes the body by itself, stands, strikes it beside, gives the body back",
@@ -316,7 +323,7 @@ ABSORB_CASE = {"case": "act, already on a beast by itself, is asked to fight it 
                    {"world": ["agent_at(p1)", "next(p1, e, p2)", "step(p2)", "resp_lon(none)"],
                     "expect": {"out": ["cleared(p2)", "tick__done(act)", "tick__release(act, motion)"], "status": "success",
                                "fired": ["struck_down", "pay"]}}]}
-TREE_DYN = {"act": ("oncoming", "closing", "resp_lon", "lost")}     # the tree variant's own readings (the beast case; lost: nav-belief step 3)
+TREE_DYN = {"act": ("oncoming", "closing", "resp_lon", "lost", "peaceful")}   # the tree variant's own readings (the beast case; lost: nav-belief step 3; peaceful: nav-belief-2)
 
 
 def base(spec, geometry="pred", tree=False, policy=None):
@@ -352,6 +359,7 @@ def _base(spec, geometry="pred", tree=False, policy=None):
             "types (cell beast).", "type dir {n e s w ne se sw nw}.", "type doorstate {open closed}.", "namespace nav produce (dyn).",
             "pred agent_at(cell) : nav.", "pred step(cell) : nav.                     % the host's: the cell can be stepped on now (floor or an open door, no beast)",
             "pred door(cell, doorstate) : nav.", "pred monster(beast, cell) : nav.",
+            "pred bystander(beast, cell) : nav.         % the host's: a beast the screen calls peaceful (never a monster to fight)",
             "pred stairs_down(cell) : nav.              % the host's map: the stairs, under the robot too", geo,
             "pred toward(cell) : nav.                   % the host's: the next cell of its path",
             "pred goto(cell) : nav.", "pred reached(cell) : nav.", "pred closed(cell) : nav.", "pred guarded(cell) : nav."] + tok
@@ -371,6 +379,9 @@ def _base(spec, geometry="pred", tree=False, policy=None):
             "  %% {B} is in my way, {D}.",
             _tree(t, "  in_way [dyn] : goto(goal) * $agent_at(C) * $next(C, D, P) * $toward(P) * $monster(B, P) -o guarded(P).",
                   "  in_way [dyn] : goto(goal) * busy * $tick__grant(nav, motion) * $agent_at(C) * $next(C, D, P) * $toward(P) * $monster(B, P) -o guarded(P) * idle."),
+            "  %% {B} stands in my way, {D}, and means no harm: I wait for it to step aside.",   # nav-belief-2 (b): never a fight
+            _tree(t, "  wait_by [dyn] : $goto(goal) * $agent_at(C) * $next(C, D, P) * $toward(P) * bystander(B, P) -o ().",
+                  "  wait_by [dyn] : $goto(goal) * $busy * $tick__grant(nav, motion) * $agent_at(C) * $next(C, D, P) * $toward(P) * bystander(B, P) -o ()."),
             "}", ""])
     if spec == "act":
         done = " * idle * tick__done(act)" if t else ""

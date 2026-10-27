@@ -3,7 +3,8 @@
 The map (glyphs + chars) becomes atoms over CELLS (`c3_2`: column 3, row 2 of the level's
 own map, not the 79×21 screen): `agent_at(C)`, `floor(C)`, `wall(C)`, `door(C, open|closed)`,
 `stairs_down(C)`, `obj(NAME, C)` (NLE's object name), `monster(NAME, C)`, `trap(KIND, C)`
-(once seen); the bottom line becomes `hp(N)`, `hpmax(N)`, `hunger(STATE)`, `turn(N)`; the
+(once seen), `peaceful(NAME, C)` for a monster the screen calls peaceful (farlook's words, NLE's
+screen_descriptions: no turn spent; nav-belief-2 (b)); the bottom line becomes `hp(N)`, `hpmax(N)`, `hunger(STATE)`, `turn(N)`; the
 inventory `holds(NAME)` per item class word; the message line becomes EVENTS the host
 hands in as atoms for one beat: `said(KIND)` with KIND from a small table of NetHack's
 messages (solid stone, you see here, you kill, it bites, you fall into a pit, there is a
@@ -27,6 +28,7 @@ MESSAGES = [
     (r"(\w) - (.+?)\.", "picked"), (r"there is nothing here to pick up", "nothing_here"), (r"you can.?t (go|move) ", "cant"),
     (r"you are (hungry|weak|fainting)", "hunger"), (r"you die", "died"), (r"welcome", "welcome"), (r"it.s a wall", "blocked"),
     (r"you cannot pass", "blocked"), (r"you stop\.", "stopped"), (r"never mind", "nevermind"), (r"what do you want", "prompt"),
+    (r"\[yn[aq]*\]", "asked"),          # a y/n question: the gym answers it "n" (mh_gym.World.answered; nav-belief-2 (c))
 ]
 
 
@@ -59,6 +61,7 @@ class Perceiver:
 
     def map_atoms(self, obs):
         g, c = obs["glyphs"], obs["chars"]
+        sd = obs.get("screen_descriptions") if hasattr(obs, "get") else None
         atoms, names = set(), {"objects": set(), "monsters": set()}
         for y in range(self.h):
             for x in range(self.w):
@@ -72,6 +75,8 @@ class Perceiver:
                 elif nethack.glyph_is_monster(gl):
                     name = nethack.permonst(nethack.glyph_to_mon(gl)).mname.replace(" ", "_")
                     atoms.add("monster(%s,%s)" % (name, C)); atoms.add("floor(%s)" % C); names["monsters"].add(name)
+                    if sd is not None and bytes(sd[sy, sx]).decode(errors="ignore").strip("\x00").startswith("peaceful "):
+                        atoms.add("peaceful(%s,%s)" % (name, C))
                 elif nethack.glyph_is_object(gl):
                     name = (nethack.OBJ_NAME(nethack.objclass(nethack.glyph_to_obj(gl))) or "thing").replace(" ", "_")
                     atoms.add("obj(%s,%s)" % (name, C)); atoms.add("floor(%s)" % C); names["objects"].add(name)

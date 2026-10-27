@@ -350,7 +350,12 @@ class GridMap(core.SemanticMap):
                     out["support(%s,%s)" % (role, inv[c])] = 1
         return out
 
-    CONTACT = 1                          # a beast in contact: within this many steps of the ego (beside it)
+    # contact per intent (nav-belief-2 s-9300e90a (a); the ruling's law: a categorical belief enters only through
+    # per-value tables): the steps from the ego at which B, its intent I, is in contact. A hostile beast attacks from
+    # beside the ego (NetHack's melee reach: one step); a wandering or fleeing one never attacks and never enters the
+    # ego's cell (one monster or hero a square), so it is never in contact (None): beside the ego it is only near.
+    # Its walk still moves its position belief (the closing rows, the marginals).
+    CONTACT = {"hostile": 1, "wandering": None, "fleeing": None}
 
     def predict_table(self, h, d=None, path=None):
         """The belief per step over the next H ticks, for the instrument (nav-belief step 2; metis-lang spec/16 §10.1,
@@ -361,9 +366,10 @@ class GridMap(core.SemanticMap):
         alone, the paths that have not closed yet kept), B its role when bound, else its name — and "marginals":
         {"closing": [[P(nearer than now at t) per beast] …], "near": [[P(within one step at t)] …]} under the intent
         mixture, for the levels only. Rows are TICKS (one NLE turn): the instrument's events per tick are step 3's.
-        Each row also has the HAZARD of contact, "contact(B,I)": that B, its intent I, comes within CONTACT steps of the
-        ego at step t given it has not before (nav-belief step 3, the crossing's risk) — the ego walking PATH (its
-        route: at PATH[t] at step t, its last cell after its end), else standing."""
+        Each row also has the HAZARD of contact, "contact(B,I)": that B, its intent I, comes within CONTACT[I] steps of
+        the ego at step t given it has not before (nav-belief step 3, the crossing's risk; per intent since nav-belief-2:
+        a hostile beside the ego, any other never, 0) — the ego walking PATH (its route: at PATH[t] at step t, its last
+        cell after its end), else standing."""
         from . import intent
         d = d or self.load()
         at = d["agent"]["at"]
@@ -381,11 +387,11 @@ class GridMap(core.SemanticMap):
             for i in intent.INTENTS:
                 bel = dict(d["belief"][n])
                 for t in range(int(h)):
-                    de = dists.get(egos[t], {})
+                    de, reach = dists.get(egos[t], {}), self.CONTACT[i]
                     hit, keep = 0.0, {}
                     for c, m in bel.items():
                         for c2, q in ims[n][i]({c: 1.0}, 1).items():
-                            if de.get(c2, far) <= self.CONTACT:
+                            if reach is not None and de.get(c2, far) <= reach:
                                 hit += m * q
                             else:
                                 keep[c2] = keep.get(c2, 0.0) + m * q

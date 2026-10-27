@@ -5,7 +5,8 @@ gnome that wanders, a white unicorn that keeps its distance — and the map's ca
 position predicted along the lanes while unseen, NLE's line of sight as the observation). Today's nav and act run
 unchanged (the CONTROL): the host logs, per world step, each beast's intent belief and levels and the per-step table.
 
-    .worlds/mh/bin/python experiments/nav_belief.py setup OUT [SEED …] [--policy belief|worst] [--level mines|cross|gnome]
+    .worlds/mh/bin/python experiments/nav_belief.py setup OUT [SEED …] [--policy belief|worst] [--level mines|cross|gnome|junction]
+        [--prior SPECIES:INTENT=P]      (a counterfactual prior on the level's card: OUT/card.json)
     cd metis-agent/py && METIS_MH_PY=… .venv/bin/python …/experiments/nav_belief.py run OUT [SEED …]
 
 run prints per seed: steps, waits, the outcome, and the levels per tick (from OUT/seedN/.run/steps.jsonl).
@@ -40,7 +41,22 @@ LEVELS = {"mines": BEASTS,
           "cross": [("gnome", (23, 7), ("peaceful",)), ("white unicorn", (35, 8), ()), ("jackal", (24, 1), ())],
           # step 3b (the ruling): mines with the peaceful gnome loitering beside the route's junction c19_4 (its north
           # branch): the belief should cross it where the worst case waits
-          "gnome": [("jackal", (31, 4), ()), ("gnome", (19, 3), ("peaceful",)), ("white unicorn", (27, 1), ())]}
+          "gnome": [("jackal", (31, 4), ()), ("gnome", (19, 3), ("peaceful",)), ("white unicorn", (27, 1), ())],
+          # nav-belief-2 (d): mines with the peaceful gnome AT the route's junction c23_4 — asleep on its south branch,
+          # c23_5, in the junction's crossing zone, off the main lane (it loiters there until the robot's nearness wakes
+          # it), created first; no unicorn. Placement, sleep and creation order searched by replaying mines' control
+          # moves on both runs: this one leaves the jackal's approach as on mines (NetHack's monster moves share one
+          # random stream: the gnome awake there, or in its mines slot, moved the jackal). No placement near c23 kept
+          # the unicorn's path on the north lane as well: its believed cell two steps up the route broke condition 4
+          # at t10 under control and belief, a beast of mines', not of the gnome's junction. The belief should cross
+          # c23_4 where the worst case waits. Measured (runs 1, 2): belief passes c23_4 at t31, worst at t64 (33 waits
+          # beside the sleeping gnome), equal at the jackal's junctions; the gnome's first beat reads 0.2998, under the
+          # 0.3 threshold by its prior alone. With --prior gnome:hostile=0.31 (the ruling's counterfactual): two waits
+          # at c22_4 (0.3098, then 0.3009, high; 0.257 mid on the third beat), passed at t33, 53 steps, still 31
+          # ticks before worst; the separation rests on the update
+          "junction": [("gnome", (23, 5), ("peaceful", "asleep")), ("jackal", (31, 4), ())]}
+# the levels' cards (nav-belief-2 step 2 ruling): junction's gnome sleeps in the zone; an awake wanderer is a later level
+CARDS = {"junction": "sleeping bystander"}
 # the beasts' intent priors (hand-set from NetHack's behaviour: a jackal chases, a gnome here wanders, a unicorn
 # keeps its distance) and their speeds (cells a turn, the hero's 12 = 1): the map's only knowledge of them
 PRIORS = {"jackal": {"hostile": 0.5, "wandering": 0.3, "fleeing": 0.2},
@@ -97,13 +113,27 @@ def level_des(beasts=BEASTS):
     return lvl.get_des()
 
 
-def setup(out, seeds=(1,), policy=None, level="mines"):
+def override(priors, spec):
+    """PRIORS with SPEC "species:intent=p" set: that intent p, the species' others scaled to 1 − p (a counterfactual
+    run's card, never the library's prior)."""
+    sp, rest = spec.split(":")
+    i, p = rest.split("=")
+    p, row = float(p), dict(priors[sp])
+    z = sum(v for k, v in row.items() if k != i) or 1.0
+    return dict(priors, **{sp: {k: (p if k == i else v * (1 - p) / z) for k, v in row.items()}})
+
+
+def setup(out, seeds=(1,), policy=None, level="mines", prior=None):
     import mh_hier
+    priors = override(PRIORS, prior) if prior else PRIORS
+    Path(out).mkdir(parents=True, exist_ok=True)
+    Path(out, "card.json").write_text(json.dumps({"level": level, "card": CARDS.get(level, level), "policy": policy,
+                                                  "prior": prior, "priors": priors}, indent=1))
     for s in seeds:
         root = Path(out) / ("seed%d" % s)
         mh_hier.install(level_des(LEVELS[level]), str(root), view=False, k=8, seed=s, name="nav_" + level, max_steps=300, tree=True,
-                        intents={"priors": PRIORS, "los": True}, speeds=SPEEDS, policy=policy)
-        print("setup:", root)
+                        intents={"priors": priors, "los": True}, speeds=SPEEDS, policy=policy)
+        print("setup:", root, CARDS.get(level, level), prior or "")
 
 
 class NoModel:
@@ -189,6 +219,14 @@ def summary(res):
         j = zone.get(r.get("agent"))
         if j and j not in crossed:
             crossed[j] = r.get("t")
+    # nav-belief-2: the tick the robot is first PAST each junction's zone (east of it: the junction crossed; a wait
+    # beside it is inside the zone, so `crossed`, the zone's entry, cannot tell a wait from a crossing)
+    passed = {}
+    for r in recs:
+        x = int(str(r.get("agent") or "c0_0")[1:].split("_")[0])
+        for j in junctions():
+            if j not in passed and x >= int(j[1:].split("_")[0]) + 2:
+                passed[j] = r.get("t")
     moves = [a for a in acts if str(a.get("rule", "")).split("[")[0] in ("move", "move_cross")]
     risky = [(a.get("t"), min(g[2] for g in a["gaps"] if g[3])) for a in moves if any(g[3] for g in a.get("gaps") or [])]
     cross = [s["cross"] for s in res["steps"] if "cross" in s]
@@ -196,6 +234,7 @@ def summary(res):
     return {"steps": len(acts), "waits": max(0, waits - 1), "won": bool(res["won"]), "end": res["end"], "trace": trace,
             "levels": recs[0]["levels"] if recs else None,
             "crossed": dict(sorted(crossed.items(), key=lambda kv: int(kv[0][1:].split("_")[0]))),
+            "passed": {j: passed[j] for j in sorted(passed, key=lambda j: int(j[1:].split("_")[0])) if j.endswith("_4")},
             "junction_waits": sum(1 for a in acts if str(a.get("rule", "")).startswith("wait_cross")),
             "cond4": {"ok": len(risky) <= mh_host.RHO and all(g > 2 for _, g in risky), "risky": risky},
             "instrument": {"beats": len(cross), "high": sum(1 for l in lv if l and "cross_risk(high)" in l),
@@ -215,13 +254,13 @@ if __name__ == "__main__":
             rest.append(a)
     seeds = [int(s) for s in rest] or [1]
     if cmd == "setup":
-        setup(out, seeds, policy=opts.get("policy"), level=opts.get("level", "mines"))
+        setup(out, seeds, policy=opts.get("policy"), level=opts.get("level", "mines"), prior=opts.get("prior"))
     else:
         for s in seeds:
             sm = summary(run(Path(out) / ("seed%d" % s)))
             Path(out, "seed%d.json" % s).write_text(json.dumps(sm, indent=1))
             print("== seed %d: won %s steps %d waits %d end %s; levels %s" % (s, sm["won"], sm["steps"], sm["waits"], sm["end"], sm["levels"]))
-            print("   crossed %s; junction waits %d; cond4 %s; instrument %s" % (sm["crossed"], sm["junction_waits"], sm["cond4"], sm["instrument"]))
+            print("   crossed %s; passed %s; junction waits %d; cond4 %s; instrument %s" % (sm["crossed"], sm["passed"], sm["junction_waits"], sm["cond4"], sm["instrument"]))
             for row in sm["trace"]:
                 print("   t%-3s %-6s %s" % (row["t"], row["at"], "  ".join("%s:%s/%s%s" % (b.split()[0][:6], (v["level"] or "-").replace("hostile_", "h."),
                                                                                             (v["closing"] or "-").replace("closing_", "c."), "" if v["seen"] else "?")

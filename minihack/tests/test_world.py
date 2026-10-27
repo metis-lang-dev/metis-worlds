@@ -356,3 +356,69 @@ def test_a_crossing_cell_reads_one_kind():
         if a.startswith(("junction(", "lane(")):
             kinds.setdefault(a[a.index("(") + 1:-1], []).append(a.split("(")[0])
     assert kinds and all(len(v) == 1 for v in kinds.values()), kinds
+
+
+def _peaceful_room():
+    from minihack import LevelGenerator
+    lvl = LevelGenerator(map="-----\n|...|\n-----\n", lit=True)
+    lvl.set_start_rect((1, 1), (1, 1))
+    lvl.add_monster("gnome", place=(2, 1), args=("peaceful",))
+    return lvl.get_des()
+
+
+def test_the_screen_says_peaceful_and_the_question_is_answered_no():
+    # nav-belief-2 (b), (c): a peaceful monster is perceived as such (farlook's words, NLE's screen_descriptions: no
+    # turn spent), and walking into it asks "Really attack?", which the gym answers "n" and records — never a hang
+    w = World()
+    try:
+        info = w.open(des=_peaceful_room(), actions=ACTIONS, max_steps=20, seed=1)
+        atoms = set(info["init"]["atoms"])
+        g = next(a for a in atoms if a.startswith("monster(gnome,"))
+        assert "peaceful(gnome,%s" % g.split(",")[1] in atoms
+        assert not any(a.startswith("peaceful(") and "gnome" not in a for a in atoms)
+        s = w.step("E")
+        assert s["asked"]["answer"] == "n" and "really attack" in s["asked"]["question"].lower(), s
+        assert "said(asked)" in s["events"] and not s["done"]
+        assert any(a.startswith("monster(gnome,") for a in s["atoms"])         # not struck: it is still there
+    finally:
+        w.env.close()
+
+
+def test_the_situation_layer_drops_a_peaceful_beast():
+    # nav-belief-2 (b): a beast the screen calls peaceful is in no RSS pair — never oncoming, out of the fold — and the
+    # host says peaceful(B) in roles; a beast with no such word stays the worst case (oncoming)
+    from semantic_world.grid import GridMap, name
+    import tempfile
+    cells = {name(x, 0): "floor" for x in range(12)}
+    cells["c11_0"] = "stairs_down"
+    for calm in (False, True):
+        m = GridMap.build(tempfile.mktemp(suffix=".json"), (12, 1), cells=cells, k=8)
+        h = MhHost.__new__(MhHost)
+        h.cmap, h.atoms = m, {"agent_at(c0_0)", "monster(gnome,c3_0)"} | ({"peaceful(gnome,c3_0)"} if calm else set())
+        m.cycle(h.atoms, 1, m.models())
+        m.project()
+        b = next(r for r, n in m.load()["binding"].items() if n == "gnome")
+        out = h.situation()
+        assert ("peaceful(%s)" % b in out) == calm and ("oncoming(%s)" % b in out) != calm, out
+        assert ("resp_lon(none)" in out) == calm, out
+
+
+def test_a_peaceful_beast_is_a_bystander():
+    # nav-belief-2 (b): the screen's peaceful beast reads bystander(B, P), never monster(B, P), so no strike or fight
+    # rule binds it
+    import tempfile
+    import mh_host
+    sys.path.insert(0, os.path.join(ROOT, "experiments"))
+    import nav_belief
+    from semantic_world.grid import GridMap, name
+    rows = nav_belief.rows()
+    cells = {name(x, y): "floor" for y, r in enumerate(rows) for x, ch in enumerate(r) if ch == "."}
+    cells[name(*nav_belief.STAIRS)] = "stairs_down"
+    m = GridMap.build(tempfile.mktemp(suffix=".json"), (nav_belief.W, nav_belief.H), cells=cells, k=8)
+    h = MhHost.__new__(MhHost)
+    h.cmap, h.observed = m, set(mh_host.POLICY_FACTS) | {"monster", "bystander"}
+    h.atoms = {"agent_at(c20_4)", "monster(gnome,c22_4)", "peaceful(gnome,c22_4)"}
+    m.cycle(h.atoms, 1, m.models())
+    m.project()
+    r = h.reading()
+    assert any(a.startswith("bystander(") for a in r) and not any(a.startswith("monster(") for a in r), r

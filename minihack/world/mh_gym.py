@@ -45,7 +45,7 @@ class World:
         import gymnasium as gym, minihack  # noqa: F401
         from nle import nethack
         from perceive import Perceiver
-        keys = ("glyphs", "chars", "message", "blstats", "inv_strs", "inv_letters")
+        keys = ("glyphs", "chars", "message", "blstats", "inv_strs", "inv_letters", "screen_descriptions")
         kw = {"observation_keys": keys, "max_episode_steps": int(max_steps)}
         if actions:
             table = {m.name: m for m in list(nethack.CompassDirection) + list(nethack.Command) + list(nethack.MiscDirection) + list(nethack.MiscAction)}
@@ -110,7 +110,21 @@ class World:
             if "unlock it" in out.get("message", "").lower():
                 return self._step(self.codes.index(ord("y")))
             return self._step(self.codes.index(ord("n")))     # never lock a door the agent could open (N2)
-        return self._step(self.names.index(action))
+        return self.answered(self._step(self.names.index(action)))
+
+    def answered(self, out):
+        """A y/n question the step left on the line ("Really attack the gnome? [yn] (n)") answered "n" here, never
+        left waiting (nav-belief-2 (c): the run hung on it): the answer's step, its message the question and the
+        answer, its events the question's (said(asked)) then the answer's; `asked` records it."""
+        import re
+        q = out.get("message", "")
+        if out.get("done") or not re.search(r"\[yn[aq]*\]", q):
+            return out
+        ans = self._step(self.codes.index(ord("n")))
+        ans["message"] = ("%s n %s" % (q, ans.get("message", ""))).strip()
+        ans["events"] = list(out.get("events", [])) + [e for e in ans.get("events", []) if e not in out.get("events", [])]
+        ans["asked"] = {"question": q, "answer": "n"}
+        return ans
 
 
 def main():

@@ -133,3 +133,18 @@ def test_the_contact_hazard_follows_the_ego_along_its_path(tmp_path):
     assert survive(walk, "hostile") < survive(stand, "hostile")       # walking into it: contact sooner
     assert all(0.0 <= r["contact(jackal,wandering)"] <= 1.0 for r in walk["rows"])
     assert [k for k in stand["rows"][0] if k.startswith("closing(")] == [k for k in walk["rows"][0] if k.startswith("closing(")]
+
+
+def test_contact_is_intent_specific_beside_a_junction(tmp_path):
+    """nav-belief-2 (a): a peaceful beast merely beside the crossing is no contact. The gnome on a branch cell beside
+    the junction the ego walks over: the hostile row's contact is near certain, the wandering and fleeing rows are
+    under 0.1 (zero: neither attacks nor enters the ego's cell), so the risk over the intent belief follows
+    p(hostile) — 0.2 reads mid (under the instrument's 0.3), the worst case (hostile 1) high (over 0.3)."""
+    import math
+    m = level(tmp_path, ["...........", "     .     ", "     .     "])
+    m.cycle({"agent_at(c0_0)", "monster(gnome,c5_1)"}, 1, m.models())
+    t = m.predict_table(4, path=[name(x, 0) for x in range(2, 9)])
+    pc = {i: 1 - math.prod(1 - r["contact(gnome,%s)" % i] for r in t["rows"]) for i in intent.INTENTS}
+    assert pc["wandering"] < 0.1 and pc["fleeing"] < 0.1, pc
+    risk = lambda p: sum(p[i] * pc[i] for i in intent.INTENTS)
+    assert risk({"hostile": 0.2, "wandering": 0.73, "fleeing": 0.07}) < 0.3 < risk({"hostile": 1.0, "wandering": 0.0, "fleeing": 0.0})
