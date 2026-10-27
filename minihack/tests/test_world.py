@@ -332,3 +332,27 @@ def test_a_step_that_says_it_again_is_a_new_event():
     assert h.events == ["said(hit)"]
     h._take(dict(miss), fresh=False)                     # the world as another host left it: nothing new here
     assert h.events == []
+
+
+def test_a_crossing_cell_reads_one_kind():
+    # nav-belief-2: under the crossing policy every bound cell is junction or lane, never both (the map's segment kind
+    # lane(P) beside a junction let nav's move step into the zone past wait_cross)
+    import tempfile
+    import mh_host
+    sys.path.insert(0, os.path.join(ROOT, "experiments"))
+    import nav_belief
+    from semantic_world.grid import GridMap, name
+    rows = nav_belief.rows()
+    cells = {name(x, y): "floor" for y, r in enumerate(rows) for x, ch in enumerate(r) if ch == "."}
+    cells[name(*nav_belief.STAIRS)] = "stairs_down"
+    m = GridMap.build(tempfile.mktemp(suffix=".json"), (nav_belief.W, nav_belief.H), cells=cells, k=8)
+    h = MhHost.__new__(MhHost)
+    h.cmap, h.observed = m, set(mh_host.POLICY_FACTS) | {"monster"}
+    h.atoms = {"agent_at(c20_4)", "monster(gnome,c22_4)"}
+    m.cycle(h.atoms, 1, m.models())
+    m.project()
+    kinds = {}
+    for a in h.reading():
+        if a.startswith(("junction(", "lane(")):
+            kinds.setdefault(a[a.index("(") + 1:-1], []).append(a.split("(")[0])
+    assert kinds and all(len(v) == 1 for v in kinds.values()), kinds

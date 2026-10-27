@@ -218,6 +218,9 @@ class MhHost:
             if self.observed is not None and self.observed & INTENT_FACTS:
                 r.update(self.cmap.intent_facts(CLOSING_LEVELS, RHO))
             if self.observed is not None and self.observed & POLICY_FACTS:
+                # the crossing zone's kinds replace the map's segment kinds (place_facts: lane(P) for a lane cell beside
+                # a junction too): with both, nav's move ($lane) stepped into the zone past wait_cross (nav-belief-2)
+                r = {a: n for a, n in r.items() if a.split("(")[0] not in ("junction", "lane")}
                 r.update(self.cell_kinds())
                 r.update(getattr(self, "cross_atoms", {}))
             keep = self.observed if self.observed is not None else ROLE_READ   # what the domain declares
