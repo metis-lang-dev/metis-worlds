@@ -88,6 +88,17 @@ def config_dict(run, port):
          "ws": {"addr": "127.0.0.1:%d" % port}}
 
 
+def tree_image(c, root):
+    """A tree install's config (the tick: gen_hier.install(tree=True) wrote domains/hier/composition.yaml) on its
+    IMAGE (spec 17 §6, linker s-5908724a step 3): the Live builds it with metisc, and it names the members, their
+    clocks and the director, so the config names none of them."""
+    c["v3"]["image"] = str(Path(root) / "domains" / "hier")
+    c["v3"].pop("director", None)
+    c["domains"].pop("names", None)
+    c["domains"].pop("clocks", None)
+    return c
+
+
 def config(run, port):
     c = config_dict(run, port)
     import yaml

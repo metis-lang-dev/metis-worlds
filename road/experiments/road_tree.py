@@ -59,9 +59,13 @@ def run(scenario, seed, out_dir, ticks=1500, world_kind=None, vehicles=None):
     agent = Path(S.__file__).resolve().parents[1]
     cfg = S.load_config(agent / "config.live.yaml")
     cfg["intent"] = {"grammar": str(agent.parent / "go" / "grammar" / "e11-next.gbnf")}
-    cfg["v3"].update(journal=str(out_dir / ("j-%s-%d.jsonl" % (scenario, seed))), catalog=[], loaded=NAMES, director="road_director")
-    cfg["domains"].update(names=NAMES, narrate=None, consult=False, records=None, quiet=[], pairs=[], seed=seed,
-                          clocks=[{"domain": d, "n": 1} for d in NAMES], tick=True)
+    # the image (spec 17 §6, linker s-5908724a step 3): road/domains built by metisc; the members, their clocks and the
+    # director are its, the config names none of them
+    cfg["v3"].update(journal=str(out_dir / ("j-%s-%d.jsonl" % (scenario, seed))), catalog=[], loaded=NAMES,
+                     image=str(HERE.parent / "domains"))
+    cfg["domains"].update(narrate=None, consult=False, records=None, quiet=[], pairs=[], seed=seed, tick=True)
+    for k in ("names", "clocks"):
+        cfg["domains"].pop(k, None)
     lv = S.Live(cfg, NoModel())
     for ag in lv.agents.agents.values():
         ag.watch.blind = True                       # a world that moves by itself: no surprise from its motion

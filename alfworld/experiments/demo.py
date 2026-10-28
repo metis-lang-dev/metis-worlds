@@ -152,6 +152,7 @@ def setup(game, root, port=8398, view=False, tree=False, room=False):
     c["ws"]["ui"] = str(WEB)
     if tree:                                   # the tick (specialist-tree s-404d001f step 2): the tree director, domains.tick
         c["domains"]["tick"] = True
+        hda.tree_image(c, root)                # … on the tree's image (linker step 3)
     import yaml
     (run / "config.yaml").write_text(yaml.safe_dump(c, sort_keys=False))
     return run / "config.yaml", m, hda.fetch_of(out["_flat"]), out

@@ -45,6 +45,8 @@ def setup(root, tree=False):
         cp = Path(root) / ".run" / "config.yaml"
         cfg = yaml.safe_load(cp.read_text())
         cfg["domains"]["tick"] = True
+        import hier_director_agent
+        hier_director_agent.tree_image(cfg, root)        # the tree on its image (linker step 3)
         cp.write_text(yaml.safe_dump(cfg, sort_keys=False))
 
 
