@@ -106,7 +106,7 @@ class DirectorHost:
             info = dict(json.load(open(os.path.join(self.meta["flat"], "game.json"))), static=sorted(mirror.static), task_type=mirror.task, params=mirror.params)
         finally:
             mirror.gym.close()
-        if goal is None:
+        if goal is None and not self.meta.get("room"):        # a room has no task of its own: the binding stays the person's
             smap.project(*gen_hier.args_of(gen_hier.seed(info)[0]))
         self.k += 1
         return True

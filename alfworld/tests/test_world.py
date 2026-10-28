@@ -1057,7 +1057,9 @@ def test_a_room_steps_on_after_the_episodes_own_goal(tmp_path):
     out = gen_hier.install(str(trial), str(tmp_path / "root"), person=True, room=True)
     m = json.load(open(tmp_path / "root" / "domains" / "hier" / ".map.json"))
     assert m["task"] == {"targets": [], "dests": []}
-    assert all(json.load(open(os.path.join(out[s], "game.json"))).get("room") for s in ("task", "nav", "access", "grasp", "place"))
+    # every package on the log says room — the mirror (_flat) and the director's too: one world process per log, and a
+    # mirror opened first as a game froze it after the episode's goal (a second task's stale reading: the access surprise)
+    assert all(json.load(open(os.path.join(out[s], "game.json"))).get("room") for s in ("task", "nav", "access", "grasp", "place", "_flat", "director"))
     from semantic_map import text_map
     tm = text_map(str(trial), room=True)
     assert tm["task"]["text"] == "" and tm["task"]["episode"] == "Put a tomato in the microwave."
