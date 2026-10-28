@@ -3,6 +3,7 @@
     ALFWORLD_DATA=… .worlds/alf/bin/python experiments/demo.py setup GAME_DIR ROOT [--port P] [--view]
     ALFWORLD_DATA=… .worlds/alf/bin/python experiments/demo.py check [--game GAME_DIR] [--out DIR] [--port P]
     ALFWORLD_DATA=… .worlds/alf/bin/python experiments/demo.py games [--n 10] [--split train] [--out DIR]
+    ALFWORLD_DATA=… .worlds/alf/bin/python experiments/demo.py list | resolve NAME
 
 setup: ROOT becomes the agent's catalog (cwd-root): the game's hierarchy installed for a person
 (gen_hier.install, person=True: the director, the task, the specialists, one commands log), the task
@@ -19,10 +20,16 @@ wrong destination), the ask through the band and the cornered place. Asserts eac
 writes them as the page's replay (OUT/<name>.run.jsonl: the same frames world.html?replay= plays).
 
 games: N train games by say_text (the step's acceptance): won, the director's beats, every command a
-world/delta."""
+world/delta.
+
+list: the games the demo can load (one family's: the hierarchy is pick_and_place_simple's), one per task directory,
+"split/task  label"; the world page's picker shows the same list (ROOT/games.json, served at /world/games.json).
+resolve: NAME (a trial directory, a task directory, "split/task", a task's name, or its name without the family,
+"Bowl-None-Fridge-6") → the game's trial directory."""
 import argparse
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -41,6 +48,55 @@ from wire import Wire  # noqa: E402
 
 WEB = WORLD.parent / "web"
 GAME = "train/pick_and_place_simple-Tomato-None-Microwave-13"        # the fixtures' kitchen (web/fixtures)
+FAMILY = "pick_and_place_simple"                                     # the games the hierarchy plays
+ROOMS = ((1, 30, "kitchen"), (201, 230, "living room"), (301, 330, "bedroom"), (401, 430, "bathroom"))   # ALFRED's floor plans
+
+
+def trial_of(task_dir):
+    """A task directory's first trial with a game, or None."""
+    task_dir = Path(task_dir)
+    return next((t for t in sorted(task_dir.iterdir()) if (t / "game.tw-pddl").exists()), None) if task_dir.is_dir() else None
+
+
+def game_list():
+    """The games the demo can load: one per task directory of FAMILY (its first trial), split by split.
+    → [{id: "split/task", label, room, split}], the label "bowl → fridge · kitchen 6"."""
+    words = lambda s: re.sub(r"(?<=[a-z])(?=[A-Z])", " ", s).lower()
+    out = []
+    for split in families.SPLITS:
+        root = Path(families.data_root()) / split
+        for task in sorted(os.listdir(root)) if root.is_dir() else ():
+            parts = task.split("-")
+            if parts[0] != FAMILY or len(parts) != 5 or not parts[4].isdigit() or trial_of(root / task) is None:
+                continue
+            n = int(parts[4])
+            room = next((r for a, b, r in ROOMS if a <= n <= b), "room")
+            out.append({"id": "%s/%s" % (split, task), "label": "%s → %s · %s %d" % (words(parts[1]), words(parts[3]), room, n),
+                        "room": room, "split": split})
+    return out
+
+
+def id_of(game):
+    """A trial directory's id in game_list ("split/task")."""
+    g = Path(game).resolve()
+    return "%s/%s" % (g.parent.parent.name, g.parent.name)
+
+
+def resolve(name):
+    """NAME → the game's trial directory: a trial directory, a task directory, "split/task", a task's name, or its name
+    without the family ("Bowl-None-Fridge-6"), looked for split by split."""
+    p = Path(name)
+    if (p / "game.tw-pddl").exists():
+        return p.resolve()
+    if trial_of(p):
+        return trial_of(p).resolve()
+    root = Path(families.data_root())
+    name = name.strip("/")
+    tries = [root / name] if "/" in name else [root / s / n for s in families.SPLITS for n in (name, "%s-%s" % (FAMILY, name))]
+    for d in tries:
+        if trial_of(d):
+            return trial_of(d).resolve()
+    raise SystemExit("demo.py: no game %r (demo.py list names them)" % name)
 
 
 def setup(game, root, port=8398, view=False, tree=False):
@@ -60,11 +116,16 @@ def setup(game, root, port=8398, view=False, tree=False):
         for p in m["places"]:
             p["unseen"] = True
     (root / "world-map.json").write_text(json.dumps(m, indent=1))
+    # the world page's picker: the games this demo can load, this one current; a page's choice is written beside ROOT
+    # (ROOT.next.json, outside what the next setup removes) and the service stops for demo.sh to set it up
+    (root / "games.json").write_text(json.dumps({"current": id_of(game), "games": game_list()}, indent=1))
     names = list(hda.NAMES)
     run = root / ".run"
     run.mkdir()
     c = hda.config_dict(run, port)
     c["v3"]["world_map"] = str(root / "world-map.json")
+    c["v3"]["games"] = str(root / "games.json")
+    c["v3"]["game_request"] = str(root.parent / (root.name + ".next.json"))
     c["v3"]["catalog"] = names
     c["v3"]["loaded"] = ["director", "task"]
     c["domains"]["names"] = names
@@ -410,6 +471,9 @@ def main(argv=None):
     c.add_argument("--out", default=str(HERE / "records" / "demo-check"))
     c.add_argument("--port", type=int, default=8398)
     c.add_argument("--tree", action="store_true", help="the tick: the tree director, domains.tick (specialist-tree step 2)")
+    sub.add_parser("list")
+    r = sub.add_parser("resolve")
+    r.add_argument("name")
     g = sub.add_parser("games")
     g.add_argument("--n", type=int, default=10)
     g.add_argument("--split", default="train")
@@ -419,6 +483,13 @@ def main(argv=None):
     if a.cmd == "setup":
         cfg, m, fetch, _ = setup(a.game, a.root, a.port, view=a.view)
         print(json.dumps({"config": str(cfg), "task": m["task"]["text"], "fetch": fetch}))
+        return 0
+    if a.cmd == "list":
+        for g in game_list():
+            print("%-70s %s" % (g["id"], g["label"]))
+        return 0
+    if a.cmd == "resolve":
+        print(resolve(a.name))
         return 0
     if a.cmd == "check":
         game = a.game or str(Path(families.data_root()) / GAME / sorted(os.listdir(Path(families.data_root()) / GAME))[0])

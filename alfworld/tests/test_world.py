@@ -1002,3 +1002,28 @@ def test_a_specialist_reads_its_activation_binding(tmp_path):
     finally:
         ah.gym.close()
         th.gym.close()
+
+
+def test_the_demo_names_its_games_and_loads_one_by_name(tmp_path):
+    """The world page's game picker (demo.sh): demo.py's game list (pick_and_place_simple, one per task directory,
+    by room), a game resolved from its name in any of its forms, and setup's games.json (this game current) and the
+    service's v3.games / v3.game_request (the page's next game, beside the catalog)."""
+    import yaml
+    sys.path.insert(0, os.path.join(ROOT, "experiments"))
+    import demo
+    gs = demo.game_list()
+    ids = [g["id"] for g in gs]
+    assert len(ids) == len(set(ids)) and all(i.split("/")[1].startswith("pick_and_place_simple-") for i in ids)
+    bowl = next(g for g in gs if g["id"] == "train/pick_and_place_simple-Bowl-None-Fridge-6")
+    assert bowl["label"] == "bowl → fridge · kitchen 6" and bowl["room"] == "kitchen"
+    trial = demo.resolve("Bowl-None-Fridge-6")
+    for name in ("pick_and_place_simple-Bowl-None-Fridge-6", bowl["id"], str(trial.parent), str(trial)):
+        assert demo.resolve(name) == trial
+    with pytest.raises(SystemExit):
+        demo.resolve("Bowl-None-Fridge-999")
+    cfg, m, fetch, _ = demo.setup(trial, tmp_path / "root")
+    g = json.loads((tmp_path / "root" / "games.json").read_text())
+    assert g["current"] == bowl["id"] and len(g["games"]) == len(gs)
+    v3 = yaml.safe_load(cfg.read_text())["v3"]
+    assert v3["games"] == str(tmp_path / "root" / "games.json") and v3["game_request"] == str(tmp_path / "root.next.json")
+    assert list(fetch) == ["bowl1", "fridge1"]

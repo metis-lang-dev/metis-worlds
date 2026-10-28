@@ -8,6 +8,9 @@
 //   world.html?agent=ws://127.0.0.1:8395/ws            live: metis-agent's /ws (the person's words,
 //   world.html?live=1[&map=fixtures/x.json]            the journal, world/* frames);
 //                                                     live=1: this host's /ws (alfworld/demo.sh serves the page)
+// Live with a runner that loads games (the service's /world/games.json: alfworld/demo.sh), the top bar's picker
+// names another game: load_game, the service stops (world/loading), its runner sets that game up and starts it
+// again, and the page reloads on it once the socket is back. Under the map, the game: its name and its task.
 //
 // The frames (the same in both): {ev: 'world/map', url} · {ev: 'world/delta', …} (map.js's delta)
 // · {ev: 'world/hierarchy', beat, arrival, effects, state} (the director's atoms) · {ev:
@@ -138,6 +141,45 @@ function worldCard() {
     ${c.source ? `<p class="wc-src">${esc(c.source)}</p>` : ''}`;
   for (const b of box.querySelectorAll('[data-ask]')) b.onclick = () => answer({ say: c.asks[Number(b.dataset.ask)].say });
 }
+// ── the game: the picker in the top bar (live, when the runner loads games), the game under the map ──
+const ROOMS = ['kitchen', 'living room', 'bedroom', 'bathroom'];
+world.games = null;
+async function gamePicker() {
+  let g = null;
+  try { const r = await fetch(new URL('world/games.json', world.base)); if (r.ok) g = await r.json(); } catch { /* no runner: no picker */ }
+  if (!g?.games?.length) return;
+  world.games = g;
+  const sel = $('#game'), rooms = [...new Set([...ROOMS, ...g.games.map(x => x.room)])];
+  sel.replaceChildren(...rooms.filter(r => g.games.some(x => x.room === r)).map(r => {
+    const og = document.createElement('optgroup');
+    og.label = r;
+    og.append(...g.games.filter(x => x.room === r).map(x => Object.assign(document.createElement('option'),
+      { value: x.id, textContent: x.label + (x.split === 'train' ? '' : ` (${x.split.replace('_', ' ')})`), selected: x.id === g.current })));
+    return og;
+  }));
+  sel.hidden = false;
+  sel.onchange = () => { rec('load_game', { game: sel.value }); send({ ev: 'load_game', game: sel.value }); loading(sel.value); };
+  gameInfo();
+}
+function loading(game) {                             // another game on its way (null: refused, the current one stays)
+  world.loading = game;
+  const sel = $('#game');
+  sel.disabled = !!game;
+  if (!game) { sel.value = world.games?.current ?? sel.value; return; }
+  const x = world.games?.games.find(g => g.id === game);
+  $('#sstate').textContent = 'loading'; $('#stext').textContent = `the agent starts again on ${x?.label ?? game}…`;
+  $('#sopts').replaceChildren();
+}
+function gameInfo() {                                // under the map: the game (the picker's name for it) and its task
+  const m = world.map?.map, el = $('#gameinfo');
+  if (!el || !m) return;
+  const x = world.games?.games.find(g => g.id === world.games.current);
+  const task = m.task?.text || m.task?.goal;
+  el.hidden = !(x || task);
+  el.innerHTML = `<div class="gi-name">${esc(x ? x.label : m.card?.title || 'this game')}</div>
+    ${task ? `<div class="gi-task">this game's task: ${esc(task)}</div>` : ''}
+    ${x ? `<div class="gi-dim">${esc(x.id)}</div>` : ''}`;
+}
 function showCard() { docks.set('world', { shown: true, open: true }); $('#dock-world')?.scrollIntoView?.({ block: 'nearest' }); }
 // the tiles as large as the left pane allows (the map, its attention slot beside it when there is room)
 function fitMap() {
@@ -228,7 +270,9 @@ function floorLook(s) { if (panel) panel.dom.floor.textContent = `floor: ${FLOOR
 let say = 0, panel = null, send = () => {};
 async function frame(f) {
   rec('frame', { ev: f.ev });
-  if (f.ev === 'world/map') { world.mapUrl = new URL(f.url, world.base).href; await world.map.load(world.mapUrl); fitMap(); legend(); worldCard(); return; }
+  if (f.ev === 'world/map') { world.mapUrl = new URL(f.url, world.base).href; await world.map.load(world.mapUrl); fitMap(); legend(); worldCard(); gameInfo(); drawHierarchy(); return; }   // the task row names this map's task
+  if (f.ev === 'world/loading') { loading(f.game); return; }
+  if (f.ev === 'load_game_ack') { if (f.error) { loading(null); panel.note(f.error); } return; }
   if (f.ev === 'world/delta') { world.map.delta(f); if (f.task) { chainTo(world.map.map.task); } return; }
   if (f.ev === 'world/hierarchy') { hierarchy(f); return; }
   if (f.ev === 'world/status') { status(f); return; }
@@ -276,10 +320,12 @@ async function live(url) {
   world.base = location.href;
   $('#ctrl').hidden = true;                          // play / step are the replay's: live has nothing to step
   await frame({ ev: 'world/map', url: q.get('map') || 'fixtures/alfworld_tomato_microwave_13.json' });
-  const backend = await connect(url, { timeoutMs: 5000, reconnect: 2000, onReopen: hello });
+  // the socket back after another game's restart: the page starts again on it (the map, the card, the docks' contents)
+  const backend = await connect(url, { timeoutMs: 5000, reconnect: 2000, onReopen: b => world.loading ? location.reload() : hello(b) });
   if (!backend) { $('#conn').textContent = `no agent at ${url}`; return null; }
   send = m => { if (backend.isOpen) backend.send(m); };
   $('#conn').textContent = 'live';
+  await gamePicker();
   return backend;          // the hello once the panel listens (start)
 }
 
