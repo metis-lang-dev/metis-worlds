@@ -41,6 +41,8 @@ pred absent(object, receptacle) : task.
 pred lost(thing) : task.                  % … and no place left to look (a thing: stuck's own type)
 pred seen(object) : task.                 % the goal's thing is one the robot has seen (text mode: every thing)
 pred unseen(object) : task.               % … or a kind it looks for, not seen yet (a room in view mode: alf-tasks step 2)
+pred handsfree : task.                    % the robot's hand is empty (a fetch starts only so: alf-tasks step 3)
+pred freeing(object, receptacle) : task.  % a fetch waiting while the robot puts down what it holds
 pred believed(object, receptacle) : task. % … in its destination by an earlier look, not seen there now: go and look
 type risk {high mid low}.
 pred fetch_risk(risk) : task.             % the host's level port (spec16 step 4): the fetch's failure risk within h
@@ -77,11 +79,17 @@ pred carry(object) : task.                % carrying it to the destination
 
 stage act {
   %% I'll fetch {O} to {R}.
-  fetch [dyn] : fetch(O, R) * $target(O) * $dest(R) * $inrecep(O, R0) * R0 <> R -o want(O) * to(R) * start.
+  fetch [dyn] : fetch(O, R) * $target(O) * $dest(R) * $handsfree * $inrecep(O, R0) * R0 <> R -o want(O) * to(R) * start.
   %% {O} is already in {R}: nothing to do.
   already [dyn] : fetch(O, R) * $target(O) * $dest(R) * $inrecep(O, R) -o done.
   %% {O} may be in {R}: I go and look.
-  verify [dyn] : fetch(O, R) * $target(O) * $dest(R) * $believed(O, R) -o want(O) * to(R) * goto(R).
+  verify [dyn] : fetch(O, R) * $target(O) * $dest(R) * $handsfree * $believed(O, R) -o want(O) * to(R) * goto(R).
+  %% I have {X} in hand: I put it down here first.
+  free_hands [dyn] : fetch(O, R) * $target(O) * $dest(R) * $holds(X) * $nottarget(X) -o freeing(O, R) * put(X, p0).
+  %% {X} is down: now I fetch {O} to {R}.
+  freed [dyn] : freeing(O, R) * placed(X, P) -o want(O) * to(R) * start.
+  %% I can't put {X} down here: I stop and ask.
+  stuck_free [dyn] : freeing(O, R) * refused_put(X) * $place_of(X, T) -o stuck(T).
   %% There is no {X} in this room: I looked everywhere it could be.
   nowhere [dyn] : fetch(O, R) * $target(O) * $dest(R) * $lost(X) -o stuck(X).
   %% I have {O}: to {R}.

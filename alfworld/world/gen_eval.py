@@ -84,7 +84,7 @@ def case(name, level):
     bel, lone = BELIEFS[name]
     values = {("target", r): p for r, p in bel.items()}
     values[("other", "p0")] = 1                                  # the other object: in p0, surely (a group of its own)
-    init = ["fetch(target, dest)", "seen(target)"] + ["inrecep(target, %s)" % r for r in sorted(bel)]   # seen: the host's reading (alf-tasks)
+    init = ["fetch(target, dest)", "seen(target)", "handsfree"] + ["inrecep(target, %s)" % r for r in sorted(bel)]   # the host's reading (alf-tasks)
     if level:
         init += ["place_level(%s, target, %s)" % (level_of(p), r) for r, p in sorted(bel.items())]
     manifest = "fetch%s%s.yaml" % ("_level" if level else "", "_lone" if lone else "")

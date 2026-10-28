@@ -14,6 +14,7 @@ world/gen_instance.py). The gym's interpreter: $METIS_ALF_PY, else the world rep
 import json
 import os
 import sys
+import time
 
 from metis.host import GymChild, find_interpreter
 
@@ -179,6 +180,8 @@ class AlfHost:
         """The mapper's atom (the room's things: the card names them) in the program's roles: a fetch
         re-projects the map for its goal (metis-agent's AgentHost.submit asks); the atom itself without a map."""
         name = atom.split("(")[0]
+        if self.spec == "task":                          # a task begins: its card opens (alf-tasks step 3)
+            self._task_begin(atom)
         if name == "notask":                             # ALFWorld's vocabulary, not the room's things: no projection
             return atom
         if name == "fetch" and self.smap is not None:     # what the room cannot do, said before anything moves (alf-tasks step 2)
@@ -432,7 +435,60 @@ class AlfHost:
             return None
         if out:                                      # continues: the result is reported once, the world keeps stepping
             self.reported |= set(out)
+            if self.spec == "task":
+                self._task_end(out)
         return dos
+
+    # ── a card per task (alf-tasks s-e9cc8fae step 3): what it was asked, what it did, what it believed, our own check ──
+    ENDS = ("done", "stuck", "wrong_dest", "wrong_object", "nothing", "cannot", "misfit")
+
+    def _root(self):
+        return os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(self.smap.path)))) if self.smap is not None else None
+
+    def _task_begin(self, atom):
+        """The person's goal arrives (intent_atom): a card opens at the world's and the map's records as they stand."""
+        if getattr(self, "_task", None) is not None:   # the one before never ended (a stop, a new task over it): its card says so
+            self._task_end(["stopped"])
+        mj = getattr(self.smap, "journal", None) if self.smap is not None else None   # the map's journal file (its store's)
+        n = lambda f: sum(1 for _ in open(f)) if f and os.path.exists(f) else 0
+        self._task = {"goal": atom, "beat": self.beat, "commands_at": n(self.commands_log), "map_at": n(mj), "map_journal": mj,
+                      "t0": time.time()}
+
+    def _task_end(self, out):
+        """A task's end atom is out: its card under ROOT/records/tasks/ — the goal (the room's names), the ticks, the
+        commands it sent, the map's records meanwhile (the belief: projections, wanted kinds, looks), the outcome and
+        OUR OWN success check: for done, the goal holds in the world as observed (inrecep of the goal's thing in its
+        place), never the episode's `won`."""
+        task = getattr(self, "_task", None)
+        end = next((a for a in out if a.split("(")[0] in self.ENDS + ("stopped",)), None)
+        root = self._root()
+        if task is None or end is None or root is None:
+            return
+        self._task = None
+        lines = lambda f, k: [json.loads(l) for l in list(open(f))[k:] if l.strip()] if f and os.path.exists(f) else []
+        refused = end.split("(")[0] in ("nothing", "cannot", "misfit", "stopped")   # refused before anything moved, or cut short
+        b = {} if refused else self.smap.binding()
+        obj, rec = b.get("target"), b.get("dest")
+        holds = bool(obj and rec and "inrecep(%s,%s)" % (obj, rec) in self.dyn)
+        cmds = lines(self.commands_log, task["commands_at"])
+        card = {"goal": task["goal"], "goal_roles": {"target": obj, "dest": rec}, "outcome": self.in_room(end),
+                "ticks": self.beat - task["beat"], "seconds": round(time.time() - task["t0"], 1),
+                "commands": [{"command": self.speak(" ".join(self._spoken_command(c["command"]))), "rule": c.get("rule"),
+                              "admissible": c.get("admissible"), "changed": c.get("changed")} for c in cmds],
+                "belief": [r for r in lines(task["map_journal"], task["map_at"]) if r.get("kind") != "observe"],
+                "check": {"applies": False, "why": "stopped before its end" if end == "stopped" else "refused before anything moved"} if refused else
+                         {"goal_holds": holds, "agrees": holds == (end.split("(")[0] == "done"),
+                          "how": "inrecep(%s,%s) in the world's facts as observed" % (obj, rec)}}
+        d = os.path.join(root, "records", "tasks")
+        os.makedirs(d, exist_ok=True)
+        k = len([f for f in os.listdir(d) if f.endswith(".json")]) + 1
+        json.dump(card, open(os.path.join(d, "task-%02d.json" % k), "w"), indent=1)
+        self.last_card = card
+
+    def _spoken_command(self, cmd):
+        """A game command in the room's handles (the game's long names → fridge1)."""
+        inv = {v: k for k, v in self.to_name.items()}
+        return [inv.get(w, w) for w in cmd.split()]
 
     def dynamic_preds(self):
         """The predicates the world owns in this program (sync may retract them): a role host's place facts too."""
@@ -563,7 +619,7 @@ class AlfHost:
 # the program's dynamic predicates (the ones sync may retract): ground.py's, plus the complements
 from ground import DYNAMIC as _DYN  # noqa: E402
 DYNAMIC_PREDS = set(_DYN) | {"closed", "handsfree", "holding"}
-PLACE_PREDS = {"recat", "openable", "notopenable", "absent", "lost", "believed"}     # a role host's too: the projection asserts the place facts (a flat
+PLACE_PREDS = {"recat", "openable", "notopenable", "absent", "lost", "believed", "seen", "unseen"}     # a role host's too: the projection asserts the place facts (a flat
                                                        # program's are static, or its own: a learned split's to keep),
                                                        # and the map's view mode what was looked for in vain (step 3)
 

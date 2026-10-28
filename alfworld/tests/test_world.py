@@ -175,12 +175,13 @@ def test_hierarchy_instances_see_less(tmp_path):
         p = gen_hier.generate(game_dir(), str(tmp_path / "pk"), spec, 0, info, smap, reading, seed, [])
         init = sum(1 for l in open(p) if l.startswith("#init"))
         assert init < flat_init, (spec, init, flat_init)
-        assert gen_hier.vector(spec)["rules"] <= 28          # the task domain: 14 with `already` and `held` (alf-demo step 3b, F8/F12),
+        assert gen_hier.vector(spec)["rules"] <= 31          # the task domain: 14 with `already` and `held` (alf-demo step 3b, F8/F12),
                                                              # 21 with view mode's look (semantic-map step 3: not_here, not_in,
                                                              # lost_it, nowhere; verify, open_look, verified), 23 with
                                                              # stuck_take / stuck_put (specialist-tree step 3b: refused split),
                                                              # 28 with what a room cannot do and its search (alf-tasks step 2: absent_kind,
-                                                             # not_a_chore, cannot_fit, look_first, look_dest)
+                                                             # not_a_chore, cannot_fit, look_first, look_dest), 31 with
+                                                             # a full hand at a new task (step 3: free_hands, freed, stuck_free)
 
 
 def test_activation_cards(tmp_path):
@@ -1079,3 +1080,24 @@ def test_a_room_steps_on_after_the_episodes_own_goal(tmp_path):
     assert "give the agent a task, then another" in tm["card"]["about"][0] and not any("new game\" first" in c for c in tm["card"]["cannot"])
     rooms = demo.room_list()
     assert len({(x["room"], x["scene"]) for x in rooms}) == len(rooms) and demo.resolve("kitchen 13").parent.name.endswith("-13")
+
+
+def test_every_packages_cases_pass_alone(tmp_path):
+    """alf-tasks step 3: each installed member's cases/ (gen_hier.write_cases) through metispy's interface stub — the
+    task's included: a fetch goes when the target is seen and the hand empty; a full hand puts its thing down first.
+    (Step 2's seen premise had left level_present failing with nothing running the cases.)"""
+    import yaml
+    import gen_hier
+    sys.path.insert(0, os.path.join(ROOT, "experiments"))
+    import demo
+    from metis.catalog import stub
+    out = gen_hier.install(str(demo.resolve("kitchen 13")), str(tmp_path / "root"), person=True, room=True)
+    failed = []
+    for spec in gen_hier.SPECS:
+        pkg = out[spec]
+        man = yaml.safe_load(open(os.path.join(pkg, "domain.yaml")))
+        for case in sorted(os.listdir(os.path.join(pkg, "cases"))):
+            r = stub.run_case((os.path.join(pkg, man["program"]), man), os.path.join(pkg, "cases", case))
+            if not r.passed:
+                failed.append(stub.render([r]))
+    assert not failed, "\n".join(failed)

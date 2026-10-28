@@ -36,7 +36,7 @@ SPECS = {
     "place":  dict(types=("location", "receptacle", "object"),
                    dyn=("at", "recat", "openable", "notopenable", "objat", "inrecep", "opened", "closed", "holds", "holding",
                         "handsfree"), goal="put", out=("placed", "refused_put", "elsewhere")),
-    "task":   dict(types=("object", "receptacle", "thing"), dyn=("inrecep", "holds", "absent", "lost", "believed", "fetch_risk", "seen", "unseen"),
+    "task":   dict(types=("object", "receptacle", "thing"), dyn=("inrecep", "holds", "absent", "lost", "believed", "fetch_risk", "seen", "unseen", "handsfree"),
                    goal="fetch", takes=("reached", "accessible", "taken", "placed", "refused_take", "refused_put", "refused"),
                    out=("goto", "open", "take", "put", "done", "stuck", "wrong_dest", "wrong_object", "nothing", "cannot", "misfit")),
 }
@@ -150,9 +150,12 @@ def _cases(spec, tree):
         cs = dict(stop, **one("already_there", ["inrecep(target, dest)"], ["fetch(target, dest)"], ["already"],
                               ["done"] + T("tick__done(task)"), "success"),
                   # the level port's atom present (spec16 step 4): the host's fetch_risk, read by no rule — the fetch
-                  # goes as it does without it
-                  **one("level_present", ["inrecep(target, p1)", "fetch_risk(mid)"], ["fetch(target, dest)"], ["fetch", "go_for"],
-                        ["goto(p1)"] + T("tick__active(task)"), "running"),
+                  # goes as it does without it (the target seen, the hand empty: the host's reading, alf-tasks)
+                  **one("level_present", ["inrecep(target, p1)", "fetch_risk(mid)", "seen(target)", "handsfree"], ["fetch(target, dest)"],
+                        ["fetch", "go_for"], ["goto(p1)"] + T("tick__active(task)"), "running"),
+                  # a fetch while the hand holds another thing (alf-tasks step 3): it goes down where the robot stands first
+                  **one("hands_full_first", ["inrecep(target, p1)", "seen(target)", "holds(other)"], ["fetch(target, dest)"],
+                        ["free_hands"], ["put(other, p0)"], "running"),
                   **one("wrong_destination", ["inrecep(target, p2)"], ["fetch(target, p1)"], ["not_dest"],
                         ["wrong_dest(p1)"] + T("tick__stuck(task)"), "failure"))
         return {k: dict(c, ports={"look": 1.0}) for k, c in cs.items()}
