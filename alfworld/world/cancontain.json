@@ -1,0 +1,549 @@
+{
+ "source": "the union of canContain over every ALFWorld game (json_2.1.1, all splits): ALFRED's receptacle compatibility, no room's",
+ "cancontain": {
+  "alarmclock_t": [
+   "countertop_t",
+   "desk_t",
+   "diningtable_t",
+   "dresser_t",
+   "shelf_t",
+   "sidetable_t"
+  ],
+  "apple_t": [
+   "countertop_t",
+   "diningtable_t",
+   "fridge_t",
+   "garbagecan_t",
+   "microwave_t",
+   "sidetable_t",
+   "sinkbasin_t"
+  ],
+  "baseballbat_t": [
+   "bed_t",
+   "diningtable_t",
+   "sidetable_t"
+  ],
+  "basketball_t": [
+   "bed_t",
+   "desk_t",
+   "diningtable_t",
+   "dresser_t",
+   "sidetable_t"
+  ],
+  "book_t": [
+   "armchair_t",
+   "bed_t",
+   "cabinet_t",
+   "coffeetable_t",
+   "countertop_t",
+   "desk_t",
+   "diningtable_t",
+   "drawer_t",
+   "dresser_t",
+   "ottoman_t",
+   "shelf_t",
+   "sidetable_t",
+   "sofa_t"
+  ],
+  "bowl_t": [
+   "cabinet_t",
+   "coffeetable_t",
+   "countertop_t",
+   "desk_t",
+   "diningtable_t",
+   "dresser_t",
+   "fridge_t",
+   "microwave_t",
+   "shelf_t",
+   "sidetable_t",
+   "sinkbasin_t"
+  ],
+  "box_t": [
+   "armchair_t",
+   "cabinet_t",
+   "coffeetable_t",
+   "desk_t",
+   "diningtable_t",
+   "dresser_t",
+   "ottoman_t",
+   "shelf_t",
+   "sidetable_t",
+   "sofa_t"
+  ],
+  "bread_t": [
+   "countertop_t",
+   "diningtable_t",
+   "fridge_t",
+   "garbagecan_t",
+   "microwave_t",
+   "sidetable_t"
+  ],
+  "butterknife_t": [
+   "countertop_t",
+   "diningtable_t",
+   "drawer_t",
+   "sidetable_t",
+   "sinkbasin_t"
+  ],
+  "candle_t": [
+   "cabinet_t",
+   "cart_t",
+   "coffeetable_t",
+   "countertop_t",
+   "diningtable_t",
+   "drawer_t",
+   "dresser_t",
+   "shelf_t",
+   "sidetable_t",
+   "toilet_t"
+  ],
+  "cd_t": [
+   "cabinet_t",
+   "countertop_t",
+   "desk_t",
+   "diningtable_t",
+   "drawer_t",
+   "dresser_t",
+   "garbagecan_t",
+   "safe_t",
+   "shelf_t",
+   "sidetable_t"
+  ],
+  "cellphone_t": [
+   "armchair_t",
+   "bed_t",
+   "coffeetable_t",
+   "countertop_t",
+   "desk_t",
+   "diningtable_t",
+   "drawer_t",
+   "dresser_t",
+   "ottoman_t",
+   "safe_t",
+   "shelf_t",
+   "sidetable_t",
+   "sofa_t"
+  ],
+  "cloth_t": [
+   "armchair_t",
+   "bathtubbasin_t",
+   "cabinet_t",
+   "cart_t",
+   "countertop_t",
+   "desk_t",
+   "diningtable_t",
+   "drawer_t",
+   "dresser_t",
+   "garbagecan_t",
+   "laundryhamper_t",
+   "shelf_t",
+   "sidetable_t",
+   "sinkbasin_t",
+   "toilet_t"
+  ],
+  "creditcard_t": [
+   "armchair_t",
+   "coffeetable_t",
+   "countertop_t",
+   "desk_t",
+   "diningtable_t",
+   "drawer_t",
+   "dresser_t",
+   "ottoman_t",
+   "safe_t",
+   "shelf_t",
+   "sidetable_t",
+   "sofa_t"
+  ],
+  "cup_t": [
+   "cabinet_t",
+   "countertop_t",
+   "diningtable_t",
+   "fridge_t",
+   "microwave_t",
+   "shelf_t",
+   "sidetable_t",
+   "sinkbasin_t"
+  ],
+  "dishsponge_t": [
+   "bathtubbasin_t",
+   "cabinet_t",
+   "cart_t",
+   "countertop_t",
+   "diningtable_t",
+   "drawer_t",
+   "garbagecan_t",
+   "shelf_t",
+   "sidetable_t",
+   "sinkbasin_t",
+   "toilet_t"
+  ],
+  "egg_t": [
+   "countertop_t",
+   "diningtable_t",
+   "fridge_t",
+   "garbagecan_t",
+   "microwave_t",
+   "sidetable_t",
+   "sinkbasin_t"
+  ],
+  "fork_t": [
+   "countertop_t",
+   "diningtable_t",
+   "drawer_t",
+   "sidetable_t",
+   "sinkbasin_t"
+  ],
+  "glassbottle_t": [
+   "cabinet_t",
+   "countertop_t",
+   "diningtable_t",
+   "fridge_t",
+   "microwave_t",
+   "shelf_t",
+   "sinkbasin_t"
+  ],
+  "handtowel_t": [
+   "bathtubbasin_t",
+   "cabinet_t",
+   "cart_t",
+   "countertop_t",
+   "drawer_t",
+   "garbagecan_t",
+   "handtowelholder_t",
+   "shelf_t",
+   "sidetable_t",
+   "sinkbasin_t",
+   "toilet_t"
+  ],
+  "kettle_t": [
+   "cabinet_t",
+   "countertop_t",
+   "diningtable_t",
+   "shelf_t",
+   "sidetable_t",
+   "sinkbasin_t",
+   "stoveburner_t"
+  ],
+  "keychain_t": [
+   "armchair_t",
+   "coffeetable_t",
+   "countertop_t",
+   "desk_t",
+   "diningtable_t",
+   "drawer_t",
+   "dresser_t",
+   "ottoman_t",
+   "safe_t",
+   "shelf_t",
+   "sidetable_t",
+   "sofa_t"
+  ],
+  "knife_t": [
+   "countertop_t",
+   "diningtable_t",
+   "drawer_t",
+   "sidetable_t",
+   "sinkbasin_t"
+  ],
+  "ladle_t": [
+   "cabinet_t",
+   "countertop_t",
+   "diningtable_t",
+   "drawer_t",
+   "sinkbasin_t"
+  ],
+  "laptop_t": [
+   "armchair_t",
+   "bed_t",
+   "coffeetable_t",
+   "countertop_t",
+   "desk_t",
+   "diningtable_t",
+   "dresser_t",
+   "ottoman_t",
+   "sidetable_t",
+   "sofa_t"
+  ],
+  "lettuce_t": [
+   "countertop_t",
+   "diningtable_t",
+   "fridge_t",
+   "garbagecan_t",
+   "sidetable_t",
+   "sinkbasin_t"
+  ],
+  "mug_t": [
+   "cabinet_t",
+   "coffeemachine_t",
+   "countertop_t",
+   "desk_t",
+   "diningtable_t",
+   "dresser_t",
+   "fridge_t",
+   "microwave_t",
+   "shelf_t",
+   "sidetable_t",
+   "sinkbasin_t"
+  ],
+  "newspaper_t": [
+   "armchair_t",
+   "cabinet_t",
+   "coffeetable_t",
+   "diningtable_t",
+   "drawer_t",
+   "dresser_t",
+   "garbagecan_t",
+   "ottoman_t",
+   "shelf_t",
+   "sidetable_t",
+   "sofa_t"
+  ],
+  "pan_t": [
+   "cabinet_t",
+   "countertop_t",
+   "diningtable_t",
+   "fridge_t",
+   "sidetable_t",
+   "sinkbasin_t",
+   "stoveburner_t"
+  ],
+  "pen_t": [
+   "coffeetable_t",
+   "countertop_t",
+   "desk_t",
+   "diningtable_t",
+   "drawer_t",
+   "dresser_t",
+   "garbagecan_t",
+   "shelf_t",
+   "sidetable_t"
+  ],
+  "pencil_t": [
+   "coffeetable_t",
+   "countertop_t",
+   "desk_t",
+   "diningtable_t",
+   "drawer_t",
+   "dresser_t",
+   "garbagecan_t",
+   "shelf_t",
+   "sidetable_t"
+  ],
+  "peppershaker_t": [
+   "cabinet_t",
+   "countertop_t",
+   "diningtable_t",
+   "drawer_t",
+   "shelf_t",
+   "sidetable_t"
+  ],
+  "pillow_t": [
+   "armchair_t",
+   "bed_t",
+   "ottoman_t",
+   "sofa_t"
+  ],
+  "plate_t": [
+   "cabinet_t",
+   "coffeetable_t",
+   "countertop_t",
+   "diningtable_t",
+   "dresser_t",
+   "fridge_t",
+   "microwave_t",
+   "shelf_t",
+   "sidetable_t",
+   "sinkbasin_t"
+  ],
+  "plunger_t": [
+   "cabinet_t",
+   "cart_t"
+  ],
+  "pot_t": [
+   "cabinet_t",
+   "countertop_t",
+   "diningtable_t",
+   "fridge_t",
+   "shelf_t",
+   "sidetable_t",
+   "sinkbasin_t",
+   "stoveburner_t"
+  ],
+  "potato_t": [
+   "countertop_t",
+   "diningtable_t",
+   "fridge_t",
+   "garbagecan_t",
+   "microwave_t",
+   "sidetable_t",
+   "sinkbasin_t"
+  ],
+  "remotecontrol_t": [
+   "armchair_t",
+   "coffeetable_t",
+   "countertop_t",
+   "desk_t",
+   "diningtable_t",
+   "drawer_t",
+   "dresser_t",
+   "ottoman_t",
+   "shelf_t",
+   "sidetable_t",
+   "sofa_t"
+  ],
+  "saltshaker_t": [
+   "cabinet_t",
+   "countertop_t",
+   "diningtable_t",
+   "drawer_t",
+   "shelf_t",
+   "sidetable_t"
+  ],
+  "soapbar_t": [
+   "bathtubbasin_t",
+   "cabinet_t",
+   "cart_t",
+   "countertop_t",
+   "drawer_t",
+   "garbagecan_t",
+   "shelf_t",
+   "sidetable_t",
+   "sinkbasin_t",
+   "toilet_t"
+  ],
+  "soapbottle_t": [
+   "cabinet_t",
+   "cart_t",
+   "countertop_t",
+   "diningtable_t",
+   "drawer_t",
+   "garbagecan_t",
+   "shelf_t",
+   "sidetable_t",
+   "toilet_t"
+  ],
+  "spatula_t": [
+   "countertop_t",
+   "diningtable_t",
+   "drawer_t",
+   "sidetable_t",
+   "sinkbasin_t"
+  ],
+  "spoon_t": [
+   "countertop_t",
+   "diningtable_t",
+   "drawer_t",
+   "sidetable_t",
+   "sinkbasin_t"
+  ],
+  "spraybottle_t": [
+   "cabinet_t",
+   "cart_t",
+   "countertop_t",
+   "diningtable_t",
+   "drawer_t",
+   "dresser_t",
+   "garbagecan_t",
+   "shelf_t",
+   "sidetable_t",
+   "toilet_t"
+  ],
+  "statue_t": [
+   "coffeetable_t",
+   "countertop_t",
+   "desk_t",
+   "diningtable_t",
+   "dresser_t",
+   "safe_t",
+   "shelf_t",
+   "sidetable_t"
+  ],
+  "tennisracket_t": [
+   "bed_t",
+   "desk_t",
+   "diningtable_t",
+   "dresser_t",
+   "sidetable_t"
+  ],
+  "tissuebox_t": [
+   "cabinet_t",
+   "cart_t",
+   "coffeetable_t",
+   "countertop_t",
+   "desk_t",
+   "diningtable_t",
+   "drawer_t",
+   "dresser_t",
+   "garbagecan_t",
+   "shelf_t",
+   "sidetable_t",
+   "toilet_t",
+   "tvstand_t"
+  ],
+  "toiletpaper_t": [
+   "cabinet_t",
+   "cart_t",
+   "countertop_t",
+   "drawer_t",
+   "dresser_t",
+   "garbagecan_t",
+   "shelf_t",
+   "sidetable_t",
+   "toilet_t",
+   "toiletpaperhanger_t"
+  ],
+  "tomato_t": [
+   "countertop_t",
+   "diningtable_t",
+   "fridge_t",
+   "garbagecan_t",
+   "microwave_t",
+   "sidetable_t",
+   "sinkbasin_t"
+  ],
+  "towel_t": [
+   "towelholder_t"
+  ],
+  "vase_t": [
+   "cabinet_t",
+   "coffeetable_t",
+   "countertop_t",
+   "desk_t",
+   "diningtable_t",
+   "dresser_t",
+   "safe_t",
+   "shelf_t",
+   "sidetable_t"
+  ],
+  "watch_t": [
+   "coffeetable_t",
+   "desk_t",
+   "diningtable_t",
+   "drawer_t",
+   "dresser_t",
+   "safe_t",
+   "shelf_t",
+   "sidetable_t"
+  ],
+  "wateringcan_t": [
+   "cabinet_t",
+   "coffeetable_t",
+   "desk_t",
+   "diningtable_t",
+   "drawer_t",
+   "dresser_t",
+   "shelf_t",
+   "sidetable_t"
+  ],
+  "winebottle_t": [
+   "cabinet_t",
+   "countertop_t",
+   "diningtable_t",
+   "fridge_t",
+   "garbagecan_t",
+   "shelf_t",
+   "sidetable_t"
+  ]
+ }
+}

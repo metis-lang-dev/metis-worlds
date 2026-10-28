@@ -21,6 +21,10 @@ import gen_instance  # noqa: E402
 import semantic_map  # noqa: E402
 from metis.catalog import protocol_stub  # noqa: E402  (metispy's: a member's cancels, step 3c)
 
+# ALFWorld's receptacle kinds (ALFRED's rtype constants, as the text names them): in view mode the places are known at
+# once, so only these can be said absent before a search (alf-tasks step 2; the vocabulary: task_domain.llp's kind)
+RECEPTACLE_KINDS = ("armchair", "bathtubbasin", "bed", "cabinet", "cart", "coffeemachine", "coffeetable", "countertop", "desk", "diningtable", "drawer", "dresser", "fridge", "garbagecan", "handtowelholder", "laundryhamper", "microwave", "ottoman", "paintinghanger", "safe", "shelf", "sidetable", "sinkbasin", "sofa", "stoveburner", "tvstand", "toaster", "toilet", "toiletpaperhanger", "towelholder")
+
 SPECS = {
     "nav":    dict(types=("location", "receptacle"), dyn=("at", "recat"), goal="goto", out=("reached",)),
     "access": dict(types=("location", "receptacle"),
@@ -32,9 +36,9 @@ SPECS = {
     "place":  dict(types=("location", "receptacle", "object"),
                    dyn=("at", "recat", "openable", "notopenable", "objat", "inrecep", "opened", "closed", "holds", "holding",
                         "handsfree"), goal="put", out=("placed", "refused_put", "elsewhere")),
-    "task":   dict(types=("object", "receptacle", "thing"), dyn=("inrecep", "holds", "absent", "lost", "believed", "fetch_risk"),
+    "task":   dict(types=("object", "receptacle", "thing"), dyn=("inrecep", "holds", "absent", "lost", "believed", "fetch_risk", "seen", "unseen"),
                    goal="fetch", takes=("reached", "accessible", "taken", "placed", "refused_take", "refused_put", "refused"),
-                   out=("goto", "open", "take", "put", "done", "stuck", "wrong_dest", "wrong_object")),
+                   out=("goto", "open", "take", "put", "done", "stuck", "wrong_dest", "wrong_object", "nothing", "cannot", "misfit")),
 }
 # which specialist handles a sub-goal: the driver's manual switch table (step 3 makes it the director's handles/2)
 HANDLES = {"goto": "nav", "open": "access", "take": "grasp", "put": "place"}
@@ -47,7 +51,7 @@ STATUS = {"nav": {"success": ["reached"], "failure": []},
           "access": {"success": ["accessible"], "failure": []},
           "grasp": {"success": ["taken"], "failure": ["refused_take"]},
           "place": {"success": ["placed"], "failure": ["refused_put"]},
-          "task": {"success": ["done"], "failure": ["stuck", "wrong_dest", "wrong_object"]}}
+          "task": {"success": ["done"], "failure": ["stuck", "wrong_dest", "wrong_object", "nothing", "cannot", "misfit"]}}
 
 
 # the inversion (specialist-tree step 3b): the tree variant of a member's base reports itself through the protocol
@@ -343,6 +347,22 @@ def card(spec, smap):
     num = lambda h: (re.sub(r"\d+$", "", h), int(re.search(r"\d*$", h).group() or 0))   # cabinet2 before cabinet10
     have = {"receptacle": sorted(d["places"], key=num),
             "object": sorted((o for o, th in d["things"].items() if th["pickupable"]), key=num)}
+    # what this task cannot do (alf-tasks step 2): the kinds of ALFWorld's vocabulary this room lacks (view mode: its
+    # places only — a thing not seen yet is searched for), and the chores of the other task families
+    vocab = vocabulary()
+    if spec == "task" and "kind" in vocab:
+        # a kind it lacks is FETCH's own value (the model spells the word it heard, never another thing in its place);
+        # the host says it is not here (AlfHost.intent_atom → nothere). View mode: a thing not seen yet is searched for
+        present = set(d.get("kinds") or []) | {re.sub(r"\d+$", "", h) for h in list(d["places"]) + list(d["things"])}
+        absent = [k for k in vocab["kind"] if k not in present]
+        have["receptacle"] += [k for k in absent if k in RECEPTACLE_KINDS]
+        if not d.get("view"):
+            have["object"] += [k for k in absent if k not in RECEPTACLE_KINDS]
+        elif d["task"].get("room"):                                  # a room in view mode: any kind that can be carried, not seen yet
+            seen = {re.sub(r"_t$", "", d["types"].get(o, "")) for o, th in d["things"].items() if not th.get("wanted")}
+            carried = {re.sub(r"_t$", "", t) for t in compat_all()}
+            have["object"] += [k for k in vocab["kind"] if k in carried and k not in seen and k not in have["object"]]
+        have["chore"] = vocab["chore"]
     if d.get("view") and spec == "task":   # view mode: the task's kind stays a value ("a tomato": any tomato), seen or not
         kinds = {semantic_map.want_handle(t) for t in d["task"]["targets"]}
         have["object"] = sorted(set(have["object"]) | kinds, key=num)
@@ -353,7 +373,8 @@ def card(spec, smap):
     # the room's things in the prompt too: the grammar holds the model to them, and a model that
     # has not read a name (bread, a spatula) answers UNKNOWN rather than an enum value it never saw
     said = {"receptacle": "The receptacles here", "object": "The objects this task moves" if spec == "task"
-            else "The objects here that can be picked up"}
+            else "The objects here that can be picked up",
+            "chore": "The chores this task cannot do (NOTASK)"}
     c["guidance"] = c["guidance"].rstrip("\n") + "\n" + "".join(
         "%s: %s.\n" % (said[slot], ", ".join(v.upper() for v in have[slot])) for slot in c.get("slots") or {})
 
@@ -394,17 +415,40 @@ def write_card(pkg, spec, smap):
     return c
 
 
+_VOCAB = {}
+
+
+def vocabulary():
+    """The task's own vocabulary (task_domain.llp's enumerated types: kind, chore, risk): {type: [constants]}."""
+    if not _VOCAB:
+        import re
+        text = open(os.path.join(os.path.dirname(HERE), "domains", "hier", "task_domain.llp")).read()
+        _VOCAB.update({n: body.split() for n, body in re.findall(r"^type\s+(\w+)\s*\{([^}]*)\}", text, re.M)})
+    return _VOCAB
+
+
 def build_map(path, info, mirror, k=K, view=False, room=False):
     """The hierarchy's semantic map at PATH from the mirror's game as it is now (its static facts and its
     reading) and the task (task_goal); view: the robot sees only what stands before it (step 3). room (alf-tasks
     step 1): no task — the episode's goal is not the agent's; the person's goal binds the roles (project)."""
     targets, dests = ([], []) if room else task_goal(info)
-    return semantic_map.SemanticMap.build(path, mirror.static, mirror.dyn, targets, dests, k, view=view)
+    m = semantic_map.SemanticMap.build(path, mirror.static, mirror.dyn, targets, dests, k, view=view, room=room)
+    if view and room:                  # a kind the room's facts never place (none of it here): ALFRED's own compatibility
+        d = m.load()                   # (world/cancontain.json, every game's union), so a search for it looks where it could be
+        for ot, rts in compat_all().items():
+            d["compat"].setdefault(ot, rts)
+        m.save()
+    return m
+
+
+def compat_all():
+    """ALFRED's receptacle compatibility, no room's: {object type: [receptacle types]} (world/cancontain.json)."""
+    return json.load(open(os.path.join(HERE, "cancontain.json")))["cancontain"]
 
 
 # ── the director (alf-hierarchy step 3): the instance's facts from the specialists' declared ports ──
 DIRECTOR_OUT = ("wake", "sleep", "forward", "ask", "ended", "tick__grant", "tick__revoke")   # the last two: the tree director's (the tick)
-ENDS = ("done", "stuck", "wrong_dest", "wrong_object")
+ENDS = ("done", "stuck", "wrong_dest", "wrong_object", "nothing", "cannot", "misfit")   # the last three: what the task cannot do (alf-tasks step 2)
 
 
 def director_facts():

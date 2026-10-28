@@ -178,7 +178,33 @@ class AlfHost:
     def intent_atom(self, atom):
         """The mapper's atom (the room's things: the card names them) in the program's roles: a fetch
         re-projects the map for its goal (metis-agent's AgentHost.submit asks); the atom itself without a map."""
+        name = atom.split("(")[0]
+        if name == "notask":                             # ALFWorld's vocabulary, not the room's things: no projection
+            return atom
+        if name == "fetch" and self.smap is not None:     # what the room cannot do, said before anything moves (alf-tasks step 2)
+            said = self.cannot_fetch(*[a.strip() for a in atom[6:-1].split(",")])
+            if said == "unfit":                           # the goal's own roles (the projection binds them), its line in the room's names
+                return "unfit(%s)" % self.smap.intent_atom(atom)[6:-1]
+            if said:
+                return said
         return self.smap.intent_atom(atom) if self.smap is not None else atom
+
+    def cannot_fetch(self, obj, rec):
+        """A fetch the room cannot do, as the task's vocabulary atom, or None: a kind it does not have (the card offers
+        ALFWorld's kinds it lacks: a word with no number, not the map's) → nothere(K); a thing the world never puts
+        there (ALFWorld's cancontain over the two types) → "unfit" (intent_atom says it over the fetch's roles). View
+        mode: a kind not seen yet is searched for."""
+        import re
+        d = self.smap.load()
+        for a, known in ((obj, d["things"]), (rec, d["places"])):
+            if a and not re.search(r"\d$", a) and a not in self.smap.roles() and a not in known \
+                    and not (d.get("view") and known is d["things"]):
+                return "nothere(%s)" % a
+        types = {h: t for x in self.static if x.startswith(("otype(", "rtype(")) for h, t in [x[6:-1].split(",")]}
+        ot, rt = types.get(obj), types.get(rec)
+        if ot and rt and any(x.startswith("cancontain(") for x in self.static) and "cancontain(%s,%s)" % (rt, ot) not in self.static:
+            return "unfit"
+        return None
 
     def refresh(self):
         """This host's view of the world taken from the shared process as it stands now (another host on

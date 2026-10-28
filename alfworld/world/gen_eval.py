@@ -28,7 +28,7 @@ BELIEFS = {                                     # name: ({place: P(target there)
     "lost": ({"p1": 0.5, "p2": 0.3}, True),     # 0.2 on no candidate
 }
 LEVEL_AT, LEVEL_NAMES = (0.3, 0.7), ("unlikely", "maybe", "sure")   # belief-levels' thresholds (step 1, the brief)
-GO_FOR = "  go_for [dyn] : want(O) * start * $inrecep(O, R) -o want(O) * goto(R)  @w look(O, R)."
+GO_FOR = "  go_for [dyn] : want(O) * start * $seen(O) * $inrecep(O, R) -o want(O) * goto(R)  @w look(O, R)."
 GO_LEVEL = [
     "  %% {O} is surely in {R}: I go there.",
     "  go_sure [dyn] : want(O) * start * $inrecep(O, R) * $place_level(sure, O, R) -o want(O) * goto(R).",
@@ -84,7 +84,7 @@ def case(name, level):
     bel, lone = BELIEFS[name]
     values = {("target", r): p for r, p in bel.items()}
     values[("other", "p0")] = 1                                  # the other object: in p0, surely (a group of its own)
-    init = ["fetch(target, dest)"] + ["inrecep(target, %s)" % r for r in sorted(bel)]
+    init = ["fetch(target, dest)", "seen(target)"] + ["inrecep(target, %s)" % r for r in sorted(bel)]   # seen: the host's reading (alf-tasks)
     if level:
         init += ["place_level(%s, target, %s)" % (level_of(p), r) for r, p in sorted(bel.items())]
     manifest = "fetch%s%s.yaml" % ("_level" if level else "", "_lone" if lone else "")

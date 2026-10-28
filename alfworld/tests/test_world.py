@@ -175,10 +175,12 @@ def test_hierarchy_instances_see_less(tmp_path):
         p = gen_hier.generate(game_dir(), str(tmp_path / "pk"), spec, 0, info, smap, reading, seed, [])
         init = sum(1 for l in open(p) if l.startswith("#init"))
         assert init < flat_init, (spec, init, flat_init)
-        assert gen_hier.vector(spec)["rules"] <= 23          # the task domain: 14 with `already` and `held` (alf-demo step 3b, F8/F12),
+        assert gen_hier.vector(spec)["rules"] <= 28          # the task domain: 14 with `already` and `held` (alf-demo step 3b, F8/F12),
                                                              # 21 with view mode's look (semantic-map step 3: not_here, not_in,
                                                              # lost_it, nowhere; verify, open_look, verified), 23 with
-                                                             # stuck_take / stuck_put (specialist-tree step 3b: refused split)
+                                                             # stuck_take / stuck_put (specialist-tree step 3b: refused split),
+                                                             # 28 with what a room cannot do and its search (alf-tasks step 2: absent_kind,
+                                                             # not_a_chore, cannot_fit, look_first, look_dest)
 
 
 def test_activation_cards(tmp_path):
@@ -207,14 +209,22 @@ def test_activation_cards(tmp_path):
         c = yaml.safe_load(open(os.path.join(pkg, "intent.yaml")))
         want = {"receptacle": {r for r, k in kinds.items() if k == "receptacle"},
                 "object": {o for o, k in kinds.items() if k == "object" and o in pick}}   # the task too: any pickupable may be named (F1)
+        if spec == "task":   # alf-tasks step 2: ALFWorld's kinds this room lacks are FETCH's values too (said not here), and the chores
+            import re
+            voc = gen_hier.vocabulary()
+            here = {re.sub(r"\d+$", "", h) for h in kinds} | {a.split(",")[1][:-3] for a in info["static"] if a.startswith(("otype(", "rtype("))}
+            absent = [k for k in voc["kind"] if k not in here]
+            want["receptacle"] |= {k for k in absent if k in gen_hier.RECEPTACLE_KINDS}
+            want["object"] |= {k for k in absent if k not in gen_hier.RECEPTACLE_KINDS}
+            want["chore"] = set(voc["chore"])
         for slot, s in c["slots"].items():
             assert {v.lower() for v in s["enum"]} == want[slot], (spec, slot)
             assert c["values"][slot] == {v.upper(): v for v in want[slot]}
             assert all(v.upper() in c["guidance"] for v in want[slot])
         for _, j in c["examples"]:
             assert all(j[k].lower() in want[k] for k in j if k in want), (spec, j)
-        assert [r["atom"].split("(")[0] for r in c["map"]] == [{"nav": "goto", "access": "open", "grasp": "take",
-                                                                 "place": "put", "task": "fetch"}[spec]]
+        assert [r["atom"].split("(")[0] for r in c["map"]] == {"nav": ["goto"], "access": ["open"], "grasp": ["take"],
+                                                                "place": ["put"], "task": ["fetch", "notask"]}[spec]
         assert all(" " not in r["atom"] for r in c["map"])     # a do-line reads a space as its count's
 
 
@@ -785,7 +795,10 @@ def test_a_rebinding_is_a_sync_on_the_live_session(tmp_path):
         assert not any(a.startswith("fetch_risk(") for a in th.observe(counts))
         th.level_atoms = {"fetch_risk(high)": 1}
         d = th.smap.load()
-        nd = sorted(r for r in d["places"] if r not in d["task"]["dests"] and r != th.smap.handle("p1"))[0]
+        tt = next(a.split(",")[1][:-1] for a in th.static if a.startswith("otype(%s," % d["task"]["targets"][0]))
+        fits = {a.split("(")[1].split(",")[0] for a in th.static if a.startswith("cancontain(") and a.endswith(",%s)" % tt)}
+        rtype = {a[6:-1].split(",")[0]: a[6:-1].split(",")[1] for a in th.static if a.startswith("rtype(")}
+        nd = sorted(r for r in d["places"] if r not in d["task"]["dests"] and r != th.smap.handle("p1") and rtype.get(r) in fits)[0]   # a place it can go (cancontain)
         held = th.smap.handle("p1")
         assert th.intent_atom("fetch(%s,%s)" % (d["task"]["targets"][0], nd)) == "fetch(target,p1)"
         assert th.smap.handle("p1") == nd and th.smap.handle("p2") == held     # the target's place moved to p2
@@ -1056,7 +1069,7 @@ def test_a_room_steps_on_after_the_episodes_own_goal(tmp_path):
     assert "inrecep(tomato1,fridge1)" in r[-1]["dynamic"] and not r[-1]["won"]
     out = gen_hier.install(str(trial), str(tmp_path / "root"), person=True, room=True)
     m = json.load(open(tmp_path / "root" / "domains" / "hier" / ".map.json"))
-    assert m["task"] == {"targets": [], "dests": []}
+    assert m["task"] == {"targets": [], "dests": [], "room": True}
     # every package on the log says room — the mirror (_flat) and the director's too: one world process per log, and a
     # mirror opened first as a game froze it after the episode's goal (a second task's stale reading: the access surprise)
     assert all(json.load(open(os.path.join(out[s], "game.json"))).get("room") for s in ("task", "nav", "access", "grasp", "place", "_flat", "director"))

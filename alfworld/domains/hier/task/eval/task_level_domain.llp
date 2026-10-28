@@ -39,9 +39,33 @@ pred holds(object) : task.                % … or that the agent holds it (a st
 % the map's belief (every place it may be in), look chooses among them; a place looked into without it
 pred absent(object, receptacle) : task.
 pred lost(thing) : task.                  % … and no place left to look (a thing: stuck's own type)
+pred seen(object) : task.                 % the goal's thing is one the robot has seen (text mode: every thing)
+pred unseen(object) : task.               % … or a kind it looks for, not seen yet (a room in view mode: alf-tasks step 2)
 pred believed(object, receptacle) : task. % … in its destination by an earlier look, not seen there now: go and look
 type risk {high mid low}.
 pred fetch_risk(risk) : task.             % the host's level port (spec16 step 4): the fetch's failure risk within h
+% what the person asks that this task cannot do (alf-tasks s-e9cc8fae step 2), mapped by the card (intent.yaml:
+% NOTHERE, NOTASK): ALFWorld's own vocabulary — every object and receptacle kind of ALFRED's scenes, as the text
+% names them (one word), and the chores of its other task families — never a thing of the room
+type kind {
+  alarmclock apple armchair baseballbat basketball bathtub bathtubbasin bed blinds book boots bowl box bread
+  butterknife cabinet candle cart cd cellphone chair cloth coffeemachine coffeetable countertop creditcard cup
+  curtains desk desklamp diningtable dishsponge drawer dresser egg floorlamp footstool fork fridge garbagecan
+  glassbottle handtowel handtowelholder houseplant kettle keychain knife ladle laptop laundryhamper
+  laundryhamperlid lettuce lightswitch microwave mirror mug newspaper ottoman painting paintinghanger pan
+  papertowel papertowelroll pen pencil peppershaker pillow plate plunger poster pot potato remotecontrol safe
+  saltshaker scrubbrush shelf showerdoor showerglass sidetable sink sinkbasin soapbar soapbottle sofa spatula
+  spoon spraybottle statue stoveburner stoveknob teddybear television tennisracket tissuebox toaster toilet
+  toiletpaper toiletpaperhanger toiletpaperroll tomato towel towelholder tvstand vase watch wateringcan window
+  winebottle
+}.
+type chore {heating cooling cleaning slicing examining switching}.
+pred nothere(kind) : task.                % a kind this room does not have (the card: the kinds it lacks)
+pred notask(chore) : task.                % a chore, not an errand of moving a thing
+pred unfit(object, receptacle) : task.    % a fetch the world does not allow (ALFWorld's cancontain), over the fetch's roles
+pred nothing(kind) : task.                % … said, and the task ends there (the director's end: the agent waits)
+pred cannot(chore) : task.
+pred misfit(object, receptacle) : task.
 % the sub-goals (out)
 % the results (in)
 % the one way in: the goal, typed by the person (the FETCH intent) or seeded by the driver
@@ -56,9 +80,9 @@ stage act {
   fetch [dyn] : fetch(O, R) * $target(O) * $dest(R) * $inrecep(O, R0) * R0 <> R -o want(O) * to(R) * start.
   %% {O} is already in {R}: nothing to do.
   already [dyn] : fetch(O, R) * $target(O) * $dest(R) * $inrecep(O, R) -o done.
-  %% I left {O} in {R}: I go and look.
+  %% {O} may be in {R}: I go and look.
   verify [dyn] : fetch(O, R) * $target(O) * $dest(R) * $believed(O, R) -o want(O) * to(R) * goto(R).
-  %% I can't find {X}: I stop and ask.
+  %% There is no {X} in this room: I looked everywhere it could be.
   nowhere [dyn] : fetch(O, R) * $target(O) * $dest(R) * $lost(X) -o stuck(X).
   %% I have {O}: to {R}.
   held [dyn] : fetch(O, R) * $target(O) * $dest(R) * $holds(O) -o carry(O) * to(R) * goto(R).
@@ -72,6 +96,10 @@ stage act {
   go_maybe [dyn] : want(O) * start * $inrecep(O, R) * $place_level(maybe, O, R) -o want(O) * goto(R).
   %% {O} is unlikely in {R}: I go there, a tenth as readily.
   go_unlikely [dyn] : want(O) * start * $inrecep(O, R) * $place_level(unlikely, O, R) -o want(O) * goto(R)  @w 0.1.
+  %% No {O} seen yet: I look in {R} first.
+  look_first [dyn] : want(O) * start * $unseen(O) * $inrecep(O, R) -o want(O) * goto(R)  @w look(O, R).
+  %% No {O} seen yet: it may be in {R} already, I look there too.
+  look_dest [dyn] : want(O) * start * $unseen(O) * $to(R) * $believed(O, R) -o want(O) * goto(R)  @w look(O, R).
   %% At {R}: I need it open.
   open_for [dyn] : want(O) * reached(R) * $inrecep(O, R) -o want(O) * open(R).
   %% {R} is accessible: I take {O}.
@@ -84,7 +112,7 @@ stage act {
   not_here [dyn] : want(O) * reached(R) * $absent(O, R) -o want(O) * start.
   %% {O} is not in {R}: I look elsewhere.
   not_in [dyn] : want(O) * accessible(R) * $absent(O, R) -o want(O) * start.
-  %% I can't find {X}: I stop and ask.
+  %% There is no {X} in this room: I looked everywhere it could be.
   lost_it [dyn] : want(O) * start * $lost(X) -o stuck(X).
   %% I have {O}: to {R}.
   go_dest [dyn] : want(O) * taken(O) * $to(R) -o carry(O) * goto(R).
@@ -94,6 +122,12 @@ stage act {
   put_dest [dyn] : carry(O) * accessible(R) * $to(R) -o carry(O) * put(O, R).
   %% {O} is in {R}: done.
   finish [dyn] : carry(O) * placed(O, R) -o done.
+  %% There is no {K} in this room.
+  absent_kind [dyn] : nothere(K) -o nothing(K).
+  %% Sorry, {C} is not a task I know: I move things from place to place.
+  not_a_chore [dyn] : notask(C) -o cannot(C).
+  %% {O} cannot go in or on {R}: this world does not allow it.
+  cannot_fit [dyn] : unfit(O, R) -o misfit(O, R).
   %% {X} was refused and I have no rule for it: I stop and ask.
   stuck_fetch [dyn] : want(O) * refused(X) -o stuck(X).
   %% {X} was refused and I have no rule for it: I stop and ask.

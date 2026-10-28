@@ -82,6 +82,13 @@ def world_card(scene, places, things, task):
     if other and elsewhere:
         asks.append({"say": "put the %s %s the %s" % (other["type"], prep(elsewhere["type"]), elsewhere["type"]), "what": "any thing of the room to any place: the agent does it, or asks first when the task wants something else"})
     room = bool(task.get("room"))                     # alf-tasks: a room, no task of its own — the person gives them, one after another
+    if room and other and elsewhere:                  # … a second errand for the card's line: another kind to another place
+        second = next((t for t in pick if t["type"] != other["type"]), None)
+        there = next((p for p in places if p["type"] not in (elsewhere["type"], second and second.get("at", "").rstrip("0123456789"))
+                      and p["type"] in ON + ("fridge", "sinkbasin", "sink", "cabinet", "drawer", "microwave", "garbagecan")), None)
+        if second and there:                          # [an errand, it in other words, another]: the card's line says the first and the last
+            asks[1:1] = [{"say": "bring the %s to the %s" % (other["type"], elsewhere["type"]), "what": "the same errand in other words"},
+                         {"say": "move the %s to the %s" % (second["type"], there["type"]), "what": "another errand: in a room the tasks follow one another"}]
     asks += [{"say": "stop", "what": "the agent stops what it is doing and waits"},
              {"say": "new game", "what": "the same room from its start" + ("" if room else ", the task again")}]
     return {"title": "ALFWorld kitchen %s" % scene,
@@ -129,12 +136,13 @@ class SemanticMap(core.SemanticMap):
         return location_roles(k)
 
     @classmethod
-    def build(cls, path, static, dyn, targets, dests, k=K, view=False):
+    def build(cls, path, static, dyn, targets, dests, k=K, view=False, room=False):
         """The map from the game's facts as the mirror reads them (static and dynamic atoms) and the task's
         resolved targets and dests; no binding yet. view: the robot sees only what stands before it
         (step 3, the architect's RULING 1): the places are known (the room's first look lists them), a
         thing only once seen; the task's wanted type is an entry of its own, believed flat over the places
-        that can hold it (ALFWorld's cancontain), until a target is seen."""
+        that can hold it (ALFWorld's cancontain), until a target is seen. room (alf-tasks): no task of its own — the
+        person's goal binds the roles, and in view mode a kind named before it is seen becomes a wanted entry then."""
         m = cls(path)
         st = set(static)
         places = {}
@@ -144,8 +152,12 @@ class SemanticMap(core.SemanticMap):
                 places[r] = {"loc": l, "openable": "openable(%s)" % r in st, "opened": False}
         pick = {_args(a)[0] for a in st if a.startswith("pickupable(")}
         things = {o: {"in": None, "pickupable": True} for o in sorted(pick)}
+        # the room's kinds (its objects' and receptacles' types, and its things' names): what a person may name here
+        kinds = {_args(a)[1][:-2] if _args(a)[1].endswith("_t") else _args(a)[1] for a in st if a.startswith(("otype(", "rtype("))}
+        kinds |= {re.sub(r"\d+$", "", h) for h in list(places) + list(things)}
         m.data = {"places": places, "things": things, "belief": {}, "agent": {"at": None, "holding": None},
-                  "task": {"targets": sorted(targets), "dests": sorted(dests)}, "binding": {}, "k": k}
+                  "task": dict({"targets": sorted(targets), "dests": sorted(dests)}, **({"room": True} if room else {})),
+                  "binding": {}, "k": k, "kinds": sorted(kinds)}
         if view:
             types = {}
             for a in st:
@@ -216,7 +228,7 @@ class SemanticMap(core.SemanticMap):
         """A target seen resolves its wanted type (view mode)."""
         changed = False
         for w, wt in list(d["things"].items()):
-            if wt.get("wanted") and o in d["task"]["targets"] and d["types"].get(o) == wt["wanted"]:
+            if wt.get("wanted") and (o in d["task"]["targets"] or d["task"].get("room")) and d["types"].get(o) == wt["wanted"]:
                 del d["things"][w]
                 d["belief"].pop(w, None)
                 d["looked"].pop(w, None)
@@ -228,7 +240,8 @@ class SemanticMap(core.SemanticMap):
         """A place seen into with a target in it is the one just looked into (its role stays bound)."""
         changed = False
         for o, x in seen.items():
-            if x == r and d["look"] != r and (o in d["task"]["targets"] or o in d.get("resolved", {}).values()):
+            if x == r and d["look"] != r and (o in d["task"]["targets"] or o in d.get("resolved", {}).values()
+                                              or (d["task"].get("room") and o == d["binding"].get("target"))):
                 d["look"], changed = r, True
         return changed
 
@@ -241,6 +254,10 @@ class SemanticMap(core.SemanticMap):
     def place_facts(self, d, inv):
         """Each bound receptacle's place facts: recat(R, L) when its location is bound, openable(R) or notopenable(R)."""
         out = {}
+        for role in OBJECT_ROLES:                      # the goal's things: seen, or a kind looked for (view mode, not seen yet)
+            h = d["binding"].get(role)
+            if h:
+                out[("unseen(%s)" if d["things"].get(h, {}).get("wanted") else "seen(%s)") % role] = 1
         for role, h in d["binding"].items():
             p = d["places"].get(h)
             if p is None or role not in place_roles(d["k"]):
@@ -384,6 +401,25 @@ class SemanticMap(core.SemanticMap):
                 out["lost(%s)" % orole] = 1
         return out
 
+    def want_kind(self, d, word):
+        """A room in view mode (alf-tasks step 2): WORD, a kind with no number ("apple"), named before one is seen →
+        its wanted entry, believed over the places that can hold it (the cancontain prior); None for a thing seen (an
+        instance of the kind seen already is resolved to: the person's "the apple" is the one in sight)."""
+        if not word or re.search(r"\d$", word) or word in d["places"]:
+            return None
+        wt = word + "_t"
+        seen = sorted(o for o, t in d["things"].items() if not t.get("wanted") and d["types"].get(o) == wt)
+        if seen:
+            d.setdefault("resolved", {})[word] = seen[0]
+            return None
+        if word not in d["things"]:
+            d["things"][word] = {"in": None, "pickupable": True, "wanted": wt}
+            self.data = d
+            d["belief"][word] = self._prior(word)
+            self.save()
+            self.log("want", wanted=word, belief=d["belief"][word])
+        return word
+
     def intent_atom(self, atom):
         """An atom in the room's terms (the mapper's: fetch(tomato1,microwave1)) said in roles: a fetch
         re-projects for its object and receptacle (the person's goal is the projection's goal), any other
@@ -398,6 +434,9 @@ class SemanticMap(core.SemanticMap):
             kind = next((a for a in args if a in res or d["things"].get(a, {}).get("wanted")), None)   # "a tomato": the kind
             args = [res.get(a, a) if a in res else (want_handle(a) if a not in d["things"] and want_handle(a) in d["things"] else a)
                     for a in args]
+        if d.get("view") and d["task"].get("room") and name == "fetch" and kind is None:
+            kind = self.want_kind(d, args[0])
+            args = [d.get("resolved", {}).get(args[0], args[0])] + list(args[1:]) if kind is None else args
         inv = {h: r for r, h in d["binding"].items()}
         if name == "fetch" or any(a not in inv for a in args):
             obj = kind or next((a for a in args if a in d["things"]), None)
