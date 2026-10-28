@@ -36,7 +36,7 @@ SPECS = {
     "place":  dict(types=("location", "receptacle", "object"),
                    dyn=("at", "recat", "openable", "notopenable", "objat", "inrecep", "opened", "closed", "holds", "holding",
                         "handsfree"), goal="put", out=("placed", "refused_put", "elsewhere")),
-    "task":   dict(types=("object", "receptacle", "thing"), dyn=("inrecep", "holds", "absent", "lost", "believed", "fetch_risk", "seen", "unseen", "handsfree"),
+    "task":   dict(types=("object", "receptacle", "thing"), dyn=("inrecep", "holds", "absent", "lost", "believed", "fetch_risk", "seen", "unseen", "handsfree", "presence"),
                    goal="fetch", takes=("reached", "accessible", "taken", "placed", "refused_take", "refused_put", "refused"),
                    out=("goto", "open", "take", "put", "done", "stuck", "wrong_dest", "wrong_object", "nothing", "cannot", "misfit")),
 }
@@ -440,8 +440,25 @@ def build_map(path, info, mirror, k=K, view=False, room=False):
         d = m.load()                   # (world/cancontain.json, every game's union), so a search for it looks where it could be
         for ot, rts in compat_all().items():
             d["compat"].setdefault(ot, rts)
+        d["presence_prior"] = presence_prior(info.get("game") or "")
         m.save()
     return m
+
+
+def presence_prior(game):
+    """P(a kind is in this room) by ALFRED's frequency in rooms of its type (world/presence.json: the fraction of the
+    type's scenes whose objects include it), add-half smoothed: never 0, never 1. {kind type: p}."""
+    import re
+    m = re.search(r"-(\d+)(?:/|$)", str(game).rstrip("/").replace("/game.tw-pddl", ""))
+    n = int(m.group(1)) if m else 0
+    room = next((r for a, b, r in ((1, 30, "kitchen"), (201, 230, "living room"), (301, 330, "bedroom"), (401, 430, "bathroom"))
+                 if a <= n <= b), None)
+    t = json.load(open(os.path.join(HERE, "presence.json")))
+    if room is None:
+        return {}
+    k = t["scenes"][room]
+    return {kind: round((p * k + 0.5) / (k + 1), 4) for kind, p in t["presence"][room].items()} | \
+        {kind: round(0.5 / (k + 1), 4) for kind in compat_all() if kind not in t["presence"][room]}
 
 
 def compat_all():

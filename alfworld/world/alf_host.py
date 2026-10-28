@@ -619,7 +619,7 @@ class AlfHost:
 # the program's dynamic predicates (the ones sync may retract): ground.py's, plus the complements
 from ground import DYNAMIC as _DYN  # noqa: E402
 DYNAMIC_PREDS = set(_DYN) | {"closed", "handsfree", "holding"}
-PLACE_PREDS = {"recat", "openable", "notopenable", "absent", "lost", "believed", "seen", "unseen"}     # a role host's too: the projection asserts the place facts (a flat
+PLACE_PREDS = {"recat", "openable", "notopenable", "absent", "lost", "believed", "seen", "unseen", "presence"}     # a role host's too: the projection asserts the place facts (a flat
                                                        # program's are static, or its own: a learned split's to keep),
                                                        # and the map's view mode what was looked for in vain (step 3)
 

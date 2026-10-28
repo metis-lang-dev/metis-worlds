@@ -175,13 +175,14 @@ def test_hierarchy_instances_see_less(tmp_path):
         p = gen_hier.generate(game_dir(), str(tmp_path / "pk"), spec, 0, info, smap, reading, seed, [])
         init = sum(1 for l in open(p) if l.startswith("#init"))
         assert init < flat_init, (spec, init, flat_init)
-        assert gen_hier.vector(spec)["rules"] <= 31          # the task domain: 14 with `already` and `held` (alf-demo step 3b, F8/F12),
+        assert gen_hier.vector(spec)["rules"] <= 32          # the task domain: 14 with `already` and `held` (alf-demo step 3b, F8/F12),
                                                              # 21 with view mode's look (semantic-map step 3: not_here, not_in,
                                                              # lost_it, nowhere; verify, open_look, verified), 23 with
                                                              # stuck_take / stuck_put (specialist-tree step 3b: refused split),
                                                              # 28 with what a room cannot do and its search (alf-tasks step 2: absent_kind,
                                                              # not_a_chore, cannot_fit, look_first, look_dest), 31 with
-                                                             # a full hand at a new task (step 3: free_hands, freed, stuck_free)
+                                                             # a full hand at a new task (step 3: free_hands, freed, stuck_free),
+                                                             # 32 with the existence level's stop (gave_up)
 
 
 def test_activation_cards(tmp_path):
@@ -1101,3 +1102,33 @@ def test_every_packages_cases_pass_alone(tmp_path):
             if not r.passed:
                 failed.append(stub.render([r]))
     assert not failed, "\n".join(failed)
+
+
+def test_an_unseen_kinds_existence_falls_as_the_robot_looks(tmp_path):
+    """alf-tasks step 3 (the architect's ruling): a kind asked for before it is seen has an EXISTENCE belief — its room
+    type's frequency in ALFRED (world/presence.json, smoothed) as the prior, lowered by each place it could be in looked
+    into without it — quantised as a level (presence: likely / doubtful / improbable): the search stops at improbable
+    ("There is probably no kettle in this room"). A kettle is in about half of ALFRED's kitchens and in no bathroom."""
+    import gen_hier
+    sys.path.insert(0, os.path.join(ROOT, "experiments"))
+    import demo
+    from semantic_map import SemanticMap
+    out = {}
+    for room in ("kitchen 13", "bathroom 401"):
+        gen_hier.install(str(demo.resolve(room)), str(tmp_path / room.replace(" ", "")), person=True, view=True, room=True)
+        m = SemanticMap(str(tmp_path / room.replace(" ", "") / "domains" / "hier" / ".map.json"))
+        d = m.load()
+        assert m.want_kind(d, "kettle") == "kettle"
+        p0, level0 = m.presence(m.load(), "kettle")
+        cand = sorted(m.load()["belief0"]["kettle"])
+        levels = [level0]
+        for r in cand:                                   # every place a kettle could be, looked into empty
+            d = m.load()
+            d["looked"].setdefault("kettle", []).append(r)
+            levels.append(m.presence(d, "kettle")[1])
+        out[room] = (p0, levels, len(cand))
+    p0, levels, n = out["kitchen 13"]
+    assert 0.3 <= p0 < 0.7 and levels[0] == "doubtful" and levels[-1] == "improbable" and n > 10
+    first_low = levels.index("improbable")
+    assert 0 < first_low < n                             # it stops before every place is looked into
+    assert out["bathroom 401"][1][0] == "improbable"     # no kettle in ALFRED's bathrooms: stop at once

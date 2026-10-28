@@ -257,7 +257,10 @@ class SemanticMap(core.SemanticMap):
         for role in OBJECT_ROLES:                      # the goal's things: seen, or a kind looked for (view mode, not seen yet)
             h = d["binding"].get(role)
             if h:
-                out[("unseen(%s)" if d["things"].get(h, {}).get("wanted") else "seen(%s)") % role] = 1
+                wanted = d["things"].get(h, {}).get("wanted")
+                out[("unseen(%s)" if wanted else "seen(%s)") % role] = 1
+                if wanted and role == "target":       # … and how likely it is here at all: the existence level (step 3)
+                    out["presence(%s)" % self.presence(d, h)[1]] = 1
         for role, h in d["binding"].items():
             p = d["places"].get(h)
             if p is None or role not in place_roles(d["k"]):
@@ -416,9 +419,24 @@ class SemanticMap(core.SemanticMap):
             d["things"][word] = {"in": None, "pickupable": True, "wanted": wt}
             self.data = d
             d["belief"][word] = self._prior(word)
+            # its existence (the architect's ruling, alf-tasks step 3): the room type's frequency of the kind as the prior
+            d.setdefault("belief0", {})[word] = dict(d["belief"][word])
+            d.setdefault("presence0", {})[word] = (d.get("presence_prior") or {}).get(wt, 1.0)
             self.save()
-            self.log("want", wanted=word, belief=d["belief"][word])
+            self.log("want", wanted=word, belief=d["belief"][word], presence=d["presence0"][word])
         return word
+
+    PRESENCE_AT, PRESENCE_NAMES = (0.3, 0.7), ("improbable", "doubtful", "likely")   # the place belief's thresholds (belief-levels)
+
+    def presence(self, d, thing):
+        """P(THING exists in the room | looked into the places it could be, without a sighting): the prior P0 (presence0;
+        1 for a task's own target) updated by the location prior's mass m on the places looked into —
+        P0(1−m) / (P0(1−m) + 1−P0). → (p, level)."""
+        p0 = (d.get("presence0") or {}).get(thing, 1.0)
+        b0 = (d.get("belief0") or {}).get(thing) or {}
+        m = min(1.0, sum(b0.get(r, 0) for r in set(d["looked"].get(thing, ()))))
+        p = p0 * (1 - m) / (p0 * (1 - m) + 1 - p0) if p0 < 1 else 1.0
+        return p, self.PRESENCE_NAMES[sum(1 for t in self.PRESENCE_AT if t <= p)]
 
     def intent_atom(self, atom):
         """An atom in the room's terms (the mapper's: fetch(tomato1,microwave1)) said in roles: a fetch

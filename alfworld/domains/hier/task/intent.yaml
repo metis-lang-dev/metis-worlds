@@ -43,9 +43,8 @@ guidance: |
   EXAMINING, SWITCHING), even when the object is here. Before FETCH, check that the
   person's word is the object's kind: a laptop is never LETTUCE1, a book is never BOWL1. A kind
   of two words is one word in capitals: a teddy bear is TEDDYBEAR, a pepper shaker PEPPERSHAKER,
-  a spray bottle SPRAYBOTTLE. A FETCH always names its receptacle: when the person names no place
-  ("bring me the egg", "fetch the mug"), it is COUNTERTOP1 when the room has one, else
-  DININGTABLE1, else the first receptacle of the list.
+  a spray bottle SPRAYBOTTLE. When the person names no place ("bring me the egg"), leave the
+  receptacle out: the agent asks for it, never guesses one.
 
 examples:
   - ["fetch the tomato to the fridge", {"intent":"FETCH","object":"TOMATO1","receptacle":"FRIDGE1"}]
@@ -66,8 +65,8 @@ examples:
   - ["bring the teddy bear to the fridge", {"intent":"FETCH","object":"TEDDYBEAR","receptacle":"FRIDGE1"}]
   - ["move the spray bottle to the counter", {"intent":"FETCH","object":"SPRAYBOTTLE","receptacle":"COUNTERTOP1"}]
   - ["put the remote on the sofa", {"intent":"FETCH","object":"REMOTECONTROL","receptacle":"SOFA1"}]
-  - ["bring me the egg", {"intent":"FETCH","object":"EGG1","receptacle":"COUNTERTOP1"}]
-  - ["fetch the mug", {"intent":"FETCH","object":"MUG1","receptacle":"COUNTERTOP1"}]
+  - ["bring me the egg", {"intent":"FETCH","object":"EGG1"}]
+  - ["fetch the mug", {"intent":"FETCH","object":"MUG1"}]
   - ["heat the apple", {"intent":"NOTASK","chore":"HEATING"}]
   - ["cook the potato in the microwave", {"intent":"NOTASK","chore":"HEATING"}]
   - ["chill the wine", {"intent":"NOTASK","chore":"COOLING"}]
@@ -98,6 +97,10 @@ spoken:
     - ["heat the apple", {"intent":"NOTASK","chore":"HEATING"}, "I can't heat things."]
     - ["okay I understood", {"intent":"CHITCHAT"}, "Good."]
     - ["thanks", {"intent":"CHITCHAT"}, "You're welcome."]
+
+# the slots the agent holds to the person's words (metis-agent's slot grounding, alf-tasks step 3): a value the
+# words never name is the model's guess — asked about, never dispatched; one FETCH needs and the words leave out, asked for
+grounded: [object, receptacle]
 
 map:
   - {verb: FETCH, atom: "fetch({object:object},{receptacle:receptacle})", act: fetch}

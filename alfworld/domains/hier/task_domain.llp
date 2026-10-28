@@ -38,6 +38,10 @@ pred lost(thing) : task.                  % … and no place left to look (a thi
 pred seen(object) : task.                 % the goal's thing is one the robot has seen (text mode: every thing)
 pred unseen(object) : task.               % … or a kind it looks for, not seen yet (a room in view mode: alf-tasks step 2)
 pred handsfree : task.                    % the robot's hand is empty (a fetch starts only so: alf-tasks step 3)
+type chance {likely doubtful improbable}.
+bwd go_on(chance).                        % the levels at which a search goes on (below them it stops)
+pred presence(chance) : task.             % the map's existence level of an unseen kind: its room type's frequency, lowered
+                                          % by every place looked into without it (the search stops at improbable: step 3)
 pred freeing(object, receptacle) : task.  % a fetch waiting while the robot puts down what it holds
 pred believed(object, receptacle) : task. % … in its destination by an earlier look, not seen there now: go and look
 type risk {high mid low}.
@@ -73,6 +77,9 @@ pred want(object) : task.                 % fetching the object
 pred to(receptacle) : task.               % the destination this fetch names
 pred carry(object) : task.                % carrying it to the destination
 
+go_on(likely).
+go_on(doubtful).
+
 stage act {
   %% I'll fetch {O} to {R}.
   fetch [dyn] : fetch(O, R) * $target(O) * $dest(R) * $handsfree * $inrecep(O, R0) * R0 <> R -o want(O) * to(R) * start.
@@ -97,9 +104,11 @@ stage act {
   %% {O} is in {R}: I go there.
   go_for [dyn] : want(O) * start * $seen(O) * $inrecep(O, R) -o want(O) * goto(R)  @w look(O, R).
   %% No {O} seen yet: I look in {R} first.
-  look_first [dyn] : want(O) * start * $unseen(O) * $inrecep(O, R) -o want(O) * goto(R)  @w look(O, R).
+  look_first [dyn] : want(O) * start * $unseen(O) * $presence(C) * $go_on(C) * $inrecep(O, R) -o want(O) * goto(R)  @w look(O, R).
   %% No {O} seen yet: it may be in {R} already, I look there too.
-  look_dest [dyn] : want(O) * start * $unseen(O) * $to(R) * $believed(O, R) -o want(O) * goto(R)  @w look(O, R).
+  look_dest [dyn] : want(O) * start * $unseen(O) * $presence(C) * $go_on(C) * $to(R) * $believed(O, R) -o want(O) * goto(R)  @w look(O, R).
+  %% There is probably no {T} in this room: I stop looking.
+  gave_up [dyn] : want(O) * start * $unseen(O) * $presence(improbable) * $thing_of(O, T) -o stuck(T).
   %% At {R}: I need it open.
   open_for [dyn] : want(O) * reached(R) * $inrecep(O, R) -o want(O) * open(R).
   %% {R} is accessible: I take {O}.
