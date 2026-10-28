@@ -1027,3 +1027,40 @@ def test_the_demo_names_its_games_and_loads_one_by_name(tmp_path):
     v3 = yaml.safe_load(cfg.read_text())["v3"]
     assert v3["games"] == str(tmp_path / "root" / "games.json") and v3["game_request"] == str(tmp_path / "root.next.json")
     assert list(fetch) == ["bowl1", "fridge1"]
+
+
+def test_a_room_steps_on_after_the_episodes_own_goal(tmp_path):
+    """alf-tasks s-e9cc8fae step 1: the game is the room's state only. TextWorld's gym env freezes once the
+    episode's goal holds (every later step repeats the last observation); a room is played on the PDDL env
+    underneath, which steps on — the tomato into the microwave (the episode's goal: `won` reported, `done` never),
+    then out again and into the fridge. A room install has no task in its map and its packages say `room`."""
+    import re
+    import gen_hier
+    sys.path.insert(0, os.path.join(ROOT, "experiments"))
+    import demo
+    from alf_gym import Game
+    trial = demo.resolve("Tomato-None-Microwave-13")
+    plays = {}
+    for room in (False, True):
+        g = Game()
+        o = g.open(str(trial / "game.tw-pddl"), max_steps=100, room=room)
+        n = o["handles"]["to_name"]
+        h = lambda s: re.sub(r"\b([a-z]+\d+)\b", lambda m: n.get(m.group(1), m.group(1)), s)
+        rs = [g.step(h(c)) for c in ("go to countertop3", "take tomato1 from countertop3", "go to microwave1", "open microwave1",
+                                     "move tomato1 to microwave1", "take tomato1 from microwave1", "go to fridge1", "open fridge1",
+                                     "move tomato1 to fridge1")]
+        plays[room] = rs
+    assert plays[False][4]["won"] and plays[False][4]["done"] and not any(r["changed"] for r in plays[False][5:])   # the gym env: frozen
+    r = plays[True]
+    assert r[4]["won"] and not any(x["done"] for x in r) and all(x["changed"] for x in r)                             # the room: steps on
+    assert "inrecep(tomato1,fridge1)" in r[-1]["dynamic"] and not r[-1]["won"]
+    out = gen_hier.install(str(trial), str(tmp_path / "root"), person=True, room=True)
+    m = json.load(open(tmp_path / "root" / "domains" / "hier" / ".map.json"))
+    assert m["task"] == {"targets": [], "dests": []}
+    assert all(json.load(open(os.path.join(out[s], "game.json"))).get("room") for s in ("task", "nav", "access", "grasp", "place"))
+    from semantic_map import text_map
+    tm = text_map(str(trial), room=True)
+    assert tm["task"]["text"] == "" and tm["task"]["episode"] == "Put a tomato in the microwave."
+    assert "give the agent a task, then another" in tm["card"]["about"][0] and not any("new game\" first" in c for c in tm["card"]["cannot"])
+    rooms = demo.room_list()
+    assert len({(x["room"], x["scene"]) for x in rooms}) == len(rooms) and demo.resolve("kitchen 13").parent.name.endswith("-13")

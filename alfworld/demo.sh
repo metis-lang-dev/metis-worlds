@@ -4,12 +4,15 @@
 # and the world page at http://ADDR/world.html?live=1 — the map, the dialog band, the hierarchy pane,
 # the journal. TEXT mode (`--tw`, the only mode until THOR's step 1): the map from the game's facts.
 #
-#   ALFWORLD_DATA=… alfworld/demo.sh [--tw] [--view] [GAME]     (default: the fixtures' kitchen, Tomato-Microwave-13)
-#   alfworld/demo.sh --list                                      (the games it can load: one per line, "split/task  label")
+#   ALFWORLD_DATA=… alfworld/demo.sh [--tw] [--view] [--episode] [ROOM|GAME]   (default: the fixtures' kitchen 13)
+#   alfworld/demo.sh --list [--episode]                          (the rooms it can load, or the games: "split/task  label")
 #
-#   GAME: a game's name ("Bowl-None-Fridge-6", "pick_and_place_simple-Bowl-None-Fridge-6", "train/…"), its task
-#   directory or a trial directory. The page's top bar picks another game: the service stops, this script sets
-#   that game up and starts it again, and the page reloads on it.
+#   A room (alf-tasks s-e9cc8fae): the game carries the room's state only; the person gives the tasks, one after
+#   another, and the game's own task never ends the session. ROOM: a room's label ("kitchen 13"), or any game of it.
+#   --episode: the game as one task (its own goal wins and ends it; the picker lists games). GAME: a game's name
+#   ("Bowl-None-Fridge-6", "pick_and_place_simple-Bowl-None-Fridge-6", "train/…"), its task directory or a trial
+#   directory. The page's top bar picks another room: the service stops, this script sets it up and starts it
+#   again, and the page reloads on it.
 #
 #   --view: the semantic map sees only what the robot sees (semantic-map step 3): it knows the places, a
 #   thing once seen; "a tomato" is looked for place by place, the belief choosing where first.
@@ -28,14 +31,20 @@ ADDR="${ADDR:-127.0.0.1:8398}"
 ROOT="${ROOT:-$HERE/.metis/demo}"
 GAME="train/pick_and_place_simple-Tomato-None-Microwave-13"
 VIEW=()
+ROOM=(--room)
+LIST=""
 for a in "$@"; do
   case "$a" in
     --tw) ;;                                   # text mode: the only one until THOR (DEMO.md step 1)
     --view) VIEW=(--view) ;;
-    --list) exec "$PY" "$HERE/experiments/demo.py" list ;;
+    --episode) ROOM=() ;;
+    --list) LIST=1 ;;
     *) GAME="$a" ;;
   esac
 done
+if [ -n "$LIST" ]; then
+  exec "$PY" "$HERE/experiments/demo.py" list ${ROOM[@]+--rooms}
+fi
 GAME="$("$PY" "$HERE/experiments/demo.py" resolve "$GAME")"
 mkdir -p "$(dirname "$ROOT")"
 [ -f "$HERE/.metis/.gitignore" ] || { mkdir -p "$HERE/.metis"; echo '*' > "$HERE/.metis/.gitignore"; }
@@ -48,7 +57,7 @@ command -v systemd-run >/dev/null && CAP=(systemd-run --user --scope -q -p Memor
 NEXT="$ROOT.next.json"                         # the page's next game (the service's v3.game_request), read when it stops
 rm -f "$NEXT"
 while :; do
-  (cd "$HERE" && "$PY" experiments/demo.py setup "$GAME" "$ROOT" --port "${ADDR##*:}" ${VIEW[@]+"${VIEW[@]}"})
+  (cd "$HERE" && "$PY" experiments/demo.py setup "$GAME" "$ROOT" --port "${ADDR##*:}" ${VIEW[@]+"${VIEW[@]}"} ${ROOM[@]+"${ROOM[@]}"})
   echo "the world page: http://$ADDR/world.html?live=1"
   rc=0
   (cd "${METIS_AGENT_DIR:-$AGENT}/py" && "${CAP[@]}" nice "$AGENT/py/.venv/bin/python" -m metis_agent.service \

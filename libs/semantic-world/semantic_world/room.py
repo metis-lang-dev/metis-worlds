@@ -81,16 +81,18 @@ def world_card(scene, places, things, task):
         asks.append({"say": "put the %s %s the %s" % (target["type"], prep(dest["type"]), dest["type"]), "what": "the same task in your words: things by kind, a number when the room has several (\"tomato 2\")"})
     if other and elsewhere:
         asks.append({"say": "put the %s %s the %s" % (other["type"], prep(elsewhere["type"]), elsewhere["type"]), "what": "any thing of the room to any place: the agent does it, or asks first when the task wants something else"})
+    room = bool(task.get("room"))                     # alf-tasks: a room, no task of its own — the person gives them, one after another
     asks += [{"say": "stop", "what": "the agent stops what it is doing and waits"},
-             {"say": "new game", "what": "the same room from its start, the task again"}]
+             {"say": "new game", "what": "the same room from its start" + ("" if room else ", the task again")}]
     return {"title": "ALFWorld kitchen %s" % scene,
-            "about": ["ALFWorld: a household scene from ALFRED, in text mode (TextWorld): one game is one room and one task.",
+            "about": ["ALFWorld: a household scene from ALFRED, in text mode (TextWorld): " +
+                      ("one room; give the agent a task, then another." if room else "one game is one room and one task."),
                       "The agent moves between places, opens what is closed, takes one thing at a time and puts it in or on a place.",
                       "%d places of %d kinds, %d things you can ask for (%d kinds)." % (len(places), len(rooms), len(pick), len(tk))],
             "room": rooms, "things": tk, "asks": asks,
             "cannot": ["a single step on its own (just go, just open, just pick up): the agent takes whole errands",
-                       "a thing that is not in this room, or a place that is not",
-                       "another task after the game is won: say \"new game\" first"],
+                       "a thing that is not in this room, or a place that is not"] +
+                      ([] if room else ["another task after the game is won: say \"new game\" first"]),
             "source": "generated from the game's facts by world/semantic_map.py"}
 
 

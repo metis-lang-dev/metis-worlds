@@ -43,7 +43,7 @@ from semantic_world.room import (CELL, K, OBJECT_ROLES, ON, SemanticMap, _args, 
                                  place_roles, prep, spoken, thor_id, want_handle, world_card)   # libs/semantic-world, installed editable (setup.sh)
 
 
-def text_map(game_dir, index=None):
+def text_map(game_dir, index=None, room=False):
     import gen_instance
     from alf_host import AlfHost
     tmp = tempfile.mkdtemp(prefix="alf-map-")
@@ -87,6 +87,8 @@ def text_map(game_dir, index=None):
     task = {"text": words[0] if words else "", "goal": "fetch(%s, %s)" % (targets[0], dests[0]) if targets and dests else "",
             "targets": targets, "dests": dests, "params": params,
             "source": "ALFWorld traj_data.json: turk_annotations (the annotators' words)"}
+    if room:                                   # alf-tasks step 1: the room, no task of its own (the person gives them)
+        task = {"text": "", "goal": "", "targets": [], "dests": [], "room": True, "episode": task["text"]}
     return {"world": "alfworld", "scene": traj["scene"]["floor_plan"], "units": "m", "mode": "text", "cell": CELL,
             "game": os.path.relpath(game_dir, os.path.dirname(os.path.dirname(os.path.dirname(game_dir)))),
             "places": places, "things": things,

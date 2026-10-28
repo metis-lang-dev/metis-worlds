@@ -175,10 +175,12 @@ function gameInfo() {                                // under the map: the game 
   if (!el || !m) return;
   const x = world.games?.games.find(g => g.id === world.games.current);
   const task = m.task?.text || m.task?.goal;
-  el.hidden = !(x || task);
+  const room = !!m.task?.room;                      // a room (alf-tasks): no task of its own, the person gives them
+  el.hidden = !(x || task || room);
   el.innerHTML = `<div class="gi-name">${esc(x ? x.label : m.card?.title || 'this game')}</div>
     ${task ? `<div class="gi-task">this game's task: ${esc(task)}</div>` : ''}
-    ${x ? `<div class="gi-dim">${esc(x.id)}</div>` : ''}`;
+    ${room ? '<div class="gi-task">a room: tell the agent a task, then another</div>' : ''}
+    ${x ? `<div class="gi-dim">${esc(x.id)}${room && x.episode ? ` · the room's game: ${esc(x.episode)}` : ''}</div>` : ''}`;
 }
 function showCard() { docks.set('world', { shown: true, open: true }); $('#dock-world')?.scrollIntoView?.({ block: 'nearest' }); }
 // the tiles as large as the left pane allows (the map, its attention slot beside it when there is room)

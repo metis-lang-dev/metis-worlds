@@ -72,10 +72,10 @@ class GymClient(GymChild):
     no-op on it — the agent's hierarchy opens a host per activation (alf-demo step 3b: a spawn, a
     reset and a replay cost 3.6 s, twice per director step, 90 s of a 93 s task)."""
 
-    def __init__(self, game, max_steps=60, handles=None):
+    def __init__(self, game, max_steps=60, handles=None, room=False):
         self.history, self.last, self.shared = [], None, False
         super().__init__(os.path.join(HERE, "alf_gym.py"), interpreter(), "game", env=dict(os.environ),
-                         game=game, max_steps=max_steps, handles=handles)
+                         game=game, max_steps=max_steps, handles=handles, room=bool(room))
 
     def call(self, op, **kw):
         out = super().call(op, **kw)
@@ -95,11 +95,11 @@ class GymClient(GymChild):
 _SHARED = {}          # (game, commands_log) -> the GymClient every host on that log shares
 
 
-def shared_client(game, commands_log, max_steps, handles):
-    key = (game, commands_log)
+def shared_client(game, commands_log, max_steps, handles, room=False):
+    key = (game, commands_log)                    # a log is one install's: a room's or a game's, never both
     c = _SHARED.get(key)
     if c is None or c.proc.poll() is not None:
-        c = _SHARED[key] = GymClient(game, max_steps=max_steps, handles=handles)
+        c = _SHARED[key] = GymClient(game, max_steps=max_steps, handles=handles, room=room)
         c.shared = True
     return c
 
@@ -117,10 +117,14 @@ class AlfHost:
         self.game = meta["game"]
         self.to_name = meta["handles"]["to_name"]
         self.commands_log = commands_log or meta.get("commands_log")   # the agent's hierarchy: the shared world state (every host's commands, replayed at reset)
+        # a room (alf-tasks s-e9cc8fae step 1): the game carries the room's state only — its episode's goal never
+        # ends the session (alf_gym's room: the env keeps stepping), `won` is the hierarchy's own; episode_won reports it
+        self.room = bool(meta.get("room"))
+        self.episode_won = False
         if self.commands_log:                                           # … and every host on that log shares one world process
-            self.gym = shared_client(self.game, self.commands_log, max_steps, meta["handles"])
+            self.gym = shared_client(self.game, self.commands_log, max_steps, meta["handles"], room=self.room)
         else:
-            self.gym = GymClient(self.game, max_steps=max_steps, handles=meta["handles"])
+            self.gym = GymClient(self.game, max_steps=max_steps, handles=meta["handles"], room=self.room)
         info = self.gym.info
         self.task, self.params = info["task_type"], info["params"]
         self.static = set(info["static"])
@@ -232,6 +236,8 @@ class AlfHost:
         self.admissible = list(out["admissible"])
         self.obs = out["obs"]
         self.won = bool(out.get("won"))
+        if self.room:                                # the episode's goal is reported, never the session's end
+            self.episode_won, self.won = self.won, False
         self.done = bool(out.get("done")) or self.won
         if self.won and self.continues:              # the agent's hierarchy: the game won is not the run's end — the planner
             self.done = False                        # beats on to put out its own (done), the director ends the run
@@ -510,7 +516,7 @@ class AlfHost:
 
     def ports(self):
         return {"game": {"path": self.game, "task": self.task, "params": self.params, "step": self.t,
-                         "done": self.done, "won": self.won},
+                         "done": self.done, "won": self.won, **({"room": True, "episode_won": self.episode_won} if self.room else {})},
                 "observed": sorted({a.split("(")[0] for a in self.dyn} | {"closed", "handsfree", "holding"}),
                 **({"names": self.smap.names(self.frozen)} if self.smap is not None else {}),     # name(role, thing) as data
                 "commands": [[b, n, c, adm, ch] for b, n, c, adm, ch in self.commands]}

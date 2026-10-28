@@ -394,10 +394,11 @@ def write_card(pkg, spec, smap):
     return c
 
 
-def build_map(path, info, mirror, k=K, view=False):
+def build_map(path, info, mirror, k=K, view=False, room=False):
     """The hierarchy's semantic map at PATH from the mirror's game as it is now (its static facts and its
-    reading) and the task (task_goal); view: the robot sees only what stands before it (step 3)."""
-    targets, dests = task_goal(info)
+    reading) and the task (task_goal); view: the robot sees only what stands before it (step 3). room (alf-tasks
+    step 1): no task — the episode's goal is not the agent's; the person's goal binds the roles (project)."""
+    targets, dests = ([], []) if room else task_goal(info)
     return semantic_map.SemanticMap.build(path, mirror.static, mirror.dyn, targets, dests, k, view=view)
 
 
@@ -485,7 +486,7 @@ def generate_director_package(root, game_dir, flat_pkg, commands_log, domain_rel
     return pkg
 
 
-def install(game_dir, root, person=True, k=K, view=False, tree=False):
+def install(game_dir, root, person=True, k=K, view=False, tree=False, room=False):
     """A game installed for the agent under ROOT: domains/hier/_flat (the mirror's package), the
     director, the semantic map (domains/hier/.map.json: the room as data, bound to the roles for the
     game's own task until a goal re-projects it), the task (continues; `person`: no seeded fetch — the
@@ -497,7 +498,11 @@ def install(game_dir, root, person=True, k=K, view=False, tree=False):
     tree (specialist-tree s-404d001f steps 2-3b, the tick): the director over metispy's iface/ (METIS_HOME)
     director_tree_domain.llp + director_tree_wake.llp beside the routing base (the path, the
     motion's grants) and every specialist's extensions/tick.llp declaring the `motion` token it is granted.
+    room (alf-tasks s-e9cc8fae step 1): the game is the room's state only — no task in the map (the person's goal
+    binds the roles), every host plays it without an episode end (alf_gym's room), no driver's seed.
     → {name: package dir}."""
+    if room and not person:
+        raise ValueError("a room has no task of its own to seed: room=True needs person=True")
     hier = os.path.join(root, "domains", "hier")
     os.makedirs(hier, exist_ok=True)
     import shutil
@@ -520,18 +525,18 @@ def install(game_dir, root, person=True, k=K, view=False, tree=False):
     mirror = AlfHost(flat_pkg)
     try:
         info = dict(json.load(open(os.path.join(flat_pkg, "game.json"))), static=sorted(mirror.static), task_type=mirror.task, params=mirror.params)
-        smap = build_map(os.path.join(hier, ".map.json"), info, mirror, k, view=view)
+        smap = build_map(os.path.join(hier, ".map.json"), info, mirror, k, view=view, room=room)
         reading = mirror.reading()
     finally:
         mirror.gym.close()
-    smap.project(*args_of(seed(info)[0]))                          # the game's own task until a goal says otherwise
+    smap.project(*(() if room else args_of(seed(info)[0])))          # the game's own task until a goal says otherwise (a room: none)
     out = {"_flat": flat_pkg, "director": generate_director_package(
         root, game_dir, flat_pkg, log, tree=tree)}
     for spec in SPECS:
         # the task's goal: a person's FETCH arrives by intent (person=True: no seed), else the driver's seed
         inits = [smap.intent_atom(seed(info)[0])] if spec == "task" and not person else []
         path = generate(game_dir, hier, spec, 0, info, smap, reading, inits, [], intents=(spec == "task"), continues=True, fixed=True,
-                        commands_log=log, places=k, tree=tree)
+                        commands_log=log, places=k, tree=tree, room=room)
         out[spec] = os.path.dirname(path)
         if tree:                                                   # the protocol: the specialist reads its grant from it
             prog = os.path.join(out[spec], spec + ".llp")
@@ -601,7 +606,7 @@ def seed(info):
 
 
 def generate(game_dir, out_dir, spec, k, info, smap, reading, init, replay, domain_rel=None, intents=False, continues=False, fixed=False,
-             commands_log=None, places=None, tree=False):
+             commands_log=None, places=None, tree=False, room=False):
     """One package of SPEC over the semantic map SMAP. `fixed` (the agent's install): the committed
     instance (committed(spec)), plus `init` (role atoms: the driver's seed) — the world comes in on the
     first tick's sync, the goals by delivery. Otherwise the driver's activation K: the instance over
@@ -625,7 +630,7 @@ def generate(game_dir, out_dir, spec, k, info, smap, reading, init, replay, doma
     open(path, "w").write(text)
     json.dump({"game": os.path.join(game_dir, "game.tw-pddl"), "task_type": info["task_type"], "params": info["params"],
                "handles": info["handles"], "replay": list(replay), "spec": spec, "observe": list(sp["dyn"]), "out": list(sp["out"]), "continues": bool(continues),
-               "map": os.path.abspath(smap.path), "commands_log": commands_log},
+               "map": os.path.abspath(smap.path), "commands_log": commands_log, **({"room": True} if room else {})},
               open(os.path.join(pkg, "game.json"), "w"), indent=1)
     open(os.path.join(pkg, "domain.yaml"), "w").write(
         "# %s — the %s specialist on an ALFWorld game over the role vocabulary (generated by world/gen_hier.py).\n"

@@ -76,6 +76,19 @@ def game_list():
     return out
 
 
+def room_list(current=None):
+    """The rooms the demo can load (alf-tasks s-e9cc8fae step 1): one per ALFRED scene, its game the first of
+    game_list's (train first) — the game carries the room's state only; CURRENT (an id) stands for its scene when it
+    is another game of it. → [{id, label: "kitchen 13", room, split, scene, episode: the game's own label}]."""
+    rooms = {}
+    for g in game_list():
+        n = int(g["id"].rsplit("-", 1)[1])
+        if (g["room"], n) not in rooms or g["id"] == current:
+            rooms[(g["room"], n)] = dict(g, label="%s %d" % (g["room"], n), scene=n, episode=g["label"])
+    order = {r: i for i, (_, _, r) in enumerate(ROOMS)}
+    return [rooms[k] for k in sorted(rooms, key=lambda k: (order.get(k[0], 9), k[1]))]
+
+
 def id_of(game):
     """A trial directory's id in game_list ("split/task")."""
     g = Path(game).resolve()
@@ -92,6 +105,10 @@ def resolve(name):
         return trial_of(p).resolve()
     root = Path(families.data_root())
     name = name.strip("/")
+    key = re.sub(r"\s+", "", name.lower())          # a room by its label: "kitchen 13", "kitchen13"
+    for r in room_list() if re.fullmatch(r"[a-z]+\d+", key) else ():
+        if re.sub(r"\s+", "", r["label"]) == key:
+            return trial_of(root / r["id"]).resolve()
     tries = [root / name] if "/" in name else [root / s / n for s in families.SPLITS for n in (name, "%s-%s" % (FAMILY, name))]
     for d in tries:
         if trial_of(d):
@@ -99,18 +116,19 @@ def resolve(name):
     raise SystemExit("demo.py: no game %r (demo.py list names them)" % name)
 
 
-def setup(game, root, port=8398, view=False, tree=False):
+def setup(game, root, port=8398, view=False, tree=False, room=False):
     """ROOT as the demo's catalog; → (config path, the map, the task's fetch). view: the semantic map sees
-    only what the robot sees (semantic-map step 3)."""
+    only what the robot sees (semantic-map step 3). room (alf-tasks step 1): the game is the room's state only,
+    the person gives the tasks (no task of the game's own, no episode end); the picker lists rooms."""
     root = Path(root)
     if root.exists():
         shutil.rmtree(root)
-    out = gen_hier.install(str(game), str(root), person=True, view=view, tree=tree)
+    out = gen_hier.install(str(game), str(root), person=True, view=view, tree=tree, room=room)
     for spec in hda.NAMES[1:]:                 # metis-agent loads a host from <name>_host.py, or the manifest's host: file
         shutil.copy(Path(out[spec]) / "alf_host.py", Path(out[spec]) / ("%s_host.py" % spec))
     hda.card_files(root, out["task"])
     from semantic_map import text_map
-    m = text_map(str(game))
+    m = text_map(str(game), room=room)
     if view:                                   # the page draws what the robot knows: every place dimmed until seen into
         m["view"] = True
         for p in m["places"]:
@@ -118,7 +136,8 @@ def setup(game, root, port=8398, view=False, tree=False):
     (root / "world-map.json").write_text(json.dumps(m, indent=1))
     # the world page's picker: the games this demo can load, this one current; a page's choice is written beside ROOT
     # (ROOT.next.json, outside what the next setup removes) and the service stops for demo.sh to set it up
-    (root / "games.json").write_text(json.dumps({"current": id_of(game), "games": game_list()}, indent=1))
+    (root / "games.json").write_text(json.dumps({"current": id_of(game), "rooms": room,
+                                                 "games": room_list(id_of(game)) if room else game_list()}, indent=1))
     names = list(hda.NAMES)
     run = root / ".run"
     run.mkdir()
@@ -466,12 +485,14 @@ def main(argv=None):
     s.add_argument("root")
     s.add_argument("--port", type=int, default=8398)
     s.add_argument("--view", action="store_true", help="the semantic map sees only what the robot sees (semantic-map step 3)")
+    s.add_argument("--room", action="store_true", help="the game as a room: the person gives the tasks (alf-tasks step 1)")
     c = sub.add_parser("check")
     c.add_argument("--game", default=None)
     c.add_argument("--out", default=str(HERE / "records" / "demo-check"))
     c.add_argument("--port", type=int, default=8398)
     c.add_argument("--tree", action="store_true", help="the tick: the tree director, domains.tick (specialist-tree step 2)")
-    sub.add_parser("list")
+    ls = sub.add_parser("list")
+    ls.add_argument("--rooms", action="store_true", help="one per scene: the rooms the demo loads")
     r = sub.add_parser("resolve")
     r.add_argument("name")
     g = sub.add_parser("games")
@@ -481,11 +502,11 @@ def main(argv=None):
     g.add_argument("--port", type=int, default=8398)
     a = ap.parse_args(argv)
     if a.cmd == "setup":
-        cfg, m, fetch, _ = setup(a.game, a.root, a.port, view=a.view)
+        cfg, m, fetch, _ = setup(a.game, a.root, a.port, view=a.view, room=a.room)
         print(json.dumps({"config": str(cfg), "task": m["task"]["text"], "fetch": fetch}))
         return 0
     if a.cmd == "list":
-        for g in game_list():
+        for g in (room_list() if a.rooms else game_list()):
             print("%-70s %s" % (g["id"], g["label"]))
         return 0
     if a.cmd == "resolve":
