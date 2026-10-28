@@ -16,3 +16,31 @@ jobs:
         run: |
           python -m pip install -q -e libs/semantic-world pytest
           python -m pytest -q libs/semantic-world/tests
+  # spec 17 §4 (linker s-5908724a step 2): road's composition links to one image (metisc --link: every L-check over
+  # the I-checks, the derived director compared with road_director), its hash == road/domains/image.golden.
+  # alfworld's and minihack's trees are generated from the game data (world/gen_hier.py, world/mh_hier.py), which
+  # this CI does not have; their link is gated in metis-lang's corpus (gate 15).
+  road-image:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: metis-worlds
+      - uses: actions/checkout@v4
+        with:
+          repository: metis-lang-dev/metis-lang
+          ref: master
+          path: metis-lang
+      - uses: actions/checkout@v4
+        with:
+          repository: metis-lang-dev/metispy
+          path: metispy
+      - name: metisc
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq ocaml-nox
+          make -C metis-lang metisc
+      - name: the link (road's image hash)
+        run: |
+          cd metis-worlds/road/domains
+          METIS_HOME="$GITHUB_WORKSPACE/metispy/metis/catalog" "$GITHUB_WORKSPACE/metis-lang/src/metisc" --link composition.yaml --check | tee "$RUNNER_TEMP/link.txt"
+          grep -qx "image road v-$(cat image.golden)" "$RUNNER_TEMP/link.txt"

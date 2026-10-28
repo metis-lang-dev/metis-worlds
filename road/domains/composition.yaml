@@ -1,6 +1,7 @@
 # composition — the road domains as one package (road-world s-e812715d step 2; the framework's L3): the responder
 # (fast, the proper response) and the planner (slow, the plan) under the generic tree director, priority to the
 # responder; the world the exerciser (metis-worlds road/world: road_world, road_host) or the SUMO host (step 4).
+name: road
 capacity: capacity.llp
 protocol: iface/protocol_domain.llp
 specialists: [responder, planner]
