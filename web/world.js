@@ -98,7 +98,7 @@ const chips = (box, options, pressed) => box.replaceChildren(...(options || []).
 }));
 function answer(o) {                                 // a chip is the person saying its answer (the same path as typing it)
   rec('answer', { say: o.say ?? o.label });
-  if (o.card) return showCard();
+  if (o.card) showCard();                            // "what can I ask?": the card shown, and the question said (the agent's card line)
   if (o.ev) send({ ev: o.ev }); else panel.say(o.say ?? o.label);
 }
 let lastStatus = '', lastStatusRow = '';
@@ -274,12 +274,12 @@ async function replay(url) {
 // ── live: metis-agent's /ws ──
 async function live(url) {
   world.base = location.href;
+  $('#ctrl').hidden = true;                          // play / step are the replay's: live has nothing to step
   await frame({ ev: 'world/map', url: q.get('map') || 'fixtures/alfworld_tomato_microwave_13.json' });
   const backend = await connect(url, { timeoutMs: 5000, reconnect: 2000, onReopen: hello });
   if (!backend) { $('#conn').textContent = `no agent at ${url}`; return null; }
   send = m => { if (backend.isOpen) backend.send(m); };
   $('#conn').textContent = 'live';
-  for (const b of ['#play', '#step']) $(b).disabled = true;
   return backend;          // the hello once the panel listens (start)
 }
 

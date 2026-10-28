@@ -145,6 +145,9 @@ try {
   await ev(`world.docks.set('world', { shown: false })`);
   await page.mouse('#sopts .chip:last-child');
   c.ok(await ev(`document.getElementById('dock-world').classList.contains('open')`), '…which opens the world card', null);
+  c.ok(await ev(`[...document.querySelectorAll('#talkpanel .fw-person .fw-text')].some(t => t.textContent === 'what can I ask?')`),
+    '…and says it, as typing it would (the agent answers with the card\'s line)', null);
+  c.ok(await ev(`!document.getElementById('ctrl').hidden`), 'a replay shows play / step', null);
 
   // 8. the disengagement: the fridge is not where this task wants the tomato
   await page.goto('web/world.html?replay=fixtures/alfworld_tomato_microwave_13_fridge.run.jsonl');
@@ -179,6 +182,11 @@ try {
   await sleep(300);
   const w = await ev(`[document.documentElement.scrollWidth, document.documentElement.clientWidth]`);
   c.ok(w[0] <= w[1], 'at 390 px: no horizontal scroll', w);
+
+  // 10. live: play / step are the replay's, hidden (nothing to step); here no agent listens
+  await page.goto('web/world.html?agent=ws://127.0.0.1:9/ws');
+  await sleep(500);
+  c.ok(await ev(`document.getElementById('ctrl').hidden`), 'live: no play / step', null);
 } catch (e) {
   c.fail(e);
 } finally {
