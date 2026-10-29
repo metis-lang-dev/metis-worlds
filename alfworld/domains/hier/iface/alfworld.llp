@@ -7,10 +7,14 @@ types (object receptacle thing).
 namespace alfworld_iface produce (dyn).
 
 pred accessible(receptacle) : alfworld_iface.
+pred cannot : alfworld_iface.
 pred done : alfworld_iface.
 pred elsewhere(receptacle) : alfworld_iface.
 pred fetch(object, receptacle) : alfworld_iface.
+pred gave_up(thing) : alfworld_iface.
 pred goto(receptacle) : alfworld_iface.
+pred misfit(object, receptacle) : alfworld_iface.
+pred nothing : alfworld_iface.
 pred open(receptacle) : alfworld_iface.
 pred placed(object, receptacle) : alfworld_iface.
 pred put(object, receptacle) : alfworld_iface.

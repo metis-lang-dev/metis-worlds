@@ -1,5 +1,5 @@
 {
- "source": "the union of canContain over every ALFWorld game (json_2.1.1, all splits): ALFRED's receptacle compatibility, no room's",
+ "source": "the union of canContain over every ALFWorld game (json_2.1.1, all splits): world/gen_tables.py: ALFRED's receptacle compatibility, no room's",
  "cancontain": {
   "alarmclock_t": [
    "countertop_t",

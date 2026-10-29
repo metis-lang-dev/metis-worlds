@@ -38,7 +38,7 @@ SPECS = {
                         "handsfree"), goal="put", out=("placed", "refused_put", "elsewhere")),
     "task":   dict(types=("object", "receptacle", "thing"), dyn=("inrecep", "holds", "absent", "lost", "believed", "fetch_risk", "seen", "unseen", "handsfree", "presence"),
                    goal="fetch", takes=("reached", "accessible", "taken", "placed", "refused_take", "refused_put", "refused"),
-                   out=("goto", "open", "take", "put", "done", "stuck", "wrong_dest", "wrong_object", "nothing", "cannot", "misfit")),
+                   out=("goto", "open", "take", "put", "done", "stuck", "wrong_dest", "wrong_object", "nothing", "cannot", "misfit", "gave_up")),
 }
 # which specialist handles a sub-goal: the driver's manual switch table (step 3 makes it the director's handles/2)
 HANDLES = {"goto": "nav", "open": "access", "take": "grasp", "put": "place"}
@@ -51,7 +51,7 @@ STATUS = {"nav": {"success": ["reached"], "failure": []},
           "access": {"success": ["accessible"], "failure": []},
           "grasp": {"success": ["taken"], "failure": ["refused_take"]},
           "place": {"success": ["placed"], "failure": ["refused_put"]},
-          "task": {"success": ["done"], "failure": ["stuck", "wrong_dest", "wrong_object", "nothing", "cannot", "misfit"]}}
+          "task": {"success": ["done", "gave_up"], "failure": ["stuck", "wrong_dest", "wrong_object", "nothing", "cannot", "misfit"]}}
 
 
 # the inversion (specialist-tree step 3b): the tree variant of a member's base reports itself through the protocol
@@ -441,7 +441,7 @@ def build_map(path, info, mirror, k=K, view=False, room=False):
         for ot, rts in compat_all().items():
             d["compat"].setdefault(ot, rts)
         d["presence_prior"] = presence_prior(info.get("game") or "")
-        d["place_rate"] = json.load(open(os.path.join(HERE, "starts.json")))["rate"]   # where each kind usually starts (nina's F2)
+        d["place_rate"] = place_rate()                # where each kind usually starts (nina's F2; map-queries step 1)
         m.save()
     return m
 
@@ -462,6 +462,16 @@ def presence_prior(game):
         {kind: round(0.5 / (k + 1), 4) for kind in compat_all() if kind not in t["presence"][room]}
 
 
+def place_rate():
+    """Where a kind usually IS, per place (map-queries step 1, the architect's ruling): for each object type, the games
+    whose initial state starts it in or on a receptacle type, per receptacle of that type across the scenes
+    (world/starts.json, world/gen_tables.py). The room map's prior is this rate times compatibility, normalized over
+    the room's places. {object type: {receptacle type: rate}}."""
+    t = json.load(open(os.path.join(HERE, "starts.json")))
+    n = t["receptacles"]
+    return {o: {r: round(c / n[r], 4) for r, c in rs.items() if n.get(r)} for o, rs in t["starts"].items()}
+
+
 def compat_all():
     """ALFRED's receptacle compatibility, no room's: {object type: [receptacle types]} (world/cancontain.json)."""
     return json.load(open(os.path.join(HERE, "cancontain.json")))["cancontain"]
@@ -469,7 +479,11 @@ def compat_all():
 
 # ── the director (alf-hierarchy step 3): the instance's facts from the specialists' declared ports ──
 DIRECTOR_OUT = ("wake", "sleep", "forward", "ask", "ended", "tick__grant", "tick__revoke")   # the last two: the tree director's (the tick)
-ENDS = ("done", "stuck", "wrong_dest", "wrong_object", "nothing", "cannot", "misfit")   # the last three: what the task cannot do (alf-tasks step 2)
+ENDS = ("done", "stuck", "wrong_dest", "wrong_object", "nothing", "cannot", "misfit", "gave_up")   # nothing … misfit: what the task cannot do (alf-tasks
+# step 2); gave_up: a search's answer, "probably no T here" (map-queries step 1): it ends without an ask, as done does
+
+
+FINISHED = ("done", "gave_up")      # the ends that are answers: no ask (done: opus, the demo; gave_up: map-queries step 1)
 
 
 def director_facts():
@@ -486,7 +500,7 @@ def director_facts():
             facts.append("handles(%s, %s)" % (d, k))
     handled = {k for d, sp in SPECS.items() for k in (sp["goal"],) + tuple(sp.get("takes", ()))}
     facts += ["result(%s)" % k for k in SPECS["task"]["takes"] if not k.startswith("refused")]
-    facts += ["end(%s)" % k for k in ENDS if k != "done"] + ["finished(done)"]   # done ends without an ask (opus, the demo)
+    facts += ["end(%s)" % k for k in ENDS if k not in FINISHED] + ["finished(%s)" % k for k in FINISHED]   # these end without an ask
     facts += ["detour(elsewhere, goto)", "escalate(elsewhere, refused)"]
     facts += ["rename(elsewhere, goto, goto)", "rename(elsewhere, refused, refused)"]   # the orchestrator's frames (metis-agent director.py)
     facts += ["nohandler(%s)" % k for k in kinds if k not in handled and k not in ENDS and k != "elsewhere"]

@@ -2,6 +2,8 @@
 steps, the stable projection, the port contract, the room's text and view modes."""
 import json
 
+import pytest
+
 from semantic_world import bayes, ports, project
 from semantic_world.room import SemanticMap, spoken, thor_id, want_handle
 from semantic_world.store import Store
@@ -107,3 +109,37 @@ def test_the_room_in_view_mode(tmp_path):
 def test_the_room_names():
     assert thor_id("countertop_bar__minus_01_dot_87_bar__plus_00_dot_96_bar__plus_01_dot_80") == ("countertop", -1.87, 0.96, 1.8)
     assert spoken("cabinet12") == "cabinet 12" and want_handle("tomato2") == "tomato"
+
+
+def test_the_query_api(tmp_path):
+    """map-queries s-396939dc step 1: one query API — bind (the dialog side), level (standing level ports), weight
+    (standing categorical ports), next (the argmax of a place belief, ties by place id), observe — and a room's search
+    prior: where the kind usually starts per receptacle of each type, times compatibility, normalized over the room's
+    places; a kind the compatibility never names is a logged uniform fallback, never a silent {}."""
+    st = STATIC + ["cancontain(countertop_t,kettle_t)", "cancontain(fridge_t,kettle_t)", "cancontain(microwave_t,kettle_t)"]
+    m = SemanticMap.build(str(tmp_path / "map.json"), st, DYN, [], [], view=True, room=True)
+    d = m.load()
+    d["place_rate"] = {"kettle_t": {"countertop_t": 4.0, "fridge_t": 1.0}}         # none starts in the microwave
+    d["presence_prior"] = {"kettle_t": 0.5}
+    m.save()
+    assert m.want_kind(m.load(), "kettle") == "kettle"
+    bel = m.load()["belief"]["kettle"]
+    z = 4.0 + 4.0 + 1.0 + 0.5                                                          # two countertops, the fridge, the microwave (half the smallest rate)
+    assert abs(bel["countertop1"] - 4.0 / z) < 1e-9 and abs(bel["microwave1"] - 0.5 / z) < 1e-9 and abs(sum(bel.values()) - 1) < 1e-9
+    assert m.next("kettle") == "countertop1" and m.next("kettle", excluded=["countertop1"]) == "countertop2"
+    assert m.level("presence", ("kettle",)) == "doubtful"
+    # bind: the places are known at once, a thing once seen (view mode): the tomatoes are not seen yet; the wanted kettle is
+    assert m.bind("countertop") == ["countertop1", "countertop2"] and m.bind("kettle") == ["kettle"]
+    assert m.bind("tomato") == [] and m.bind("banana") == []
+    with pytest.raises(KeyError):
+        m.level("fetch_risk", ())
+    d = m.load()                                                                       # ties: by the place's id
+    d["belief"]["kettle"] = {"fridge1": 0.5, "countertop1": 0.5}
+    m.save()
+    assert m.next("kettle") == "countertop1"
+    d = m.load()                                                                       # nothing known of the kind: uniform, logged
+    d["compat"], d["place_rate"] = {"apple_t": ["fridge_t"]}, {}
+    m.save()
+    p = m._prior("kettle")
+    assert p and len(set(round(x, 9) for x in p.values())) == 1
+    assert any(json.loads(l).get("kind") == "prior-fallback" for l in open(m.journal))

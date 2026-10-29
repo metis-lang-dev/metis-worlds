@@ -20,7 +20,15 @@ An adapter supplies (class attributes and hooks):
     resolve(d, thing) -> bool  after a sighting (a wanted kind resolved)
     looked_at(d, place, seen) -> bool   after a place is seen into
     reproject(d)               the stable re-projection after a change (view mode)
-    believed(d, inv), place_facts(d, inv) -> {atom: n}   the adapter's facts in roles"""
+    believed(d, inv), place_facts(d, inv) -> {atom: n}   the adapter's facts in roles
+    LEVELS                     {pred: method}: the adapter's standing level ports (level())
+
+The query API (map-queries s-396939dc step 1) — the only faces a program's host and the dialog read the map through:
+    bind(kind, constraints) -> [entries]   the dialog side: the map's entries a word of the person's can mean
+    level(pred, args) -> level             a standing level port's level now (the room's presence)
+    weight(pred, args) -> p                a standing categorical port's weight (look / where: the place belief)
+    next(kind, excluded) -> place | None   the likeliest place of KIND's belief, ties by place id: deterministic
+    observe(atoms)                         the update (the cycle above)"""
 from . import bayes, ports
 from .store import Store
 
@@ -54,7 +62,17 @@ class SemanticMap(Store):
         return []
 
     def prior(self, thing):
-        return {}
+        """An adapter's prior over its places for THING; the core's own is uniform over candidates(d), logged: a kind
+        the adapter knows nothing of is a fallback, never a silent {}."""
+        d = self.load()
+        cand = self.candidates(d)
+        if cand:
+            self.log("prior-fallback", thing=thing, places=len(cand))
+        return {r: 1.0 / len(cand) for r in cand} if cand else {}
+
+    def candidates(self, d):
+        """The places a thing may be believed in (default: the map's places)."""
+        return sorted(d.get("places") or {})
 
     def grow(self, d, thing):
         return {"in": None}
@@ -196,6 +214,43 @@ class SemanticMap(Store):
         """name(role, thing) as data: the named roles and what they are bound to."""
         k = self.load()["k"]
         return ports.names(binding if binding is not None else self.binding(), self.named_roles(k))
+
+    # ── the query API (map-queries s-396939dc step 1) ──
+    LEVELS = {}
+
+    def bind(self, kind, constraints=None):
+        """The dialog side: the map's entries KIND can name — the entry itself, else the things and places of that kind
+        (its letters and a number: tomato → tomato1, tomato2), else a wanted entry of it; CONSTRAINTS {"in": place}
+        keeps the things seen or believed there. → [entry] in id order (empty: nothing here is that)."""
+        import re
+        d = self.load()
+        k = re.sub(r"[^a-z0-9]", "", str(kind).lower())
+        every = dict(d.get("places") or {}, **(d.get("things") or {}))
+        out = [k] if k in every else sorted(h for h in every if re.sub(r"\d+$", "", h) == k)
+        where = (constraints or {}).get("in")
+        if where:
+            out = [h for h in out if (d["things"].get(h) or {}).get("in") == where or (d["belief"].get(h) or {}).get(where, 0) > 0]
+        return out
+
+    def level(self, pred, args):
+        """A standing level port's level now: the adapter's LEVELS[pred](*args). → its level name."""
+        if pred not in self.LEVELS:
+            raise KeyError("no level port %r on this map (it has: %s)" % (pred, ", ".join(sorted(self.LEVELS)) or "none"))
+        return getattr(self, self.LEVELS[pred])(*args)
+
+    def weight(self, pred, args):
+        """A standing categorical port's weight: look / where over (object role, place role) read the place belief."""
+        if pred in ("look", "where"):
+            return self.belief(*args)
+        raise KeyError("no weight port %r on this map" % pred)
+
+    def next(self, kind, excluded=()):
+        """The likeliest place of KIND's belief (a thing, or a wanted kind) not in EXCLUDED; ties by the place's id, so
+        the answer is a function of the map's state. → place, or None when no place is left."""
+        d = self.load()
+        thing = (d.get("resolved") or {}).get(kind, kind)
+        cand = [(p, r) for r, p in (d["belief"].get(thing) or {}).items() if p > 0 and r not in set(excluded)]
+        return min(cand, key=lambda x: (-x[0], x[1]))[1] if cand else None
 
     def belief(self, obj_role, place_role):
         """The belief that the role-bound thing is at the role-bound place, normalized over the bound places (a

@@ -1119,6 +1119,8 @@ def test_an_unseen_kinds_existence_falls_as_the_robot_looks(tmp_path):
         m = SemanticMap(str(tmp_path / room.replace(" ", "") / "domains" / "hier" / ".map.json"))
         d = m.load()
         assert m.want_kind(d, "kettle") == "kettle"
+        if room == "kitchen 13":                         # map-queries step 1: the search goes where a kettle usually starts first
+            assert m.next("kettle").startswith("stoveburner"), m.next("kettle")
         p0, level0 = m.presence(m.load(), "kettle")
         cand = sorted(m.load()["belief0"]["kettle"])
         levels = [level0]
@@ -1132,3 +1134,10 @@ def test_an_unseen_kinds_existence_falls_as_the_robot_looks(tmp_path):
     first_low = levels.index("improbable")
     assert 0 < first_low < n                             # it stops before every place is looked into
     assert out["bathroom 401"][1][0] == "improbable"     # no kettle in ALFRED's bathrooms: stop at once
+
+
+def test_the_room_tables_are_the_datasets():
+    """map-queries step 1: world/cancontain.json, presence.json and starts.json are world/gen_tables.py's output over
+    every ALFWorld game (its --check)."""
+    r = subprocess.run([sys.executable, os.path.join(ROOT, "world", "gen_tables.py"), "--check"], capture_output=True, text=True)
+    assert r.returncode == 0, r.stderr
