@@ -376,7 +376,7 @@ class AlfHost:
     # ── the host faces ──
     def bind(self, reg):
         if self.smap is not None:                # the task's belief port: where the map believes the target is
-            reg.weight("look", lambda args, counts: self.smap.belief(*args))
+            reg.weight("look", lambda args, counts: self.smap.weight("look", args))   # the query API: a room's search, next()'s place
 
     def on_event(self, name, args):
         cmd = self.command_of(name, args)
@@ -433,6 +433,8 @@ class AlfHost:
         if out and not self.continues:               # a result is out: the run is over (the driver's manual switch)
             self.done = True
             return None
+        if self.spec == "task" and getattr(self, "_task", None) is not None:
+            self._task_step()
         if out:                                      # continues: the result is reported once, the world keeps stepping
             self.reported |= set(out)
             if self.spec == "task":
@@ -440,7 +442,7 @@ class AlfHost:
         return dos
 
     # ── a card per task (alf-tasks s-e9cc8fae step 3): what it was asked, what it did, what it believed, our own check ──
-    ENDS = ("done", "stuck", "wrong_dest", "wrong_object", "nothing", "cannot", "misfit")
+    ENDS = ("done", "stuck", "wrong_dest", "wrong_object", "nothing", "cannot", "misfit", "gave_up")
 
     def _root(self):
         return os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(self.smap.path)))) if self.smap is not None else None
@@ -486,6 +488,11 @@ class AlfHost:
                 "commands": [{"command": self.speak(" ".join(self._spoken_command(c["command"]))), "rule": c.get("rule"),
                               "admissible": c.get("admissible"), "changed": c.get("changed")} for c in cmds],
                 "belief": [r for r in lines(task["map_journal"], task["map_at"]) if r.get("kind") != "observe"],
+                "search": task.get("steps") or [],            # each search step: next()'s place, presence, the belief's top five
+                **({"prior": "the place belief's prior: ALFRED's starts of the kind per receptacle of each type "
+                             "(world/starts.json) over the room's places that can hold it, normalized over them; "
+                             "next() = its argmax, ties by place id; presence: the existence belief (world/presence.json)"}
+                   if task.get("steps") else {}),
                 "check": {"applies": False, "why": "stopped before its end" if end == "stopped" else "refused before anything moved"} if refused else
                          {"goal_holds": holds, "agrees": holds == (end.split("(")[0] == "done"),
                           "how": "inrecep(%s,%s) in the world's facts as observed" % (obj, rec)}}
@@ -494,6 +501,25 @@ class AlfHost:
         k = len([f for f in os.listdir(d) if f.endswith(".json")]) + 1
         json.dump(card, open(os.path.join(d, "task-%02d.json" % k), "w"), indent=1)
         self.last_card = card
+
+    def _task_step(self):
+        """A search step on the open card (map-queries step 1, the architect's ruling: the card says why a place was
+        chosen): while the goal's thing is a kind not seen yet, the place next() gives (the likeliest bound place, ties
+        by id), the presence level, and the belief's five likeliest places, once each time it changes."""
+        d = self.smap.load()
+        obj = d["binding"].get("target")
+        if not (d.get("view") and obj and (d["things"].get(obj) or {}).get("wanted")):
+            return
+        bound = {d["binding"][r] for r in self.smap.place_roles(d["k"]) if d["binding"].get(r)}
+        bel = d["belief"].get(obj) or {}
+        step = {"next": self.smap.next(obj, excluded=[r for r in bel if r not in bound]),
+                "presence": self.smap.level("presence", (obj,)),
+                "belief": [[r, round(p, 4)] for r, p in sorted(bel.items(), key=lambda x: (-x[1], x[0]))[:5]]}
+        steps = self._task.setdefault("steps", [])
+        if not steps or {k: v for k, v in steps[-1].items() if k != "beat"} != step:
+            steps.append(dict(step, beat=self.beat))
+            if self._root():
+                json.dump(self._task, open(os.path.join(self._root(), "records", "tasks", ".open.json"), "w"))
 
     def _spoken_command(self, cmd):
         """A game command in the room's handles (the game's long names → fridge1)."""
@@ -540,6 +566,8 @@ class AlfHost:
         metis-agent's service says the director's lines with it (nina's alf-demo review N3)."""
         import re
         from semantic_map import spoken
+        if re.match(r"^gave_up: ", text):            # the director's end line for a search's answer (map-queries step 1)
+            return "I stopped looking."
         if getattr(self, "smap", None) is not None:   # a role said as the thing it is bound to: name(role, thing)
             names = dict(self.smap.names(self.frozen))
             if names:

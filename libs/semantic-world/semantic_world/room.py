@@ -188,6 +188,9 @@ class SemanticMap(core.SemanticMap):
         d = self.data
         t = d["things"].get(thing, {}).get("wanted") or d["types"].get(thing)
         ok = set(d["compat"].get(t, ())) if d["compat"] else None
+        if ok is not None and not ok:                 # a kind the compatibility never names: no knowledge, uniform (logged)
+            ok = None
+            self.log("prior-fallback", thing=thing, why="no compatibility for %s" % t)
         gone = set(d["looked"].get(thing, ()))
         cand = [r for r in sorted(d["places"]) if r not in d["task"]["dests"] and r not in gone
                 and (ok is None or d["types"].get(r) in ok)]
@@ -431,6 +434,24 @@ class SemanticMap(core.SemanticMap):
             self.save()
             self.log("want", wanted=word, belief=d["belief"][word], presence=d["presence0"][word])
         return word
+
+    LEVELS = {"presence": "presence_level"}       # the query API's level ports (core.level)
+
+    def presence_level(self, thing):
+        return self.presence(self.load(), thing)[1]
+
+    def weight(self, pred, args):
+        """look in a room's search (view mode, a room): the place the search visits next is the likeliest BOUND place
+        (core.next over the bound places), so it visits by descending belief (the architect's ruling on nina's F2):
+        weight 1 there, 0 elsewhere; any other port, the core's."""
+        d = self.load()
+        if pred == "look" and d.get("view") and d["task"].get("room"):
+            b = d["binding"]
+            obj, place = b.get(args[0]), b.get(args[1])
+            bound = {b[r] for r in self.place_roles(d["k"]) if b.get(r)}
+            nxt = self.next(obj, excluded=[r for r in (d["belief"].get(obj) or {}) if r not in bound]) if obj else None
+            return 1.0 if nxt is None or place == nxt else 0.0
+        return super().weight(pred, args)
 
     PRESENCE_AT, PRESENCE_NAMES = (0.3, 0.7), ("improbable", "doubtful", "likely")   # the place belief's thresholds (belief-levels)
 

@@ -20,6 +20,31 @@ A world's host runs one cycle every turn:
 5. **the program's turn** happens outside the library. Its intents come back through `ports.say_in_roles` and
    `ports.in_room`, and `names` gives name(role, thing) for the voice and the page.
 
+## The query API (map-queries s-396939dc step 1)
+
+The only faces a program's host and the dialog read the map through (`core.SemanticMap`):
+
+| entry | side | what |
+|---|---|---|
+| `bind(kind, constraints)` → `[entries]` | dialog | the map's entries a person's word can mean: the entry itself, else the places and things of that kind (`tomato` → `tomato1`, `tomato2`; a thing only once seen, in view mode), else a wanted entry; `{"in": place}` keeps those seen or believed there |
+| `level(pred, args)` → level | tick | a standing level port, from the adapter's `LEVELS`; the room's `presence(thing)`: the existence belief quantised at 0.3 / 0.7 (improbable, doubtful, likely) |
+| `weight(pred, args)` → p | tick | a standing categorical port: `look` / `where` over (object role, place role) read the place belief; the room's search feeds `look` as 1 on `next()`'s place and 0 elsewhere (the port stays spec 16's categorical port, degenerate), so it visits places most likely first |
+| `next(kind, excluded)` → place / None | tick | the argmax of the kind's place belief, ties by the place's id: a function of the map's state |
+| `observe(atoms)` | tick | the update (the cycle above) |
+
+**The prior.** An adapter's `prior(thing)` gives the belief before a sighting. The core's own is uniform over the map's places, and logged (`prior-fallback`): a kind with no prior is never a silent `{}`. An empty belief is reserved for a search that has looked everywhere (`lost`).
+
+The room's prior for a kind not seen yet is the per-place rate
+`rate(kind, type(place)) = starts(kind, type) / receptacles(type)`. Here starts is the number of ALFWorld games
+whose initial state puts the kind in or on that receptacle type, and receptacles is the number of receptacles of
+that type across the scenes (`alfworld/world/starts.json`, made by `world/gen_tables.py`). The rate is taken over
+the room's places that can hold the kind (cancontain), and normalised over them: `P(place) = rate(place) /
+Σ rate`. A compatible type with no starts gets half the smallest rate. A kind the compatibility never names gets
+the uniform fallback, logged. Each look updates the belief by Bayes, unchanged.
+
+A cost-aware order (belief per unit of effort: opening a cabinet costs more than a glance at a countertop) is the
+next refinement, noted and not built.
+
 | module | what |
 |---|---|
 | `store` | the map file: JSON beside the world's run, one writer, an mtime cache, and a journal beside it |
