@@ -1141,3 +1141,19 @@ def test_the_room_tables_are_the_datasets():
     every ALFWorld game (its --check)."""
     r = subprocess.run([sys.executable, os.path.join(ROOT, "world", "gen_tables.py"), "--check"], capture_output=True, text=True)
     assert r.returncode == 0, r.stderr
+
+
+def test_a_regeneration_keeps_the_natures_the_family_names(tmp_path):
+    """map-queries (the architect's ruling): tools/iface_gen.py takes each pred's nature from the family's iface yaml as
+    it was — gave_up a report (a search's answer) — and makes a pred it does not name a signal; a nature that is none
+    of signal / resource / report is refused."""
+    sys.path.insert(0, os.path.join(os.path.dirname(ROOT), "tools"))
+    import iface_gen
+    table = iface_gen.natures_of(os.path.join(ROOT, "domains", "hier", "iface", "alfworld.yaml"))
+    assert table["gave_up"] == "report" and table["stuck"] == "signal"
+    text = iface_gen.natures_text("alfworld", ["gave_up", "stuck", "a_new_one"], table)
+    assert "gave_up: report" in text and "stuck: signal" in text and "a_new_one: signal" in text
+    bad = tmp_path / "bad.yaml"
+    bad.write_text("nature: {gave_up: answer}\n")
+    with pytest.raises(ValueError):
+        iface_gen.natures_of(str(bad))
