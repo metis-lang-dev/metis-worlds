@@ -42,5 +42,5 @@ jobs:
       - name: the link (road's image hash)
         run: |
           cd metis-worlds/road/domains
-          METIS_HOME="$GITHUB_WORKSPACE/metispy/metis/catalog" "$GITHUB_WORKSPACE/metis-lang/src/metisc" --link composition.yaml --check | tee "$RUNNER_TEMP/link.txt"
+          env -u METIS_HOME "$GITHUB_WORKSPACE/metis-lang/src/metisc" --link composition.yaml --check | tee "$RUNNER_TEMP/link.txt"
           grep -qx "image road v-$(cat image.golden)" "$RUNNER_TEMP/link.txt"
