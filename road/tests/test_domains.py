@@ -13,10 +13,9 @@ METISC = Path(os.environ.get("METISC") or ROAD.parents[1] / "metis-lang" / "src"
 
 
 def env():
-    """metisc's environment: METIS_HOME the metispy catalog (iface/: the protocol and the tree director the bases
-    include), unless set."""
-    import metis.catalog
-    return dict(os.environ, METIS_HOME=os.environ.get("METIS_HOME") or str(Path(metis.catalog.__file__).parent))
+    """metisc's environment: METIS_HOME unset, the proof that nothing need be set (metisc finds its own standard
+    units, iface/: the protocol and the tree director the bases include; metis-lang spec/17 amendment 5)."""
+    return {k: v for k, v in os.environ.items() if k != "METIS_HOME"}
 
 
 needs_metisc = pytest.mark.skipif(not METISC.is_file(), reason="no metisc (METISC, else metis-lang/src/metisc beside)")
