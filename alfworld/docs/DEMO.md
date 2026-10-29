@@ -22,6 +22,78 @@ page's affordances turn INTO the chat (the world card's ask chips, the status li
 the other way round. `web/domains/world_ui`, `vendor/ui-port.js`, `web/run.sh` and `demo.sh --nav`
 are removed; the page runs on the game alone. Below, the voice-nav rows are the history.
 
+## 0. Running it today: a room, and the person's tasks (alf-tasks s-e9cc8fae, 2026-10-29)
+
+The user (2026-10-28): "we reload games and i cant give agent any tasks besides one hardcoded into game episode".
+Now the picker loads a ROOM: the game file carries the room's state only, and the person gives the tasks, one after
+another, through the intent interface.
+
+    cd metis-worlds/alfworld
+    ./demo.sh --tw                      # kitchen 13 as a room; the page: http://127.0.0.1:8398/world.html?live=1
+    ./demo.sh --tw "bathroom 401"       # another room by its label (./demo.sh --list names the 107)
+    ./demo.sh --tw --view "kitchen 13"  # the robot sees only what stands before it: unseen things are searched for
+    ./demo.sh --tw --episode Bowl-None-Fridge-6   # the old way: the game as one task, its own goal wins and ends it
+
+**The room.**
+- **Why the episode no longer ends anything.** TextWorld's gym env freezes once the episode's own goal holds: every
+  later command repeats the last observation. A room is played on the PDDL env underneath (`alf_gym` `room`), which
+  steps on. The episode's goal is still read (`episode_won`, reported) and never ends the session.
+- **No task in the map.** The map has no task of its own: the person's goal binds the roles.
+- **The picker.** The top bar's picker lists one room per ALFRED scene (24 kitchens, 28 living rooms, 27 bedrooms,
+  28 bathrooms). A pick restarts the service on that room, and the page reloads.
+
+**The tasks.** The task card (`domains/hier/task/intent.yaml`) maps the words; the program says the lines; the
+agent only renders them.
+
+| the person says | the agent |
+|---|---|
+| put the apple on the countertop / take the mug to the sink / move the pepper shaker to the drawer | does it: nav, access, grasp, place, one sub-goal at a time |
+| move the pepper shaker to a shelf (kitchen 13 has none) | "There is no shelf in this room." |
+| put the tomato in the drawer (ALFWorld's cancontain forbids it) | "Tomato 1 cannot go in or on drawer 3: this world does not allow it." |
+| heat the apple / wash the mug / chill the wine | "Sorry, heating is not a task I know: I move things from place to place." |
+| bring the teddy bear to the fridge (a kind ALFWorld has, not this room) | "There is no teddybear in this room." |
+| bring the toy to the fridge (the model guesses a thing the words never name) | "I didn't hear toiletpaperroll in what you said: say it again with the thing's name?" (metis-agent's slot grounding over the card's `grounded:` slots: never a substitution) |
+| bring me the egg (no place) | "I need the receptacle too: say it again with it?" |
+| a word outside ALFWorld's vocabulary (banana) | the world card's line: what this world is, what to ask |
+
+**Several tasks in a row.**
+- Each starts without a reload, re-binding the roles.
+- A thing still in the hand (after a "stop") is put down where the robot stands first: "Tomato 1 is down: now I
+  fetch egg 1 to countertop 1."
+
+**The search (`--view`).**
+- **The prior.** A kind not seen yet is believed over the places that can hold it: ALFRED's compatibility
+  (`world/cancontain.json`, the union over the dataset).
+- **The existence belief.** The kind also has an existence belief: its room type's frequency in ALFRED
+  (`world/presence.json`), lowered by every place looked into without it, quantised as presence(likely | doubtful |
+  improbable).
+- **The planner says** "No apple seen yet: I look in microwave 1 first." (the task results on the page; the
+  specialists' lines are the ones voiced).
+- **The search stops**
+  - at "There is probably no kettle in this room: I stop looking." (a kitchen kettle: after about half the places; a
+    bathroom kettle: at once), or
+  - at "There is no X in this room: I looked everywhere it could be."
+
+**Our own check, and a card per task.**
+- **Success is the hierarchy's, never the episode's `won`.** At each task's end, ROOT/records/tasks/task-NN.json
+  (ROOT: `alfworld/.metis/demo`) holds:
+  - the goal in the room's names, and its roles;
+  - the outcome, the ticks, the seconds and the commands;
+  - the map's belief records meanwhile;
+  - `check`: for done, the goal holds in the world's facts as observed (`goal_holds`), and `agrees` says whether the
+    end and the world agree.
+- **Refusals and stops.** A refusal, or a task stopped before its end, says the check does not apply.
+
+**The consoles.**
+- The world page runs on metis-agent's **py** service (`demo.sh`).
+- The Go agent has no director and no world/* frames, so it does not run this demo.
+
+**What to try** (nina's Chrome check):
+1. kitchen 13: "put the apple on the countertop", then "move the bowl to the cabinet", then "put a tomato in the
+   microwave" (the episode's own goal: "Done. Tell me another task.");
+2. one impossible: "move the pepper shaker to a shelf";
+3. then `--view` with "bring the kettle to the sink".
+
 ## 1. The two phases, and who has the agency
 
 | phase | agency | what runs | what it produces |
