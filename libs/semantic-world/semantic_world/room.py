@@ -191,6 +191,12 @@ class SemanticMap(core.SemanticMap):
         gone = set(d["looked"].get(thing, ()))
         cand = [r for r in sorted(d["places"]) if r not in d["task"]["dests"] and r not in gone
                 and (ok is None or d["types"].get(r) in ok)]
+        rate = (d.get("place_rate") or {}).get(t)     # a room's search (alf-tasks, nina's F2): where the kind usually starts,
+        if cand and rate:                             # per receptacle of each type (ALFRED's starts), else flat
+            floor = min(rate.values()) / 2
+            w = {r: rate.get(d["types"].get(r), floor) for r in cand}
+            s = sum(w.values())
+            return {r: w[r] / s for r in cand}
         return {r: 1.0 / len(cand) for r in cand} if cand else {}
 
     def _visible(self, d, at):

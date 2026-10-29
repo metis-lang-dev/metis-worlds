@@ -447,12 +447,20 @@ class AlfHost:
 
     def _task_begin(self, atom):
         """The person's goal arrives (intent_atom): a card opens at the world's and the map's records as they stand."""
+        if getattr(self, "_task", None) is None and self._root():   # a card left open on disk (a stop reloads the task: another host)
+            f = os.path.join(self._root(), "records", "tasks", ".open.json")
+            if os.path.exists(f):
+                self._task = json.load(open(f))
         if getattr(self, "_task", None) is not None:   # the one before never ended (a stop, a new task over it): its card says so
             self._task_end(["stopped"])
         mj = getattr(self.smap, "journal", None) if self.smap is not None else None   # the map's journal file (its store's)
         n = lambda f: sum(1 for _ in open(f)) if f and os.path.exists(f) else 0
         self._task = {"goal": atom, "beat": self.beat, "commands_at": n(self.commands_log), "map_at": n(mj), "map_journal": mj,
                       "t0": time.time()}
+        if self._root():                                # open on disk too, until its end writes the card
+            d = os.path.join(self._root(), "records", "tasks")
+            os.makedirs(d, exist_ok=True)
+            json.dump(self._task, open(os.path.join(d, ".open.json"), "w"))
 
     def _task_end(self, out):
         """A task's end atom is out: its card under ROOT/records/tasks/ — the goal (the room's names), the ticks, the
@@ -465,6 +473,8 @@ class AlfHost:
         if task is None or end is None or root is None:
             return
         self._task = None
+        if os.path.exists(os.path.join(root, "records", "tasks", ".open.json")):
+            os.remove(os.path.join(root, "records", "tasks", ".open.json"))
         lines = lambda f, k: [json.loads(l) for l in list(open(f))[k:] if l.strip()] if f and os.path.exists(f) else []
         refused = end.split("(")[0] in ("nothing", "cannot", "misfit", "stopped")   # refused before anything moved, or cut short
         b = {} if refused else self.smap.binding()
@@ -472,7 +482,7 @@ class AlfHost:
         holds = bool(obj and rec and "inrecep(%s,%s)" % (obj, rec) in self.dyn)
         cmds = lines(self.commands_log, task["commands_at"])
         card = {"goal": task["goal"], "goal_roles": {"target": obj, "dest": rec}, "outcome": self.in_room(end),
-                "ticks": self.beat - task["beat"], "seconds": round(time.time() - task["t0"], 1),
+                "ticks": self.beat - task["beat"] if self.beat >= task["beat"] else None, "seconds": round(time.time() - task["t0"], 1),
                 "commands": [{"command": self.speak(" ".join(self._spoken_command(c["command"]))), "rule": c.get("rule"),
                               "admissible": c.get("admissible"), "changed": c.get("changed")} for c in cmds],
                 "belief": [r for r in lines(task["map_journal"], task["map_at"]) if r.get("kind") != "observe"],

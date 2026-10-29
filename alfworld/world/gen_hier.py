@@ -441,6 +441,7 @@ def build_map(path, info, mirror, k=K, view=False, room=False):
         for ot, rts in compat_all().items():
             d["compat"].setdefault(ot, rts)
         d["presence_prior"] = presence_prior(info.get("game") or "")
+        d["place_rate"] = json.load(open(os.path.join(HERE, "starts.json")))["rate"]   # where each kind usually starts (nina's F2)
         m.save()
     return m
 

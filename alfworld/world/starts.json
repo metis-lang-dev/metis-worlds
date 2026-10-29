@@ -1,0 +1,584 @@
+{
+ "source": "ALFRED's starting places: per object type, the instances that start in or on each receptacle type, per receptacle of that type (every ALFWorld game's initial state, json_2.1.1, all splits; one count per instance and receptacle per scene): a place's weight in the search's prior",
+ "rate": {
+  "alarmclock_t": {
+   "desk_t": 14.5217,
+   "dresser_t": 5.3929,
+   "sidetable_t": 1.8592,
+   "diningtable_t": 1.5366,
+   "shelf_t": 1.0309,
+   "countertop_t": 0.1474
+  },
+  "apple_t": {
+   "fridge_t": 28.9286,
+   "microwave_t": 11.0,
+   "diningtable_t": 9.8537,
+   "countertop_t": 8.0632,
+   "sinkbasin_t": 3.1,
+   "garbagecan_t": 2.8929,
+   "sidetable_t": 0.6901
+  },
+  "bathtub_t": {
+   "bathtubbasin_t": 0.0526
+  },
+  "book_t": {
+   "bed_t": 16.5,
+   "desk_t": 7.6522,
+   "dresser_t": 2.3571,
+   "coffeetable_t": 1.8571,
+   "diningtable_t": 1.5854,
+   "armchair_t": 1.0,
+   "sidetable_t": 0.9437,
+   "sofa_t": 0.9412,
+   "countertop_t": 0.7368,
+   "drawer_t": 0.336,
+   "tvstand_t": 0.2143,
+   "shelf_t": 0.1289,
+   "cabinet_t": 0.1189
+  },
+  "bowl_t": {
+   "fridge_t": 21.7143,
+   "diningtable_t": 9.9512,
+   "desk_t": 6.087,
+   "countertop_t": 5.9579,
+   "cabinet_t": 2.1699,
+   "microwave_t": 2.0357,
+   "dresser_t": 1.6071,
+   "sinkbasin_t": 1.0286,
+   "tvstand_t": 0.9286,
+   "shelf_t": 0.8351,
+   "coffeetable_t": 0.7857,
+   "sidetable_t": 0.5493
+  },
+  "box_t": {
+   "sofa_t": 3.0588,
+   "diningtable_t": 2.1463,
+   "coffeetable_t": 1.6786,
+   "dresser_t": 0.7857,
+   "ottoman_t": 0.75,
+   "tvstand_t": 0.5,
+   "desk_t": 0.3043,
+   "armchair_t": 0.2889,
+   "sidetable_t": 0.2817,
+   "shelf_t": 0.0464,
+   "cabinet_t": 0.034
+  },
+  "bread_t": {
+   "diningtable_t": 9.0,
+   "fridge_t": 8.6429,
+   "countertop_t": 7.7579,
+   "sidetable_t": 0.1408,
+   "microwave_t": 0.1071,
+   "garbagecan_t": 0.0268
+  },
+  "butterknife_t": {
+   "countertop_t": 13.2,
+   "diningtable_t": 12.2195,
+   "sinkbasin_t": 1.3857,
+   "drawer_t": 0.3834,
+   "sidetable_t": 0.3662
+  },
+  "candle_t": {
+   "toilet_t": 12.3929,
+   "cart_t": 10.5,
+   "countertop_t": 4.0105,
+   "coffeetable_t": 1.1429,
+   "dresser_t": 0.6786,
+   "sidetable_t": 0.6197,
+   "diningtable_t": 0.5854,
+   "shelf_t": 0.4485,
+   "tvstand_t": 0.4286,
+   "cabinet_t": 0.397,
+   "drawer_t": 0.3379
+  },
+  "cd_t": {
+   "desk_t": 11.0435,
+   "dresser_t": 5.7857,
+   "sidetable_t": 2.0282,
+   "diningtable_t": 1.5854,
+   "garbagecan_t": 0.875,
+   "drawer_t": 0.7905,
+   "armchair_t": 0.4444,
+   "shelf_t": 0.4175,
+   "cabinet_t": 0.0531
+  },
+  "cellphone_t": {
+   "bed_t": 13.0312,
+   "desk_t": 11.2174,
+   "dresser_t": 5.9286,
+   "safe_t": 4.25,
+   "diningtable_t": 2.7805,
+   "sidetable_t": 2.507,
+   "countertop_t": 2.2632,
+   "ottoman_t": 1.75,
+   "armchair_t": 1.3333,
+   "coffeetable_t": 1.2143,
+   "drawer_t": 0.9506,
+   "sofa_t": 0.7353,
+   "shelf_t": 0.7113,
+   "tvstand_t": 0.2857,
+   "cabinet_t": 0.0191
+  },
+  "cloth_t": {
+   "bathtubbasin_t": 15.2105,
+   "cart_t": 10.0,
+   "countertop_t": 1.9474,
+   "toilet_t": 1.1071,
+   "sinkbasin_t": 0.8429,
+   "dresser_t": 0.5357,
+   "cabinet_t": 0.4459,
+   "drawer_t": 0.3103,
+   "shelf_t": 0.2423,
+   "sidetable_t": 0.0282
+  },
+  "creditcard_t": {
+   "desk_t": 11.2609,
+   "dresser_t": 8.1071,
+   "coffeetable_t": 5.8929,
+   "sofa_t": 5.7941,
+   "tvstand_t": 5.2143,
+   "sidetable_t": 4.7887,
+   "armchair_t": 4.1111,
+   "diningtable_t": 3.5366,
+   "ottoman_t": 3.5,
+   "shelf_t": 2.067,
+   "countertop_t": 1.8947,
+   "drawer_t": 1.5119
+  },
+  "cup_t": {
+   "fridge_t": 24.3929,
+   "diningtable_t": 9.8049,
+   "countertop_t": 7.1474,
+   "microwave_t": 6.75,
+   "sinkbasin_t": 2.7429,
+   "cabinet_t": 1.7643,
+   "sidetable_t": 0.5211,
+   "shelf_t": 0.3454
+  },
+  "curtains_t": {
+   "sidetable_t": 0.0141
+  },
+  "desklamp_t": {
+   "desk_t": 0.3478,
+   "dresser_t": 0.1786,
+   "sidetable_t": 0.1408,
+   "coffeetable_t": 0.0357,
+   "shelf_t": 0.0103
+  },
+  "dishsponge_t": {
+   "countertop_t": 9.6,
+   "diningtable_t": 9.2683,
+   "cart_t": 9.0,
+   "sinkbasin_t": 3.1429,
+   "bathtubbasin_t": 3.0,
+   "cabinet_t": 1.7898,
+   "drawer_t": 1.413,
+   "garbagecan_t": 1.3393,
+   "toilet_t": 0.8214,
+   "shelf_t": 0.5464,
+   "sidetable_t": 0.2958
+  },
+  "egg_t": {
+   "fridge_t": 29.25,
+   "microwave_t": 11.3929,
+   "diningtable_t": 8.2683,
+   "countertop_t": 8.0526,
+   "sinkbasin_t": 5.3857,
+   "garbagecan_t": 3.3036,
+   "sidetable_t": 0.5352
+  },
+  "floorlamp_t": {
+   "sinkbasin_t": 0.0286
+  },
+  "fork_t": {
+   "countertop_t": 12.4737,
+   "diningtable_t": 12.3659,
+   "sinkbasin_t": 2.6429,
+   "drawer_t": 1.1067,
+   "sidetable_t": 0.4507
+  },
+  "glassbottle_t": {
+   "countertop_t": 2.5895,
+   "diningtable_t": 2.2439,
+   "fridge_t": 2.1786,
+   "sinkbasin_t": 1.0143,
+   "cabinet_t": 0.6306,
+   "garbagecan_t": 0.4554,
+   "shelf_t": 0.1598
+  },
+  "handtowel_t": {
+   "handtowelholder_t": 1.0,
+   "countertop_t": 0.0105
+  },
+  "houseplant_t": {
+   "coffeetable_t": 0.1429,
+   "sidetable_t": 0.1268,
+   "countertop_t": 0.0947,
+   "diningtable_t": 0.0732,
+   "tvstand_t": 0.0714,
+   "dresser_t": 0.0714,
+   "desk_t": 0.0435,
+   "shelf_t": 0.0155,
+   "cabinet_t": 0.0021
+  },
+  "kettle_t": {
+   "countertop_t": 2.7579,
+   "diningtable_t": 1.9268,
+   "cabinet_t": 0.707,
+   "stoveburner_t": 0.4737,
+   "sinkbasin_t": 0.3143,
+   "shelf_t": 0.0309
+  },
+  "keychain_t": {
+   "desk_t": 11.1304,
+   "dresser_t": 7.5357,
+   "safe_t": 6.5,
+   "coffeetable_t": 5.25,
+   "sidetable_t": 4.7606,
+   "tvstand_t": 4.2857,
+   "diningtable_t": 2.8049,
+   "sofa_t": 2.7941,
+   "ottoman_t": 2.75,
+   "armchair_t": 2.2889,
+   "shelf_t": 1.3144,
+   "drawer_t": 1.0632,
+   "cabinet_t": 0.0276,
+   "countertop_t": 0.0105
+  },
+  "knife_t": {
+   "countertop_t": 12.4947,
+   "diningtable_t": 11.9512,
+   "sinkbasin_t": 1.1571,
+   "drawer_t": 0.8103,
+   "sidetable_t": 0.2817,
+   "garbagecan_t": 0.0268
+  },
+  "ladle_t": {
+   "countertop_t": 3.7368,
+   "diningtable_t": 2.6098,
+   "cabinet_t": 0.4331,
+   "sinkbasin_t": 0.2857,
+   "drawer_t": 0.2648
+  },
+  "laptop_t": {
+   "bed_t": 17.8438,
+   "desk_t": 3.1739,
+   "sofa_t": 2.7941,
+   "coffeetable_t": 2.3929,
+   "ottoman_t": 2.25,
+   "diningtable_t": 2.0,
+   "tvstand_t": 0.9286,
+   "dresser_t": 0.8571,
+   "armchair_t": 0.7556,
+   "sidetable_t": 0.2394,
+   "countertop_t": 0.1053
+  },
+  "lettuce_t": {
+   "fridge_t": 16.9286,
+   "diningtable_t": 10.7805,
+   "countertop_t": 8.3158,
+   "sinkbasin_t": 0.8286,
+   "sidetable_t": 0.2958,
+   "garbagecan_t": 0.2054
+  },
+  "mirror_t": {
+   "countertop_t": 0.0421,
+   "dresser_t": 0.0357
+  },
+  "mug_t": {
+   "fridge_t": 19.0714,
+   "desk_t": 9.1304,
+   "microwave_t": 8.5357,
+   "diningtable_t": 8.2683,
+   "countertop_t": 5.3053,
+   "dresser_t": 3.3214,
+   "sinkbasin_t": 2.7429,
+   "sidetable_t": 1.8451,
+   "cabinet_t": 1.3631,
+   "shelf_t": 0.8814,
+   "coffeemachine_t": 0.0357
+  },
+  "newspaper_t": {
+   "coffeetable_t": 3.1429,
+   "sofa_t": 2.8235,
+   "diningtable_t": 1.9512,
+   "ottoman_t": 1.75,
+   "dresser_t": 1.3571,
+   "tvstand_t": 1.0714,
+   "sidetable_t": 0.8732,
+   "armchair_t": 0.6,
+   "shelf_t": 0.2629,
+   "drawer_t": 0.0178,
+   "cabinet_t": 0.0106,
+   "garbagecan_t": 0.0089
+  },
+  "pan_t": {
+   "fridge_t": 4.3571,
+   "countertop_t": 2.8737,
+   "diningtable_t": 1.561,
+   "stoveburner_t": 0.8772,
+   "cabinet_t": 0.1953,
+   "sinkbasin_t": 0.0143
+  },
+  "papertowelroll_t": {
+   "countertop_t": 3.9579,
+   "cart_t": 2.5,
+   "diningtable_t": 2.1951,
+   "garbagecan_t": 0.9643,
+   "toilet_t": 0.8929,
+   "shelf_t": 0.4227,
+   "sidetable_t": 0.1408
+  },
+  "pen_t": {
+   "desk_t": 16.0,
+   "dresser_t": 7.6429,
+   "diningtable_t": 3.2439,
+   "sidetable_t": 3.1408,
+   "coffeetable_t": 2.0,
+   "shelf_t": 1.2577,
+   "countertop_t": 0.9263,
+   "tvstand_t": 0.7857,
+   "drawer_t": 0.668,
+   "garbagecan_t": 0.3571
+  },
+  "pencil_t": {
+   "desk_t": 14.087,
+   "dresser_t": 6.0,
+   "sidetable_t": 3.8451,
+   "diningtable_t": 2.7317,
+   "coffeetable_t": 1.5714,
+   "shelf_t": 1.3608,
+   "countertop_t": 0.7474,
+   "garbagecan_t": 0.7411,
+   "tvstand_t": 0.7143,
+   "drawer_t": 0.7134
+  },
+  "peppershaker_t": {
+   "diningtable_t": 10.561,
+   "countertop_t": 10.4,
+   "cabinet_t": 2.5563,
+   "drawer_t": 1.0593,
+   "sidetable_t": 0.7183,
+   "shelf_t": 0.6392
+  },
+  "pillow_t": {
+   "bed_t": 15.4688,
+   "sofa_t": 3.2059,
+   "armchair_t": 0.6667,
+   "ottoman_t": 0.5
+  },
+  "plate_t": {
+   "diningtable_t": 9.122,
+   "fridge_t": 8.75,
+   "countertop_t": 6.1895,
+   "coffeetable_t": 1.9286,
+   "cabinet_t": 1.6497,
+   "sinkbasin_t": 0.5857,
+   "microwave_t": 0.5,
+   "tvstand_t": 0.4286,
+   "sidetable_t": 0.4085,
+   "shelf_t": 0.268,
+   "dresser_t": 0.0714
+  },
+  "pot_t": {
+   "fridge_t": 4.0714,
+   "countertop_t": 2.2947,
+   "diningtable_t": 1.7805,
+   "stoveburner_t": 0.8947,
+   "cabinet_t": 0.1592,
+   "sinkbasin_t": 0.1,
+   "shelf_t": 0.0619
+  },
+  "potato_t": {
+   "fridge_t": 29.8214,
+   "diningtable_t": 10.9024,
+   "countertop_t": 9.1053,
+   "microwave_t": 9.0714,
+   "sinkbasin_t": 4.3286,
+   "garbagecan_t": 1.6964,
+   "sidetable_t": 0.507
+  },
+  "remotecontrol_t": {
+   "coffeetable_t": 7.3929,
+   "sofa_t": 5.0,
+   "tvstand_t": 4.5714,
+   "ottoman_t": 3.25,
+   "dresser_t": 2.8214,
+   "diningtable_t": 2.561,
+   "armchair_t": 1.9778,
+   "sidetable_t": 1.831,
+   "desk_t": 1.5217,
+   "drawer_t": 0.1818,
+   "shelf_t": 0.1804,
+   "countertop_t": 0.1368
+  },
+  "saltshaker_t": {
+   "diningtable_t": 11.2683,
+   "countertop_t": 10.1579,
+   "cabinet_t": 2.3843,
+   "drawer_t": 1.004,
+   "sidetable_t": 0.7465,
+   "shelf_t": 0.567
+  },
+  "showerglass_t": {
+   "countertop_t": 0.0105
+  },
+  "sink_t": {
+   "countertop_t": 0.0632,
+   "sinkbasin_t": 0.0571
+  },
+  "soapbar_t": {
+   "cart_t": 9.5,
+   "bathtubbasin_t": 7.6842,
+   "toilet_t": 7.1071,
+   "countertop_t": 2.7895,
+   "sinkbasin_t": 2.6,
+   "garbagecan_t": 0.7232,
+   "cabinet_t": 0.3503,
+   "shelf_t": 0.2938,
+   "sidetable_t": 0.2817,
+   "drawer_t": 0.2806
+  },
+  "soapbottle_t": {
+   "countertop_t": 13.2632,
+   "diningtable_t": 12.4146,
+   "toilet_t": 8.1071,
+   "cart_t": 7.0,
+   "garbagecan_t": 3.1429,
+   "cabinet_t": 2.758,
+   "shelf_t": 1.0103,
+   "dresser_t": 0.9286,
+   "sidetable_t": 0.5775,
+   "drawer_t": 0.1542
+  },
+  "spatula_t": {
+   "diningtable_t": 13.2927,
+   "countertop_t": 12.8947,
+   "sinkbasin_t": 3.5571,
+   "drawer_t": 1.164,
+   "sidetable_t": 0.2394,
+   "stoveburner_t": 0.0088
+  },
+  "spoon_t": {
+   "diningtable_t": 12.0244,
+   "countertop_t": 11.5474,
+   "sinkbasin_t": 3.6143,
+   "drawer_t": 1.4763,
+   "sidetable_t": 0.493
+  },
+  "spraybottle_t": {
+   "cart_t": 23.5,
+   "toilet_t": 10.0,
+   "countertop_t": 4.8211,
+   "garbagecan_t": 1.2768,
+   "diningtable_t": 1.0732,
+   "dresser_t": 0.8929,
+   "cabinet_t": 0.62,
+   "shelf_t": 0.4433,
+   "sidetable_t": 0.3099,
+   "drawer_t": 0.004
+  },
+  "statue_t": {
+   "coffeetable_t": 8.2857,
+   "tvstand_t": 4.7857,
+   "diningtable_t": 4.0976,
+   "dresser_t": 3.3214,
+   "sidetable_t": 2.2394,
+   "countertop_t": 2.0947,
+   "desk_t": 1.087,
+   "shelf_t": 0.8041,
+   "safe_t": 0.25
+  },
+  "teddybear_t": {
+   "bed_t": 0.2188
+  },
+  "television_t": {
+   "tvstand_t": 0.7857,
+   "dresser_t": 0.2857,
+   "coffeetable_t": 0.0714,
+   "sidetable_t": 0.0141
+  },
+  "tissuebox_t": {
+   "cart_t": 7.0,
+   "coffeetable_t": 3.8929,
+   "desk_t": 2.2174,
+   "diningtable_t": 1.9756,
+   "tvstand_t": 1.8571,
+   "sidetable_t": 1.2113,
+   "countertop_t": 0.8737,
+   "dresser_t": 0.6071,
+   "shelf_t": 0.5722,
+   "toilet_t": 0.3214,
+   "drawer_t": 0.1996,
+   "cabinet_t": 0.0552,
+   "garbagecan_t": 0.0446
+  },
+  "toiletpaper_t": {
+   "cart_t": 10.5,
+   "toilet_t": 7.2857,
+   "countertop_t": 2.6211,
+   "toiletpaperhanger_t": 0.9643,
+   "garbagecan_t": 0.7679,
+   "dresser_t": 0.75,
+   "shelf_t": 0.3299,
+   "cabinet_t": 0.3185,
+   "drawer_t": 0.2767,
+   "sidetable_t": 0.169,
+   "bathtubbasin_t": 0.1053
+  },
+  "tomato_t": {
+   "fridge_t": 35.5357,
+   "diningtable_t": 12.2439,
+   "countertop_t": 9.7895,
+   "sinkbasin_t": 2.5714,
+   "garbagecan_t": 1.9732,
+   "sidetable_t": 0.5352
+  },
+  "towel_t": {
+   "towelholder_t": 0.9722,
+   "countertop_t": 0.0105
+  },
+  "vase_t": {
+   "coffeetable_t": 4.0714,
+   "diningtable_t": 2.6098,
+   "tvstand_t": 2.5714,
+   "countertop_t": 2.4211,
+   "dresser_t": 1.6429,
+   "sidetable_t": 1.169,
+   "shelf_t": 0.9691,
+   "safe_t": 0.625,
+   "cabinet_t": 0.5329,
+   "desk_t": 0.3478
+  },
+  "watch_t": {
+   "coffeetable_t": 4.3929,
+   "tvstand_t": 3.5714,
+   "dresser_t": 2.2143,
+   "diningtable_t": 1.5854,
+   "sidetable_t": 1.4225,
+   "safe_t": 0.75,
+   "desk_t": 0.6087,
+   "drawer_t": 0.2727,
+   "shelf_t": 0.2423
+  },
+  "wateringcan_t": {
+   "coffeetable_t": 0.7857,
+   "sidetable_t": 0.0563,
+   "shelf_t": 0.0464
+  },
+  "window_t": {
+   "dresser_t": 0.0357,
+   "countertop_t": 0.0211,
+   "shelf_t": 0.0103
+  },
+  "winebottle_t": {
+   "diningtable_t": 6.1463,
+   "countertop_t": 4.5579,
+   "garbagecan_t": 0.8482,
+   "cabinet_t": 0.7537,
+   "fridge_t": 0.75,
+   "shelf_t": 0.2216,
+   "sidetable_t": 0.0141
+  }
+ }
+}
