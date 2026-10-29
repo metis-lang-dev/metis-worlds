@@ -95,3 +95,97 @@ def test_a_net_as_the_one_map(tmp_path):
     got = reach(m, west)
     assert east in got
     assert not any("|" in p and m.zone_kind(m.zone_of(p)) == "lane" for p in got)
+
+
+# ── people (step 2b): intents on the cells, the birth prior, meets ──
+def people_scene(tmp_path):
+    m = scene(tmp_path)
+    d = m.load()
+    d["dt"] = 1.0                                      # a second a tick: a walker at 1.2 m/s moves about a cell
+    m.save()
+    return m
+
+
+def chair_on_s(m, at="c12_-3", path=("c11_-3", "c10_-3")):
+    m.cycle([], visible=(), ego={"place": at, "speed": 0.5, "path": list(path)})
+
+
+def test_a_walker_toward_the_chair_meets_it_one_walking_away_does_not(tmp_path):
+    m = people_scene(tmp_path)
+    chair_on_s(m)
+    m.cycle([{"class": "pedestrian", "x": 6.5, "y": -2.5, "speed": 1.2, "heading": 0.0},
+             {"class": "pedestrian", "x": 4.5, "y": -2.5, "speed": 1.2, "heading": 3.14159}],
+            ego={"place": "c12_-3", "speed": 0.5, "path": ["c11_-3", "c10_-3"]})
+    d = m.load()
+    toward, away = sorted(t for t in d["things"] if d["things"][t]["layer"] == "people")
+    assert d["belief"][toward] == {"c6_-3": 1.0} and d["belief"][away] == {"c4_-3": 1.0}
+    assert m.meets(toward) > 0.5 > 0.1 > m.meets(away)
+
+
+def test_a_steady_walker_is_believed_to_keep_its_way(tmp_path):
+    m = people_scene(tmp_path)
+    chair_on_s(m)
+    for x in (3.5, 4.5, 5.5, 6.5):
+        m.cycle([{"class": "pedestrian", "x": x, "y": -2.5, "speed": 1.0}], ego={"place": "c12_-3", "path": []})
+    p = m.load()["intent"]["pedestrian"]
+    assert p["keep"] > 0.6 and p["keep"] > p["stop"] and p["keep"] > p["cross"]          # from its prior 0.5
+
+
+def test_a_birth_prior_rises_through_the_middle_and_is_removed_by_an_empty_view(tmp_path):
+    m = people_scene(tmp_path)
+    chair_on_s(m, at="c5_-3", path=["c4_-3", "c3_-3"])
+    m.birth("hidden", ["c0_-3", "c1_-3"], mass=0.3)
+    p = m.meets("hidden")
+    assert 0.0 < p <= 0.3                              # unconfirmed: never more than its existence
+    # seen into where it could have walked by now (the boundary and a step beyond), and nobody there
+    m.cycle([], visible=["c0_-3", "c1_-3", "c2_-3", "c3_-3", "c4_-3"], ego={"place": "c5_-3", "path": ["c4_-3", "c3_-3"]})
+    d = m.load()
+    assert not d["belief"].get("hidden") and "hidden" in d["gone"] and m.meets("hidden") == 0.0
+
+
+def test_a_sighting_near_a_birth_prior_is_that_walker(tmp_path):
+    m = people_scene(tmp_path)
+    chair_on_s(m, at="c5_-3", path=["c4_-3", "c3_-3"])
+    m.birth("hidden", ["c0_-3", "c1_-3"], mass=0.3)
+    m.cycle([{"class": "pedestrian", "x": 1.5, "y": -2.5, "speed": 1.2, "heading": 0.0}],
+            ego={"place": "c5_-3", "path": ["c4_-3", "c3_-3"]})
+    d = m.load()
+    assert sorted(t for t in d["things"] if d["things"][t]["layer"] == "people") == ["hidden"]
+    assert "birth" not in d["things"]["hidden"] and d["belief"]["hidden"] == {"c1_-3": 1.0}
+    assert m.meets("hidden") > 0.5                     # confirmed and heading at the chair: its whole belief counts
+
+
+def test_vehicles_and_people_share_the_one_map(tmp_path):
+    m = people_scene(tmp_path)
+    m.cycle([{"class": "passenger", "lane": "R", "s": 3.0, "speed": 5.0},
+             {"class": "bicycle", "x": 15.5, "y": 2.5, "speed": 4.0, "heading": 3.14159}],
+            ego={"place": "c10_2", "path": ["X|1", "X|0"]})
+    d = m.load()
+    assert d["belief"]["passenger"] == {"R|0": 1.0} and d["things"]["passenger"].get("layer") is None
+    assert d["belief"]["bicycle"] == {"c15_2": 1.0} and d["things"]["bicycle"]["layer"] == "people"
+    m.cycle([], ego={"place": "c10_2", "path": ["X|1", "X|0"]})
+    d = m.load()
+    assert all("|" in c and c.startswith("R|") for c in d["belief"]["passenger"])     # the car stays on its lane
+    assert all(not c.startswith("R|") for c in d["belief"]["bicycle"])               # the cyclist never enters it
+    assert m.weight("meets", ("bicycle",)) == m.meets("bicycle")
+
+
+def test_the_one_binding_and_the_peoples_readings(tmp_path):
+    m = people_scene(tmp_path)
+    d = m.load()
+    d["zones"]["S"]["width"] = 1.0
+    d["zones"]["N"]["width"] = 3.0
+    m.save()
+    dets = [{"class": "pedestrian", "x": x, "y": -2.5, "speed": 1.0, "heading": 0.0} for x in (6.5, 7.5, 8.5)]
+    dets += [{"class": "bicycle", "x": 15.5, "y": 2.5, "speed": 4.0, "heading": 3.14159},
+             {"class": "passenger", "lane": "R", "s": 12.0, "speed": 8.0}]
+    m.cycle(dets, ego={"place": "c10_-3", "lane": "X", "s": 1.0, "speed": 0.5, "route": ["X"], "path": ["X|0"]})
+    b = m.project(k=2, j=2)
+    assert set(b) == {"vru1", "vru2"} | {r for r in b if r.startswith(("a", "lead", "follow"))}
+    assert m.load()["things"][b["vru1"]]["layer"] == "people" and b["vru1"] != b["vru2"]
+    assert all(b[r] == "passenger" for r in b if not r.startswith("vru"))           # the lane roles: the car
+    f = m.people_facts(group=3)
+    assert "group_at(S)" in f and "walker_at(vru1,S)" in f
+    z = m.zone_facts()
+    assert z["path_width(S,narrow)"] == z["path_width(N,wide)"] == 1
+    assert m.roles() == set(b)
