@@ -215,7 +215,7 @@ def test_activation_cards(tmp_path):
             import re
             voc = gen_hier.vocabulary()
             here = {re.sub(r"\d+$", "", h) for h in kinds} | {a.split(",")[1][:-3] for a in info["static"] if a.startswith(("otype(", "rtype("))}
-            absent = [k for k in voc["kind"] if k not in here]
+            absent = [k for k in voc["alfkind"] if k not in here]
             want["receptacle"] |= {k for k in absent if k in gen_hier.RECEPTACLE_KINDS}
             want["object"] |= {k for k in absent if k not in gen_hier.RECEPTACLE_KINDS}
             want["chore"] = set(voc["chore"])
@@ -1157,3 +1157,20 @@ def test_a_regeneration_keeps_the_natures_the_family_names(tmp_path):
     bad.write_text("nature: {gave_up: answer}\n")
     with pytest.raises(ValueError):
         iface_gen.natures_of(str(bad))
+
+
+@pytest.mark.skipif(not os.environ.get("METISC"), reason="METISC is not set")
+def test_a_room_tree_passes_the_interface_check(tmp_path):
+    """A room installed as a tick tree passes metisc --interface with no error. alf-tasks step 2 had named the task's
+    vocabulary type `kind`, the director's routing type too: I6, two member sets of one type, which no test saw."""
+    import gen_hier
+    sys.path.insert(0, os.path.join(ROOT, "experiments"))
+    import demo
+    import metis.catalog
+    root = tmp_path / "root"
+    gen_hier.install(str(demo.resolve("kitchen 13")), str(root), person=True, tree=True, room=True)
+    env = dict(os.environ, METIS_CATALOG=str(root), METIS_HOME=os.path.dirname(metis.catalog.__file__))
+    r = subprocess.run([os.environ["METISC"], "--interface", "domains/hier/composition.yaml"], cwd=str(root), env=env,
+                       capture_output=True, text=True)
+    errors = [l for l in (r.stdout + r.stderr).splitlines() if l.startswith("error")]
+    assert r.returncode == 0 and not errors, errors
