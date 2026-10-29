@@ -50,7 +50,8 @@ where that change lands, with the test that asks for it.
     m.birth(name, places, cls, mass)                                a birth prior at an occlusion boundary
     m.meets(track) / m.weight("meets", (role,))                     P(the person's path meets the chair's)
     m.project(k, j) → binding                                       the one binding: lane roles and vru1..vruJ
-    m.people_facts(group) → {atom: 1}                               walker_at / cyclist_at / group_at"""
+    m.people_facts(group) → {atom: 1}                               walker_at / cyclist_at / group_at
+    m.pairs(lights) → [situation.Pair]                              the people's unstructured pairs, the lane's"""
 import math
 
 from . import bayes, road
@@ -473,6 +474,46 @@ class MixedMap(road.RoadMap):
 
     def roles(self):
         return set((self.load().get("binding") or {}).keys())
+
+    # ── the situation layer's pairs: the people's unstructured, the lane's when the chair is on a lane ──
+    RADIUS = {"chair": 0.45, "pedestrian": 0.3, "bicycle": 0.9}     # half a body's length (m): the discs' gap
+
+    def pairs(self, lights=None, chair_class="pedestrian"):
+        """→ [situation.Pair] of the chair and every person seen (UNSTRUCTURED, DESIGN §12 position 2: the gap between
+        the bodies, the bearing from the chair, each side's class dynamics at its speed), and, when the host projects
+        the chair on a lane, LaneMap.pairs over the vehicle tracks (the responder's lane case, unchanged)."""
+        from .lane import Mover, dynamics_for
+        from .situation import Pair
+        d = self.load()
+        chair = d.get("chair") or {}
+        inv = {h: r for r, h in (d.get("binding") or {}).items()}
+        cxy = self.xy(chair["place"]) if chair.get("place") else None
+        ego = dynamics_for(chair_class, v=chair.get("speed", 0.0), ego=True)
+        out = []
+        if cxy is not None:
+            for t in self._people(d):
+                p = (d.get("pos") or {}).get(t)
+                if p is None or not d["belief"].get(t) or t not in (d.get("_people_seen") or ()):
+                    continue
+                cls = d["things"][t]["class"]
+                dx, dy = p["x"] - cxy[0], p["y"] - cxy[1]
+                gap = max(0.0, math.hypot(dx, dy) - self.RADIUS["chair"] - self.RADIUS.get(cls, 0.3))
+                out.append(Pair("%s:unstructured" % t, "unstructured", d_lon=gap, ego=ego,
+                                obj=dynamics_for(cls, v=d["speed"].get(t, 0.0)), role=inv.get(t),
+                                bearing=math.atan2(dy, dx)))
+        e = d.get("ego")
+        if e is not None and e.get("lane") in self.lanemap.lanes:
+            em = Mover("ego", e["lane"], float(e["s"]), ego, route=e.get("route"), length=0.9, width=0.7,
+                       vclass=chair_class)
+            movers = []
+            for t, p in sorted((d.get("pos") or {}).items()):
+                th = d["things"].get(t) or {}
+                if th.get("layer") == "people" or "lane" not in p or not d["belief"].get(t):
+                    continue
+                movers.append(Mover(t, p["lane"], p["s"], dynamics_for(th.get("class", "passenger"), v=d["speed"].get(t, 0.0)),
+                                    length=th.get("length", 4.5), width=th.get("width", 1.8), vclass=th.get("class", "passenger")))
+            out += self.lanemap.pairs(em, movers, role_of=lambda o: inv.get(o.id), lights=lights)
+        return out
 
     # ── the people's readings ──
     def people_facts(self, group=3):

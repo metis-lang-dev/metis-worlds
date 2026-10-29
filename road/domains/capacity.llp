@@ -15,3 +15,5 @@ type zone {nextzone}.
 type zclass {none far near at in}.
 type prio {ego obj same}.
 type walk {near on}.
+type unst {none continue drive_away brake}.      % the free-space response (situation.RESP_UNST)
+type sector {s0 s1 s2 s3 s4 s5 s6 s7}.           % the drive-away heading, quantised (situation.SECTORS)

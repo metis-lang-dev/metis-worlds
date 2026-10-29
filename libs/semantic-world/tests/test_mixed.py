@@ -189,3 +189,19 @@ def test_the_one_binding_and_the_peoples_readings(tmp_path):
     z = m.zone_facts()
     assert z["path_width(S,narrow)"] == z["path_width(N,wide)"] == 1
     assert m.roles() == set(b)
+
+
+def test_the_people_seen_are_the_chairs_unstructured_pairs(tmp_path):
+    from semantic_world.situation import Situation
+    m = people_scene(tmp_path)
+    m.cycle([{"class": "pedestrian", "x": 11.5, "y": -2.5, "speed": 0.0},
+             {"class": "bicycle", "x": 18.5, "y": 2.5, "speed": 5.0, "heading": 3.14159}],
+            ego={"place": "c10_-3", "speed": 0.0, "path": []})
+    b = m.project(k=0, j=2)
+    ps = {p.role: p for p in m.pairs()}
+    assert set(ps) == {"vru1", "vru2"} and all(p.type == "unstructured" for p in ps.values())
+    walker = ps[[r for r, t in b.items() if t == "pedestrian"][0]]
+    assert walker.d_lon < 0.5 and abs(walker.bearing) < 1e-6                  # just east of the chair
+    states = Situation().check(list(ps.values()))
+    f = Situation.fold(states, walker.ego)
+    assert f["resp_unst"] in ("drive_away", "brake")                          # standing too close: never drive on

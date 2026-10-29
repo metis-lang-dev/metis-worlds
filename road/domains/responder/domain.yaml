@@ -6,6 +6,6 @@ voice: third
 program: responder.llp
 host: road_host.py:make
 clock: {beats: 1, period: 1}
-shared: {type: world-private, safe_long: world-private, safe_lat: world-private, dangerous: world-private, safe_before: world-private, resp: world-private, safe_lat_left: world-private, safe_lat_right: world-private, resp_side: world-private, xing_case: world-private, xing_before: world-private, resp_lon: world-private, resp_lat: world-private, resp_lat_left: world-private, resp_lat_right: world-private, changing: world-private, signalled: world-private, settled_to: world-private, now: world-private, tick__want: out, tick__release: out, tick__active: out, tick__done: out, tick__grant: in, tick__cancel: in, controls: resource}
+shared: {type: world-private, safe_long: world-private, safe_lat: world-private, dangerous: world-private, safe_before: world-private, resp: world-private, safe_lat_left: world-private, safe_lat_right: world-private, resp_side: world-private, xing_case: world-private, xing_before: world-private, resp_lon: world-private, resp_lat: world-private, resp_lat_left: world-private, resp_lat_right: world-private, changing: world-private, signalled: world-private, settled_to: world-private, now: world-private, resp_unst: world-private, drive_away_sector: world-private, tick__want: out, tick__release: out, tick__active: out, tick__done: out, tick__grant: in, tick__cancel: in, controls: resource}
 status: {success: [tick__done], failure: []}
 gating: program

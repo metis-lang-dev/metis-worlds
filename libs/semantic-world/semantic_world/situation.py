@@ -17,10 +17,30 @@ dungeon's lanes and areas); this layer does the rest, with numbers that never re
 
 On a dungeon the same layer runs with REACH instead of braking distance: a beast's speed in cells a turn, no
 acceleration and no braking bound (it stops at will), the ego's response time one turn; a one-wide lane has no
-lateral room (`lat` overlap: never laterally safe), an area has."""
+lateral room (`lat` overlap: never laterally safe), an area has.
+
+The UNSTRUCTURED constellation (wc-world s-db2f8e59 step 2c; the wheelchair DESIGN v5 §12 position 2: RSS §3.8's
+unstructured road, the pedestrian and park space, as ad-rss-lib's RssUnstructuredConstellation): a pair in free space,
+off any lane, with the gap between the two bodies (d_lon) and the BEARING from the ego to the object. Each side's
+trajectory sets are discs, any heading (a chair turns in place; a walker and a cyclist may turn): the BRAKE set's
+radius is its stated distance (the response time at its acceleration, then braking at brake_min; one that stops at
+will: its reach in the response time), the CONTINUE set's that and one response time more at its speed. The pair is
+safe when the two brake sets are disjoint (no lateral split: across is along in free space). Dangerous, the response
+by the memory of its last safe cycle (Def 10's, as ad-rss keeps it per constellation): both standing → DRIVE AWAY,
+within the headings that lead away from the object; the ego's continue set disjoint from the object's brake set then
+→ CONTINUE (the other brakes); else → BRAKE (brake_min). The fold: the most severe (none < continue < drive_away <
+brake); the drive-away headings intersected over the pairs that ask it, an empty intersection folded to brake.
+
+The drive-away heading range is QUANTISED into SECTORS (8: sector k is the heading k·45°, in the map's frame) and the
+fold says one, `drive_away_sector(sK)`: the allowed sector farthest from every object's bearing (ties: the lowest k).
+A finite atom into the tick (rule 2: no number reaches the rules) is the reason; ad-rss-lib's own response is a
+continuous heading range, and a later change of SECTORS is a declared choice of this quantisation, not a fix."""
+import math
 from dataclasses import dataclass, field
 
 TYPES = ("same_dir", "opp_dir", "xing_ego_prio", "xing_obj_prio", "xing_same_prio", "unstructured", "not_relevant")
+RESP_UNST = ("none", "continue", "drive_away", "brake")                      # the unstructured response, least first
+SECTORS = 8                                                                  # the drive-away heading's quantisation
 LON = ("in_front", "overlap_front", "overlap", "overlap_back", "at_back")     # the OBJECT relative to the ego
 LAT = ("at_left", "overlap_left", "overlap", "overlap_right", "at_right")
 RESP_LON = ("none", "brake_min_correct", "brake_min")                        # the enum order: the most severe last
@@ -142,6 +162,7 @@ class Pair:
     o_enter: float = None
     o_leave: float = None
     role: str = None
+    bearing: float = None              # unstructured: the heading from the ego to the object (radians, the map's frame)
 
 
 XING = ("able_to_stop", "safe_long", "no_overlap")    # Def 17's three cases, the one that held (Def 18's memory)
@@ -167,12 +188,61 @@ class State:
     resp_lat_right: str = "none"
     xing: str = None                   # a crossing: the Def 17 case that holds now (None: none holds, or not a crossing)
     xing_before: tuple = None          # a crossing: (case, ego in front) at the last safe cycle (Def 18); None: never safe
+    resp_unst: str = "none"            # unstructured: none | continue | drive_away | brake
+    bearing: float = None
+
+
+def brake_set(dyn):
+    """An unstructured mover's brake trajectory set's radius: its stated distance (response time, then brake_min), or
+    its reach in the response time when it stops at will."""
+    if dyn.brake_min:
+        return stated_of(dyn, dyn.brake_min)
+    return (dyn.vmax or 0.0) * dyn.rho
+
+
+def continue_set(dyn):
+    """… its continue-forward set's: the brake set and one response time more at its speed."""
+    return brake_set(dyn) + (dyn.vmax or 0.0) * dyn.rho
+
+
+def check_unstructured(p):
+    """→ (safe, d_safe, continue_ok): the brake sets disjoint (the gap over both radii and the floor); the ego's continue
+    set disjoint from the object's brake set (the memory's half: who may drive on)."""
+    floor = max(p.ego.min_dist, p.obj.min_dist)
+    ds = brake_set(p.ego) + brake_set(p.obj) + floor
+    return p.d_lon > ds, ds, p.d_lon > continue_set(p.ego) + brake_set(p.obj) + floor
+
+
+def respond_unstructured(p, dangerous, cont_before):
+    """The unstructured pair's response (see the module's doc): none when safe; drive_away when both stand; continue
+    when the ego's continue set was clear of the object's brake set at the last safe cycle; else brake."""
+    if not dangerous:
+        return "none"
+    if (p.ego.vmax or 0.0) <= 0.0 and (p.obj.vmax or 0.0) <= 0.0:
+        return "drive_away"
+    if cont_before:
+        return "continue"
+    return "brake"
+
+
+def _angle(a, b):
+    d = abs(a - b) % (2 * math.pi)
+    return min(d, 2 * math.pi - d)
+
+
+def away_sectors(bearings):
+    """The sectors (0..SECTORS-1) whose heading leads away from every bearing (more than a right angle from each)."""
+    step = 2 * math.pi / SECTORS
+    return [k for k in range(SECTORS) if all(_angle(k * step, b) > math.pi / 2 + 1e-9 for b in bearings)]
 
 
 def check_long(p):
     """→ (safe, d_safe) along the ego's way."""
     if p.type == "not_relevant":
         return True, 0.0
+    if p.type == "unstructured":
+        safe, ds, _ = check_unstructured(p)
+        return safe, ds
     if p.type == "same_dir":
         if p.lon in ("in_front", "overlap_front"):              # the object ahead: the ego follows
             ds = safe_same_dir(p.ego, p.obj)
@@ -199,6 +269,9 @@ def check_lat_sides(p):
     on the right side; overlapping, or at a crossing, or in a one-wide lane, neither side is safe."""
     if p.type == "not_relevant":
         return True, True
+    if p.type == "unstructured":                                # free space: across is along (one disc each)
+        safe = check_unstructured(p)[0]
+        return safe, safe
     if not p.lateral_room or p.type.startswith("xing") or p.lat == "overlap":
         return False, False
     if p.lat in ("at_left", "overlap_left"):
@@ -290,9 +363,10 @@ def ego_stops_short(dyn, d_enter):
 class Situation:
     """The per-pair memory across cycles and the fold. One per ego; `check(pairs)` every cycle, in order."""
 
-    def __init__(self, memory=None, xmemory=None):
+    def __init__(self, memory=None, xmemory=None, umemory=None):
         self.memory = dict(memory or {})          # pair id -> (long safe, lat safe) at its last safe cycle
         self.xmemory = dict(xmemory or {})        # a crossing's id -> (Def 17 case, ego in front) at its last safe cycle
+        self.umemory = dict(umemory or {})        # an unstructured pair's id -> the ego's continue set clear, then
         self.escalated = set()                    # crossings whose priority holder's response escalated (RSS rule 5)
 
     def check(self, pairs):
@@ -302,8 +376,11 @@ class Situation:
         for p in pairs:
             seen.add(p.id)
             xing = front = None
+            cont_ok = None
             if p.type.startswith("xing"):
                 lon, ds, xing, front = xing_case(p)
+            elif p.type == "unstructured":
+                lon, ds, cont_ok = check_unstructured(p)
             else:
                 lon, ds = check_long(p)
             left, right = check_lat_sides(p)
@@ -315,7 +392,14 @@ class Situation:
                 self.memory[p.id] = (lon, lat)
                 if xing:
                     self.xmemory[p.id] = (xing, front)
-            r_lon, r_lat = respond(p, dangerous, before, xbefore, escalated=p.id in self.escalated)
+                if cont_ok is not None:
+                    self.umemory[p.id] = cont_ok
+            r_unst = "none"
+            if p.type == "unstructured":
+                r_unst = respond_unstructured(p, dangerous, self.umemory.get(p.id))
+                r_lon, r_lat = ("brake_min" if r_unst == "brake" else "none"), "none"
+            else:
+                r_lon, r_lat = respond(p, dangerous, before, xbefore, escalated=p.id in self.escalated)
             if dangerous and p.type == "xing_ego_prio" and r_lon == "brake_min":
                 self.escalated.add(p.id)          # held at least that while the pair stays dangerous
             else:
@@ -323,9 +407,12 @@ class Situation:
             out.append(State(p.id, p.type, p.role, lon, lat, dangerous, before if dangerous else (lon, lat),
                              r_lon, r_lat, round(p.d_lon, 6), round(ds, 6), left, right,
                              r_lat if not left else "none", r_lat if not right else "none",
-                             xing, xbefore if dangerous else ((xing, front) if xing else xbefore)))
+                             xing, xbefore if dangerous else ((xing, front) if xing else xbefore),
+                             r_unst, p.bearing))
         for k in [k for k in self.memory if k not in seen]:
             self.memory.pop(k)
+        for k in [k for k in self.umemory if k not in seen]:
+            self.umemory.pop(k)
         for k in [k for k in self.xmemory if k not in seen]:
             self.xmemory.pop(k)
         self.escalated &= seen
@@ -362,9 +449,25 @@ class Situation:
                 left_hi = min(left_hi, -(ego.lat_brake or 0.0))
             if s.resp_lat_right == "brake_min":
                 right_hi = min(right_hi, -(ego.lat_brake or 0.0))
-        return {"resp_lon": r_lon, "resp_lat": r_lat, "lon_range": [lo, hi], "lat_max": lat_hi, "dangerous": bad,
-                "resp_lat_left": r_left, "resp_lat_right": r_right,
-                "lat_left_max": left_hi, "lat_right_max": right_hi}
+        out = {"resp_lon": r_lon, "resp_lat": r_lat, "lon_range": [lo, hi], "lat_max": lat_hi, "dangerous": bad,
+               "resp_lat_left": r_left, "resp_lat_right": r_right,
+               "lat_left_max": left_hi, "lat_right_max": right_hi}
+        unst = [s for s in states if s.type == "unstructured"]
+        if unst:                                                # the unstructured fold (the module's doc)
+            r_u = max((s.resp_unst for s in unst), key=RESP_UNST.index, default="none")
+            sector = None
+            if r_u == "drive_away":
+                bear = [s.bearing for s in unst if s.resp_unst == "drive_away" and s.bearing is not None]
+                ok = away_sectors(bear)
+                if ok:
+                    step = 2 * math.pi / SECTORS
+                    sector = max(ok, key=lambda k: (min((_angle(k * step, b) for b in bear), default=0.0), -k))
+                else:                                           # no heading leads away from all of them
+                    r_u = "brake"
+                    out["resp_lon"] = max(out["resp_lon"], "brake_min", key=RESP_LON.index)
+                    out["lon_range"][1] = min(out["lon_range"][1], -(ego.brake_min or 0.0))
+            out["resp_unst"], out["drive_away_sector"] = r_u, sector
+        return out
 
     @staticmethod
     def facts(states, folded=None, detail=False):
@@ -408,6 +511,10 @@ class Situation:
                         out["xing_before(%s,%s)" % (o, s.xing_before[0] if s.xing_before else "none")] = 1
         if folded is not None:
             out["resp_lon(%s)" % folded["resp_lon"]] = 1
+            if "resp_unst" in folded:                           # only where an unstructured pair is: road's never
+                out["resp_unst(%s)" % folded["resp_unst"]] = 1
+                if folded.get("drive_away_sector") is not None:
+                    out["drive_away_sector(s%d)" % folded["drive_away_sector"]] = 1
             out["resp_lat(%s)" % folded["resp_lat"]] = 1
             if detail:
                 out["resp_lat_left(%s)" % folded.get("resp_lat_left", "none")] = 1
