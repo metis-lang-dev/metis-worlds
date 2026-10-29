@@ -51,7 +51,14 @@ where that change lands, with the test that asks for it.
     m.meets(track) / m.weight("meets", (role,))                     P(the person's path meets the chair's)
     m.project(k, j) → binding                                       the one binding: lane roles and vru1..vruJ
     m.people_facts(group) → {atom: 1}                               walker_at / cyclist_at / group_at
-    m.pairs(lights) → [situation.Pair]                              the people's unstructured pairs, the lane's"""
+    m.pairs(lights) → [situation.Pair]                              the people's unstructured pairs, the lane's
+    perceive(m, sensor, ego, truth, occluders) → (detections, visible)   the sensing model over the one map
+
+SENSING (DESIGN §10 ruling 2: the epistemic case, a walker or a car the chair cannot see yet): `perceive` runs
+sensing.Sensor over the scene's truth — every body blocks the line of sight (a parked car at the crossing among them,
+`parked`: a body, never a detection), and so do the scene's occluder polygons — and gives the map's detections (a
+vehicle by its lane and s, a person by its x, y) and the places seen into (cells and lane bins in range and in sight):
+the negative evidence, and what removes a birth prior once the boundary is in view."""
 import math
 
 from . import bayes, road
@@ -624,3 +631,40 @@ class MixedMap(road.RoadMap):
             else:
                 links.append((a, b, "open"))
         return cls.build(path, lm, cells, zones, links, dt=dt, cell=cell, priors=priors, journal=journal)
+
+
+def perceive(m, sensor, ego, truth, occluders=()):
+    """The sensing model over the one map: SENSOR (sensing.Sensor) from the chair's body EGO (sensing.Body) over TRUTH
+    [{"id", "class", "x", "y", "heading"?, "speed"?, "length"?, "width"?, "lane"?, "s"?, "parked"?}] and OCCLUDERS
+    (polygons). → (detections for m.cycle, the visible places): a body seen and not parked is a detection — a vehicle
+    (not a person) by its lane and s, a person by its x, y — and every place (cell or lane bin) whose centre is in range
+    and in sight past the bodies and the occluders is visible."""
+    from .sensing import Body
+    bodies = {t["id"]: Body(float(t["x"]), float(t["y"]), float(t.get("heading", 0.0)),
+                            float(t.get("length", 0.6 if t.get("class") in PEOPLE else 4.5)),
+                            float(t.get("width", 0.6 if t.get("class") in PEOPLE else 1.8))) for t in truth}
+    seen = set(sensor.sense(ego, bodies, occluders))
+    dets = []
+    for t in sorted(truth, key=lambda t: t["id"]):
+        if t["id"] not in seen or t.get("parked"):
+            continue
+        x = {"class": t["class"], "speed": float(t.get("speed", 0.0))}
+        if t["class"] in PEOPLE or "lane" not in t:
+            x.update(x=float(t["x"]), y=float(t["y"]))
+            if t.get("heading") is not None:
+                x["heading"] = float(t["heading"])
+        else:
+            x.update(lane=t["lane"], s=float(t["s"]))
+            for k in ("length", "width"):
+                if k in t:
+                    x[k] = float(t[k])
+        dets.append(x)
+    d = m.load()
+    points = {c: (x, y) for c, (x, y, _) in d["cells"].items()}
+    for lid in sorted(m.lanemap.lanes):
+        for k in range(m.nbins(lid)):
+            xy = m.xy("%s|%d" % (lid, k))
+            if xy is not None:
+                points["%s|%d" % (lid, k)] = xy
+    visible = sensor.visible(ego, points, bodies, occluders)
+    return dets, visible

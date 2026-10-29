@@ -205,3 +205,24 @@ def test_the_people_seen_are_the_chairs_unstructured_pairs(tmp_path):
     states = Situation().check(list(ps.values()))
     f = Situation.fold(states, walker.ego)
     assert f["resp_unst"] in ("drive_away", "brake")                          # standing too close: never drive on
+
+
+# ── sensing (step 2d): the occluder, the birth prior's end ──
+def test_a_parked_car_hides_the_walker_behind_it_and_the_view_ends_the_birth_prior(tmp_path):
+    from semantic_world.sensing import Body, Sensor
+    m = people_scene(tmp_path)
+    sensor = Sensor(range=30.0)
+    chair = Body(17.5, -2.5, 3.14159, 0.9, 0.7)                     # on S, looking west toward the crosswalk
+    parked = {"id": "parked", "class": "passenger", "x": 12.0, "y": -2.5, "length": 4.5, "width": 1.8, "parked": True}
+    walker = {"id": "w", "class": "pedestrian", "x": 8.5, "y": -2.5, "speed": 1.0, "heading": 0.0}
+    dets, vis = mixed.perceive(m, sensor, chair, [parked, walker])
+    assert dets == [] and "c8_-3" not in vis and "c15_-3" in vis      # behind the car: unseen, and not seen into
+    m.birth("hidden", ["c8_-3", "c9_-3"], mass=0.4)
+    m.cycle(dets, vis, ego={"place": "c17_-3", "path": ["c16_-3", "c15_-3"]})
+    assert m.load()["belief"].get("hidden")                           # still believed where the view cannot reach
+    walker.update(x=14.5)                                             # it steps out past the car
+    dets, vis = mixed.perceive(m, sensor, chair, [parked, walker])
+    assert [x["class"] for x in dets] == ["pedestrian"] and "c16_-3" in vis      # its own body hides its cell: the detection says it
+    m.cycle(dets, vis, ego={"place": "c17_-3", "path": ["c16_-3", "c15_-3"]})
+    d = m.load()
+    assert d["belief"]["hidden"] == {"c14_-3": 1.0} and "birth" not in d["things"]["hidden"]   # the birth prior was it
