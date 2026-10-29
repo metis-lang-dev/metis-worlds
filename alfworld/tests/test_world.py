@@ -1150,9 +1150,9 @@ def test_a_regeneration_keeps_the_natures_the_family_names(tmp_path):
     sys.path.insert(0, os.path.join(os.path.dirname(ROOT), "tools"))
     import iface_gen
     table = iface_gen.natures_of(os.path.join(ROOT, "domains", "hier", "iface", "alfworld.yaml"))
-    assert table["gave_up"] == "report" and table["stuck"] == "signal"
+    assert table["gave_up"] == "report" and table["stuck"] == "report" and table["done"] == "signal"
     text = iface_gen.natures_text("alfworld", ["gave_up", "stuck", "a_new_one"], table)
-    assert "gave_up: report" in text and "stuck: signal" in text and "a_new_one: signal" in text
+    assert "gave_up: report" in text and "stuck: report" in text and "a_new_one: signal" in text
     bad = tmp_path / "bad.yaml"
     bad.write_text("nature: {gave_up: answer}\n")
     with pytest.raises(ValueError):
