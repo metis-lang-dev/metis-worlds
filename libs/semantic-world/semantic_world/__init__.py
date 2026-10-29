@@ -15,6 +15,8 @@ an intent back in the world's terms.
     dungeon  a pure-python exerciser: cave, rooms and lanes levels, monsters, sight, NLE's perception
     situation the RSS layer: pairs, safe distances, the memory of the axis safe before, the fold, facts over roles
     lane     the road's adapter skeleton: lanes, (lane, s) positions, conflict zones, the pairs
+    road     the lane adapter's belief: tracks over lane bins, intents, the association, the danger region
+    mixed    the ONE map over lane segments and free-space cells, zones and their links (the wheelchair's world)
 
 Pure python, no dependency: the library never knows a world's names or a rule program; adapters do."""
 from . import bayes, core, ports, project, store  # noqa: F401  (room, grid, dungeon, situation, lane: imported by name)

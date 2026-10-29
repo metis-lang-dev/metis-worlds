@@ -2,7 +2,7 @@
 and the internal lanes, the junctions with their link rows (foes, response), the traffic-light programs, and the
 CONFLICT ZONES the junctions' internal lanes make where they overlap.
 
-- `load_net(path)` → Net: `lanes` {id: lane.Lane} (normal and internal, with length, speed, width, shape, the edge
+- `load_net(path, walking=False)` → Net: `lanes` {id: lane.Lane} (normal and internal, with length, speed, width, shape, the edge
   and index, the junction of an internal lane, the vClasses allowed), `connections` [Connection], `junctions`
   {id: Junction}, `tls` {id: Tls}.
 - A junction's LINK index: its incoming lanes in `incLanes` order, each lane's connections in file order (SUMO's
@@ -174,12 +174,23 @@ def _dist_to_line(x, y, line):
     return best
 
 
-def load_net(path):
+def load_net(path, walking=False):
+    """WALKING (the mixed adapter, wc-world s-db2f8e59): keep the `crossing` and `walkingarea` edges as lanes of that
+    `function` (a crosswalk's lane, allow pedestrian; a walking area's polygon in its shape), outside the vehicle graph
+    (no neighbours, no successors, no zones). Off (the default): skipped, as every lane adapter reads a net."""
     root = ET.parse(path).getroot()
     lanes, edges = {}, {}
     for e in root.iter("edge"):
         eid, func = e.get("id"), e.get("function", "normal")
         if func in ("crossing", "walkingarea"):
+            if walking:
+                for ln in e.iter("lane"):
+                    allow = ln.get("allow")
+                    lanes[ln.get("id")] = Lane(
+                        ln.get("id"), float(ln.get("length")), float(ln.get("width", DEFAULT_WIDTH)),
+                        speed=float(ln.get("speed", DEFAULT_SPEED)), shape=_shape(ln.get("shape")), edge=eid,
+                        junction=eid[1:].rsplit("_", 1)[0], index=int(ln.get("index", 0)),
+                        allow=tuple(allow.split()) if allow else None, function=func)
             continue
         internal = func == "internal"
         edges[eid] = {"from": e.get("from"), "to": e.get("to"), "lanes": [], "internal": internal}

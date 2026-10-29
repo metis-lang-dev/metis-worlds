@@ -47,6 +47,8 @@ class Lane:
     index: int = 0                      # the lane index on its edge (0: the rightmost)
     allow: tuple = None                 # the vClasses allowed (None: all), and disallowed
     disallow: tuple = None
+    function: str = "normal"            # SUMO's edge function: normal | internal | crossing | walkingarea (a net read
+                                        # with walking=True keeps the last two: the mixed adapter's crosswalks and areas)
 
 
 @dataclass

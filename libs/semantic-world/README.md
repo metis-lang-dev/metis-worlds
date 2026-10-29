@@ -76,6 +76,21 @@ program over roles (metispy's REPL): an oncoming hostile in a one-wide lane (sto
 back to the last area, fight it there) and a peaceful standing in the lane (yield at the safe gap, wait three turns,
 back off to the junction, take the other way).
 
+## The mixed adapter: one map (wc-world s-db2f8e59, the wheelchair DESIGN v5 §12 position 1)
+
+`mixed.MixedMap` is ONE `core.SemanticMap` over two geometries: lane SEGMENTS (road.RoadMap's lane bins over a
+`lane.LaneMap`: the roads and the crosswalks) and free-space CELLS (sidewalks, paths, plazas, walking areas). Its places
+belong to ZONES (`sidewalk | crossing | lane | path | plaza`), and zones connect only through declared LINKS (`open`,
+`ramp` passable at `slow`, `curb` impassable): one place set, one belief store, one role binding (core's). Built from
+data (`MixedMap.build(path, lanemap, cells, zones, links)`) or from a SUMO net read with crossings and walking areas
+kept (`net.load_net(path, walking=True)`, then `MixedMap.from_net`).
+
+One map is one INSTANCE at runtime: in the wheelchair composition every domain that runs (responder, planner, nav, wc)
+reads the one MixedMap. `LaneMap.roles` stays the lane ROLE BINDER: a binder over this map's places that writes into
+the one binding, never a second binding. When the road members run on the MixedMap (the wc-member subject), road's
+`road_facts` reads its lane roles from the map's binding; that change lands there, with the test that asks for it.
+Today the road world (`road_world`, the SUMO host) still runs on `LaneMap` and `RoadMap` directly, unchanged.
+
 ## Install
 
 It lives in metis-worlds (`libs/semantic-world`) until the road returns, and is then cut out to its own repo.
