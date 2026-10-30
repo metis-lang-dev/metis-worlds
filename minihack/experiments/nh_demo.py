@@ -11,6 +11,7 @@ Hanging up saves the game, the next start restores it.
 import argparse
 import asyncio
 import json
+import logging
 import os
 import sys
 import time
@@ -22,7 +23,8 @@ sys.path.insert(0, os.path.join(os.path.dirname(HERE), "world"))
 from nh_tty import COLS, MAP_COLS, MAP_ROWS, MG_PET, Game, Tty, describe   # noqa: E402
 
 WEB = os.path.join(os.path.dirname(HERE), "web")
-# the chat's words → the game's keys; anything else goes as typed (`20s`, `y`), a `#command` with its Return
+# the chat's words → the game's keys; one token goes as typed (`20s`, `y`), a `#command` with its Return; a sentence the
+# table does not know goes nowhere (each of its letters would be a command in the game)
 WORDS = {"north": "k", "south": "j", "east": "l", "west": "h", "northeast": "u", "northwest": "y", "southeast": "n",
          "southwest": "b", "up": "<", "down": ">", "search": "s", "wait": "s", "look": ":", "look here": ":",
          "inventory": "i", "pick up": ",", "pickup": ",", "eat": "e", "open": "o", "close": "c", "kick": "\x04",
@@ -46,18 +48,20 @@ def key_of(text):
     w = WORDS.get(t.lower())
     if w is not None:
         return w
-    return t + "\r" if t.startswith("#") else t
+    if t.startswith("#"):
+        return t + "\r"
+    return None if " " in t else t
 
 
 class Demo:
     def __init__(self):
         self.clients, self.seq = set(), 0
         self.game, self.tty, self.last, self.said, self.over = None, None, None, "", False
-        self.pending, self.log, self.state = None, [], None
+        self.pending, self.log, self.state, self.booting = None, [], None, True
 
     # ── the game ──
     def start_game(self):
-        self.game, self.tty, self.last, self.said, self.over = Game(), Tty(), None, "", False
+        self.game, self.tty, self.last, self.said, self.over, self.booting = Game(), Tty(), None, "", False, True
         self.game.start()
         asyncio.get_running_loop().add_reader(self.game.fd, self.on_read)
 
@@ -119,6 +123,11 @@ class Demo:
 
     def publish(self):
         snap = self.tty.snapshot()
+        if self.booting:                                    # the welcome and "Restoring save file...--More--": nobody's to answer, the map is behind them
+            if snap["hero"]:
+                self.booting = False
+            elif snap["more"]:
+                self.game.keys(b"\r")
         was = self.last
         frozen = bool(snap["text"])                         # a menu or a page over the map: the map stays as it was
         if not frozen:
@@ -186,6 +195,9 @@ class Demo:
                     text = f.get("text", "")
                     self.journal({"kind": "dlg-wake", "what": "person", "person": text})
                     keys = key_of(text)
+                    if keys is None:
+                        await ws.send_str(json.dumps({"ev": "intent", "id": f["id"], "intent": "", "voice": f"I don't know that command: {text}. The world card lists what you can say."}))
+                        continue
                     self.press(keys)
                     await ws.send_str(json.dumps({"ev": "intent", "id": f["id"], "intent": {"intent": "KEYS", "keys": keys.replace("\r", "⏎").replace("\x1b", "esc")}, "voice": ""}))
                 elif f.get("ev") == "keys":
@@ -196,6 +208,9 @@ class Demo:
 
     async def map_route(self, req):
         return web.json_response(self.map_json())
+
+    async def games_route(self, req):
+        return web.json_response({"games": []})             # one game: no picker on the page
 
     async def journal_route(self, req):
         return web.Response(text="".join(json.dumps(r) + "\n" for r in self.log), content_type="text/plain")
@@ -216,18 +231,21 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--addr", default="127.0.0.1:8399")
     a = ap.parse_args()
+    logging.basicConfig(level=logging.INFO, stream=sys.stdout, format="%(asctime)s %(message)s")
     host, port = a.addr.rsplit(":", 1)
     demo = Demo()
     app = web.Application()
     app.router.add_get("/ws", demo.ws)
     app.router.add_get("/world/map.json", demo.map_route)
     app.router.add_get("/world/journal.jsonl", demo.journal_route)
+    app.router.add_get("/world/games.json", demo.games_route)
+    app.router.add_get("/favicon.ico", lambda req: web.Response(status=204))
     app.router.add_static("/", WEB)
     app.on_startup.append(demo.on_start)
     app.on_shutdown.append(demo.on_shutdown)
     app.on_cleanup.append(demo.on_stop)
     print(f"the page: http://{host}:{port}/world.html", flush=True)
-    web.run_app(app, host=host, port=int(port), print=None)
+    web.run_app(app, host=host, port=int(port), print=None, shutdown_timeout=5)
 
 
 if __name__ == "__main__":

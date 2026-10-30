@@ -119,3 +119,11 @@ def test_the_page_stands_alone():
     for r in re.findall(r'(?:src|href)="([^"#]+)"', open(os.path.join(web, "world.html")).read()):
         if not r.startswith("http"):
             assert os.path.exists(os.path.join(web, r)), r
+
+
+def test_the_chat_never_types_a_sentence_into_the_game():
+    sys.path.insert(0, os.path.join(HERE, "..", "experiments"))
+    from nh_demo import key_of
+    assert key_of("look here") == ":" and key_of("North") == "k"
+    assert key_of("20s") == "20s" and key_of("#pray") == "#pray\r"
+    assert key_of("nlook here f") is None
