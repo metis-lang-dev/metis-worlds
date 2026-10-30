@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>World Page</title>
+<!-- the common web style of the loop and agent consoles (vendor/shell.css + shell.js: this repo's copies,
+     web/tests keep them equal to the consoles'); map.css keeps the tiles -->
+<link rel="stylesheet" href="vendor/shell.css">
+<link rel="stylesheet" href="map.css">
+<link rel="stylesheet" href="vendor/panel.css">
+<link rel="stylesheet" href="vendor/switch.css">
+<script src="vendor/shell.js"></script>
+<script type="importmap">{"imports":{"fsttm-web/tts":"./vendor/tts.js","fsttm-web/ws":"./vendor/ws.js","fsttm-web/panel":"./vendor/panel.js"}}</script>
+<style>
+  /* the map and the band in the shell's tokens (one look with the consoles) */
+  :root, :root[data-theme="dark"] { --wm-bg: var(--bg); --wm-fg: var(--fg); --wm-mute: var(--dim); --wm-line: var(--line); --wm-card: var(--panel);
+    --wm-hot: var(--yellow); --wm-focus: var(--cyan); --fw-accent: var(--fg); --fw-side: var(--yellow); }
+  #root { display: flex; flex-direction: column; flex: 1; min-height: 0; outline: none; }
+  /* the band's status: what the agent is doing, and what it wants from you */
+  #status { display: flex; gap: 8px; align-items: baseline; min-width: 0; flex: 1 1 320px; }
+  #status .state { font-size: 10.5px; padding: 0 6px; border: 1px solid var(--line); letter-spacing: .06em; text-transform: uppercase; flex: none; }
+  #status[data-state="waiting"] .state { color: var(--cyan); border-color: var(--cyan); }
+  #status[data-state="working"] .state { color: var(--green); border-color: #2a5a35; }
+  #status[data-state="asking"] .state, #status[data-state="stuck"] .state { color: var(--yellow); border-color: var(--yellow); }
+  #status[data-state="done"] .state, #status[data-state="over"] .state { color: var(--purple); border-color: #5a4580; }
+  #status .text { color: var(--fg); overflow: hidden; text-overflow: ellipsis; }
+  #status .opts { display: inline-flex; gap: 6px; flex: none; }
+  #conn { color: var(--dim); }
+  /* the game picker (live, a runner that loads games: alfworld/demo.sh) and the game under the map */
+  #game, #gameall { background: var(--bg); color: var(--fg); border: 1px solid var(--line); font: inherit; padding: 1px 4px; max-width: 18em; }
+  #game:disabled { opacity: .6; }
+  #screen { flex: none; margin: 10px 0 0; padding: 8px 10px; border: 1px solid var(--line); max-width: 60em; white-space: pre; overflow-x: auto; font-size: 12px; }
+  #screen.over { border-color: var(--yellow); }
+  #gameinfo { margin: 10px 0 0; padding: 8px 10px; border: 1px solid var(--line); max-width: 60em; }
+  #gameinfo .gi-name { color: var(--fg); font-weight: 600; }
+  #gameinfo .gi-task { margin-top: 3px; }
+  #gameinfo .gi-dim { color: var(--dim); font-size: 11.5px; margin-top: 3px; }
+  #gameinfo .gi-intro { margin-top: 6px; font-size: 12px; line-height: 1.45; }
+  #left { overflow: auto; padding: 12px; }
+  #map .wm-view { box-sizing: content-box; }
+  #legend { display: flex; flex-wrap: wrap; gap: 2px 14px; margin: 8px 0 0; color: var(--dim); font-size: 11.5px; }
+  #legend b { color: var(--fg); margin-right: 4px; }
+  #jtools { margin-bottom: 6px; }
+  #jsave { font: inherit; color: inherit; background: none; border: 0; padding: 0; text-decoration: underline; opacity: .7; cursor: pointer; }
+  /* map.css sizes the view to its grid; the shell's border-box would clip it */
+  #dock-talk .dbody { display: flex; flex-direction: column; overflow: hidden; }
+  #dock-talk #talkpanel { flex: 1 1 auto; min-height: 0; }
+  .fw-panel .fw-title:empty { display: none; }
+  #map { min-width: 0; }
+  /* the ask: the agent's question, its answers as chips (a chip says its answer, as typing it would) */
+  #ask { border: 1px solid var(--yellow); background: #2a2111; padding: 6px 8px; margin: 0 0 6px; }
+  #ask .q { color: var(--yellow); margin-bottom: 4px; }
+  #ask .q::before { content: "the agent asks: "; color: var(--dim); }
+  #ask .opts { display: flex; flex-wrap: wrap; gap: 6px; }
+  #ask .chip { border-color: var(--yellow); }
+  #talkpanel { min-height: 160px; }
+  .fw-panel .fw-ask .fw-text { color: var(--yellow); font-weight: bold; }
+  .fw-panel .fw-ask .fw-who { color: var(--yellow); opacity: 1; }
+  .fw-panel .fw-status .fw-text { color: var(--dim); font-style: italic; }
+  .fw-panel .fw-intent code { color: var(--dim); }
+  .fw-panel .fw-note .fw-text { color: var(--dim); }
+  .fw-panel .fw-input .fw-text { background: var(--bg); border: 1px solid var(--line); padding: 1px 6px; }
+  .fw-panel .fw-input button { background: transparent; border: 1px solid var(--line); padding: 0 8px; cursor: pointer; }
+  /* fsttm-web's widgets in the shell's look: the voice (the mic, the narrator) in the band, the DIALOG drawer */
+  #band .fw-voicebar { border-color: var(--line); border-radius: 0; }
+  #sessbar { flex-wrap: wrap; justify-content: flex-end; }             /* the voice widget and the replay's buttons: two rows when narrow */
+  .fw-panel .fw-ctl { background: var(--bg); border-color: var(--line); border-radius: 0; }
+  .fw-panel .fw-attn[aria-pressed="true"] { color: var(--bg); background: var(--green); border-color: var(--green); }
+  #dock-dialog .dbody { display: flex; flex-direction: column; overflow: hidden; }
+  #dialogpart { flex: 1 1 auto; min-height: 0; }
+  #dialogpart > .fw-bar { padding: 0 0 6px; border-bottom: 1px solid var(--line); }
+  #dialogpart .fw-sec { border: 1px solid var(--line); padding: 2px 8px; background: var(--panel); }
+  #dialogpart .fw-sec > summary { color: var(--dim); font-weight: normal; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; }
+  #dialogpart .fw-sec[open] > summary { color: var(--fg); }
+  /* the hierarchy: who is attending, on what goal */
+  #hlist { list-style: none; margin: 0; padding: 0; }
+  #hlist li { display: flex; flex-wrap: wrap; gap: 6px; padding: 2px 6px; border-left: 2px solid transparent; }
+  #hlist li.on .st { color: var(--green); } #hlist li.off { color: var(--dim); }
+  #hlist li.att { border-left-color: var(--yellow); background: var(--sel); } #hlist li.att .st { color: var(--yellow); font-weight: bold; }
+  #hlist li[data-domain="task"] { cursor: pointer; }
+  #hlist .k { font-size: 11.5px; } #hlist .g { color: var(--dim); font-size: 11.5px; } #hlist .goal { color: var(--yellow); font-size: 11.5px; }
+  #hstate { color: var(--dim); text-transform: none; letter-spacing: 0; font-size: 11px; }
+  /* the world card: what this world is and what you can ask it (the map's `card`) */
+  #wcard .wc-title { color: var(--fg); font-weight: bold; margin: 0 0 4px; }
+  #wcard .wc-about { color: var(--fg); margin: 0 0 3px; }
+  #wcard .wc-h { color: var(--dim); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; margin: 10px 0 3px; }
+  #wcard .wc-kinds { display: flex; flex-wrap: wrap; gap: 2px 6px; }
+  #wcard details.wc-kind { border: 1px solid var(--line); padding: 0 6px; }
+  #wcard details.wc-kind[open] { flex-basis: 100%; }
+  #wcard details.wc-kind summary { cursor: pointer; list-style: none; }
+  #wcard details.wc-kind summary::-webkit-details-marker { display: none; }
+  #wcard .wc-n { color: var(--dim); } #wcard .wc-opens { color: var(--cyan); font-size: 10.5px; margin-left: 4px; }
+  #wcard .wc-ids { color: var(--dim); font-size: 11.5px; padding: 2px 0 3px; }
+  #wcard .wc-ask { display: flex; gap: 8px; align-items: baseline; margin: 3px 0; }
+  #wcard .wc-ask .chip { flex: none; } #wcard .wc-ask .what { color: var(--dim); }
+  #wcard ul.wc-cannot { margin: 0; padding-left: 16px; color: var(--fg); }
+  #wcard .wc-src { color: var(--faint); font-size: 10.5px; margin-top: 10px; }
+  #jlog { list-style: none; margin: 0; padding: 0; font-size: 11.5px; }
+  #jlog li { padding: 1px 0; border-top: 1px solid var(--line); } #jlog .who { color: var(--dim); display: inline-block; min-width: 3.5em; }
+  #jlog .j-you { color: var(--fg); font-weight: bold; } #jlog .j-note { color: var(--dim); }
+</style>
+</head>
+<body>
+<div id="root" tabindex="-1">
+  <header id="band" tabindex="-1">
+    <div class="l">
+      <span class="brand">WORLD</span>
+      <span id="status" data-state="" aria-live="polite"><span class="state" id="sstate">…</span><span class="text" id="stext"></span><span class="opts" id="sopts"></span></span>
+      <span id="sessbar">
+        <select id="game" hidden aria-label="the room: the agent goes there"></select>
+      <select id="gameall" hidden aria-label="every room"></select>
+        <span id="conn"></span>
+        <span id="voice"></span>
+        <span id="ctrl" tabindex="-1" aria-label="the replay">
+          <button class="btn" id="play" type="button">play</button>
+          <button class="btn" id="step" type="button">step</button>
+        </span>
+      </span>
+    </div>
+  </header>
+  <main>
+    <section id="left">
+      <section id="map" tabindex="-1" aria-label="the map"></section>
+      <p id="legend" hidden aria-label="the map's letters"></p>
+      <pre id="screen" hidden aria-label="the game's status and what lies over the map"></pre>
+      <div id="gameinfo" hidden aria-label="this game"></div>
+    </section>
+    <div id="split"></div>
+    <aside id="right">
+      <section class="dock" id="dock-talk" data-dock="talk" tabindex="-1" aria-label="the dialog">
+        <header><span class="tw">▾</span><span class="tt">TALK</span><button class="x" type="button" aria-label="hide the dialog">✕</button></header>
+        <div class="dbody">
+          <div id="ask" hidden aria-live="assertive"><div class="q" id="askq"></div><div class="opts" id="askopts"></div></div>
+          <div id="talkpanel"></div>
+        </div>
+      </section>
+      <section class="dock" id="dock-hierarchy" data-dock="hierarchy" tabindex="-1" aria-label="the hierarchy">
+        <header><span class="tw">▾</span><span class="tt">HIERARCHY</span><span id="hstate"></span><button class="x" type="button" aria-label="hide the hierarchy">✕</button></header>
+        <div class="dbody"><ul id="hlist" tabindex="-1" aria-label="the domains"></ul></div>
+      </section>
+      <section class="dock" id="dock-world" data-dock="world" tabindex="-1" aria-label="the world card">
+        <header><span class="tw">▾</span><span class="tt">WORLD CARD</span><button class="x" type="button" aria-label="hide the world card">✕</button></header>
+        <div class="dbody" id="wcard"><p class="empty">loading the world…</p></div>
+      </section>
+      <section class="dock" id="dock-journal" data-dock="journal" tabindex="-1" aria-label="the journal">
+        <header><span class="tw">▾</span><span class="tt">JOURNAL</span><button class="x" type="button" aria-label="hide the journal">✕</button></header>
+        <div class="dbody"><div id="jtools"><button id="jsave" type="button" class="fw-link">save (JSONL)</button></div><ol id="jlog" tabindex="-1" aria-label="the journal's lines"></ol></div>
+      </section>
+      <section class="dock" id="dock-dialog" data-dock="dialog" tabindex="-1" aria-label="the dialog: the floor, barge-in, attention, the numbers">
+        <header><span class="tw">▾</span><span class="tt">DIALOG</span><button class="x" type="button" aria-label="hide the dialog">✕</button></header>
+        <div class="dbody"><div id="dialogpart"></div></div>
+      </section>
+    </aside>
+    <nav id="strip"><button type="button" data-strip="talk">Talk</button><button type="button" data-strip="hierarchy">Hierarchy</button><button type="button" data-strip="world">World card</button><button type="button" data-strip="journal">Journal</button><button type="button" data-strip="dialog">Dialog</button></nav>
+  </main>
+</div>
+<script type="module">
+const t = new URLSearchParams(location.search).get('theme');
+if (t) document.documentElement.dataset.theme = t;
+import('./world.js').catch(e => { document.getElementById('conn').textContent = 'the page: ' + (e?.message || e); throw e; });
+</script>
+</body>
+</html>

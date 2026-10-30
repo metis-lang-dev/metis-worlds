@@ -44,6 +44,18 @@ discovery.
 The exerciser's levels (`semantic_world.dungeon`: caves from the article's algorithm, rooms and corridors) are NLE
 levels through `Level.des()` (`tests/test_an_exerciser_level_opens_in_its_own_coordinates`).
 
+## The real game on the page (`./demo.sh`)
+
+`http://127.0.0.1:8399/world.html` (ADDR): real NetHack on its own page (`web/`), independent of ALFWorld. What the two share is external: the agent (metis-agent) and the dialog (fsttm-web).
+
+| path | what |
+|---|---|
+| `nethack/build.sh` | NetHack 3.6.6 from source into `.nethack/` (gitignored) with `TTY_TILES_ESCCODES` on: the tty names each cell's tile. Apt's build has it off, and a character and colour alone are ambiguous for 55% of the monsters and 93% of the objects |
+| `world/nh_tty.py` | the game behind a pty, its screen in pyte, each map cell with its tile (Tilehack's idea, rewritten for 3.6.6's codes) |
+| `experiments/nh_demo.py` | the frames (`world/map`, `world/delta`, `world/status`, `world/screen`, journal, narration). No agent yet: the chat's words and the keyboard are the game's commands, until the agentic loop makes the NetHack domain |
+
+The tile numbers index `web/tiles/nethack/glyphs.png` (this directory's) directly (`raw_tiles`, `tests/test_nh_tty.py` compares all 1082 by pixel). Glyph numbers differ from NLE's: this build has the mail daemon. Stopping the service (SIGTERM, Ctrl-C) saves the game and the next start restores it.
+
 ## Findings while building (step 1)
 
 - **The map is the level's, not the screen's.** NLE draws the level inside a 21×79

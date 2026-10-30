@@ -1,0 +1,62 @@
+/* map.css — the world map's look (map.js, alf-demo step 3a). Tiles are 16 px art drawn at
+   --wm-z times their size, pixelated; the page sets the theme tokens or takes these. */
+:root {
+  --wm-bg: #f4f1ea; --wm-fg: #1d1d1b; --wm-mute: #6b6760; --wm-line: #d6d0c4; --wm-void: #2a2a2a;
+  --wm-hot: #d4632a; --wm-focus: #2a6fd4; --wm-card: #ffffff;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --wm-bg: #16171a; --wm-fg: #e8e6e1; --wm-mute: #9a968e; --wm-line: #33353a; --wm-void: #050505;
+    --wm-hot: #f08a4b; --wm-focus: #6ea3ff; --wm-card: #202226;
+  }
+}
+:root[data-theme="dark"] {
+  --wm-bg: #16171a; --wm-fg: #e8e6e1; --wm-mute: #9a968e; --wm-line: #33353a; --wm-void: #050505;
+  --wm-hot: #f08a4b; --wm-focus: #6ea3ff; --wm-card: #202226;
+}
+.wm { --wm-z: 1.5; --wm-t: calc(16px * var(--wm-z)); display: flex; flex-wrap: wrap; gap: 12px;
+  align-items: flex-start; color: var(--wm-fg); font: 14px/1.4 system-ui, sans-serif; }
+.wm-view { position: relative; width: calc(var(--cols) * var(--wm-t)); height: calc(var(--rows) * var(--wm-t));
+  max-width: 100%; overflow: auto; background: var(--wm-void); border: 1px solid var(--wm-line); }
+.wm-grid { display: grid; grid-template-columns: repeat(var(--cols), var(--wm-t)); grid-auto-rows: var(--wm-t); }
+.wm-cell, .wm-ent { width: var(--wm-t); height: var(--wm-t); display: grid; place-items: center; overflow: hidden; }
+.wm-sp { width: 16px; height: 16px; zoom: var(--wm-z); image-rendering: pixelated; display: block; }
+.wm-img { width: var(--wm-t); height: var(--wm-t); image-rendering: pixelated; display: block; }
+.wm-ch { font: bold calc(var(--wm-t) * 0.8)/1 ui-monospace, monospace; color: #ddd; }
+.wm-layer { position: absolute; inset: 0; pointer-events: none; }
+.wm-ent { position: absolute; left: calc(var(--x) * var(--wm-t)); top: calc(var(--y) * var(--wm-t));
+  padding: 0; border: 0; background: transparent; cursor: pointer; pointer-events: auto;
+  transition: left .25s ease, top .25s ease; }
+.wm-ent sup { position: absolute; right: 0; top: 0; font: 9px/1 system-ui; background: var(--wm-bg);
+  color: var(--wm-fg); border-radius: 3px; padding: 0 2px; }
+.wm-ent:focus-visible, .wm-ent:hover { outline: 2px solid var(--wm-focus); outline-offset: -2px; z-index: 2; }
+.wm-hot { box-shadow: inset 0 0 0 2px var(--wm-hot); }
+.wm-unseen { outline: 1px dashed var(--dim, #888); outline-offset: -1px; }   /* view mode: known from the room's opening text, not looked into yet */
+.wm-cornered { box-shadow: inset 0 0 0 3px #e03a3a; background: rgba(224, 58, 58, .25); }
+.wm-agent { z-index: 3; }
+.wm-name { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.wm-ent[data-n]::before { content: attr(data-n); position: absolute; left: 0; top: 0; z-index: 4; min-width: 12px;
+  font: bold 10px/12px system-ui; text-align: center; color: #000; background: #6ee7f0; border-radius: 3px; }
+.wm-agent .wm-ch { color: #ffe066; }
+.wm-attn { flex: 1 1 220px; min-width: 200px; max-width: 360px; min-height: 120px; padding: 10px 12px;
+  background: var(--wm-card); border: 1px solid var(--wm-line); border-radius: 6px;
+  display: flex; flex-direction: column; gap: 4px; }
+.wm-big { --wm-z: 3; width: calc(16px * 3); height: calc(16px * 3); }
+.wm-big .wm-img { width: 48px; height: 48px; }
+.wm-big .wm-ch { font-size: 40px; color: var(--wm-fg); }
+.wm-kind, .wm-empty, .wm-src { color: var(--wm-mute); font-size: 12px; }
+.wm-frame { width: 100%; max-width: 300px; border-radius: 4px; }
+.wm-items { font-size: 12px; }
+.wm-task { max-width: min(520px, calc(100vw - 32px)); border: 1px solid var(--wm-line); border-radius: 8px;
+  background: var(--wm-card); color: var(--wm-fg); padding: 14px 18px; }
+.wm-task::backdrop { background: rgba(0, 0, 0, .4); }
+.wm-task h3 { margin: 0 0 6px; } .wm-task h4 { margin: 12px 0 4px; font-size: 13px; }
+.wm-words { font-size: 16px; margin: 4px 0; }
+.wm-goal { font-size: 13px; }
+.wm-chain, .wm-results { margin: 0; padding-left: 20px; }
+.wm-close { margin-top: 10px; }
+/* NetHack's colour names (the editor's index): a glyph with no picture keeps its colour */
+.clr-red { color: #e04a3f !important; } .clr-green { color: #4caf50 !important; } .clr-brown { color: #b07a3a !important; }
+.clr-cyan { color: #3fc1d0 !important; } .clr-gray { color: #a0a0a0 !important; } .clr-white { color: #f4f4f4 !important; }
+.clr-magenta { color: #d05ad0 !important; } .clr-yellow { color: #f0d040 !important; } .clr-blue { color: #4a7ff0 !important; }
+@media (max-width: 600px) { .wm { --wm-z: 1.25; } .wm-attn { max-width: none; } }
