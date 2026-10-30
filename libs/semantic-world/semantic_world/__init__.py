@@ -18,6 +18,7 @@ an intent back in the world's terms.
     lane     the road's adapter skeleton: lanes, (lane, s) positions, conflict zones, the pairs
     road     the lane adapter's belief: tracks over lane bins, intents, the association, the danger region
     mixed    the ONE map over lane segments and free-space cells, zones and their links (the wheelchair's world)
+    occupancy the mixed map's predict step over a horizon, a time-indexed occupancy; its zones on a grid aligned to its cells
 
 Pure python, no dependency: the library never knows a world's names or a rule program; adapters do."""
 from . import bayes, core, ports, project, store  # noqa: F401  (room, grid, dungeon, situation, lane: imported by name)

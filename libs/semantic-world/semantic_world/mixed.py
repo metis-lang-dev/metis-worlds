@@ -279,9 +279,10 @@ class MixedMap(road.RoadMap):
                 out += ["%s|%d" % (lid, k) for k in range(self.nbins(lid))]
         return sorted(set(out))
 
-    def people_models(self, d, t):
+    def people_models(self, d, t, neighbours=None):
         """{intent: model(belief)} for the person track T: one bayes.walk per PEOPLE_INTENTS at its speed (cells a tick),
-        keep drawn along its heading from its last sighting, cross toward the nearest crosswalk place, stop standing."""
+        keep drawn along its heading from its last sighting, cross toward the nearest crosswalk place, stop standing.
+        NEIGHBOURS: the graph to walk (None: the one graph)."""
         cls = d["things"][t]["class"]
         cell = d["cell"]
         steps = max(0.0, d["speed"].get(t, 0.0)) * d["dt"] / cell
@@ -303,7 +304,7 @@ class MixedMap(road.RoadMap):
         for i in PEOPLE_INTENTS:
             stay, bias = WALK.get(cls, WALK["pedestrian"])[i]
             toward = along if i == "keep" else (to_cross if i == "cross" else None)
-            w = bayes.walk(self.neighbours, toward, stay=stay, bias=bias or 1.0, speed=steps if i != "stop" else 1.0)
+            w = bayes.walk(neighbours or self.neighbours, toward, stay=stay, bias=bias or 1.0, speed=steps if i != "stop" else 1.0)
             out[i] = (lambda bel, _w=w: _w(bel, 1))
         return out
 

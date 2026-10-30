@@ -107,6 +107,20 @@ the one binding, never a second binding. When the road members run on the MixedM
 `road_facts` reads its lane roles from the map's binding; that change lands there, with the test that asks for it.
 Today the road world (`road_world`, the SUMO host) still runs on `LaneMap` and `RoadMap` directly, unchanged.
 
+## The predicted occupancy (wc-motion s-efcc13bf step 2)
+
+For a local planner: the mixed map's predict step over a short horizon, on the map's cells, and its zones on a finer grid. Numbers
+and rows only; `semantic_world/occupancy.py`'s doc holds the reasons.
+
+```python
+occ = occupancy.render(m, horizon=3.0)        # after m.cycle; reads the map, writes nothing. occ.times: seconds from now
+occ.soft(k)                                   # {cell: P(some track's body is there at times[k])}: belief × intent × dynamics, a cost
+occ.hard(k, ego)                              # {cells} never to enter: the RSS set of the pair the map forms; ego a Dynamics
+occ.clear(k, x, y, ego)                       # the same test at any point
+occ.tracks[t]                                 # one track's: cls, seen, mass, speed, form, soft, hard, clear
+r = occupancy.rasterise(m, 20)                # the zones and kinds at cell / 20: r.zone[iy][ix], r.kind, r.mask(zones), r.cell_at(ix, iy)
+```
+
 ## Install
 
 It lives in metis-worlds (`libs/semantic-world`) until the road returns, and is then cut out to its own repo.
