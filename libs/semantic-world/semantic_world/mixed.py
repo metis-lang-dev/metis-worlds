@@ -54,6 +54,17 @@ where that change lands, with the test that asks for it.
     m.pairs(lights) → [situation.Pair]                              the people's unstructured pairs, the lane's
     perceive(m, sensor, ego, truth, occluders) → (detections, visible)   the sensing model over the one map
 
+STRIPS (DESIGN amendment 4: road semantics, not road geometry). A zone may state {"strip": {"axis": [(x0, y0), (x1, y1)],
+"width": metres, "halves": 2 | 1}}, the host's choice from its width. It is then ALSO lanes (lane.halves: keep right, an
+s-coordinate), kept apart from the place graph: they add no bin and no place, the people's belief stays on the cells.
+`strip_at` places a body on them: its half by where it is (on the dividing line, by its direction), its direction,
+its s, its lateral bin. The chair and a cyclist in strips side by side (or one strip) are movers, and LaneMap.pairs
+pairs them (lemma 3 and lemma 4, the road's structured case: passing in the other half is laterally safe, and asks
+nothing). A walker keeps no lane: its pair stays unstructured, and so does a cyclist's anywhere else (a plaza, or
+a chair off the strips). The readings are finite: chair_half(Z, along | against | one), chair_dir(Z, along | against),
+chair_lat(Z, right | centre | left), cyclist_half(R, same | other), cyclist_dir(R, with | against), and the pair's lateral
+LEVEL cyclist_gap(R, tight | near | clear), the bodies' gap against the host's limit and comfort (`lane_facts`).
+
 SENSING (DESIGN §10 ruling 2: the epistemic case, a walker or a car the chair cannot see yet): `perceive` runs
 sensing.Sensor over the scene's truth — every body blocks the line of sight (a parked car at the crossing among them,
 `parked`: a body, never a detection), and so do the scene's occluder polygons — and gives the map's detections (a
@@ -65,7 +76,7 @@ from . import bayes, road
 from .sensing import point_at
 
 CELL = 1.0                                     # metres a cell (a chair's footprint, a walker's step)
-KINDS = ("sidewalk", "crossing", "lane", "path", "plaza")
+KINDS = ("sidewalk", "crossing", "lane", "path", "plaza", "bike")
 LINKS = ("open", "ramp", "curb")
 PASSABLE = ("open", "ramp")
 PEOPLE = ("pedestrian", "bicycle")
@@ -75,6 +86,10 @@ PEOPLE_PRIORS = {"pedestrian": {"keep": 0.5, "stop": 0.2, "cross": 0.3},
 WALK = {"pedestrian": {"keep": (0.05, 3.0), "stop": (0.9, 0.0), "cross": (0.1, 2.0)},    # (stay, bias) a step
         "bicycle": {"keep": (0.02, 5.0), "stop": (0.9, 0.0), "cross": (0.1, 2.0)}}
 P_TEMPER, P_FLOOR = 0.5, 0.01                  # a walker's motion fits its kernels less than a car's (road.py: 0.5, 0.005)
+CHAIR = "wheelchair"                           # the chair's vClass (DESIGN amendment 4; lane.VCLASS)
+BODY = {"bicycle": (1.8, 0.6)}                 # a person's length, width on a strip (m), what the map assumes
+CHAIR_BODY = (0.9, 0.7)
+LAT_BINS = ("right", "centre", "left")         # a body's third of its lane, across it
 HORIZON = 20                                   # ticks: meets' default horizon (a scene parameter)
 
 
@@ -348,6 +363,9 @@ class MixedMap(road.RoadMap):
         if ego is not None:
             at = ego.get("place") or (self.place_at(ego["x"], ego["y"]) if "x" in ego else None)
             d["chair"] = {"place": at, "speed": float(ego.get("speed", 0.0)), "path": list(ego.get("path") or ())}
+            for k in ("x", "y", "heading"):
+                if ego.get(k) is not None:
+                    d["chair"][k] = float(ego[k])
             if at is not None and lane_ego is None:
                 d["agent"]["at"] = at
         if save:
@@ -459,8 +477,8 @@ class MixedMap(road.RoadMap):
         out = {}
         ego = d.get("ego")
         if ego is not None and ego.get("lane") in self.lanemap.lanes:
-            em = Mover("ego", ego["lane"], float(ego["s"]), dynamics_for("pedestrian", v=ego.get("speed", 0.0), ego=True),
-                       route=ego.get("route"), length=0.9, width=0.7, vclass="pedestrian")
+            em = Mover("ego", ego["lane"], float(ego["s"]), dynamics_for(CHAIR, v=ego.get("speed", 0.0), ego=True),
+                       route=ego.get("route"), length=0.9, width=0.7, vclass=CHAIR)
             movers = []
             for t, p in sorted((d.get("pos") or {}).items()):
                 th = d["things"].get(t) or {}
@@ -485,10 +503,76 @@ class MixedMap(road.RoadMap):
     # ── the situation layer's pairs: the people's unstructured, the lane's when the chair is on a lane ──
     RADIUS = {"chair": 0.45, "pedestrian": 0.3, "bicycle": 0.9}     # half a body's length (m): the discs' gap
 
-    def pairs(self, lights=None, chair_class="pedestrian"):
-        """→ [situation.Pair] of the chair and every person seen (UNSTRUCTURED, DESIGN §12 position 2: the gap between
-        the bodies, the bearing from the chair, each side's class dynamics at its speed), and, when the host projects
-        the chair on a lane, LaneMap.pairs over the vehicle tracks (the responder's lane case, unchanged)."""
+    def strips(self):
+        """The zones' strips as lanes (see the module's doc): {zone: [Lane]}, and the one LaneMap they lie on."""
+        from .lane import LaneMap, halves, link_neighbours
+        by = {z: halves(z, v["strip"]["axis"], float(v["strip"]["width"]), int(v["strip"].get("halves", 2)))
+              for z, v in sorted(self.load()["zones"].items()) if v.get("strip")}
+        lanes = [ln for z in by for ln in by[z]]
+        link_neighbours(lanes)
+        return by, LaneMap(lanes)
+
+    def strip_at(self, zone, x, y, heading=None):
+        """A body at (x, y) on ZONE's strip → {"lane", "half", "s" along the lane, "offset" (left of the lane's direction),
+        "dir", "against", "lat"}; None when the zone has no strip. Its half is where it is, on the dividing line the one
+        its direction keeps; its direction by its HEADING (None: along the axis). A half's lane runs one way, so a body
+        the other way in it is `against`; a one-lane strip runs along its axis."""
+        from .lane import halves
+        st = (self.load()["zones"].get(zone) or {}).get("strip")
+        if not st:
+            return None
+        (x0, y0), (x1, y1) = st["axis"]
+        length = math.hypot(x1 - x0, y1 - y0)
+        ux, uy = (x1 - x0) / length, (y1 - y0) / length
+        sa, across = (x - x0) * ux + (y - y0) * uy, -(x - x0) * uy + (y - y0) * ux       # across: left of the axis
+        along = heading is None or math.cos(heading) * ux + math.sin(heading) * uy >= 0
+        width = float(st["width"])
+        if int(st.get("halves", 2)) == 1:
+            half, s, off, w = "one", sa, across, width
+            against = not along
+        else:
+            half = "along" if across < 0 or (across == 0 and along) else "against"
+            s = sa if half == "along" else length - sa
+            off = across + width / 4 if half == "along" else width / 4 - across
+            w = width / 2
+            against = along != (half == "along")
+        lane = [ln.id for ln in halves(zone, st["axis"], width, int(st.get("halves", 2))) if ln.id.endswith("_" + half)][0]
+        k = min(2, max(0, int((off + w / 2) / (w / 3))))
+        return {"lane": lane, "half": half, "s": s, "offset": off, "dir": "along" if along else "against",
+                "against": against, "lat": LAT_BINS[k]}
+
+    def _chair_on_strip(self, d):
+        chair = d.get("chair") or {}
+        if not chair.get("place") or chair.get("x") is None:
+            return None, None
+        z = self.zone_of(chair["place"])
+        return z, self.strip_at(z, chair["x"], chair["y"], chair.get("heading"))
+
+    def _cyclist_mover(self, d, t, cx, lanemap):
+        """Track T as a Mover on a strip side by side with the chair's lane CX (or on it), else None."""
+        from .lane import Mover, dynamics_for
+        th, p = d["things"][t], (d.get("pos") or {}).get(t)
+        if th["class"] != "bicycle" or p is None or not d["belief"].get(t):
+            return None
+        z = self.zone_of(min(d["belief"][t].items(), key=lambda x: (-x[1], x[0]))[0])
+        at = self.strip_at(z, p["x"], p["y"], (d.get("heading") or {}).get(t))
+        if at is None or (at["lane"] != cx["lane"] and lanemap.lateral(cx["lane"], at["lane"])[0] is None):
+            return None
+        length, width = BODY["bicycle"]
+        return Mover(t, at["lane"], at["s"] + (-length / 2 if at["against"] else length / 2),
+                     dynamics_for("bicycle", v=d["speed"].get(t, 0.0)), length=length, width=width, vclass="bicycle",
+                     offset=at["offset"], against=at["against"])
+
+    def _chair_mover(self, cx, dyn, chair_class=CHAIR):
+        from .lane import Mover
+        return Mover("chair", cx["lane"], cx["s"] + CHAIR_BODY[0] / 2, dyn, route=[cx["lane"]], length=CHAIR_BODY[0],
+                     width=CHAIR_BODY[1], vclass=chair_class, offset=cx["offset"])
+
+    def pairs(self, lights=None, chair_class=CHAIR, chair_mu=None):
+        """CHAIR_MU: the chair's lateral margin, the host's. → [situation.Pair] of the chair and every person seen, each side's class dynamics at its speed: a cyclist on
+        the chair's strip (or the one beside it) as a mover (STRIPS, the module's doc), every other person UNSTRUCTURED
+        (DESIGN §12 position 2: the gap between the bodies, the bearing from the chair); and, when the host projects the
+        chair on a lane, LaneMap.pairs over the vehicle tracks (the responder's lane case, unchanged)."""
         from .lane import Mover, dynamics_for
         from .situation import Pair
         d = self.load()
@@ -496,13 +580,21 @@ class MixedMap(road.RoadMap):
         inv = {h: r for r, h in (d.get("binding") or {}).items()}
         cxy = self.xy(chair["place"]) if chair.get("place") else None
         ego = dynamics_for(chair_class, v=chair.get("speed", 0.0), ego=True)
+        if chair_mu is not None:
+            ego.mu = chair_mu
         out = []
         if cxy is not None:
+            _, cx = self._chair_on_strip(d)
+            strips = self.strips()[1] if cx is not None else None
             for t in self._people(d):
                 p = (d.get("pos") or {}).get(t)
                 if p is None or not d["belief"].get(t) or t not in (d.get("_people_seen") or ()):
                     continue
                 cls = d["things"][t]["class"]
+                mover = self._cyclist_mover(d, t, cx, strips) if cx is not None else None
+                if mover is not None:
+                    out += strips.pairs(self._chair_mover(cx, ego, chair_class), [mover], role_of=lambda o: inv.get(o.id))
+                    continue
                 dx, dy = p["x"] - cxy[0], p["y"] - cxy[1]
                 gap = max(0.0, math.hypot(dx, dy) - self.RADIUS["chair"] - self.RADIUS.get(cls, 0.3))
                 out.append(Pair("%s:unstructured" % t, "unstructured", d_lon=gap, ego=ego,
@@ -549,6 +641,34 @@ class MixedMap(road.RoadMap):
             if width is not None and float(width) < narrow_below and any(
                     sum(math.hypot(a[0] - b[0], a[1] - b[1]) <= band for b in ps) >= group for a in ps):
                 out["group_at(%s)" % z] = 1
+        return out
+
+    def lane_facts(self, limit, comfort):
+        """The strips' finite readings (STRIPS, the module's doc): where the chair is on its strip, and each bound
+        cyclist on a strip beside it or the same one, its lateral level by the bodies' gap: tight under LIMIT metres,
+        near under COMFORT, else clear (both the host's). A cyclist that has passed head-on in one lane has no level.
+        → {atom: 1}."""
+        from .lane import dynamics_for
+        d = self.load()
+        z, cx = self._chair_on_strip(d)
+        if cx is None:
+            return {}
+        out = {"chair_half(%s,%s)" % (z, cx["half"]): 1, "chair_dir(%s,%s)" % (z, cx["dir"]): 1,
+               "chair_lat(%s,%s)" % (z, cx["lat"]): 1}
+        strips = self.strips()[1]
+        for r, t in sorted((d.get("binding") or {}).items()):
+            if (d["things"].get(t) or {}).get("layer") != "people":
+                continue
+            o = self._cyclist_mover(d, t, cx, strips)
+            if o is not None:
+                out["cyclist_half(%s,%s)" % (r, "same" if o.lane == cx["lane"] else "other")] = 1
+                z2 = self.zone_of(min(d["belief"][t].items(), key=lambda x: (-x[1], x[0]))[0])
+                at = self.strip_at(z2, d["pos"][t]["x"], d["pos"][t]["y"], (d.get("heading") or {}).get(t))
+                out["cyclist_dir(%s,%s)" % (r, "with" if at["dir"] == cx["dir"] else "against")] = 1
+                p, = strips.pairs(self._chair_mover(cx, dynamics_for(CHAIR)), [o])
+                if p.type != "not_relevant":
+                    gap = "tight" if p.d_lat < limit else "near" if p.d_lat < comfort else "clear"
+                    out["cyclist_gap(%s,%s)" % (r, gap)] = 1
         return out
 
     # ── the zones' readings (the static part of the mixed host's world.out) ──
