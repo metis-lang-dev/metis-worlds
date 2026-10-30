@@ -1,0 +1,7 @@
+minihack/web/tiles/nethack/ — NOT under the Apache License of metis-worlds: these are NetHack's art and keep their own terms.
+
+glyphs.png, glyphs.json
+  The NetHack 3.6 tileset as MiniHack ships it (minihack/tiles/tiles.pkl and glyph2tile,
+  https://github.com/facebookresearch/minihack), exported as a sprite sheet by metis-worlds tools/tiles_export.py.
+  The tiles are NetHack's (win/share/*.txt), distributed under the NetHack General Public License
+  (https://www.nethack.org/common/license.html).
