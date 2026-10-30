@@ -33,7 +33,9 @@ a1..a3, vru1). The facts (every number stays here; the rules read classes):
   at all is inside (every mover, not the bound ones only), and holder(nextzone, O) for zone_roles' holder; zclear(nextzone) when it is free and no
   mover on another of its lanes is within APPROACH of it, else zbusy(nextzone); cross_unsettled(nextzone) while a car on a
   crossing lane, near the zone or in it, still moves, else cross_settled(nextzone) (RSS rule 5 form B: the planner's accel
-  waits; also with no zone ahead, and at a merge); conflict(nextzone) for crossing axes (a zone with a
+  waits; also with no zone ahead, and at a merge); cross_overlap(nextzone) in place of cross_unsettled when, on the ego's
+  priority, that car's time at the zone is within a response time of the ego's and another plan at this speed would lose
+  the ability to stop short (the planner's soft brake keeps it); conflict(nextzone) for crossing axes (a zone with a
   priority), share(nextzone) for a merge's (none); turn(nextzone) at a merge when the last to enter came from
   another lane (the zipper's alternation, TURN: the host's {zone: the lane of the last entrant}) and no mover on
   another of its lanes reaches the line first, else wait_turn(nextzone) (road step 5, yield_merge: the alternation
@@ -43,7 +45,7 @@ a1..a3, vru1). The facts (every number stays here; the rules read classes):
 - the beat: now (one a tick; the command rules consume it)."""
 from dataclasses import replace
 
-from semantic_world.situation import Situation, safe_same_dir, stated
+from semantic_world.situation import Situation, safe_same_dir, stated, stop
 
 OBJ_ROLES = ("lead", "follower", "leadleft", "followleft", "leadright", "followright", "a1", "a2", "a3", "vru1")
 NEAR_RANGE, AT_RANGE, APPROACH, NEAR_MARGIN = 30.0, 3.0, 40.0, 10.0
@@ -58,6 +60,22 @@ def inside(z, m):
         return False
     a, b = z.lanes[m.lane]
     return m.s >= a and m.s - m.length <= b
+
+
+def windows_overlap(z, m, mv, front, d_out, v, margin):
+    """Mover M, at speed MV, and the ego, at V with FRONT and D_OUT to the zone's entry and exit, are at zone Z within
+    MARGIN seconds of each other: each one's time there, at the speed it has."""
+    a, b = z.lanes[m.lane]
+    m_in, m_out = max(0.0, a - m.s) / max(mv, 0.1), max(0.0, b + m.length - m.s) / max(mv, 0.1)
+    e_in, e_out = max(0.0, front) / max(v, 0.1), max(0.0, d_out) / max(v, 0.1)
+    return e_in - margin <= m_out and m_in - margin <= e_out
+
+
+def keeps_stop_short(front, v, d):
+    """Another plan at this speed, then easing off at the planner's own brake, would no longer stop the ego short of a zone
+    FRONT away, and it can still stop short at brake_min (situation.ego_stops_short's distance): the time to ease off.
+    Past that distance: clear the zone."""
+    return stop(v, d.brake_min) + d.min_dist < front <= stop(v, d.brake_min_correct) + d.min_dist + v * PLAN_T
 
 
 def gap_room(pairs, ego, v, cap, accel, t=2 * PLAN_T):
@@ -172,11 +190,14 @@ def facts(lm, ego, v, movers, sit, changing=None, dest=None, turn=None, lights=N
             out["zbusy(nextzone)"] = 1
         # RSS rule 5, form B: a car on a crossing lane near the zone or in it, still moving: whether it yields is not yet
         # seen. It settles when it stands, or when it has left the zone. A merge's share has its own turn
-        unsettled = prio is not None and any(
-            m.lane in z.lanes and m.lane != rl and (speeds or {}).get(m.id, m.dyn.vmax) > STILL
-            and m.s - m.length <= z.lanes[m.lane][1] and z.lanes[m.lane][0] - m.s <= APPROACH
-            for m in movers)
-        out["cross_unsettled(nextzone)" if unsettled else "cross_settled(nextzone)"] = 1
+        crossing = [m for m in movers if prio is not None and m.lane in z.lanes and m.lane != rl
+                    and (speeds or {}).get(m.id, m.dyn.vmax) > STILL and m.s - m.length <= z.lanes[m.lane][1]
+                    and z.lanes[m.lane][0] - m.s <= APPROACH]
+        if prio == rl and any(windows_overlap(z, m, (speeds or {}).get(m.id, m.dyn.vmax), front, d_out, v, d.rho) for m in crossing) \
+                and keeps_stop_short(front, v, d):
+            out["cross_overlap(nextzone)"] = 1
+        else:
+            out["cross_unsettled(nextzone)" if crossing else "cross_settled(nextzone)"] = 1
         if zr["holder"]:
             out["holder(nextzone,%s)" % zr["holder"]] = 1
         if prio is None:

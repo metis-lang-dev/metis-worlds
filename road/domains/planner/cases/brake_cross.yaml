@@ -1,0 +1,7 @@
+case: "a car at the zone ahead still moves, and we would be there together: the planner eases off to keep the stop short (RSS rule 5 form B)"
+boundaries:
+  - world: [below_limit, lead_ok, accel_ok, cross_overlap(nextzone), keep_ok, zone_at(nextzone, none), now]
+    expect: {out: [tick__active(planner), tick__want(planner, controls)], status: running, fired: [drive]}
+  - grant: [controls]
+    deliver: [tick__grant(planner, controls)]
+    expect: {status: running, fired: [brake_cross]}

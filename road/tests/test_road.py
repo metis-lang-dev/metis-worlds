@@ -84,39 +84,54 @@ def test_every_scenario_is_safe_under_the_restrictor_alone(scenario):
     assert s["collisions"] == 0 and s["violations"] == 0, s
 
 
-def planner_accel(w):
-    """The planner's accel as the rules gate it, held a plan (1 s): accel while accel_ok and cross_settled, else keep."""
+def planner_cmd(w):
+    """The planner's longitudinal command as its rules read the facts (a plan is held 1 s)."""
     f = w.observe()[0]
+    if "cross_overlap(nextzone)" in f:
+        return ("brake", "brake_min_correct")
     return ("accel", None) if "accel_ok" in f and "cross_settled(nextzone)" in f and "below_limit" in f else ("keep", None)
 
 
-@pytest.mark.parametrize("scenario", sorted(road_world.SCENARIOS))
-@pytest.mark.parametrize("seed", [1, 2, 3])
-def test_every_scenario_is_safe_under_the_planners_accel(scenario, seed):
-    # planned at the tree's phase, 0.2 s into each second. The rule keeps the speed, it does not make room: junction_rb seed
-    # 2 clears the car by 0.1 s here, and a plan 0.2 s earlier meets its tail (test_the_rule_keeps_it_does_not_make_room)
+def planned(scenario, seed, phase=2):
+    """The world under the planner's commands, planned PHASE ticks into each second (the tree's phase is 2); no responder:
+    the world's restrictor only."""
     w = road_world.RoadWorld(scenario, seed)
     for i in range(1200):
         if w.arrived():
             break
-        if i % 10 == 2:
-            w.command(planner_accel(w), life=10)
+        if i % 10 == phase:
+            w.command(planner_cmd(w), life=10)
         w.step()
-    s = w.summary()
+    return w
+
+
+@pytest.mark.parametrize("scenario", sorted(road_world.SCENARIOS))
+@pytest.mark.parametrize("seed", [1, 2, 3])
+def test_every_scenario_is_safe_under_the_planners_commands(scenario, seed):
+    s = planned(scenario, seed).summary()
     assert s["collisions"] == 0 and s["violations"] == 0, s
 
 
-def test_the_rule_keeps_it_does_not_make_room():
-    # the known margin (road-sync s-4169b42d): the first accel comes before the car moves, and past that the ego can't
-    # stop short, so the responder clears it. A phase earlier, seed 2 enters as the car's tail leaves
-    w = road_world.RoadWorld("junction_rb", 2)
-    for i in range(160):
+@pytest.mark.parametrize("phase", range(10))
+@pytest.mark.parametrize("seed", range(1, 9))
+def test_a_rule_breaker_leaves_a_response_times_margin_at_any_plan_phase(seed, phase):
+    # the margin (road-sync s-4169b42d step 2): the ego enters the zone a response time or more after the car has left
+    w = road_world.RoadWorld("junction_rb", seed)
+    car_out = ego_in = None
+    for i in range(400):
         if w.arrived():
             break
-        if i % 10 == 0:
-            w.command(planner_accel(w), life=10)
+        if i % 10 == phase:
+            w.command(planner_cmd(w), life=10)
         w.step()
-    assert w.summary()["collisions"] == 1 and w.summary()["violations"] == 0
+        car = next((a.m for a in w.live() if a.m.id == "xcar"), None)
+        if car is not None and w.zones_of(car):
+            car_out = w.t
+        if ego_in is None and w.zones_of(w.ego.m):
+            ego_in = w.t
+    s = w.summary()
+    assert s["collisions"] == 0 and s["violations"] == 0, s
+    assert ego_in is not None and ego_in - car_out >= w.ego.m.dyn.rho, (ego_in, car_out)
 
 
 def test_an_accel_held_at_a_rule_breaker_is_why_the_rule_is_there():
