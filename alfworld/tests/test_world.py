@@ -1295,6 +1295,40 @@ def test_a_command_the_world_refuses_is_said_as_refused():
     assert AlfHost.cannot_fetch(c, "kettle", "bathtub1") is None                  # a kind nothing is known of: searched for
 
 
+@pytest.mark.parametrize("rule,command,out,answer", [
+    ("go[R=fridge1,L=loc0,L2=loc1]", "go to fridge 1", {"reached", "elsewhere"}, "refused(fridge1)"),
+    ("open_closed[R=fridge1,L=loc1]", "open fridge 1", {"accessible", "elsewhere"}, "refused(fridge1)"),
+])
+def test_a_go_or_an_open_maps_to_refused_when_the_world_refuses_it_and_to_nothing_when_it_takes_it(rule, command, out, answer):
+    """rooms s-b51a2e80 step 5: the real on_event and command_of over a stand-in game, both ways. No game refuses these
+    two in play (a go is always listed, an open once there), so a stand-in is how they are held; the director can route the
+    answer to the planner, whose stuck_fetch / stuck_carry end the task."""
+    from types import SimpleNamespace
+    import gen_hier
+
+    def host(admissible):
+        h = SimpleNamespace(spec="nav", out=out, done=False, admissible=admissible, smap=None, verbs=False, recat={"loc1": ["fridge1"]}, dyn=set(),
+                            to_name={"fridge1": "fridge 1"}, gym=SimpleNamespace(call=lambda op, command: {}), changed=False, commands=[], beat=1, t=0,
+                            won=False, obs="", stepped=False, pending_frames=[], commands_log=None, _refusals=[],
+                            speak=lambda t: t, _log=lambda r: None, _spoken_command=lambda c: c.split(), delta=lambda c: {"note": c})
+        h._take = lambda o: setattr(h, "changed", command in admissible)
+        h.name = lambda x: h.to_name[x]
+        h.command_of = lambda n, a: AlfHost.command_of(h, n, a)
+        h._refused_by_world = lambda n, c: AlfHost._refused_by_world(h, n, c)
+        return h
+    refused = host([])
+    AlfHost.on_event(refused, rule, [])
+    assert refused.commands[-1][2:4] == (command, False)
+    r = AlfHost.world_refused(refused)
+    assert [(x["answer"], x["rule"], x["command"]) for x in r] == [(answer, rule, command)] and r[0]["withdraw"] == sorted(out)
+    assert r[0]["line"] == "The world refused it: %s." % command
+    taken = host([command])
+    AlfHost.on_event(taken, rule, [])
+    assert taken.commands[-1][2:5] == (command, True, True) and AlfHost.world_refused(taken) == []
+    kinds, facts = gen_hier.director_facts()
+    assert "refused" in kinds and "handles(task, refused)" in facts
+
+
 def test_a_done_is_held_to_the_world():
     """The backstop: a task said done whose goal does not hold in the world is said so, in the room's names."""
     from types import SimpleNamespace
