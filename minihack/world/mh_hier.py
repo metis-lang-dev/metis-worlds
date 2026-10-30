@@ -81,12 +81,12 @@ REPORTS = {"nav": ("tick__active", "tick__done"), "act": ("tick__active", "tick_
            "task": ("tick__active", "tick__done", "tick__stuck")}     # the tree variant's own reports (the inversion)
 
 
-def manifest_fields(spec, tree=False, policy=None):
+def manifest_fields(spec, tree=False, policy=None, extra=None):
     """SPEC's manifest lines (spec/15 §2.1): shared {pred: in|out|resource|world-private}, status {success, failure};
     tree: its reports (the protocol's) are its outs too."""
     sp = SPECS[spec]
     shared = {p: "world-private" for p in sp["dyn"]}
-    shared.update({g: "in" for g in (sp["goal"],) + tuple(sp.get("goals", ()))})
+    shared.update({g: "in" for g in (sp["goal"],) + tuple(sp.get("goals", ())) + tuple((extra or {}).get("goals", ()))})
     shared.update({p: "in" for p in sp.get("takes", ())})
     shared.update({p: "out" for p in sp["out"]})
     if tree:
@@ -286,6 +286,8 @@ GUARD = ["  %% {B} is coming at me: I take over.",
          "  strike_asked [dyn] : struck(B) * busy * said(asked) -o idle * tick__done(act) * tick__release(act, motion).",
          "  %% It is down: the way is clear.",
          "  struck_down [dyn] : struck(B) * busy * $resp_lon(none) -o idle * tick__done(act) * tick__release(act, motion).",
+         "  %% It is dead: I give the way back, and take it again if another is coming.",
+         "  struck_dead [dyn] : struck(B) * busy * said(killed) -o idle * tick__done(act) * tick__release(act, motion).",
          "  %% I was asked to clear {P}: it is the beast I am on already.",
          "  absorb [dyn] : fight(P) * $alert(B) * $monster(B, P) -o owed(P).",
          "  %% I was asked to clear {P}: it is the beast I am on already.",
@@ -326,10 +328,10 @@ ABSORB_CASE = {"case": "act, already on a beast by itself, is asked to fight it 
 TREE_DYN = {"act": ("oncoming", "closing", "resp_lon", "lost", "peaceful")}   # the tree variant's own readings (the beast case; lost: nav-belief step 3; peaceful: nav-belief-2)
 
 
-def base(spec, geometry="pred", tree=False, policy=None):
+def base(spec, geometry="pred", tree=False, policy=None, extra=None):
     """SPEC's base (_base); the tree variant with its cancel rules after its begin rules (a stop, step 3c: generated
     by metis.catalog.protocol_stub from the member's own rules and goal kinds)."""
-    t = _base(spec, geometry, tree, policy)
+    t = _base(spec, geometry, tree, policy, extra)
     if not tree:
         return t
     sp = SPECS[spec]
@@ -342,7 +344,7 @@ def base(spec, geometry="pred", tree=False, policy=None):
     return "\n".join(lines[:i + 1] + cancels + lines[i + 1:])
 
 
-def _base(spec, geometry="pred", tree=False, policy=None):
+def _base(spec, geometry="pred", tree=False, policy=None, extra=None):
     """SPEC's lifted base over the capacity's types, every pred declared (install moves the crossing ones into
     the include: iface_gen.strip). geometry pred:
     next(p, d, q) is the host's projection's; bwd: a static table (a level's own cells: the flat comparison).
@@ -403,6 +405,8 @@ def _base(spec, geometry="pred", tree=False, policy=None):
                                "  %% I take on {P}.", "  begin_fight [dyn] : $fight(P) * idle -o busy * fighting * tick__active(act)."] if t else []) + [
             "  %% The door {D} is closed: I open it.",
             "  open_door [dyn] : open(P)%s%s * $agent_at(C) * $next(C, D, P) * $door(P, closed) -o tried(P)." % (rbusy, grant),
+            "  %% The door {D} is stuck: I try it again.",
+            "  open_again [dyn] : tried(P) * said(door_stuck)%s * $agent_at(C) * $next(C, D, P) * $door(P, closed) -o tried(P)." % grant,
             "  %% The door {D} is locked: I kick it.",
             "  kick_door [dyn] : tried(P) * said(door_locked)%s * $agent_at(C) * $next(C, D, P) * $door(P, closed) -o kicked(P)." % grant,
             "  %% It holds: I kick it again.",
@@ -429,15 +433,15 @@ def _base(spec, geometry="pred", tree=False, policy=None):
             "pred reach(cell) : task.                   % the one way in: the person's REACH",
             "pred want(cell) : task.", "pred goto(cell) : task.",
             "pred reached(cell) : task.", "pred opened(cell) : task.", "pred cleared(cell) : task.", "pred refused(cell) : task.",
-            "pred done : task.", "pred stuck(cell) : task.",
+            "pred done : task.", "pred stuck(cell) : task."] + list((extra or {}).get("decls", ())) + [
             "stage act {",
             "  %% I'll walk onto {G}.",
             "  go [dyn] : reach(G) -o want(G) * goto(G)%s." % (" * tick__active(task)" if t else ""),
             "  %% I am on {G}: done.",
             "  arrived [dyn] : want(G) * reached(G) -o done%s." % (" * tick__done(task)" if t else ""),
             "  %% {X} was refused and I have no rule for it: I stop and ask.",
-            "  stuck_on [dyn] : want(G) * refused(X) -o stuck(X)%s." % (" * tick__stuck(task)" if t else ""),
-            "}", ""])
+            "  stuck_on [dyn] : want(G) * refused(X) -o stuck(X)%s." % (" * tick__stuck(task)" if t else "")]
+            + list((extra or {}).get("rules", ())) + ["}", ""])
     raise ValueError(spec)
 
 
@@ -452,20 +456,22 @@ def committed(spec, tree=False):
                      + (["#init brakes(brake_min) 1", "#init brakes(brake_min_correct) 1"] if tree and spec == "act" else []) + [""])
 
 
-def kinds():
-    out = {sp["goal"] for sp in SPECS.values()} | {g for sp in SPECS.values() for g in sp.get("goals", ())}
+def kinds(extra=None):
+    out = {sp["goal"] for sp in SPECS.values()} | {g for sp in SPECS.values() for g in sp.get("goals", ())} | set((extra or {}).get("goals", ()))
     return sorted(out | {k for sp in SPECS.values() for k in sp["out"]} | {k for sp in SPECS.values() for k in sp.get("takes", ())})
 
 
-def director_facts():
-    """The instance's facts (the lifted director's roles, as gen_hier.director_facts for ALFWorld)."""
-    ks = kinds()
+def director_facts(extra=None):
+    """The instance's facts (the lifted director's roles, as gen_hier.director_facts for ALFWorld); extra: the task's own
+    further goals (the real game's single commands)."""
+    goals = tuple((extra or {}).get("goals", ()))
+    ks = kinds(extra)
     f = ["specialist(nav)", "specialist(act)", "planner(task)", "handles(nav, goto)", "handles(act, open)", "handles(act, fight)",
-         "handles(task, reach)"] + ["handles(task, %s)" % k for k in SPECS["task"]["takes"]]
+         "handles(task, reach)"] + ["handles(task, %s)" % k for k in SPECS["task"]["takes"] + goals]
     f += ["result(reached)", "result(opened)", "result(cleared)", "end(stuck)", "finished(done)"]
     f += ["detour(closed, open)", "detour(guarded, fight)", "escalate(closed, refused)", "escalate(guarded, refused)"]
     f += ["rename(closed, open, open)", "rename(guarded, fight, fight)", "rename(closed, refused, refused)", "rename(guarded, refused, refused)"]
-    handled = {"goto", "open", "fight", "reach"} | set(SPECS["task"]["takes"])
+    handled = {"goto", "open", "fight", "reach"} | set(SPECS["task"]["takes"]) | set(goals)
     f += ["nohandler(%s)" % k for k in ks if k not in handled and k not in ("done", "stuck", "closed", "guarded")]
     return ks, f
 
@@ -536,25 +542,26 @@ PRIORITY = (("act", "nav"),)      # the tree's strict order: act's own trigger (
 
 
 def install(level, root, view=False, k=K, seed=1, max_steps=600, name="level", tree=False, priority=None, intents=None, speeds=None,
-            policy=None):
+            policy=None, info=None, card=None, task_extra=None):
     """LEVEL (a des text, or a room variant tuple) installed for the agent under ROOT: ROOT/domains/hier/{director,
     task, nav, act} over the lifted bases and the capacity, the level's map store (.map.json), one shared NLE
     process for every host (the same level.json `shared` key), the task's card and ROOT/.run/config.yaml for
-    metis-agent's service. POLICY (nav-belief step 3; the tree only): nav's crossing policy, "belief" or "worst"
+    metis-agent's service. info: the level's {size, cells} when no NLE level stands behind it (the real game, nh_hier); card:
+    the task's card, else TASK_CARD; task_extra: the task's further {goals, decls, rules}. POLICY (nav-belief step 3; the tree only): nav's crossing policy, "belief" or "worst"
     (POLICIES), with its instrument's world model in nav/eval. → {name: package dir}."""
     if policy is not None and (policy not in POLICIES or not tree or not intents):
         raise ValueError("policy %r: one of %s, on the tree with the map's intents" % (policy, POLICIES))
-    import gen_level
     import levels
     from mh_gym import World
     from mh_host import ACTIONS
     des = level if isinstance(level, str) else levels.level(level, seed)["des"]
-    w = World()
-    try:
-        info = w.open(des=des, actions=ACTIONS, max_steps=100, seed=seed)
-    finally:
-        if w.env is not None:
-            w.env.close()
+    if info is None:
+        w = World()
+        try:
+            info = w.open(des=des, actions=ACTIONS, max_steps=100, seed=seed)
+        finally:
+            if w.env is not None:
+                w.env.close()
     hier = os.path.join(root, "domains", "hier")
     os.makedirs(hier, exist_ok=True)
     open(os.path.join(root, "domains", "director_domain.llp"), "w").write(_director_base())
@@ -570,7 +577,7 @@ def install(level, root, view=False, k=K, seed=1, max_steps=600, name="level", t
             shutil.copy(os.path.join(IFACE, f), os.path.join(hier, "iface", f))
         cross = crossing()
     for sp in SPECS:
-        t = base(sp, tree=tree, policy=policy)
+        t = base(sp, tree=tree, policy=policy, extra=task_extra if sp == "task" else None)
         open(os.path.join(hier, "%s_domain.llp" % sp), "w").write(iface_gen.strip(t, cross, "minihack") if cross else t)
     open(os.path.join(hier, "capacity.llp"), "w").write(grid.capacity(k))
     mp = os.path.abspath(os.path.join(hier, ".map.json"))
@@ -590,7 +597,7 @@ def install(level, root, view=False, k=K, seed=1, max_steps=600, name="level", t
             "# %s — MiniHack's %s over the role program (generated by world/mh_hier.py).\n"
             "program: %s.llp\nhost: mh_host.py:make\nclock: {beats: 1}\nrecords: records/\n"
             "display: MiniHack %s\nline: \"the %s\"\nvoice: own\n" % (sp, sp, sp, sp, sp)
-            + ("intent: {spec: intent.yaml}\n" if sp == "task" else "") + manifest_fields(sp, tree, policy))
+            + ("intent: {spec: intent.yaml}\n" if sp == "task" else "") + manifest_fields(sp, tree, policy, task_extra if sp == "task" else None))
         if policy and sp == "nav":                             # the crossing instrument's world model
             os.makedirs(os.path.join(pkg, "eval"), exist_ok=True)
             for f in ("cross.llp", "cross.yaml"):            # the model, and the manifest the host's per-beat case names
@@ -598,9 +605,9 @@ def install(level, root, view=False, k=K, seed=1, max_steps=600, name="level", t
         write_cases(pkg, sp, tree)
         open(os.path.join(pkg, "mh_host.py"), "w").write(shim)
         out[sp] = pkg
-    open(os.path.join(out["task"], "intent.yaml"), "w").write(TASK_CARD)
+    open(os.path.join(out["task"], "intent.yaml"), "w").write(card or TASK_CARD)
     _card_files(root, out["task"])
-    out["director"] = _director_package(root, hier, mp, tree, priority=PRIORITY if priority is None and tree else priority or ())
+    out["director"] = _director_package(root, hier, mp, tree, priority=PRIORITY if priority is None and tree else priority or (), extra=task_extra)
     _config(root, tree)
     return out
 
@@ -617,8 +624,8 @@ def _card_files(root, task_dir):
         (d / fn).write_text(text)
 
 
-def _director_package(root, hier, mp, tree=False, priority=()):
-    ks, facts = director_facts()
+def _director_package(root, hier, mp, tree=False, priority=(), extra=None):
+    ks, facts = director_facts(extra)
     pkg = os.path.join(hier, "director")
     os.makedirs(pkg, exist_ok=True)
     lines = ["% director — the director over MiniHack's hierarchy, installed for the agent (world/mh_hier.py).",

@@ -138,11 +138,64 @@ def test_the_page_stands_alone():
             assert os.path.exists(os.path.join(web, r)), r
 
 
-def test_the_chat_never_types_a_sentence_into_the_game():
-    sys.path.insert(0, os.path.join(HERE, "..", "experiments"))
-    from nh_demo import key_of
-    assert key_of("look here") == ":" and key_of("North") == "k"
-    assert key_of("20s") == "20s" and key_of("#pray") == "#pray\r"
-    assert key_of("nlook here f") is None
-    assert key_of("left") == "h" and key_of("go north") == "k" and key_of("Move west.") == "h"
-    assert key_of("complete") is None and key_of("east1") is None
+def test_the_game_as_the_hierarchys_atoms():
+    from nh_gym import cell_atoms, events_of, status_atoms
+    from nh_tty import tile_names
+    n = tile_names()
+    mon, obj = len(n["monsters"]), len(n["objects"])
+    other = lambda name: mon + obj + n["other"].index(name)
+    assert cell_atoms("c1_2", other("vertical closed door"), 0) == ["door(c1_2,closed)"]
+    assert cell_atoms("c1_2", other("horizontal open door"), 0) == ["door(c1_2,open)"]
+    assert "stairs_down(c1_2)" in cell_atoms("c1_2", other("staircase down"), 0)
+    assert cell_atoms("c1_2", other("lit corridor"), 0) == ["corridor(c1_2)"]
+    assert cell_atoms("c1_2", other("tlwall"), 0) == ["wall(c1_2)"] and cell_atoms("c1_2", other("iron bars"), 0) == ["wall(c1_2)"]
+    assert cell_atoms("c1_2", other("no door"), 0) == ["floor(c1_2)"] and cell_atoms("c1_2", other("floor of a room"), 0) == ["floor(c1_2)"]
+    assert cell_atoms("c1_2", 0, 0)[0].startswith("monster(giant_ant,")
+    assert cell_atoms("c1_2", 0, 8) == ["floor(c1_2)"]                 # a pet swaps places: never a monster to fight
+    assert "said(door_locked)" in events_of("This door is locked.") and events_of("") == []
+    assert "said(asked)" in events_of("Really attack the gnome? [yn] (n)")
+    assert "hp(16)" in status_atoms(["", "Dlvl:1 $:0 HP:16(16) Pw:2(2) AC:6 Xp:1/0 T:5"])
+
+
+@BUILT
+def test_the_hierarchy_acts_in_the_real_game(tmp_path):
+    """The gym under the rules: a search is a turn, a move's perception names the hero, the agent's frames carry the map."""
+    from nh_gym import Gym
+    g = Gym(options="name:metistest,role:Valkyrie,race:human,gender:female,align:neutral,pettype:none,!legacy,!splash_screen,!autopickup,color,time,vt_tiledata,windowtype:tty")
+    try:
+        info = g.open(map_doc=str(tmp_path / "map.json"), card={"title": "t"})
+        assert info["size"] == [79, 21] and any(a.startswith("agent_at(") for a in info["atoms"])
+        turn = lambda p: next(int(a[5:-1]) for a in p["atoms"] if a.startswith("turn("))
+        t0, after = turn(info), g.step("SEARCH")
+        assert turn(after) == t0 + 1 and not after["done"]
+        assert json.load(open(tmp_path / "map.json"))["raw_tiles"] is True
+        frames = g.frames()["frames"]
+        assert any(f["ev"] == "world/screen" for f in frames)
+        g.step("OPEN")                                    # a direction prompt is left for the rule's next action
+        assert g.tty.snapshot()["prompt"]
+        g.step("N")
+        assert not g.tty.snapshot()["prompt"]
+    finally:
+        g.keys("#quit\r")
+        g.keys("y")
+        g.keys("\x1b\x1b\r\r")
+        if not g.over:
+            g.game.stop()
+
+
+def test_the_real_game_installs_for_the_agent(tmp_path):
+    """The packages the service loads: every domain compiles, the task's card maps its verbs to goals its rules take."""
+    import yaml
+    from metis.lang.compiler import load_llp
+    import nh_hier
+    cfg = yaml.safe_load(open(nh_hier.install(str(tmp_path / "root"))))
+    assert cfg["domains"]["tick"] is True and cfg["v3"]["world_map"].endswith("world-map.json")
+    hier = tmp_path / "root" / "domains" / "hier"
+    for sp in ("director", "task", "nav", "act"):
+        assert load_llp(hier / sp / ("%s.llp" % sp)).catalog.ground({}) is not None
+    card = yaml.safe_load(open(hier / "task" / "intent.yaml"))
+    goals = {m["act"] for m in card["map"]}
+    assert goals == {"reach", "walk", "search_here", "pick_up", "go_down"}
+    text = (hier / "task_domain.llp").read_text()
+    assert all(("%s" % g) in text for g in goals)
+    assert "NhHost" in (hier / "nav" / "mh_host.py").read_text()

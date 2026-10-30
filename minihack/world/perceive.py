@@ -22,7 +22,7 @@ HUNGER = {0: "satiated", 1: "normal", 2: "hungry", 3: "weak", 4: "fainting", 5: 
 
 MESSAGES = [
     (r"solid stone", "blocked"), (r"you see here (an? |the )?(.+?)\.", "see_here"), (r"there is (an? )?(open|closed|broken) door", "door_here"),
-    (r"the door is closed", "door_closed"), (r"the door opens", "door_opened"), (r"this door is locked", "door_locked"), (r"whamm", "whamm"), (r"you succeed in unlocking", "unlocked"), (r"you don't have anything to use", "nothing_to_apply"),
+    (r"the door is closed", "door_closed"), (r"the door opens", "door_opened"), (r"this door is locked", "door_locked"), (r"door resists|door is stuck", "door_stuck"), (r"whamm", "whamm"), (r"you succeed in unlocking", "unlocked"), (r"you don't have anything to use", "nothing_to_apply"),
     (r"you kill (the )?(.+?)!", "killed"), (r"you (hit|miss) (the )?(.+?)[.!]", "hit"), (r"(bites|hits|kicks|stings)!?", "hurt"),
     (r"you fall into a pit", "fell_pit"), (r"a trap door opens", "trap_door"), (r"you (eat|finish eating)", "ate"),
     (r"(\w) - (.+?)\.", "picked"), (r"there is nothing here to pick up", "nothing_here"), (r"you can.?t (go|move) ", "cant"),

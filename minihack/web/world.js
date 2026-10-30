@@ -319,7 +319,7 @@ function floorLook(s) { if (panel) panel.dom.floor.textContent = `floor: ${FLOOR
 let say = 0, panel = null, send = () => {};
 async function frame(f) {
   rec('frame', { ev: f.ev });
-  if (f.ev === 'world/map') { world.mapUrl = new URL(f.url, world.base).href; await world.map.load(world.mapUrl); fitMap(); legend(); worldCard(); gameInfo(); drawHierarchy(); return; }   // the task row names this map's task
+  if (f.ev === 'world/map') { world.mapUrl = new URL(f.url, world.base).href; await world.map.load(world.mapUrl); if (world.map.map.screen) screen(world.map.map.screen); fitMap(); legend(); worldCard(); gameInfo(); drawHierarchy(); return; }   // the task row names this map's task
   if (f.ev === 'world/loading') { loading(f.game); return; }
   if (f.ev === 'world/room') { await gamePicker(); loading(null); gameInfo(); return; }   // the agent is there: no reload, the panes go on
   if (f.ev === 'load_game_ack') { if (f.error) { loading(null); panel.note(f.error); } return; }
@@ -328,6 +328,7 @@ async function frame(f) {
   if (f.ev === 'world/status') { status(f); return; }
   if (f.ev === 'world/ask') { ask(f); return; }
   if (f.ev === 'world/screen') { screen(f); return; }
+  if (f.ev === 'world/message') { panel.core.frame({ ev: 'narration', id: `g${++say}`, sentence: f.text, kind: 'v3-card' }); return frame({ ev: 'journal', rec: { kind: 'dlg-say', what: 'world', text: f.text } }); }
   if (f.ev === 'new_game_ack') { if (f.text) panel.note(f.text); return; }
   if (f.ev === 'page') return;                     // the hello's answer: this page owns no domain
   if (f.ev !== 'journal' || !f.rec) return;
@@ -349,6 +350,14 @@ function screen(f) {
   el.textContent = [...(f.status || []), ...(f.text ? ['', f.text] : [])].join('\n');
   el.classList.toggle('over', !!f.text);
 }
+// the person's keys go to the game as world lines on the agent's wire (world/nh_host.py); in the chat one key (`y`), a count
+// and a key (`20s`) or a #command are the game's too: every other line is the agent's to read
+const keys = k => send({ ev: 'world', domain: 'task', atoms: [`key:${k}`] });
+function gameKeys(text) {
+  const t = String(text ?? '').trim();
+  if (t.startsWith('#')) return `${t}\r`;
+  return /^\d*\S$/.test(t) ? t : null;
+}
 // a map with `keys` is played from the keyboard (the real game): the keys go to it unless a field has the focus
 const KEYS = { Enter: '\r', Escape: '\x1b', Backspace: '\x7f', ArrowUp: 'k', ArrowDown: 'j', ArrowLeft: 'h', ArrowRight: 'l' };
 addEventListener('keydown', e => {
@@ -356,7 +365,7 @@ addEventListener('keydown', e => {
   const k = KEYS[e.key] ?? (e.key.length === 1 ? e.key : null);
   if (k == null) return;
   e.preventDefault(); e.stopPropagation();
-  send({ ev: 'keys', keys: k });
+  keys(k);
 }, true);
 // ── replay: the recording, frame by frame ──
 async function replay(url) {
@@ -436,6 +445,8 @@ const say0 = panel.core.say.bind(panel.core);
 let stops = 0;
 panel.core.say = (text, opts = {}) => {
   const t = String(text ?? '').trim();
+  const k = gameKeys(t);
+  if (k != null) { panel.core.row({ who: 'person', text: t, channel: 'main' }); keys(k); return; }
   if (backend && t && keywordStop(t, panel.core.dialog.stopWords) && ['working', 'asking', 'stuck'].includes(world.status?.state)) {
     panel.core.tts.cancel?.();
     panel.core.via = opts.via ?? 'say';

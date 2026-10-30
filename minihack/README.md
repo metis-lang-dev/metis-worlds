@@ -52,9 +52,10 @@ levels through `Level.des()` (`tests/test_an_exerciser_level_opens_in_its_own_co
 |---|---|
 | `nethack/build.sh` | NetHack 3.6.6 from source into `.nethack/` (gitignored) with `TTY_TILES_ESCCODES` on: the tty names each cell's tile. Apt's build has it off, and a character and colour alone are ambiguous for 55% of the monsters and 93% of the objects |
 | `world/nh_tty.py` | the game behind a pty, its screen in pyte, each map cell with its tile (Tilehack's idea, rewritten for 3.6.6's codes) |
-| `experiments/nh_demo.py` | the frames (`world/map`, `world/delta`, `world/status`, `world/screen`, journal, narration). No agent yet: the chat's words and the keyboard are the game's commands, until the agentic loop makes the NetHack domain |
+| `world/nh_gym.py` | `mh_gym.py`'s protocol over the real game: the screen as the hierarchy's atoms, prompts answered, the page's `world/*` frames |
+| `world/nh_host.py`, `world/nh_hier.py` | `MhHost` over that world (view mode: nothing known until seen; a new level starts the map again), the hierarchy installed for metis-agent's service: the person's words through the model: an errand (`reach(goal)`: the director, task, nav and act) or one command (a move, a search, a pick-up, the stairs). The watch's surprises are off here (`observe`) until the loop makes the domain |
 
-The tile numbers index `web/tiles/nethack/glyphs.png` (this directory's) directly (`raw_tiles`, `tests/test_nh_tty.py` compares all 1082 by pixel). Glyph numbers differ from NLE's: this build has the mail daemon. Stopping the service (SIGTERM, Ctrl-C) saves the game and the next start restores it.
+The tile numbers index `web/tiles/nethack/glyphs.png` (this directory's) directly (`raw_tiles`, `tests/test_nh_tty.py` compares all 1082 by pixel). Glyph numbers differ from NLE's: this build has the mail daemon. The keyboard goes straight to the game (world lines on the agent's wire); chat lines are the model's to read, except a single key, a count and a key, or a #command. Stopping the service saves the game and the next start restores it.
 
 ## Findings while building (step 1)
 

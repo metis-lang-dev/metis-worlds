@@ -120,11 +120,14 @@ class MhHost:
             self._take(SHARED[self.key]["last"], fresh=False)
             self.actions, self.t, self.pending_events, self.handed = [], 0, [], []
             return
-        self.gym = GymClient(self.level, self.max_steps, self.seed)
+        self.gym = self.client()
         self.cells = self.gym.info["cells"]
         if self.key:
             SHARED[self.key] = {"gym": self.gym, "last": None}
         self._reset(self.seed)
+
+    def client(self):
+        return GymClient(self.level, self.max_steps, self.seed)
 
     def _reset(self, seed):
         self.seed = seed
