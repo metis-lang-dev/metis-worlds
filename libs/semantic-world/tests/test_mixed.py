@@ -54,7 +54,7 @@ def test_zones_links_and_the_one_graph(tmp_path):
 
 
 def test_the_zones_readings_both_ways(tmp_path):
-    f = scene(tmp_path).zone_facts()
+    f = scene(tmp_path).zone_facts(1.9)
     assert f["zone_kind(S,sidewalk)"] == f["zone_kind(X,crossing)"] == f["zone_kind(R,lane)"] == 1
     assert {"ramp(S,X)", "ramp(X,S)", "curb(R,S)", "curb(S,R)"} <= set(f)
     assert not any(a.startswith("open(") for a in f)                    # an open link is no reading
@@ -184,11 +184,30 @@ def test_the_one_binding_and_the_peoples_readings(tmp_path):
     assert set(b) == {"vru1", "vru2"} | {r for r in b if r.startswith(("a", "lead", "follow"))}
     assert m.load()["things"][b["vru1"]]["layer"] == "people" and b["vru1"] != b["vru2"]
     assert all(b[r] == "passenger" for r in b if not r.startswith("vru"))           # the lane roles: the car
-    f = m.people_facts(group=3)
-    assert "group_at(S)" in f and "walker_at(vru1,S)" in f
-    z = m.zone_facts()
+    f = m.people_facts(1.9, 2.0)
+    assert "walker_at(vru1,S)" in f and "group_at(S)" not in f                # they walk: no group
+    z = m.zone_facts(1.9)
     assert z["path_width(S,narrow)"] == z["path_width(N,wide)"] == 1
+    assert m.zone_facts(0.9)["path_width(S,wide)"] == 1                        # the threshold is the host's
     assert m.roles() == set(b)
+
+
+def test_a_group_is_two_standing_close_on_a_narrow_path(tmp_path):
+    def facts(row, xs, speed=0.0, **kw):
+        m = people_scene(tmp_path)
+        d = m.load()
+        d["zones"]["S"]["width"] = 1.6
+        d["zones"]["N"]["width"] = 3.0
+        m.save()
+        m.cycle([{"class": "pedestrian", "x": x, "y": row, "speed": speed} for x in xs],
+                ego={"place": "c0_-3", "speed": 0.0, "path": []})
+        return m.people_facts(1.9, 2.0, **kw)
+    assert "group_at(S)" in facts(-2.5, (14.5, 15.5))                         # the front of a group: sensing sees two
+    assert "group_at(S)" not in facts(-2.5, (14.5,))                          # one is no group
+    assert "group_at(S)" not in facts(-2.5, (10.5, 15.5))                     # two apart, more than the band
+    assert "group_at(S)" not in facts(-2.5, (14.5, 15.5), speed=1.0)          # walking
+    assert "group_at(N)" not in facts(2.5, (14.5, 15.5))                      # a wide path: they block nothing
+    assert "group_at(S)" not in facts(-2.5, (14.5, 15.5), group=3)            # the host may ask more
 
 
 def test_the_people_seen_are_the_chairs_unstructured_pairs(tmp_path):

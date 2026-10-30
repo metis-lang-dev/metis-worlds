@@ -45,12 +45,12 @@ where that change lands, with the test that asks for it.
     MixedMap.build(path, lanemap, cells, zones, links, dt, cell)   the map (cells {id: (x, y, zone)}, zones, links)
     MixedMap.from_net(path, net, cell, dt)                          a SUMO net read with walking=True, rasterised
     m.neighbours(place), m.zone_of(place), m.zone_kind(zone), m.xy(place), m.link(z1, z2)
-    m.zone_facts() → {atom: 1}                                      zone_kind / curb / ramp / path_width, static
+    m.zone_facts(narrow_below) → {atom: 1}                          zone_kind / curb / ramp / path_width, static
     m.cycle(detections, visible, ego)                               one tick: the vehicles (RoadMap's), the people
     m.birth(name, places, cls, mass)                                a birth prior at an occlusion boundary
     m.meets(track) / m.weight("meets", (role,))                     P(the person's path meets the chair's)
     m.project(k, j) → binding                                       the one binding: lane roles and vru1..vruJ
-    m.people_facts(group) → {atom: 1}                               walker_at / cyclist_at / group_at
+    m.people_facts(narrow_below, band) → {atom: 1}                  walker_at / cyclist_at / group_at
     m.pairs(lights) → [situation.Pair]                              the people's unstructured pairs, the lane's
     perceive(m, sensor, ego, truth, occluders) → (detections, visible)   the sensing model over the one map
 
@@ -523,17 +523,20 @@ class MixedMap(road.RoadMap):
         return out
 
     # ── the people's readings ──
-    def people_facts(self, group=3):
+    def people_facts(self, narrow_below, band, group=2, still=0.2):
         """walker_at(R, Z) / cyclist_at(R, Z) for every bound person (the zone of its likeliest place), group_at(Z) for
-        a zone where GROUP or more people are likeliest (a scene parameter, DESIGN §3.3). → {atom: 1}."""
+        a NARROW zone (its width under NARROW_BELOW metres, the host's parameter, as in zone_facts) where GROUP or more
+        tracks stand (speed at most STILL, m/s) within BAND metres of one of them: the host's parameter, DESIGN §3.3.
+        Two are enough: the front of a group is what sensing sees along a path. → {atom: 1}."""
         d = self.load()
-        out, count = {}, {}
+        out, standing = {}, {}
         for t in self._people(d):
             bel = d["belief"].get(t)
-            if not bel:
+            p = (d.get("pos") or {}).get(t)
+            if not bel or p is None or d["speed"].get(t, 0.0) > still:
                 continue
             z = self.zone_of(min(bel.items(), key=lambda x: (-x[1], x[0]))[0])
-            count[z] = count.get(z, 0) + 1
+            standing.setdefault(z, []).append((p["x"], p["y"]))
         for r, t in sorted((d.get("binding") or {}).items()):
             th = d["things"].get(t) or {}
             bel = d["belief"].get(t)
@@ -541,16 +544,18 @@ class MixedMap(road.RoadMap):
                 continue
             z = self.zone_of(min(bel.items(), key=lambda x: (-x[1], x[0]))[0])
             out["%s_at(%s,%s)" % ("cyclist" if th["class"] == "bicycle" else "walker", r, z)] = 1
-        for z, n in sorted(count.items()):
-            if n >= group:
+        for z, ps in sorted(standing.items()):
+            width = (d["zones"].get(z) or {}).get("width")
+            if width is not None and float(width) < narrow_below and any(
+                    sum(math.hypot(a[0] - b[0], a[1] - b[1]) <= band for b in ps) >= group for a in ps):
                 out["group_at(%s)" % z] = 1
         return out
 
     # ── the zones' readings (the static part of the mixed host's world.out) ──
-    def zone_facts(self, narrow_below=1.6):
+    def zone_facts(self, narrow_below):
         """zone_kind(Z, K) for every zone, curb(Z1, Z2) and ramp(Z1, Z2) for every link of that kind, both ways, and
-        path_width(Z, narrow | wide) for a zone that states its width (metres; narrow under NARROW_BELOW, a scene
-        parameter: two chairs' width by default, the width a group blocks, DESIGN §3.3)."""
+        path_width(Z, narrow | wide) for a zone that states its width (metres; narrow under NARROW_BELOW, the host's
+        parameter: the chair's width × 2 + a margin, the width a group blocks, DESIGN §3.3)."""
         d = self.load()
         out = {"zone_kind(%s,%s)" % (z, v["kind"]): 1 for z, v in d["zones"].items()}
         for z, v in d["zones"].items():
