@@ -22,7 +22,12 @@ links, so a traffic light's phase decides its priority (`priority`); the nearest
 (`nearest_zone`); a route through the internal lanes (`route_through`); objects' predicted routes in `pairs` (its
 route if given, else every way out of its lane), a lead on a later lane of the ego's route followed (same_dir), and
 the nearest shared zone, the object's ways merged worst-case (the least enter, the most leave); and the per-vClass
-Dynamics table with the lane's vcap (`dynamics_for`)."""
+Dynamics table with the lane's vcap (`dynamics_for`).
+
+Wc-member (s-4fe6cfd6; the wheelchair DESIGN amendment 4) adds a strip as lanes, for a sidewalk, a path or a bike lane:
+`halves` cuts a strip into its two opposite lanes under the keep-right convention (one lane when it is too narrow for
+two), `link_neighbours` finds the lanes side by side, and a Mover may stand off its lane's centre line (`offset`) or
+come the wrong way along it (`against`). Both default to what a road's mover has always been."""
 import math
 from dataclasses import dataclass, field
 
@@ -61,6 +66,8 @@ class Mover:
     length: float = 4.5
     width: float = 1.8
     vclass: str = "passenger"
+    offset: float = 0.0                 # off the lane's centre line, to the left of its direction (m)
+    against: bool = False               # it comes the wrong way along its lane (a strip's half, a one-lane path)
 
 
 @dataclass
@@ -81,7 +88,8 @@ LIGHT_RANK = {"G": 4, "g": 3, "y": 2, "Y": 2, "u": 1, "r": 1, "s": 1, "o": 0, "O
 # The per-vClass RSS dynamics (road-world step 3d). Parameters, not facts: RSS leaves them to regulation (Remark 2);
 # these follow the ad-rss / CARLA practice (an ego's response time 1 s, another vehicle's 2 s, a pedestrian's 0.5 s;
 # braking bounds brake_min_correct < brake_min < brake_max) with SUMO's class top speeds as the cap where no lane
-# limit applies. A host may replace any entry.
+# limit applies. A host may replace any entry. `wheelchair` (DESIGN amendment 4: a differential drive that keeps its
+# lane, 1.2 m/s) is PLACEHOLDERS until the hardware project measures it, its lateral entries first.
 VCLASS = {
     "passenger":  dict(accel=3.5, brake_min=4.0, brake_max=8.0, brake_min_correct=3.0, rho=2.0, min_dist=1.0,
                        lat_accel=0.2, lat_brake=0.8, mu=0.1, top=55.56),
@@ -91,6 +99,8 @@ VCLASS = {
                        lat_accel=0.5, lat_brake=1.0, mu=0.2, top=5.56),
     "pedestrian": dict(accel=2.0, brake_min=2.0, brake_max=4.0, brake_min_correct=2.0, rho=0.5, min_dist=0.5,
                        lat_accel=2.0, lat_brake=2.0, mu=0.2, top=1.39),
+    "wheelchair": dict(accel=1.0, brake_min=1.0, brake_max=2.0, brake_min_correct=0.8, rho=1.0, min_dist=0.5,
+                       lat_accel=0.2, lat_brake=0.8, mu=0.1, top=1.2),         # placeholders, see above
 }
 VCLASS_ALIAS = {"private": "passenger", "taxi": "passenger", "evehicle": "passenger", "emergency": "passenger",
                 "delivery": "truck", "bus": "truck", "coach": "truck", "trailer": "truck", "moped": "bicycle"}
@@ -113,6 +123,43 @@ def dynamics_for(vclass, v=None, vmin=None, vmax=None, lane=None, ego=False, vca
     hi = vmax if vmax is not None else (v if v is not None else 0.0)
     cap = top if lane is None or lane.speed is None else min(top, lane.speed * vcap_factor)
     return Dynamics(vmin=lo, vmax=hi, vcap=cap, **p)
+
+
+def halves(zone, axis, width, n=2, speed=None):
+    """A strip ZONE as lanes, around its AXIS [(x0, y0), (x1, y1)]: N = 2, keep right: `<zone>_along`, the half on the
+    right of the axis, running along it, and `<zone>_against`, the other half, running back; N = 1, one lane `<zone>_one`
+    along the axis, for both directions (a path narrower than two chairs) or one (a bike lane)."""
+    (x0, y0), (x1, y1) = axis
+    length = math.hypot(x1 - x0, y1 - y0)
+    if n == 1:
+        return [Lane("%s_one" % zone, length, width, speed=speed, shape=[(x0, y0), (x1, y1)])]
+    nx, ny = -(y1 - y0) / length * width / 4, (x1 - x0) / length * width / 4     # a quarter of the width, to the left
+    along = Lane("%s_along" % zone, length, width / 2, left="%s_against" % zone, left_opposite=True, speed=speed,
+                 shape=[(x0 - nx, y0 - ny), (x1 - nx, y1 - ny)])
+    back = Lane("%s_against" % zone, length, width / 2, left="%s_along" % zone, left_opposite=True, speed=speed,
+                shape=[(x1 + nx, y1 + ny), (x0 + nx, y0 + ny)])
+    return [along, back]
+
+
+def link_neighbours(lanes):
+    """Set left / right (and whether it runs the other way) of straight LANES lying side by side, the half widths' sum
+    apart. A neighbour already named stays."""
+    for a in lanes:
+        (ax0, ay0), (ax1, ay1) = a.shape[0], a.shape[-1]
+        ax, ay = ax1 - ax0, ay1 - ay0
+        for b in lanes:
+            if b is a:
+                continue
+            bx, by = b.shape[-1][0] - b.shape[0][0], b.shape[-1][1] - b.shape[0][1]
+            ox, oy = b.shape[0][0] - ax0, b.shape[0][1] - ay0
+            off = (ax * oy - ay * ox) / a.length                 # > 0: b lies to a's left
+            if abs(ax * by - ay * bx) > 1e-6 or abs(abs(off) - (a.width + b.width) / 2) > 1e-6:
+                continue
+            opp = ax * bx + ay * by < 0
+            if off > 0:
+                a.left, a.left_opposite = a.left or b.id, opp if a.left in (None, b.id) else a.left_opposite
+            else:
+                a.right, a.right_opposite = a.right or b.id, opp if a.right in (None, b.id) else a.right_opposite
 
 
 class LaneMap:
@@ -287,6 +334,13 @@ class LaneMap:
             lat, gap = self.lateral(ego.lane, o.lane)
             if d is not None and lat is None and d >= 0:                                   # on a later lane of the way
                 lat = "overlap"
+            if o.against and d is not None and lat == "overlap":                          # head-on along the ego's lane
+                if d >= 0:
+                    out.append(Pair("%s:opp_dir" % o.id, "opp_dir", "in_front", "overlap", d, 0.0, ego.dyn, o.dyn,
+                                    role=role_of(o)))
+                else:                                                                     # passed: it goes away
+                    out.append(Pair("%s:not_relevant" % o.id, "not_relevant", role=role_of(o), ego=ego.dyn, obj=o.dyn))
+                continue
             if d is not None and lat == "overlap":                                        # on the ego's way
                 if d >= 0:
                     lon, d_lon = "in_front", max(0.0, d - o.length)
@@ -302,7 +356,8 @@ class LaneMap:
                 rel = ((lb.length - o.s) if opposite else o.s) - ego.s                         # opposite: its s runs the other way
                 d_lon = max(0.0, abs(rel) - o.length)
                 lon = "in_front" if rel >= 0 else "at_back"
-                d_lat = max(0.0, gap - 0.5 * (ego.width + o.width))                             # between the cars' sides
+                across = (-o.offset if opposite else o.offset) - ego.offset                     # off their centre lines
+                d_lat = max(0.0, gap + (across if lat == "at_left" else -across) - 0.5 * (ego.width + o.width))   # between the cars' sides
                 out.append(Pair("%s:%s" % (o.id, kind), kind, lon, lat, d_lon, d_lat, ego.dyn, o.dyn, role=role_of(o)))
                 continue
             ways = [o.route] if o.route else self.ways(o.lane)
