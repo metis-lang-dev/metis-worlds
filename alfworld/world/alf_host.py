@@ -192,6 +192,11 @@ class AlfHost:
                 return said
         return self.smap.intent_atom(atom) if self.smap is not None else atom
 
+    def candidates(self, kind, constraints=None):
+        """The map's entries KIND can name (the query API's bind, map-queries s-396939dc step 3): metis-agent's slot
+        grounding takes a slot's candidates here, its only path to the map; None without a map."""
+        return self.smap.bind(kind, constraints) if self.smap is not None else None
+
     def cannot_fetch(self, obj, rec):
         """A fetch the room cannot do, as the task's vocabulary atom, or None: a kind it does not have (the card offers
         ALFWorld's kinds it lacks: a word with no number, not the map's) → nothere(K); a thing the world never puts

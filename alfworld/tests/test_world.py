@@ -1143,6 +1143,14 @@ def test_the_room_tables_are_the_datasets():
     assert r.returncode == 0, r.stderr
 
 
+def test_the_ci_room_tree_is_what_a_room_installs():
+    """map-queries step 3: tests/room_tree, the room tree metis-worlds CI runs metisc --interface on (it has no game
+    data), is world/gen_room_tree.py's install of kitchen 13 as a room now (its --check)."""
+    r = subprocess.run([sys.executable, os.path.join(ROOT, "world", "gen_room_tree.py"), "--check"], capture_output=True,
+                       text=True, env=dict(os.environ, PYTHONPATH=os.pathsep.join(sys.path)))
+    assert r.returncode == 0, r.stderr
+
+
 def test_a_regeneration_keeps_the_natures_the_family_names(tmp_path):
     """map-queries (the architect's ruling): tools/iface_gen.py takes each pred's nature from the family's iface yaml as
     it was — gave_up a report (a search's answer) — and makes a pred it does not name a signal; a nature that is none

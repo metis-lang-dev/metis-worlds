@@ -19,7 +19,10 @@ jobs:
   # spec 17 §4 (linker s-5908724a step 2): road's composition links to one image (metisc --link: every L-check over
   # the I-checks, the derived director compared with road_director), its hash == road/domains/image.golden.
   # alfworld's and minihack's trees are generated from the game data (world/gen_hier.py, world/mh_hier.py), which
-  # this CI does not have; their link is gated in metis-lang's corpus (gate 15).
+  # this CI does not have; their link is gated in metis-lang's corpus (gate 15). alfworld's room tree (kitchen 13 as a
+  # room: the person's tasks, map-queries s-396939dc step 3) is checked here from its snapshot, alfworld/tests/room_tree
+  # (world/gen_room_tree.py; a dev-machine test keeps it current): metisc --interface with no error, so a type-name
+  # clash with the director's routing type (alf-tasks step 2's `kind`, I6) fails CI, not the person's session.
   road-image:
     runs-on: ubuntu-24.04
     steps:
@@ -44,3 +47,11 @@ jobs:
           cd metis-worlds/road/domains
           env -u METIS_HOME "$GITHUB_WORKSPACE/metis-lang/src/metisc" --link composition.yaml --check | tee "$RUNNER_TEMP/link.txt"
           grep -qx "image road v-$(cat image.golden)" "$RUNNER_TEMP/link.txt"
+      - name: the room tree's interface (alfworld, kitchen 13 as a room)
+        run: |
+          cd metis-worlds/alfworld/tests/room_tree
+          rc=0
+          METIS_HOME="$GITHUB_WORKSPACE/metispy/metis/catalog" "$GITHUB_WORKSPACE/metis-lang/src/metisc" \
+              --interface domains/hier/composition.yaml > "$RUNNER_TEMP/iface.txt" 2>&1 || rc=$?
+          cat "$RUNNER_TEMP/iface.txt"
+          [ "$rc" -eq 0 ] && ! grep -q '^error' "$RUNNER_TEMP/iface.txt"
