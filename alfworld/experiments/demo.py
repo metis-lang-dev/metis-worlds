@@ -116,6 +116,17 @@ def resolve(name):
     raise SystemExit("demo.py: no game %r (demo.py list names them)" % name)
 
 
+def house_of(current, rooms):
+    """The rooms the agent keeps at its start (rooms s-b51a2e80 step 2): CURRENT and the first of each other room type. The
+    picker shows these; the rest are behind "choose another", and one chosen joins the house."""
+    here = next(r for r in rooms if r["id"] == current)
+    first = {}
+    for r in rooms:
+        first.setdefault(r["room"], r["id"])
+    first[here["room"]] = current
+    return [first[t] for _, _, t in ROOMS if t in first]
+
+
 def room_name(game):
     """A game's name among a World's rooms: its id, safe in a file's name."""
     return re.sub(r"[^A-Za-z0-9_]+", "-", id_of(game))
@@ -131,14 +142,18 @@ def install_room(game, root, view=False, tree=False, room=False, world=False):
     for spec in hda.NAMES[1:]:                 # metis-agent loads a host from <name>_host.py, or the manifest's host: file
         shutil.copy(Path(out[spec]) / "alf_host.py", Path(out[spec]) / ("%s_host.py" % spec))
     hda.card_files(root, out["task"])
-    from semantic_map import text_map
-    m = text_map(str(game), room=room)
+    from semantic_map import room_as_left, text_map
+    hier = root / "domains" / "hier"
+    page = hier / (".page.%s.json" % name) if name else None        # the room as the game begins it: read once
+    if page and page.exists():
+        m = json.loads(page.read_text())
+    else:
+        m = text_map(str(game), room=room)
+        if page:
+            page.write_text(json.dumps(m))
     if view:                                   # the page draws what the robot knows: every place marked until looked into
-        mp = root / "domains" / "hier" / (".map.%s.json" % name if name else ".map.json")
-        seen = set(json.loads(mp.read_text()).get("seen") or ())
         m["view"] = True
-        for p in m["places"]:
-            p["unseen"] = p["id"] not in seen
+    room_as_left(m, json.loads((hier / (".map.%s.json" % name if name else ".map.json")).read_text()))
     (root / "world-map.json").write_text(json.dumps(m, indent=1))
     return m, out
 
@@ -153,8 +168,9 @@ def setup(game, root, port=8398, view=False, tree=False, room=False, world=False
         shutil.rmtree(root)
     m, out = install_room(game, root, view=view, tree=tree, room=room, world=world)
     # the world page's picker: the games this demo can load, this one current
-    (root / "games.json").write_text(json.dumps({"current": id_of(game), "rooms": room,
-                                                 "games": room_list(id_of(game)) if room else game_list()}, indent=1))
+    rooms = room_list(id_of(game)) if room else None
+    (root / "games.json").write_text(json.dumps({"current": id_of(game), "rooms": room, "games": rooms or game_list(),
+                                                 **({"house": house_of(id_of(game), rooms)} if room and world else {})}, indent=1))
     names = list(hda.NAMES)
     run = root / ".run"
     run.mkdir()

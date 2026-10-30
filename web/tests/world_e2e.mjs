@@ -185,6 +185,31 @@ try {
   c.ok(/^You are in the middle of a room\./.test(u.intro || '') && !/_bar_/.test(u.intro), 'the room\'s opening text under its description', u.intro);
   c.ok(u.jsave === 'save (JSONL)', 'the journal saves its records', u.jsave);
 
+  // 8c. the house (rooms step 2): the picker shows the rooms the agent keeps, the rest behind "choose another"; a move
+  // needs no reload; the world card names the places looked into
+  const h = await ev(`(async () => {
+    const real = window.fetch, games = { current: 'k2', rooms: true, house: ['k2', 'b1'], games: [
+      { id: 'k2', label: 'kitchen 2', room: 'kitchen', split: 'train' }, { id: 'k3', label: 'kitchen 3', room: 'kitchen', split: 'train' },
+      { id: 'b1', label: 'bathroom 1', room: 'bathroom', split: 'train' }] };
+    window.fetch = (u, o) => String(u).endsWith('world/games.json') ? Promise.resolve(new Response(JSON.stringify(games))) : real(u, o);
+    window.__stayed = true;
+    await world.frame({ ev: 'world/room', game: 'k2' });
+    const sel = document.querySelector('#game'), all = document.querySelector('#gameall');
+    const before = { house: [...sel.options].map(o => o.textContent), value: sel.value, hidden: all.hidden };
+    sel.value = ''; sel.dispatchEvent(new Event('change'));
+    const after = { hidden: all.hidden, groups: [...all.querySelectorAll('optgroup')].map(g => g.label), every: all.options.length, back: sel.value };
+    const sem = await (await real(world.mapUrl)).json();
+    sem.card = { ...(sem.card || {}), looked: ['fridge 1', 'countertop 2'] };
+    await world.map.load(sem, world.mapUrl);
+    world.frame({ ev: 'world/map', url: world.mapUrl }).catch(() => {});
+    return { before, after };
+  })()`);
+  c.ok(h.before.house.join() === 'kitchen 2,bathroom 1,choose another room…' && h.before.value === 'k2' && h.before.hidden,
+    'the picker shows the house and "choose another"', h.before);
+  c.ok(!h.after.hidden && h.after.every === 3 && h.after.groups.join() === 'kitchen,bathroom' && h.after.back === 'k2',
+    '"choose another" opens every room, grouped; the house stays on the current room', h.after);
+  c.ok(await ev(`window.__stayed === true`), 'a room change does not reload the page', null);
+
   // 9. at phone width the page does not scroll sideways
   await page.cmd('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 2, mobile: true });
   await sleep(300);

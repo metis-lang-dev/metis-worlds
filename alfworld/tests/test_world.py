@@ -1216,6 +1216,65 @@ def test_a_room_of_a_world_is_installed_over_the_tree_and_stands_as_it_was_left(
     assert "go to fridge 1" in open(log).read() and host_map.bind("fridge") == ["fridge1"]
 
 
+def test_a_room_returned_to_is_drawn_as_it_was_left():
+    """rooms s-b51a2e80 step 2: on return the page's map is the room as the semantic map has it, not as the game began: each
+    thing where it was last seen, what is open, the places looked into (and on the world card), the robot where it stands."""
+    from semantic_map import room_as_left
+    m = {"view": True, "agent": {"pos": [0, 0], "at": None}, "card": {},
+         "places": [{"id": "fridge1", "name": "fridge 1", "pos": [1, 1], "openable": True, "closed": True, "unseen": True},
+                    {"id": "countertop1", "name": "countertop 1", "pos": [2, 2], "openable": False, "closed": False, "unseen": True},
+                    {"id": "sink1", "name": "sink 1", "pos": [3, 3], "openable": False, "closed": False, "unseen": True}],
+         "things": [{"id": "apple1", "at": "fridge1"}, {"id": "egg1", "at": "sink1"}]}
+    d = {"seen": ["fridge1", "countertop1"], "agent": {"at": "loc2"}, "belief": {"apple1": {"countertop1": 1.0}, "egg1": {"sink1": 0.5, "fridge1": 0.5}},
+         "places": {"fridge1": {"loc": "loc1", "opened": True}, "countertop1": {"loc": "loc2", "opened": False}, "sink1": {"loc": "loc3", "opened": False}}}
+    room_as_left(m, d)
+    assert [p["unseen"] for p in m["places"]] == [False, False, True] and m["places"][0]["closed"] is False
+    assert m["things"][0]["at"] == "countertop1" and m["things"][1]["at"] == "sink1"       # a thing not seen stays where the game put it
+    assert m["agent"]["at"] == "countertop1" and m["agent"]["pos"] == [2, 2]
+    assert m["card"]["looked"] == ["fridge 1", "countertop 1"]
+    fresh = {"view": True, "agent": {"pos": [0, 0], "at": None}, "card": {}, "places": [dict(m["places"][0], unseen=True, closed=True)], "things": []}
+    room_as_left(fresh, {"agent": {"at": "loc0"}, "places": {"fridge1": {"loc": "loc1", "opened": False}}, "belief": {}})
+    assert fresh["places"][0]["unseen"] and fresh["agent"]["at"] is None and "looked" not in fresh["card"]
+
+
+def test_the_idle_room_processes_are_bounded_and_a_closed_room_replays_its_log(tmp_path, monkeypatch):
+    """rooms step 2: the world processes kept are bounded, the longest idle closed; a room returned to after that stands
+    where its log left it (AlfHost._reset replays it), the same world by a new process."""
+    import alf_host
+    import gen_instance
+    sys.path.insert(0, os.path.join(ROOT, "experiments"))
+    import demo
+    monkeypatch.setattr(alf_host, "MAX_WORLDS", 2)
+    monkeypatch.setattr(alf_host, "_SHARED", {})
+    pkgs = {}
+    for room in ("kitchen 2", "bathroom 401", "bedroom 301"):
+        flat, _, _ = gen_instance.generate(str(demo.resolve(room)), str(tmp_path / room.replace(" ", "")))
+        pkg = os.path.dirname(flat)
+        gj = os.path.join(pkg, "game.json")
+        json.dump(dict(json.load(open(gj)), room=True), open(gj, "w"))
+        pkgs[room] = (pkg, str(tmp_path / (room.replace(" ", "") + ".jsonl")))
+        open(pkgs[room][1], "w").close()
+    try:
+        h = alf_host.AlfHost(pkgs["kitchen 2"][0], commands_log=pkgs["kitchen 2"][1])
+        first = h.gym
+        cmd = next(c for c in h.admissible if c.startswith("go to"))
+        h._take(h.gym.call("step", command=cmd))
+        open(pkgs["kitchen 2"][1], "a").write(json.dumps({"command": cmd}) + "\n")
+        before = set(h.dyn)
+        alf_host.AlfHost(pkgs["bathroom 401"][0], commands_log=pkgs["bathroom 401"][1])
+        assert alf_host.AlfHost(pkgs["kitchen 2"][0], commands_log=pkgs["kitchen 2"][1]).gym is first      # kept: no new process
+        alf_host.AlfHost(pkgs["bedroom 301"][0], commands_log=pkgs["bedroom 301"][1])
+        assert len(alf_host._SHARED) == 2                                                                   # bathroom closed, kitchen used more lately
+        alf_host.AlfHost(pkgs["bathroom 401"][0], commands_log=pkgs["bathroom 401"][1])
+        assert len(alf_host._SHARED) == 2 and first.proc.poll() is not None                                 # now the kitchen is the longest idle
+        back = alf_host.AlfHost(pkgs["kitchen 2"][0], commands_log=pkgs["kitchen 2"][1])
+        assert back.gym is not first and set(back.dyn) == before and back.t == 1                            # a new process, the same world
+    finally:
+        for c in alf_host._SHARED.values():
+            c.shared = False
+            c.close()
+
+
 def test_the_room_tables_are_the_datasets():
     """map-queries step 1: world/cancontain.json, presence.json and starts.json are world/gen_tables.py's output over
     every ALFWorld game (its --check)."""

@@ -40,7 +40,12 @@ another, through the intent interface.
   steps on. The episode's goal is still read (`episode_won`, reported) and never ends the session.
 - **No task in the map.** The map has no task of its own: the person's goal binds the roles.
 - **The picker.** The top bar's picker lists one room per ALFRED scene (24 kitchens, 28 living rooms, 27 bedrooms,
-  28 bathrooms). A pick moves the agent to that room with nothing restarted (rooms s-b51a2e80); a room it comes back to stands as it left it.
+  28 bathrooms). The picker shows the house: the room started in and the first of each other type, the rest behind "choose another
+  room…" (a room chosen there joins the house). A pick moves the agent to that room with nothing restarted (rooms
+  s-b51a2e80), and a room it comes back to stands as it left it: things where they were put, the places looked into, on the
+  page too. Measured (kitchens, GPU): a full restart 13–18 s; a room's first entry 5–15 s; a return 2–5 s. Each room keeps a
+  world process (92 MB), at most 4 (METIS_ALF_WORLDS), the longest idle closed; a room returned to after that replays
+  its commands log (1.9 s at 10 commands, 10 s at 200).
 
 **The tasks.** The task card (`domains/hier/task/intent.yaml`) maps the words; the program says the lines; the
 agent only renders them.

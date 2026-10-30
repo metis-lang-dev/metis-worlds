@@ -146,6 +146,7 @@ function worldCard() {
     ${(c.about || []).map(a => `<p class="wc-about">${esc(a)}</p>`).join('')}
     ${c.asks?.length ? `<div class="wc-h">what you can ask</div><div id="wcasks">${c.asks.map((a, i) => `<div class="wc-ask"><button type="button" class="chip" data-ask="${i}">${esc(a.say)}</button><span class="what">${esc(a.what || '')}</span></div>`).join('')}</div>` : ''}
     ${c.room?.length ? `<div class="wc-h">the room</div>${kindRows(c.room, true)}` : ''}
+    ${c.looked?.length ? `<div class="wc-h">looked into already</div><p class="wc-looked">${esc(c.looked.join(', '))}</p>` : ''}
     ${c.things?.length ? `<div class="wc-h">the things you can ask for</div>${kindRows(c.things, false)}` : ''}
     ${c.cannot?.length ? `<div class="wc-h">it cannot</div><ul class="wc-cannot">${c.cannot.map(x => `<li>${esc(x)}</li>`).join('')}</ul>` : ''}
     ${c.source ? `<p class="wc-src">${esc(c.source)}</p>` : ''}`;
@@ -159,23 +160,35 @@ async function gamePicker() {
   try { const r = await fetch(new URL('world/games.json', world.base)); if (r.ok) g = await r.json(); } catch { /* no runner: no picker */ }
   if (!g?.games?.length) return;
   world.games = g;
-  const sel = $('#game'), rooms = [...new Set([...ROOMS, ...g.games.map(x => x.room)])];
-  sel.replaceChildren(...rooms.filter(r => g.games.some(x => x.room === r)).map(r => {
+  // grouped by room type, every game; with a house (rooms step 2) the house first, the rest behind "choose another"
+  const sel = $('#game'), all = $('#gameall'), rooms = [...new Set([...ROOMS, ...g.games.map(x => x.room)])];
+  const opt = x => Object.assign(document.createElement('option'),
+    { value: x.id, textContent: x.label + (x.split === 'train' ? '' : ` (${x.split.replace('_', ' ')})`), selected: x.id === g.current });
+  const groups = () => rooms.filter(r => g.games.some(x => x.room === r)).map(r => {
     const og = document.createElement('optgroup');
     og.label = r;
-    og.append(...g.games.filter(x => x.room === r).map(x => Object.assign(document.createElement('option'),
-      { value: x.id, textContent: x.label + (x.split === 'train' ? '' : ` (${x.split.replace('_', ' ')})`), selected: x.id === g.current })));
+    og.append(...g.games.filter(x => x.room === r).map(opt));
     return og;
-  }));
+  });
+  const go = id => { all.hidden = true; rec('load_game', { game: id }); send({ ev: 'load_game', game: id }); loading(id); };
+  if (g.house?.length) {
+    sel.replaceChildren(...g.house.map(id => g.games.find(x => x.id === id)).filter(Boolean).map(opt),
+      Object.assign(document.createElement('option'), { value: '', textContent: 'choose another room…' }));
+    all.replaceChildren(...groups());
+    all.onchange = () => go(all.value);
+  } else sel.replaceChildren(...groups());
   sel.hidden = false;
-  sel.onchange = () => { rec('load_game', { game: sel.value }); send({ ev: 'load_game', game: sel.value }); loading(sel.value); };
+  sel.onchange = () => {
+    if (sel.value) { go(sel.value); return; }
+    sel.value = g.current; all.value = g.current; all.hidden = false; all.focus();
+  };
   gameInfo();
 }
 function loading(game) {                             // another game on its way (null: refused, the current one stays)
   world.loading = game;
   const sel = $('#game');
   sel.disabled = !!game;
-  if (!game) { sel.value = world.games?.current ?? sel.value; return; }
+  if (!game) { sel.value = world.games?.current ?? sel.value; $('#gameall').hidden = true; return; }
   const x = world.games?.games.find(g => g.id === game);
   $('#sstate').textContent = 'moving'; $('#stext').textContent = `the agent goes to ${x?.label ?? game}…`;
   $('#sopts').replaceChildren();
@@ -285,7 +298,7 @@ async function frame(f) {
   rec('frame', { ev: f.ev });
   if (f.ev === 'world/map') { world.mapUrl = new URL(f.url, world.base).href; await world.map.load(world.mapUrl); fitMap(); legend(); worldCard(); gameInfo(); drawHierarchy(); return; }   // the task row names this map's task
   if (f.ev === 'world/loading') { loading(f.game); return; }
-  if (f.ev === 'world/room') { if (world.games) world.games.current = f.game; loading(null); gameInfo(); return; }   // the agent is there: no reload, the panes go on
+  if (f.ev === 'world/room') { await gamePicker(); loading(null); gameInfo(); return; }   // the agent is there: no reload, the panes go on
   if (f.ev === 'load_game_ack') { if (f.error) { loading(null); panel.note(f.error); } return; }
   if (f.ev === 'world/delta') { world.map.delta(f); if (f.task) { chainTo(world.map.map.task); } return; }
   if (f.ev === 'world/hierarchy') { hierarchy(f); return; }
