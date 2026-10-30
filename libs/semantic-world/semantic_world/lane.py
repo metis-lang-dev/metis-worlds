@@ -88,8 +88,8 @@ LIGHT_RANK = {"G": 4, "g": 3, "y": 2, "Y": 2, "u": 1, "r": 1, "s": 1, "o": 0, "O
 # The per-vClass RSS dynamics (road-world step 3d). Parameters, not facts: RSS leaves them to regulation (Remark 2);
 # these follow the ad-rss / CARLA practice (an ego's response time 1 s, another vehicle's 2 s, a pedestrian's 0.5 s;
 # braking bounds brake_min_correct < brake_min < brake_max) with SUMO's class top speeds as the cap where no lane
-# limit applies. A host may replace any entry. `wheelchair` (DESIGN amendment 4: a differential drive that keeps its
-# lane, 1.2 m/s) is PLACEHOLDERS until the hardware project measures it, its lateral entries first.
+# limit applies. A host may replace any entry. `wheelchair` (DESIGN amendment 4: a differential drive, 1.2 m/s) moves
+# laterally only by turning, so its lateral dynamics are NEGLECTED; its margin mu is the host's (MixedMap.pairs).
 VCLASS = {
     "passenger":  dict(accel=3.5, brake_min=4.0, brake_max=8.0, brake_min_correct=3.0, rho=2.0, min_dist=1.0,
                        lat_accel=0.2, lat_brake=0.8, mu=0.1, top=55.56),
@@ -100,7 +100,7 @@ VCLASS = {
     "pedestrian": dict(accel=2.0, brake_min=2.0, brake_max=4.0, brake_min_correct=2.0, rho=0.5, min_dist=0.5,
                        lat_accel=2.0, lat_brake=2.0, mu=0.2, top=1.39),
     "wheelchair": dict(accel=1.0, brake_min=1.0, brake_max=2.0, brake_min_correct=0.8, rho=1.0, min_dist=0.5,
-                       lat_accel=0.2, lat_brake=0.8, mu=0.1, top=1.2),         # placeholders, see above
+                       lat_accel=0.0, lat_brake=0.0, mu=0.0, top=1.2),
 }
 VCLASS_ALIAS = {"private": "passenger", "taxi": "passenger", "evehicle": "passenger", "emergency": "passenger",
                 "delivery": "truck", "bus": "truck", "coach": "truck", "trailer": "truck", "moped": "bicycle"}
