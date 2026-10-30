@@ -566,8 +566,6 @@ class AlfHost:
         metis-agent's service says the director's lines with it (nina's alf-demo review N3)."""
         import re
         from semantic_map import spoken
-        if re.match(r"^gave_up: ", text):            # the director's end line for a search's answer (map-queries step 1)
-            return "I stopped looking."
         if getattr(self, "smap", None) is not None:   # a role said as the thing it is bound to: name(role, thing)
             names = dict(self.smap.names(self.frozen))
             if names:

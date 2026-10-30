@@ -106,6 +106,22 @@ def test_the_room_in_view_mode(tmp_path):
     assert m.role_reading({})["inrecep(target,%s)" % m.role_of("fridge1")] == 1
 
 
+def test_a_kind_wanted_in_sight_of_places_has_looked_into_them(tmp_path):
+    """map-queries step 3 (the harness's kettle, then the apple): a kind wanted while the robot stands at places that
+    could hold it has looked into them already (a sighting would have resolved it): they are looked, out of its
+    belief, absent at once in the reading; the existence prior keeps the mass the look took."""
+    st = STATIC + ["cancontain(countertop_t,kettle_t)", "cancontain(fridge_t,kettle_t)"]
+    m = SemanticMap.build(str(tmp_path / "map.json"), st, DYN, [], [], view=True, room=True)
+    m.observe(["at(loc1)", "inrecep(apple1,countertop1)"])            # standing at the countertops: no kettle there
+    assert m.want_kind(m.load(), "kettle") == "kettle"
+    d = m.load()
+    assert set(d["looked"]["kettle"]) == {"countertop1", "countertop2"} and d["belief"]["kettle"] == {"fridge1": 1.0}
+    assert set(d["belief0"]["kettle"]) == {"countertop1", "countertop2", "fridge1"}
+    m.project("kettle", "microwave1")
+    assert not any(a.startswith("inrecep(target,") and m.binding()[a[15:-1]] != "fridge1"
+                   for a in m.role_reading({}))
+
+
 def test_the_room_names():
     assert thor_id("countertop_bar__minus_01_dot_87_bar__plus_00_dot_96_bar__plus_01_dot_80") == ("countertop", -1.87, 0.96, 1.8)
     assert spoken("cabinet12") == "cabinet 12" and want_handle("tomato2") == "tomato"

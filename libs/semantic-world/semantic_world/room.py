@@ -431,6 +431,17 @@ class SemanticMap(core.SemanticMap):
             # its existence (the architect's ruling, alf-tasks step 3): the room type's frequency of the kind as the prior
             d.setdefault("belief0", {})[word] = dict(d["belief"][word])
             d.setdefault("presence0", {})[word] = (d.get("presence_prior") or {}).get(wt, 1.0)
+            # the places in sight now are looked into without it (a sighting resolved it above): the look the next
+            # observe would make, made here, so the task's first reading already has their absent facts (after a
+            # search ended at a countertop, "the apple" bound that countertop as p0 believed, and the first move's
+            # reading found it absent: a surprise on the planner)
+            bel = d["belief"][word]
+            for r in self._visible(d, d["agent"]["at"]):
+                if bel.get(r, 0) > 0:
+                    d.setdefault("looked", {}).setdefault(word, []).append(r)
+                    bel.pop(r)
+            z = sum(bel.values())
+            d["belief"][word] = {r: p / z for r, p in bel.items()} if z > 0 else {}
             self.save()
             self.log("want", wanted=word, belief=d["belief"][word], presence=d["presence0"][word])
         return word
