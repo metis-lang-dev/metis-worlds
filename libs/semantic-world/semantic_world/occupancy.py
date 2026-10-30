@@ -87,10 +87,11 @@ def _credible(mass, q):
 
 class Track:
     """One track's occupancy (see the module's doc). cls, seen, mass (existence: 1, or a birth's), speed, form: unstructured |
-    strip | vehicle | birth."""
+    strip | vehicle | birth; pose (x, y) and heading as last sighted, None before a sighting (a vehicle: no heading)."""
 
-    def __init__(self, name, cls, seen, mass, speed, form, cell, soft, shapes, dyn, body, chair):
+    def __init__(self, name, cls, seen, mass, speed, form, cell, soft, shapes, dyn, body, chair, pose=None, heading=None):
         self.name, self.cls, self.seen, self.mass, self.speed, self.form = name, cls, seen, mass, speed, form
+        self.pose, self.heading = pose, heading
         self.cell, self._soft, self._shapes, self._dyn, self._body, self._chair = cell, soft, shapes, dyn, body, chair
 
     def soft(self, k):
@@ -268,23 +269,26 @@ def _person_track(m, d, t, n, step, q, pl, cx, strips):
     seen = t in (d.get("_people_seen") or ())
     p0 = (d.get("pos") or {}).get(t)
     chair = m.RADIUS["chair"]
+    pose, heading = (p0["x"], p0["y"]) if p0 else None, (d.get("heading") or {}).get(t)
     if mass is not None:
         return Track(t, th["class"], False, mass, speed, "birth", pl.cell, soft, [[] for _ in roll], dyn, 0.0, chair)
     if p0 is not None and cx is not None and m._cyclist_mover(d, t, cx, strips) is not None:
         h = (d.get("heading") or {}).get(t, 0.0)
         ux, uy = math.cos(h), math.sin(h)
         shapes = [[[(p0["x"], p0["y"]), (p0["x"] + ux * speed * k * step, p0["y"] + uy * speed * k * step)]] for k in range(n + 1)]
-        return Track(t, th["class"], seen, 1.0, speed, "strip", pl.cell, soft, shapes, dyn, mixed.BODY["bicycle"][1] / 2, chair)
+        return Track(t, th["class"], seen, 1.0, speed, "strip", pl.cell, soft, shapes, dyn, mixed.BODY["bicycle"][1] / 2, chair, pose, heading)
     shapes = [[pl.square(p) for p in _credible(bel, q)] for bel in roll]
     if seen and p0 is not None:
         shapes[0] = [(p0["x"], p0["y"], 0.0)]
-    return Track(t, th["class"], seen, 1.0, speed, "unstructured", pl.cell, soft, shapes, dyn, m.RADIUS.get(th["class"], 0.3), chair)
+    return Track(t, th["class"], seen, 1.0, speed, "unstructured", pl.cell, soft, shapes, dyn, m.RADIUS.get(th["class"], 0.3), chair, pose, heading)
 
 
 def _vehicle_track(m, d, t, n, step, q, pl):
     th, speed = d["things"][t], d["speed"].get(t, 0.0)
     length = th.get("length", 4.5)
     roll = _roll_vehicle(m, d, t, n, step)
+    p0 = (d.get("pos") or {}).get(t)
+    pose = point_at(m.lanemap.lanes[p0["lane"]].shape, p0["s"]) if p0 else None
 
     def body(p):
         lane, b = road.of(p)
@@ -298,7 +302,7 @@ def _vehicle_track(m, d, t, n, step, q, pl):
         soft.append(dict(sorted(cells.items())))
         shapes.append([_grid_square(c, pl.cell) for c in sorted({c for p in _credible(bel, q) for c in body(p)})])
     return Track(t, th["class"], t in (d.get("_seen") or ()), 1.0, speed, "vehicle", pl.cell, soft, shapes,
-                 dynamics_for(th["class"], v=speed), 0.0, m.RADIUS["chair"])
+                 dynamics_for(th["class"], v=speed), 0.0, m.RADIUS["chair"], pose)
 
 
 def _grid_square(c, cell):

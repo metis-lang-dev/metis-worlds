@@ -55,6 +55,7 @@ def test_a_walker_keeps_going_its_mass_ahead_of_it_and_further_with_time(tmp_pat
     assert m.load()["intent"][t]["keep"] > 0.5
     tr = occupancy.render(m).tracks[t]
     assert tr.form == "unstructured" and tr.seen and tr.mass == 1.0
+    assert tr.pose == (x, y) and tr.heading == 0.0 and tr.cls == "pedestrian" and tr.speed == 1.3
     xs = [mean(tr.soft(k))[0] for k in range(7)]
     assert xs[0] == pytest.approx(math.floor(x) + 0.5) and all(a < b for a, b in zip(xs[1:], xs[2:]))
     assert xs[6] - x > 1.5                             # the stop and cross branches are in the mean too
@@ -171,7 +172,7 @@ def test_an_unconfirmed_birth_is_soft_by_its_mass_and_never_hard(tmp_path):
     m.birth("b1", ["c10_10", "c10_11"], "pedestrian", 0.2)
     occ = occupancy.render(m)
     tr = occ.tracks["b1"]
-    assert tr.form == "birth" and not tr.seen and tr.mass == 0.2
+    assert tr.form == "birth" and not tr.seen and tr.mass == 0.2 and tr.pose is None and tr.heading is None
     for k in range(7):
         assert sum(tr.soft(k).values()) == pytest.approx(0.2)
         assert occ.hard(k) == set() and occ.clear(k, 10.5, 10.5)
@@ -238,7 +239,7 @@ def test_a_vehicle_is_its_body_on_its_lane(tmp_path):
     t = next(iter(t for t in m.load()["things"] if m.load()["things"][t].get("layer") != "people"))
     occ = occupancy.render(m)
     tr = occ.tracks[t]
-    assert tr.form == "vehicle" and tr.seen
+    assert tr.form == "vehicle" and tr.seen and tr.pose == (21.0, 4.75) and tr.heading is None
     assert tr.radius() == m.RADIUS["chair"]
     # the body's cells off the map's cells too (no cell on the lane), at the lane's width, its length behind the front
     assert all(3 <= mixed.cell_ij(c)[1] <= 6 for c in tr.soft(0))
