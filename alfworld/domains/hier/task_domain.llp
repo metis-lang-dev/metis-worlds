@@ -49,7 +49,8 @@ pred fetch_risk(risk) : task.             % the host's level port (spec16 step 4
 % what the person asks that this task cannot do (alf-tasks s-e9cc8fae step 2), mapped by the card (intent.yaml:
 % NOTHERE, NOTASK): ALFWorld's own vocabulary — every object and receptacle kind of ALFRED's scenes, as the text
 % names them (one word), and the chores of its other task families — never a thing of the room
-type kind {
+% (alfkind, not kind: the director's routing type is kind, and one type has one member set: spec/15 I6)
+type alfkind {
   alarmclock apple armchair baseballbat basketball bathtub bathtubbasin bed blinds book boots bowl box bread
   butterknife cabinet candle cart cd cellphone chair cloth coffeemachine coffeetable countertop creditcard cup
   curtains desk desklamp diningtable dishsponge drawer dresser egg floorlamp footstool fork fridge garbagecan
@@ -62,7 +63,7 @@ type kind {
   winebottle
 }.
 type chore {heating cooling cleaning slicing examining switching}.
-pred nothere(kind) : task.                % a kind this room does not have (the card: the kinds it lacks)
+pred nothere(alfkind) : task.                % a kind this room does not have (the card: the kinds it lacks)
 pred notask(chore) : task.                % a chore, not an errand of moving a thing
 pred unfit(object, receptacle) : task.    % a fetch the world does not allow (ALFWorld's cancontain), over the fetch's roles
 % the sub-goals (out)

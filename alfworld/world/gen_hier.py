@@ -353,18 +353,18 @@ def card(spec, smap):
     # what this task cannot do (alf-tasks step 2): the kinds of ALFWorld's vocabulary this room lacks (view mode: its
     # places only — a thing not seen yet is searched for), and the chores of the other task families
     vocab = vocabulary()
-    if spec == "task" and "kind" in vocab:
+    if spec == "task" and "alfkind" in vocab:
         # a kind it lacks is FETCH's own value (the model spells the word it heard, never another thing in its place);
         # the host says it is not here (AlfHost.intent_atom → nothere). View mode: a thing not seen yet is searched for
         present = set(d.get("kinds") or []) | {re.sub(r"\d+$", "", h) for h in list(d["places"]) + list(d["things"])}
-        absent = [k for k in vocab["kind"] if k not in present]
+        absent = [k for k in vocab["alfkind"] if k not in present]
         have["receptacle"] += [k for k in absent if k in RECEPTACLE_KINDS]
         if not d.get("view"):
             have["object"] += [k for k in absent if k not in RECEPTACLE_KINDS]
         elif d["task"].get("room"):                                  # a room in view mode: any kind that can be carried, not seen yet
             seen = {re.sub(r"_t$", "", d["types"].get(o, "")) for o, th in d["things"].items() if not th.get("wanted")}
             carried = {re.sub(r"_t$", "", t) for t in compat_all()}
-            have["object"] += [k for k in vocab["kind"] if k in carried and k not in seen and k not in have["object"]]
+            have["object"] += [k for k in vocab["alfkind"] if k in carried and k not in seen and k not in have["object"]]
         have["chore"] = vocab["chore"]
     if d.get("view") and spec == "task":   # view mode: the task's kind stays a value ("a tomato": any tomato), seen or not
         kinds = {semantic_map.want_handle(t) for t in d["task"]["targets"]}
@@ -422,7 +422,7 @@ _VOCAB = {}
 
 
 def vocabulary():
-    """The task's own vocabulary (task_domain.llp's enumerated types: kind, chore, risk): {type: [constants]}."""
+    """The task's own vocabulary (task_domain.llp's enumerated types: alfkind, chore, risk, …): {type: [constants]}."""
     if not _VOCAB:
         import re
         text = open(os.path.join(os.path.dirname(HERE), "domains", "hier", "task_domain.llp")).read()
