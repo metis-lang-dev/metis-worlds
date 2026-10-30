@@ -1,6 +1,6 @@
 case: "the planner drives itself: it asks for the controls, and below the limit with room before the lead it speeds up"
 boundaries:
-  - world: [below_limit, lead_ok, accel_ok, keep_ok, zone_at(nextzone, none), now]
+  - world: [below_limit, lead_ok, accel_ok, cross_settled(nextzone), keep_ok, zone_at(nextzone, none), now]
     expect: {out: [tick__active(planner), tick__want(planner, controls)], status: running, fired: [drive]}
   - grant: [controls]
     deliver: [tick__grant(planner, controls)]
