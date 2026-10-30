@@ -12,7 +12,7 @@ import restrict  # noqa: E402
 import road_facts  # noqa: E402
 import road_world  # noqa: E402
 from semantic_world.lane import Mover, dynamics_for  # noqa: E402
-from semantic_world.situation import Situation  # noqa: E402
+from semantic_world.situation import Pair, Situation  # noqa: E402
 
 
 def test_a_rule_names_its_command():
@@ -82,6 +82,72 @@ def test_every_scenario_is_safe_under_the_restrictor_alone(scenario):
         w.step()
     s = w.summary()
     assert s["collisions"] == 0 and s["violations"] == 0, s
+
+
+def planner_accel(w):
+    """The planner's accel as the rules gate it, held a plan (1 s): accel while accel_ok and cross_settled, else keep."""
+    f = w.observe()[0]
+    return ("accel", None) if "accel_ok" in f and "cross_settled(nextzone)" in f and "below_limit" in f else ("keep", None)
+
+
+@pytest.mark.parametrize("scenario", sorted(road_world.SCENARIOS))
+@pytest.mark.parametrize("seed", [1, 2, 3])
+def test_every_scenario_is_safe_under_the_planners_accel(scenario, seed):
+    # planned at the tree's phase, 0.2 s into each second. The rule keeps the speed, it does not make room: junction_rb seed
+    # 2 clears the car by 0.1 s here, and a plan 0.2 s earlier meets its tail (test_the_rule_keeps_it_does_not_make_room)
+    w = road_world.RoadWorld(scenario, seed)
+    for i in range(1200):
+        if w.arrived():
+            break
+        if i % 10 == 2:
+            w.command(planner_accel(w), life=10)
+        w.step()
+    s = w.summary()
+    assert s["collisions"] == 0 and s["violations"] == 0, s
+
+
+def test_the_rule_keeps_it_does_not_make_room():
+    # the known margin (road-sync s-4169b42d): the first accel comes before the car moves, and past that the ego can't
+    # stop short, so the responder clears it. A phase earlier, seed 2 enters as the car's tail leaves
+    w = road_world.RoadWorld("junction_rb", 2)
+    for i in range(160):
+        if w.arrived():
+            break
+        if i % 10 == 0:
+            w.command(planner_accel(w), life=10)
+        w.step()
+    assert w.summary()["collisions"] == 1 and w.summary()["violations"] == 0
+
+
+def test_an_accel_held_at_a_rule_breaker_is_why_the_rule_is_there():
+    # the world alone, accel held whatever the crossing car does: the restrictor has no reason to stop it (the ego has the
+    # priority, and is past stopping short by the time the car takes it), and they meet
+    w = road_world.RoadWorld("junction_rb", 1)
+    for _ in range(140):
+        if w.arrived():
+            break
+        w.command(("accel", None), life=1)
+        w.step()
+    assert w.summary()["collisions"] > 0
+
+
+def test_a_crossing_car_settles_when_it_stands_or_has_left():
+    w = road_world.RoadWorld("junction_rb", 1)
+    assert "cross_settled(nextzone)" in w.observe()[0]            # it stands, at t 0
+    while w.t < 1.5:
+        w.step()
+    assert "cross_unsettled(nextzone)" in w.observe()[0]          # it goes: whether it yields is not yet seen
+    while w.t < 12.0 and not w.arrived():
+        w.step()
+    assert "cross_settled(nextzone)" in w.observe()[0]            # it has passed
+
+
+def test_room_to_speed_up_counts_on_the_lead_braking_and_room_to_keep_does_not():
+    ego = Mover("e", "L", 100.0, dynamics_for("passenger", v=12.0, ego=True))
+    p = Pair("lead:same_dir", "same_dir", "in_front", "overlap", 40.0, 0.0, ego.dyn, dynamics_for("passenger", v=13.0),
+             role="lead")
+    assert road_facts.gap_room([p], ego, 12.0, 13.9, 0.0)
+    assert not road_facts.gap_room([p], ego, 12.0, 13.9, ego.dyn.accel)
 
 
 def test_a_car_yields_only_from_another_lane_to_an_ego_with_the_priority():

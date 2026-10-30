@@ -31,7 +31,9 @@ a1..a3, vru1). The facts (every number stays here; the rules read classes):
   same (the zone's priority lane: the ego's, another's, none); can_stop(nextzone) (the ego's stated braking
   distance at brake_min, after its response time, ≤ d_enter: RSS's zone-entry rule), else late(nextzone); zfree(nextzone) when no mover
   at all is inside (every mover, not the bound ones only), and holder(nextzone, O) for zone_roles' holder; zclear(nextzone) when it is free and no
-  mover on another of its lanes is within APPROACH of it, else zbusy(nextzone); conflict(nextzone) for crossing axes (a zone with a
+  mover on another of its lanes is within APPROACH of it, else zbusy(nextzone); cross_unsettled(nextzone) while a car on a
+  crossing lane, near the zone or in it, still moves, else cross_settled(nextzone) (RSS rule 5 form B: the planner's accel
+  waits; also with no zone ahead, and at a merge); conflict(nextzone) for crossing axes (a zone with a
   priority), share(nextzone) for a merge's (none); turn(nextzone) at a merge when the last to enter came from
   another lane (the zipper's alternation, TURN: the host's {zone: the lane of the last entrant}) and no mover on
   another of its lanes reaches the line first, else wait_turn(nextzone) (road step 5, yield_merge: the alternation
@@ -46,6 +48,7 @@ from semantic_world.situation import Situation, safe_same_dir, stated
 OBJ_ROLES = ("lead", "follower", "leadleft", "followleft", "leadright", "followright", "a1", "a2", "a3", "vru1")
 NEAR_RANGE, AT_RANGE, APPROACH, NEAR_MARGIN = 30.0, 3.0, 40.0, 10.0
 SLOW_RANGE, SLOW_MARGIN, NEAR_WALK = 60.0, 2.0, 1.0
+STILL = 0.1                       # m/s: a car at or under this stands
 PLAN_T = 1.0                      # the planner's period (s): accel_ok looks one plan ahead
 
 
@@ -58,17 +61,24 @@ def inside(z, m):
 
 
 def gap_room(pairs, ego, v, cap, accel, t=2 * PLAN_T):
-    """The ego may hold ACCEL for T and stay at a safe distance behind its lead (RSS rule 1): the gap after T, the lead
-    holding its speed, still above Lemma 2's safe distance at the speed it reaches. T is two plans: the planner acts
-    once a period, and its next decision takes a period to act. No lead: room."""
+    """The ego may hold ACCEL for T and stay at a safe distance behind its lead (RSS rule 1): the gap after T still above
+    Lemma 2's safe distance at the speed it reaches. T is two plans: the planner acts once a period, and its next decision
+    takes a period to act. To keep its speed, the lead holds its own. To speed up, the lead may brake its hardest: an
+    accel is held for a period the responder cannot shorten, so it must not turn the pair dangerous whatever the lead
+    does (RSS's blame; lead_brake seed 1). No lead: room."""
     lead = next((p for p in pairs if p.role == "lead" and p.type == "same_dir" and p.lon == "in_front"), None)
     if lead is None:
         return True
     v1 = max(0.0, min(cap, v + accel * t))
     tc = t if accel == 0 or v1 in (cap, 0.0) and accel == 0 else min(t, abs((v1 - v) / accel)) if accel else t
     run = 0.5 * (v + v1) * tc + v1 * (t - tc)
-    gap1 = lead.d_lon + lead.obj.vmin * t - run
-    return gap1 > safe_same_dir(replace(ego.dyn, vmin=v1, vmax=v1), lead.obj)
+    if accel <= 0 or not lead.obj.brake_max:
+        gap1 = lead.d_lon + lead.obj.vmin * t - run
+        return gap1 > safe_same_dir(replace(ego.dyn, vmin=v1, vmax=v1), lead.obj)
+    lv = max(0.0, lead.obj.vmin - lead.obj.brake_max * t)         # the lead braking its hardest over T
+    ran = (lead.obj.vmin * lead.obj.vmin - lv * lv) / (2.0 * lead.obj.brake_max)
+    gap1 = lead.d_lon + ran - run
+    return gap1 > safe_same_dir(replace(ego.dyn, vmin=v1, vmax=v1), replace(lead.obj, vmin=lv, vmax=lv))
 
 
 SETTLE_S = 10.0                 # s: the side the ego left is not settled again before this
@@ -160,6 +170,13 @@ def facts(lm, ego, v, movers, sit, changing=None, dest=None, turn=None, lights=N
                 out["zclear(nextzone)"] = 1
         if "zclear(nextzone)" not in out:
             out["zbusy(nextzone)"] = 1
+        # RSS rule 5, form B: a car on a crossing lane near the zone or in it, still moving: whether it yields is not yet
+        # seen. It settles when it stands, or when it has left the zone. A merge's share has its own turn
+        unsettled = prio is not None and any(
+            m.lane in z.lanes and m.lane != rl and (speeds or {}).get(m.id, m.dyn.vmax) > STILL
+            and m.s - m.length <= z.lanes[m.lane][1] and z.lanes[m.lane][0] - m.s <= APPROACH
+            for m in movers)
+        out["cross_unsettled(nextzone)" if unsettled else "cross_settled(nextzone)"] = 1
         if zr["holder"]:
             out["holder(nextzone,%s)" % zr["holder"]] = 1
         if prio is None:
@@ -174,6 +191,7 @@ def facts(lm, ego, v, movers, sit, changing=None, dest=None, turn=None, lights=N
             out["conflict(nextzone)"] = 1
     else:
         out["zone_at(nextzone,none)"] = 1
+        out["cross_settled(nextzone)"] = 1
     if "vru1" in roles:
         w = by_id[roles["vru1"]]
         for z in lm.zones:

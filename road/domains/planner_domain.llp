@@ -10,6 +10,9 @@
 %   xwram             a walker at the crossing ahead: stop before it (`yield_walker`)
 %   maccel/mbrake     the longitudinal commands: accel, keep, and the planner's gentle brake behind a closing lead
 %                     (brake_min_correct; the proper response's brake_min is the responder's)
+%   mcross            RSS rule 5, form B (right of way is given, not taken): no accel toward a conflict zone while a car
+%                     on its crossing lane still moves; keep (the responder's brake_min if it comes to that) until it
+%                     stands or has passed, then accel
 %   the surface       hard safety first, then progress, ties to the incumbent: the SAFETY stage's yields first; only
 %                     when none fires (`now` still there and the controls held: decide's one `go`) the PROGRESS stage's
 %                     change, accel, keep, a change preferred
@@ -44,6 +47,8 @@ pred late(zone) : planner.
 pred zfree(zone) : planner.
 pred zbusy(zone) : planner.                 % someone inside or coming
 pred zclear(zone) : planner.
+pred cross_settled(zone) : planner.         % every car on a crossing lane near the zone stands, or none is there
+pred cross_unsettled(zone) : planner.       % one still moves: whether it yields is not yet seen
 pred conflict(zone) : planner.              % crossing axes
 pred share(zone) : planner.                 % a merge's
 pred turn(zone) : planner.                  % the zipper: the ego's turn
@@ -98,7 +103,9 @@ stage progress {
   %% The lead is slow and the {D} lane is safe ahead and behind, and I did not just leave it: I change to it.
   change [dyn] : $busy * $tick__grant(planner, controls) * $lead_slow * $adjacent(D) * $settled(D) * $side_lead(D, L) * $safe_long(L) * $safe_lat(L) * $side_follow(D, F) * $safe_long(F) * $safe_lat(F) * $zone_at(nextzone, C) * $roomy(C) * go -o ().
   %% Below the limit, nothing slow ahead, room before the lead: I speed up.
-  accel [dyn] : $busy * $tick__grant(planner, controls) * $below_limit * $lead_ok * $accel_ok * go -o ().
+  accel [dyn] : $busy * $tick__grant(planner, controls) * $below_limit * $lead_ok * $accel_ok * $cross_settled(nextzone) * go -o ().
+  %% Below the limit, but a car at the zone ahead has not shown it yields: I keep my speed until it does.
+  keep_cross [dyn] : $busy * $tick__grant(planner, controls) * $below_limit * $lead_ok * $accel_ok * $cross_unsettled(nextzone) * go -o ().
   %% Below the limit, but no room to speed up before the lead: I keep my speed.
   keep_gap [dyn] : $busy * $tick__grant(planner, controls) * $below_limit * $lead_ok * $accel_no * $keep_ok * go -o ().
   %% At the limit: I keep my speed.

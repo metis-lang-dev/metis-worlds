@@ -16,6 +16,40 @@ jobs:
         run: |
           python -m pip install -q -e libs/semantic-world pytest
           python -m pytest -q libs/semantic-world/tests
+  # road/tests (road-sync s-4169b42d): the exerciser, the packages' cases and traces against metisc, and the road tree under
+  # Live's latch (test_road_sync), with the public siblings at their heads: metispy as metis-catalog's job installs it,
+  # metis-agent --no-deps (road_tree needs no model), metisc built here.
+  road-tests:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: metis-worlds
+      - uses: actions/checkout@v4
+        with:
+          repository: metis-lang-dev/metis-lang
+          ref: master
+          path: metis-lang
+      - uses: actions/checkout@v4
+        with:
+          repository: metis-lang-dev/metispy
+          path: metispy
+      - uses: actions/checkout@v4
+        with:
+          repository: metis-lang-dev/metis-agent
+          path: metis-agent
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: metisc
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq ocaml-nox
+          make -C metis-lang metisc
+      - name: the road tests
+        run: |
+          python -m pip install -q pyyaml pytest -e ./metispy -e metis-worlds/libs/semantic-world
+          python -m pip install -q --no-deps -e metis-agent/py
+          cd metis-worlds && python -m pytest -q road/tests
   # spec 17 §4 (linker s-5908724a step 2): road's composition links to one image (metisc --link: every L-check over
   # the I-checks, the derived director compared with road_director), its hash == road/domains/image.golden.
   # alfworld's and minihack's trees are generated from the game data (world/gen_hier.py, world/mh_hier.py), which
