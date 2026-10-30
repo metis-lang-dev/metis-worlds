@@ -146,6 +146,17 @@ def test_a_standing_track_stands(tmp_path):
     assert tr.hard(6) == tr.hard(1)
 
 
+def test_a_probability_is_never_over_one_though_the_map_rounds_its_intents(tmp_path):
+    m = plaza(tmp_path)
+    for _ in range(4):
+        m.cycle([walker(15.2, 14.7, 0.0)], ego={"x": 0.5, "y": 0.5, "speed": 0.0})
+    d = m.load()
+    t = next(iter(m._people(d)))
+    d["intent"][t] = {"keep": 0.593924, "stop": 0.049725, "cross": 0.356352}     # 1.000001, as S4's group has them
+    tr = occupancy.render(m).tracks[t]
+    assert all(p <= 1.0 for k in range(7) for p in tr.soft(k).values())
+
+
 def test_a_track_lost_from_view_is_anchored_on_its_belief(tmp_path):
     m = plaza(tmp_path)
     t, _ = walk_east(m)

@@ -217,8 +217,9 @@ def _roll_person(m, d, t, n, step, pl):
         z = sum(keep.values())
         return {c: v / z for c, v in keep.items()} if z > 0 else bel
     out = [{} for _ in range(n + 1)]
+    z = sum(d["intent"][t].values())               # the map keeps them rounded: their sum is 1 only nearly
     for i in mixed.PEOPLE_INTENTS:
-        w = d["intent"][t].get(i, 0.0)
+        w = d["intent"][t].get(i, 0.0) / z
         if w <= 0:
             continue
         bel = dict(d["belief"][t])
@@ -233,8 +234,9 @@ def _roll_person(m, d, t, n, step, pl):
 def _roll_vehicle(m, d, t, n, step):
     """… a vehicle's: RoadMap's kernels, an intent persisting."""
     out = [{} for _ in range(n + 1)]
+    z = sum(d["intent"][t].values())
     for i in road.INTENTS:
-        w = d["intent"][t].get(i, 0.0)
+        w = d["intent"][t].get(i, 0.0) / z
         if w <= 0:
             continue
         kernel, bel = m.kernel(i, d["speed"].get(t, 0.0), step), dict(d["belief"][t])
