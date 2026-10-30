@@ -106,8 +106,7 @@ class MhHost:
         self.max_steps = int(self.level.get("max_steps", max_steps))
         # a level over the role program (semantic-world step 2): the level is the host's map (semantic_world.grid,
         # libs/semantic-world), read through its binding; the program speaks roles and is never the level's
-        from semantic_world.grid import GridMap
-        self.cmap = GridMap(self.level["map"]) if self.level.get("map") else None
+        self.cmap = self.new_map(self.level["map"]) if self.level.get("map") else None
         self.fired = []                                 # (rule, the binding it fired under)
         # a hierarchy's domain (mh_hier): its spec, what it reads, the world one process shared by the hierarchy's hosts
         self.spec, self.observed = self.level.get("spec"), set(self.level["observe"]) if "observe" in self.level else None
@@ -125,6 +124,10 @@ class MhHost:
         if self.key:
             SHARED[self.key] = {"gym": self.gym, "last": None}
         self._reset(self.seed)
+
+    def new_map(self, path):
+        from semantic_world.grid import GridMap
+        return GridMap(path)
 
     def client(self):
         return GymClient(self.level, self.max_steps, self.seed)

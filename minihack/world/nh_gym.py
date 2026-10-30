@@ -57,6 +57,8 @@ def cell_atoms(C, tile, flags):
     name, kind = describe(tile)
     if kind == "monster":
         return ["floor(%s)" % C] if flags & MG_PET else ["monster(%s,%s)" % (name_of(name), C), "floor(%s)" % C]   # a pet swaps places
+    if name == "boulder":                    # pushing one can fail and take no turn: the rules would try for ever, so it is rock to them
+        return ["wall(%s)" % C]
     if kind == "object":
         return ["obj(%s,%s)" % (name_of(name), C), "floor(%s)" % C]
     if "closed door" in name:

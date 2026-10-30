@@ -152,6 +152,7 @@ def test_the_game_as_the_hierarchys_atoms():
     assert cell_atoms("c1_2", other("no door"), 0) == ["floor(c1_2)"] and cell_atoms("c1_2", other("floor of a room"), 0) == ["floor(c1_2)"]
     assert cell_atoms("c1_2", 0, 0)[0].startswith("monster(giant_ant,")
     assert cell_atoms("c1_2", 0, 8) == ["floor(c1_2)"]                 # a pet swaps places: never a monster to fight
+    assert cell_atoms("c1_2", mon + n["objects"].index("boulder"), 0) == ["wall(c1_2)"]
     assert "said(door_locked)" in events_of("This door is locked.") and events_of("") == []
     assert "said(asked)" in events_of("Really attack the gnome? [yn] (n)")
     assert "hp(16)" in status_atoms(["", "Dlvl:1 $:0 HP:16(16) Pw:2(2) AC:6 Xp:1/0 T:5"])
@@ -199,3 +200,19 @@ def test_the_real_game_installs_for_the_agent(tmp_path):
     text = (hier / "task_domain.llp").read_text()
     assert all(("%s" % g) in text for g in goals)
     assert "NhHost" in (hier / "nav" / "mh_host.py").read_text()
+
+
+def test_stairs_seen_with_no_way_to_them_do_not_stop_the_search(tmp_path):
+    from semantic_world.grid import GridMap
+    sys.path.insert(0, os.path.join(HERE, "..", "world"))
+    from nh_host import NhMap
+    p = str(tmp_path / "map.json")
+    GridMap.build(p, [20, 5], view=True)
+    m = NhMap(p)
+    m.observe({"agent_at(c1_1)": 1, "floor(c1_1)": 1, "floor(c2_1)": 1, "corridor(c3_1)": 1, "stairs_down(c10_1)": 1, "floor(c10_1)": 1})
+    assert GridMap(p).route() == []                   # the library's answer: it knows the stairs and no way to them
+    r = m.route()
+    assert r and r[0] == "c1_1" and "c10_1" not in r  # ours: on to what is not yet known
+    m2 = NhMap(p)
+    m2.observe({"agent_at(c9_1)": 1, "floor(c9_1)": 1, "floor(c10_1)": 1, "stairs_down(c10_1)": 1})
+    assert m2.route()[-1] == "c10_1"                  # and straight to them once there is a way

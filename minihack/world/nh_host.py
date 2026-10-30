@@ -5,11 +5,32 @@ game is never replayed or reset: it is one game, the person's and the agent's.
 import os
 
 from metis.host import GymChild
+from semantic_world.grid import GridMap
 
 from mh_host import HERE, SHARED, MhHost, interpreter
 
 EVENTS = ["blocked", "see_here", "door_here", "door_closed", "door_opened", "door_locked", "door_stuck", "whamm", "killed", "hit", "hurt", "fell_pit",
           "trap_door", "ate", "picked", "nothing_here", "cant", "hunger", "died", "welcome", "stopped", "nevermind", "prompt", "asked", "other"]
+
+
+class NhMap(GridMap):
+    """Stairs seen from afar (down a lit room, through a doorway) with no known way to them are no reason to stop looking:
+    the library's route has no way and no frontier then, so it is asked again as if they were unseen."""
+    exploring = False
+
+    def load(self):
+        d = super().load()
+        return dict(d, task=dict(d["task"], goal="unseen")) if self.exploring else d
+
+    def route(self):
+        r = super().route()
+        if r or self.exploring:
+            return r
+        self.exploring = True
+        try:
+            return super().route()
+        finally:
+            self.exploring = False
 
 
 class NhGym(GymChild):
@@ -18,6 +39,9 @@ class NhGym(GymChild):
 
 
 class NhHost(MhHost):
+    def new_map(self, path):
+        return NhMap(path)
+
     def client(self):
         return NhGym(self.level)
 
@@ -35,6 +59,17 @@ class NhHost(MhHost):
         k = self.cmap.load()["k"]
         GridMap.build(self.level["map"], self.level["size"], view=True, k=k)
 
+    def tick(self, counts):
+        """A release left in a sleeping specialist's session after the director already took the way back (it answered the
+        result, not the release) would be read when the specialist next wakes, as a late release of its NEW grant: the
+        director gives the way to a sleeping nav and neither moves. Without a grant there is nothing to release."""
+        dos = super().tick(counts)
+        if dos is not None and self.spec in ("nav", "act"):
+            rel, grant = "tick__release(%s,motion)" % self.spec, "tick__grant(%s,motion)" % self.spec
+            if counts.get(rel, 0) > 0 and counts.get(grant, 0) <= 0:
+                dos.append("-%s %d" % (rel, counts[rel]))
+        return dos
+
     def world(self, lines):
         """The person's keys, on the wire as world lines `key:<keys>`: the game takes them as typed."""
         for line in lines:
@@ -46,7 +81,14 @@ class NhHost(MhHost):
             self.pending_events += self.events
 
     def frames(self):
-        return self.gym.call("frames")["frames"] if self.spec == "task" else []
+        if self.spec != "task":
+            return []
+        out = self.gym.call("frames")["frames"]
+        lost = self.cmap.load()["agent"]["at"] and not self.cmap.route()
+        if lost and not getattr(self, "said_lost", False):      # no stairs seen and nowhere new to go: said once, not waited on in silence
+            out.append({"ev": "world/message", "text": "I see no way on from here: a hidden door, perhaps. Say \"search here\", or show me on the keyboard."})
+        self.said_lost = lost
+        return out
 
     def observe(self, counts):
         """The watch's reading: what the session holds. A real game brings what no rule predicts every turn (a room seen as
