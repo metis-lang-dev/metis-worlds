@@ -649,13 +649,13 @@ def director_start(tree=False):
     if tree:
         sp = [d for d in SPECS if d != "task"]
         out += ["free(%s)" % r for r in RESOURCES] + ["issue(%s,t0)" % r for r in RESOURCES] + ["serving(%s,t0)" % r for r in RESOURCES] + ["path(task)", "tick__goal(task)"] + ["offpath(%s)" % d for d in sp]
-        out += ["nowant(%s)" % d for d in sp] + ["nolate(%s)" % d for d in sp] + ["age_of(%s,a0)" % d for d in SPECS]
+        out += ["nowant(%s)" % d for d in sp] + ["nolate(%s)" % d for d in sp] + ["nocommit(%s)" % d for d in sp] + ["age_of(%s,a0)" % d for d in SPECS]
     return out
 
 
 RESOURCES = ("motion",)            # the body: one specialist moves or handles at a time
 # the tree director's side of the protocol and its resource (spec/15 §2.3: I5's count invariant over free/holder)
-DIRECTOR_FIELDS = ("shared: {tick__status: in, tick__active: in, tick__done: in, tick__stuck: in, tick__grant: out, "
+DIRECTOR_FIELDS = ("shared: {tick__status: in, tick__active: in, tick__done: in, tick__stuck: in, tick__committed: in, tick__yield: in, tick__grant: out, "
                    "tick__goal: out, tick__revoke: out, tick__cancel: out, tick__stop: in}\nresources: {motion: {count: 1, free: free, held_by: [holder]}}\n")
 
 

@@ -44,7 +44,7 @@ DIRECTOR_OUT = ("wake", "sleep", "forward", "ask", "ended", "tick__grant", "tick
 STATUS = {"nav": {"success": ["reached"], "failure": []}, "act": {"success": ["opened", "cleared"], "failure": []},
           "task": {"success": ["done"], "failure": ["stuck"]}}
 RESOURCES = ("motion",)
-DIRECTOR_FIELDS = ("shared: {tick__status: in, tick__active: in, tick__done: in, tick__stuck: in, tick__want: in, tick__release: in, tick__grant: out, "
+DIRECTOR_FIELDS = ("shared: {tick__status: in, tick__active: in, tick__done: in, tick__stuck: in, tick__committed: in, tick__yield: in, tick__want: in, tick__release: in, tick__grant: out, "
                    "tick__goal: out, tick__revoke: out, tick__cancel: out, tick__stop: in}\nresources: {motion: {count: 1, free: free, held_by: [holder]}}\n")
 HOLD_GRANT, HOLD_STATUS = 1, 1     # brief §9 rule 4: a grant is not revoked within k ticks, a status holds m ticks
 
@@ -476,7 +476,7 @@ def director_start(tree=False):
         sp = [d for d in SPECS if d != "task"]
         out += ["free(%s)" % r for r in RESOURCES] + ["issue(%s,t0)" % r for r in RESOURCES] + ["serving(%s,t0)" % r for r in RESOURCES]
         out += ["path(task)", "tick__goal(task)"] + ["offpath(%s)" % d for d in sp]   # the planner on the path (its done pops it)
-        out += ["nowant(%s)" % d for d in sp] + ["nolate(%s)" % d for d in sp] + ["age_of(%s,a0)" % d for d in SPECS]
+        out += ["nowant(%s)" % d for d in sp] + ["nolate(%s)" % d for d in sp] + ["nocommit(%s)" % d for d in sp] + ["age_of(%s,a0)" % d for d in SPECS]
     return out
 
 

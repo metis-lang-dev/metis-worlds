@@ -29,6 +29,8 @@ mature_status(a3).
 #init nowant(planner) 1
 #init nolate(responder) 1
 #init nolate(planner) 1
+#init nocommit(responder) 1
+#init nocommit(planner) 1
 #init age_of(responder, a0) 1
 #init age_of(planner, a0) 1
 #init issue(controls, t0) 1

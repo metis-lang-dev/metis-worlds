@@ -74,6 +74,10 @@ mature_status(a3).
 #init nolate(access) 1
 #init nolate(grasp) 1
 #init nolate(place) 1
+#init nocommit(nav) 1
+#init nocommit(access) 1
+#init nocommit(grasp) 1
+#init nocommit(place) 1
 #init age_of(nav,a0) 1
 #init age_of(access,a0) 1
 #init age_of(grasp,a0) 1
