@@ -464,7 +464,7 @@ class SemanticMap(core.SemanticMap):
             return 1.0 if nxt is None or place == nxt else 0.0
         return super().weight(pred, args)
 
-    PRESENCE_AT, PRESENCE_NAMES = (0.3, 0.7), ("improbable", "doubtful", "likely")   # the place belief's thresholds (belief-levels)
+    PRESENCE_AT, PRESENCE_NAMES = (0.05, 0.7), ("improbable", "doubtful", "likely")   # stop only below 5%: at 30% the search left 6 of 12 kitchens' kettles unfound
 
     def presence(self, d, thing):
         """P(THING exists in the room | looked into the places it could be, without a sighting): the prior P0 (presence0;

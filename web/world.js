@@ -81,6 +81,14 @@ function drawHierarchy() {
 
 // ── the journal pane: metis-agent's model, its chat rows ──
 const journal = new Journal();
+const jrecs = [];                                    // every record as it came (dlg-wire's timings too): the save button's file
+$('#jsave').onclick = () => {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([jrecs.map(r => JSON.stringify(r)).join('\n') + '\n'], { type: 'application/jsonl' }));
+  a.download = `world-journal-${Date.now()}.jsonl`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+};
 function journalRow(row) {
   if (!row) return;
   const li = document.createElement('li');
@@ -180,7 +188,8 @@ function gameInfo() {                                // under the map: the game 
   el.innerHTML = `<div class="gi-name">${esc(x ? x.label : m.card?.title || 'this game')}</div>
     ${task ? `<div class="gi-task">this game's task: ${esc(task)}</div>` : ''}
     ${room ? '<div class="gi-task">a room: tell the agent a task, then another</div>' : ''}
-    ${x ? `<div class="gi-dim">${esc(x.id)}${room && x.episode ? ` · the room's game: ${esc(x.episode)}` : ''}</div>` : ''}`;
+    ${x ? `<div class="gi-dim">${esc(x.id)}${room && x.episode ? ` · the room's game: ${esc(x.episode)}` : ''}</div>` : ''}
+    ${m.intro ? `<div class="gi-intro">${esc(m.intro)}</div>` : ''}`;
 }
 function showCard() { docks.set('world', { shown: true, open: true }); $('#dock-world')?.scrollIntoView?.({ block: 'nearest' }); }
 // the tiles as large as the left pane allows (the map, its attention slot beside it when there is room)
@@ -283,6 +292,7 @@ async function frame(f) {
   if (f.ev === 'page') return;                     // the hello's answer: this page owns no domain
   if (f.ev !== 'journal' || !f.rec) return;
   const r = f.rec;
+  jrecs.push(r);
   if (r.kind === 'dlg-wake' && r.what === 'person' && world.replay) panel.core.row({ who: 'person', text: r.person, channel: 'main' });
   if (r.kind === 'dlg-say' && world.replay) {
     const [line, ...answers] = asked(r.text);

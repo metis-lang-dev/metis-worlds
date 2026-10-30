@@ -43,6 +43,17 @@ from semantic_world.room import (CELL, K, OBJECT_ROLES, ON, SemanticMap, _args, 
                                  place_roles, prep, spoken, thor_id, want_handle, world_card)   # libs/semantic-world, installed editable (setup.sh)
 
 
+def opening_text(obs, to_name):
+    """The game's opening text as the page shows it under the room's description: "You are in the middle of a room.
+    Looking quickly around you, you see a cabinet 1, …" (the places, by the names the map shows them under: the game
+    says THOR's ids), without TextWorld's banner or the game's own task."""
+    text = " ".join(x.strip() for x in re.split(r"\n\s*\n", obs or "")
+                    if x.strip() and not x.strip().startswith(("-=", "Your task is to")))
+    for handle, name in sorted(to_name.items(), key=lambda x: -len(x[1])):
+        text = text.replace(name, spoken(handle))
+    return text
+
+
 def text_map(game_dir, index=None, room=False):
     import gen_instance
     from alf_host import AlfHost
@@ -53,7 +64,7 @@ def text_map(game_dir, index=None, room=False):
         facts = open(path).read()
         h = AlfHost(os.path.dirname(path))
         try:
-            static, dyn, params, to_name = set(h.static), set(h.dyn), h.params, h.to_name
+            static, dyn, params, to_name, intro = set(h.static), set(h.dyn), h.params, h.to_name, opening_text(h.obs, h.to_name)
         finally:
             h.gym.close()
     finally:
@@ -95,7 +106,7 @@ def text_map(game_dir, index=None, room=False):
             "agent": {"pos": [round(ia.get("x", 0.0), 2), round(ia.get("z", 0.0), 2)], "yaw": ia.get("rotation", 0),
                       "at": None, "holding": None},
             "edges": [[a, b] for i, a in enumerate(ids) for b in ids[i + 1:]],
-            "task": task, "card": world_card(traj["scene"]["floor_plan"], places, things, task),
+            "task": task, "intro": intro, "card": world_card(traj["scene"]["floor_plan"], places, things, task),
             "overview": None, "tileset": {"index": [index] if index else []}}
 
 

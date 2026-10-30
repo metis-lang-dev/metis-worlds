@@ -160,8 +160,8 @@ try {
     && d.chips.join(' / ') === 'put tomato 1 in microwave 1 / stop' && d.asking,
     'the disengagement: the band asks, the fridge in red, the hierarchy ended on wrong_dest', d);
 
-  // 8b. view mode (semantic-map step 3): the page draws what the robot knows — a place not seen into is
-  // dimmed where it stands (its things hidden), and lit as the robot sees into it; a seen one is not dimmed
+  // 8b. view mode (semantic-map step 3): the page draws what the robot knows — a place not looked into is
+  // marked where it stands (its things hidden), and unmarked as the robot looks into it
   const v = await ev(`(async () => {
     const sem = await (await fetch(world.mapUrl)).json();
     sem.view = true;
@@ -175,7 +175,15 @@ try {
     return { ...before, lit: !el('fridge1').classList.contains('wm-unseen'), items: ent('fridge1').items, still: ent('fridge1').pos + '' === pos };
   })()`);
   c.ok(v.dim && v.seen && v.hidden && v.shown && v.lit && v.items.join() === 'tomato 1' && v.still,
-    'view mode: an unseen place dimmed in place, its things hidden; a seen one not; lit when seen into', v);
+    'view mode: a place not looked into is marked in place, its things hidden; a seen one not; unmarked when looked into', v);
+  const u = await ev(`(() => {
+    const b = document.querySelector('#map [data-id="fridge1"]');
+    const sem = world.map.map, g = document.querySelector('#gameinfo .gi-intro');
+    return { opacity: getComputedStyle(b).opacity, intro: g && g.textContent, jsave: document.querySelector('#dock-journal #jsave')?.textContent };
+  })()`);
+  c.ok(u.opacity === '1', 'view mode: a place the opening text names is not dimmed', u.opacity);
+  c.ok(/^You are in the middle of a room\./.test(u.intro || '') && !/_bar_/.test(u.intro), 'the room\'s opening text under its description', u.intro);
+  c.ok(u.jsave === 'save (JSONL)', 'the journal saves its records', u.jsave);
 
   // 9. at phone width the page does not scroll sideways
   await page.cmd('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 2, mobile: true });

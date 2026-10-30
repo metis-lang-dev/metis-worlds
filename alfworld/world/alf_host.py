@@ -314,10 +314,21 @@ class AlfHost:
                 tbl[(o, r)] = repr(float(Fraction(int(p * 10 ** 9), 10 ** 9)))
         return {"look": tbl, "where": tbl}
 
+    def searching(self):
+        """View mode: the goal's thing is a kind not seen yet (the map's wanted entry, believed over the bound places)."""
+        if self.smap is None:
+            return False
+        d = self.smap.load()
+        return bool(d.get("view") and (d["things"].get(d["binding"].get("target")) or {}).get("wanted"))
+
     def update_levels(self, counts):
         """Once a tick: the level atoms from the session as it stands (the instrument's init) and the map's belief;
         the report (the values, the level, the time per tick) logged. A refusal or an error asserts no level."""
         if self.levels is None:
+            return
+        if self.searching():                        # no fetch to rate yet, and its cost grows with the places believed: seconds a tick
+            self.level_atoms = {}
+            self._log({"beat": self.beat, "instrument": {"skipped": "the target is not seen yet"}})
             return
         try:
             self.level_atoms, rep = self.levels.levels(counts, self.instrument_ports())

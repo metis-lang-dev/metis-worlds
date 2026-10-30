@@ -34,10 +34,13 @@
   #gameinfo .gi-name { color: var(--fg); font-weight: 600; }
   #gameinfo .gi-task { margin-top: 3px; }
   #gameinfo .gi-dim { color: var(--dim); font-size: 11.5px; margin-top: 3px; }
+  #gameinfo .gi-intro { margin-top: 6px; font-size: 12px; line-height: 1.45; }
   #left { overflow: auto; padding: 12px; }
   #map .wm-view { box-sizing: content-box; }
   #legend { display: flex; flex-wrap: wrap; gap: 2px 14px; margin: 8px 0 0; color: var(--dim); font-size: 11.5px; }
   #legend b { color: var(--fg); margin-right: 4px; }
+  #jtools { margin-bottom: 6px; }
+  #jsave { font: inherit; color: inherit; background: none; border: 0; padding: 0; text-decoration: underline; opacity: .7; cursor: pointer; }
   /* map.css sizes the view to its grid; the shell's border-box would clip it */
   #dock-talk .dbody { display: flex; flex-direction: column; overflow: hidden; }
   #dock-talk #talkpanel { flex: 1 1 auto; min-height: 0; }
@@ -138,7 +141,7 @@
       </section>
       <section class="dock" id="dock-journal" data-dock="journal" tabindex="-1" aria-label="the journal">
         <header><span class="tw">▾</span><span class="tt">JOURNAL</span><button class="x" type="button" aria-label="hide the journal">✕</button></header>
-        <div class="dbody"><ol id="jlog" tabindex="-1" aria-label="the journal's lines"></ol></div>
+        <div class="dbody"><div id="jtools"><button id="jsave" type="button" class="fw-link">save (JSONL)</button></div><ol id="jlog" tabindex="-1" aria-label="the journal's lines"></ol></div>
       </section>
       <section class="dock" id="dock-dialog" data-dock="dialog" tabindex="-1" aria-label="the dialog: the floor, barge-in, attention, the numbers">
         <header><span class="tw">▾</span><span class="tt">DIALOG</span><button class="x" type="button" aria-label="hide the dialog">✕</button></header>

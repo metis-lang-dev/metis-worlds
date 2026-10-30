@@ -55,7 +55,7 @@ export function toGrid(sem, { cell = sem.cell ?? 0.5, margin = 1 } = {}) {
   const a = sem.agent || {};
   return { cols: C, rows: R, cells: Array.from({ length: R }, () => Array(C).fill('floor')), entities,   // the room, all seen
     agent: { pos: a.pos ? q(a.pos) : [0, 0], yaw: a.yaw ?? null, ch: '@', name: 'the agent' },
-    task: task, tileset: sem.tileset || { index: [] }, world: sem.world, scene: sem.scene, card: sem.card || null };   // the world card (web/README)
+    task: task, tileset: sem.tileset || { index: [] }, world: sem.world, scene: sem.scene, card: sem.card || null, intro: sem.intro || '' };   // the world card (web/README)
 }
 
 export class WorldMap {
@@ -131,8 +131,8 @@ export class WorldMap {
       this.layer.appendChild(b); this.els.set(e.id, b);
     }
     b.dataset.kind = e.kind || ''; b.dataset.name = e.name || e.id;
-    b.setAttribute('aria-label', (e.name || e.id) + (e.unseen ? ' (not seen yet)' : e.items?.length ? ` (${e.items.length} in it)` : ''));
-    b.classList.toggle('wm-unseen', !!e.unseen);           // view mode: the robot has not seen into it (dimmed, kept in place)
+    b.setAttribute('aria-label', (e.name || e.id) + (e.unseen ? ' (not looked into yet)' : e.items?.length ? ` (${e.items.length} in it)` : ''));
+    b.classList.toggle('wm-unseen', !!e.unseen);           // view mode: the robot has not looked into it (dashed)
     b.classList.toggle('wm-hot', !!e.hot); b.classList.toggle('wm-agent', e.id === '@agent'); b.classList.toggle('wm-cornered', !!e.cornered);
     b.style.setProperty('--x', e.pos[0]); b.style.setProperty('--y', e.pos[1]);
     if (e.yaw != null) b.style.setProperty('--yaw', `${e.yaw}deg`);
@@ -177,7 +177,7 @@ export class WorldMap {
     const ix = this.index[nameOf(e.tile ?? '')] || this.index[nameOf(e.tile ?? '').replace(/_?\d+$/, '')];
     const frame = e.frame ? new URL(e.frame, this.frameBase).href : null;
     this.attn.innerHTML = `<div class="wm-big">${this.tile(e.tile, e.ch)}</div><b>${esc(e.name || e.id)}</b>
-      <span class="wm-kind">${esc(e.kind || '')}${e.closed ? ' · closed' : ''}${e.unseen ? ' · not seen yet' : ''}${e.hot ? ' · in the task' : ''}${e.cornered ? ' · the loop stopped here' : ''}</span>
+      <span class="wm-kind">${esc(e.kind || '')}${e.closed ? ' · closed' : ''}${e.unseen ? ' · not looked into yet' : ''}${e.hot ? ' · in the task' : ''}${e.cornered ? ' · the loop stopped here' : ''}</span>
       ${frame ? `<img class="wm-frame" src="${esc(frame)}" alt="${esc(e.name)} as the world showed it">` : ''}
       ${e.items?.length ? `<div class="wm-items">in it: ${e.items.map(esc).join(', ')}</div>` : ''}
       ${ix?.source?.startsWith('http') ? `<a href="${esc(ix.source)}" target="_blank" rel="noopener">about the picture</a>` : ''}`;

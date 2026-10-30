@@ -1122,9 +1122,10 @@ def test_an_unseen_kinds_existence_falls_as_the_robot_looks(tmp_path):
         if room == "kitchen 13":                         # map-queries step 1: the search goes where a kettle usually starts first
             assert m.next("kettle").startswith("stoveburner"), m.next("kettle")
         p0, level0 = m.presence(m.load(), "kettle")
-        cand = sorted(m.load()["belief0"]["kettle"])
+        b0 = m.load()["belief0"]["kettle"]
+        cand = sorted(b0, key=lambda r: (-b0[r], r))
         levels = [level0]
-        for r in cand:                                   # every place a kettle could be, looked into empty
+        for r in cand:                                   # every place a kettle could be, in the search's order, looked into empty
             d = m.load()
             d["looked"].setdefault("kettle", []).append(r)
             levels.append(m.presence(d, "kettle")[1])
@@ -1134,6 +1135,56 @@ def test_an_unseen_kinds_existence_falls_as_the_robot_looks(tmp_path):
     first_low = levels.index("improbable")
     assert 0 < first_low < n                             # it stops before every place is looked into
     assert out["bathroom 401"][1][0] == "improbable"     # no kettle in ALFRED's bathrooms: stop at once
+
+
+def test_the_search_goes_on_until_the_kind_is_really_improbable(tmp_path):
+    """The user's demo: kitchen 2's kettles are on its countertops, past its five stoveburners. The search stops below 5%,
+    not 30% (which left 6 of the 12 kitchens' kettles unfound): it is still looking when it reaches one."""
+    import gen_hier
+    sys.path.insert(0, os.path.join(ROOT, "experiments"))
+    import demo
+    from semantic_map import SemanticMap
+    gen_hier.install(str(demo.resolve("kitchen 2")), str(tmp_path / "r"), person=True, view=True, room=True)
+    m = SemanticMap(str(tmp_path / "r" / "domains" / "hier" / ".map.json"))
+    m.want_kind(m.load(), "kettle")
+    for _ in range(40):
+        place = m.next("kettle")
+        assert m.level("presence", ("kettle",)) != "improbable", place
+        if place.startswith("countertop"):
+            break
+        d = m.load()
+        d["looked"].setdefault("kettle", []).append(place)
+        d["belief"]["kettle"].pop(place)
+        m.data = d
+        m.save()
+    assert place.startswith("countertop")
+
+
+def test_a_search_rates_no_fetch(tmp_path):
+    """The profile of the 3 s tick: 90% of a search's time was the fetch_risk level, whose evaluation grows with the places
+    the unseen target is believed in, and which no rule reads. While the target is unseen it is not asked; once seen it is."""
+    from types import SimpleNamespace
+    from alf_host import AlfHost
+    calls, log, data = [], [], {"view": True, "binding": {"target": "kettle"}, "things": {"kettle": {"wanted": "kettle_t"}}}
+    h = SimpleNamespace(smap=SimpleNamespace(load=lambda: data), level_atoms={"fetch_risk(high)": 1}, _log=log.append, beat=1,
+                        instrument_ports=lambda: {},
+                        levels=SimpleNamespace(levels=lambda c, p: (calls.append(c), ({"fetch_risk(low)": 1}, {}))[1]))
+    h.searching = lambda: AlfHost.searching(h)
+    AlfHost.update_levels(h, {})
+    assert not calls and h.level_atoms == {} and "skipped" in log[-1]["instrument"]
+    data.update(binding={"target": "kettle1"}, things={"kettle1": {"in": "stoveburner1"}})
+    AlfHost.update_levels(h, {})
+    assert calls and h.level_atoms == {"fetch_risk(low)": 1}
+
+
+def test_the_rooms_opening_text_is_on_the_map():
+    """The page shows the game's opening text under the room's description: the places, by the names the map shows."""
+    sys.path.insert(0, os.path.join(ROOT, "experiments"))
+    import demo
+    from semantic_map import text_map
+    intro = text_map(str(demo.resolve("kitchen 2")), room=True)["intro"]
+    assert intro.startswith("You are in the middle of a room.") and "a countertop 1" in intro
+    assert "_bar_" not in intro and "-=" not in intro and "Your task" not in intro
 
 
 def test_the_room_tables_are_the_datasets():
