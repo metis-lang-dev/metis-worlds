@@ -54,6 +54,29 @@ def opening_text(obs, to_name):
     return text
 
 
+def room_as_left(m, d):
+    """The page's map M with the room as the semantic map D has it (rooms s-b51a2e80 step 2, a room returned to): the places
+    looked into, what is open, each thing where it was last seen, the robot where it stands. What the robot knows, not
+    the game's facts: in view mode the page shows no more than that. The world card names the places looked into."""
+    seen = set(d.get("seen") or ())
+    for p in m["places"]:
+        if m.get("view"):
+            p["unseen"] = p["id"] not in seen
+        q = (d.get("places") or {}).get(p["id"])
+        if q and p.get("openable"):
+            p["closed"] = not q.get("opened")
+    for t in m["things"]:
+        at = next((r for r, b in (d.get("belief") or {}).get(t["id"], {}).items() if b == 1.0), None)
+        if at:
+            t["at"] = at
+    here = next((p for p in m["places"] if (d.get("places") or {}).get(p["id"], {}).get("loc") == (d.get("agent") or {}).get("at")), None)
+    if here:
+        m["agent"].update(at=here["id"], pos=here["pos"])
+    if seen:
+        m["card"]["looked"] = [p["name"] for p in m["places"] if p["id"] in seen]
+    return m
+
+
 def text_map(game_dir, index=None, room=False):
     import gen_instance
     from alf_host import AlfHost

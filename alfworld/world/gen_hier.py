@@ -601,26 +601,32 @@ def install(game_dir, root, person=True, k=K, view=False, tree=False, room=False
     cap = os.path.join(hier, "capacity.llp")
     if not os.path.exists(cap) or open(cap).read() != capacity(k):
         open(cap, "w").write(capacity(k))
-    flat, _, _ = gen_instance.generate(game_dir, os.path.join(hier, "_flat"))
-    flat_pkg = os.path.dirname(flat)
-    if room:                                                       # the mirror shares the hosts' world process (one per log): a room's too
-        gj = os.path.join(flat_pkg, "game.json")
-        json.dump(dict(json.load(open(gj)), room=True), open(gj, "w"), indent=1)
     log = os.path.join(hier, ".commands.%s.jsonl" % name if name else ".commands.jsonl")
     map_path = os.path.join(hier, ".map.%s.json" % name if name else ".map.json")
-    fresh = not (name and os.path.exists(map_path))                # a room returned to stands as it was left
+    known = os.path.join(hier, ".room.%s.json" % name) if name else None   # a room's facts do not change: read once
+    fresh = not (name and os.path.exists(map_path) and os.path.exists(known))
     if fresh:
+        flat, _, _ = gen_instance.generate(game_dir, os.path.join(hier, "_flat"))
+        flat_pkg = os.path.dirname(flat)
+        if room:                                                   # the mirror shares the hosts' world process (one per log): a room's too
+            gj = os.path.join(flat_pkg, "game.json")
+            json.dump(dict(json.load(open(gj)), room=True), open(gj, "w"), indent=1)
         open(log, "w").close()
-    from alf_host import AlfHost
-    mirror = AlfHost(flat_pkg)
-    try:
-        info = dict(json.load(open(os.path.join(flat_pkg, "game.json"))), static=sorted(mirror.static), task_type=mirror.task, params=mirror.params)
-        smap = build_map(map_path, info, mirror, k, view=view, room=room) if fresh else semantic_map.SemanticMap(map_path)
-        reading = mirror.reading()
-    finally:
-        mirror.gym.close()
-    if fresh:
-        smap.project(*(() if room else args_of(seed(info)[0])))      # the game's own task until a goal says otherwise (a room: none)
+        from alf_host import AlfHost
+        mirror = AlfHost(flat_pkg)
+        try:
+            info = dict(json.load(open(os.path.join(flat_pkg, "game.json"))), static=sorted(mirror.static), task_type=mirror.task, params=mirror.params)
+            smap = build_map(map_path, info, mirror, k, view=view, room=room)
+            reading = mirror.reading()
+        finally:
+            mirror.gym.close()
+        smap.project(*(() if room else args_of(seed(info)[0])))    # the game's own task until a goal says otherwise (a room: none)
+        if known:
+            json.dump({"flat": flat_pkg, "info": info}, open(known, "w"))
+    else:                                                          # a room returned to stands as it was left
+        d = json.load(open(known))
+        flat_pkg, info, reading = d["flat"], d["info"], {}
+        smap = semantic_map.SemanticMap(map_path)
     world = None
     if name:
         from semantic_world.world import World

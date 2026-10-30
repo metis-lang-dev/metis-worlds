@@ -93,15 +93,24 @@ class GymClient(GymChild):
         super().close()
 
 
-_SHARED = {}          # (game, commands_log) -> the GymClient every host on that log shares
+_SHARED = {}          # (game, commands_log) -> the GymClient every host on that log shares, the least recently used first
+# the world processes kept (rooms s-b51a2e80 step 2, measured: a process is 92 MB and a return to it instant; rebuilt by
+# replaying its log it is 1.9 s at 10 commands, 10 s at 200): a house's four, the longest idle closed beyond that, and
+# a room returned to after that replays its log (AlfHost._reset)
+MAX_WORLDS = int(os.environ.get("METIS_ALF_WORLDS") or 4)
 
 
 def shared_client(game, commands_log, max_steps, handles, room=False):
     key = (game, commands_log)                    # a log is one install's: a room's or a game's, never both
-    c = _SHARED.get(key)
+    c = _SHARED.pop(key, None)
     if c is None or c.proc.poll() is not None:
-        c = _SHARED[key] = GymClient(game, max_steps=max_steps, handles=handles, room=room)
+        c = GymClient(game, max_steps=max_steps, handles=handles, room=room)
         c.shared = True
+    _SHARED[key] = c
+    while len(_SHARED) > MAX_WORLDS:
+        old = _SHARED.pop(next(iter(_SHARED)))
+        old.shared = False
+        old.close()
     return c
 
 

@@ -28,7 +28,7 @@
   #status .opts { display: inline-flex; gap: 6px; flex: none; }
   #conn { color: var(--dim); }
   /* the game picker (live, a runner that loads games: alfworld/demo.sh) and the game under the map */
-  #game { background: var(--bg); color: var(--fg); border: 1px solid var(--line); font: inherit; padding: 1px 4px; max-width: 18em; }
+  #game, #gameall { background: var(--bg); color: var(--fg); border: 1px solid var(--line); font: inherit; padding: 1px 4px; max-width: 18em; }
   #game:disabled { opacity: .6; }
   #gameinfo { margin: 10px 0 0; padding: 8px 10px; border: 1px solid var(--line); max-width: 60em; }
   #gameinfo .gi-name { color: var(--fg); font-weight: 600; }
@@ -106,7 +106,8 @@
       <span class="brand">WORLD</span>
       <span id="status" data-state="" aria-live="polite"><span class="state" id="sstate">…</span><span class="text" id="stext"></span><span class="opts" id="sopts"></span></span>
       <span id="sessbar">
-        <select id="game" hidden aria-label="the game: another one restarts the agent on it"></select>
+        <select id="game" hidden aria-label="the room: the agent goes there"></select>
+      <select id="gameall" hidden aria-label="every room"></select>
         <span id="conn"></span>
         <span id="voice"></span>
         <span id="ctrl" tabindex="-1" aria-label="the replay">
