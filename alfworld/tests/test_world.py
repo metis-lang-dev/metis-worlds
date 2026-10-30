@@ -1275,6 +1275,66 @@ def test_the_idle_room_processes_are_bounded_and_a_closed_room_replays_its_log(t
             c.close()
 
 
+def test_a_command_the_world_refuses_is_said_as_refused():
+    """rooms s-b51a2e80, nina's F1: a rule fires on the program's belief; when the game then takes nothing, the host says so:
+    the program's refusal in roles, the result kinds that are not so. Asked once. Taken by metis-agent's service before the
+    result reaches the director; a kind the world never lets go there is refused at the start too (the same F1, in
+    the words: "put the candle in the bathtub")."""
+    from types import SimpleNamespace
+    h = SimpleNamespace(spec="place", out={"placed", "elsewhere"}, speak=lambda t: t, _spoken_command=lambda c: c.split(), _refusals=[])
+    AlfHost._refused_by_world(h, "put_plain[O=target,R=dest,L=ldest]", "move candle1 to bathtub1")
+    r = AlfHost.world_refused(h)
+    assert r == [{"rule": "put_plain[O=target,R=dest,L=ldest]", "command": "move candle1 to bathtub1", "answer": "refused_put(dest)",
+                  "withdraw": ["elsewhere", "placed"], "line": "The world refused it: move candle1 to bathtub1."}]
+    assert AlfHost.world_refused(h) == []
+    AlfHost._refused_by_world(h, "take_plain[O=target,R=p1,L=l1]", "take candle1 from toilet1")
+    assert AlfHost.world_refused(h)[0]["answer"] == "refused_take(target)"
+    data = {"things": {}, "places": {"bathtub1": {}, "toilet1": {}}, "view": True, "compat": {"candle_t": ["toilet_t"]}}
+    c = SimpleNamespace(smap=SimpleNamespace(load=lambda: data, roles=lambda: ()), static={"rtype(bathtub1,bathtub_t)", "rtype(toilet1,toilet_t)"})
+    assert AlfHost.cannot_fetch(c, "candle", "bathtub1") == "unfit" and AlfHost.cannot_fetch(c, "candle", "toilet1") is None
+    assert AlfHost.cannot_fetch(c, "kettle", "bathtub1") is None                  # a kind nothing is known of: searched for
+
+
+def test_a_done_is_held_to_the_world():
+    """The backstop: a task said done whose goal does not hold in the world is said so, in the room's names."""
+    from types import SimpleNamespace
+    gym = SimpleNamespace(shared=False, last=None)
+    h = SimpleNamespace(spec="task", gym=gym, dyn={"holds(candle1)"}, speak=lambda t: t.replace("candle1", "candle 1").replace("bathtub1", "bathtub 1"),
+                        smap=SimpleNamespace(binding=lambda: {"target": "candle1", "dest": "bathtub1"}))
+    assert AlfHost.goal_unmet(h) == "candle 1 is not in bathtub 1 in the world: the task is not done."
+    h.dyn = {"inrecep(candle1,bathtub1)"}
+    assert AlfHost.goal_unmet(h) is None
+    h.spec = "place"
+    assert AlfHost.goal_unmet(h) is None
+
+
+def test_a_rooms_card_offers_only_what_its_world_allows_and_is_named_for_it():
+    """nina's F1 and F3: the bathroom's card offered the candle in the bathtub, and was titled kitchen. Every example of every
+    room type's first room is one the game's cancontain allows."""
+    import re
+    import tempfile
+    sys.path.insert(0, os.path.join(ROOT, "experiments"))
+    import demo
+    from semantic_map import text_map
+    for room, title in (("bathroom 401", "ALFWorld bathroom 401"), ("kitchen 13", "ALFWorld kitchen 13"), ("bedroom 301", "ALFWorld bedroom 301"), ("living room 201", "ALFWorld living room 201")):
+        trial = str(demo.resolve(room))
+        m = text_map(trial, room=True)
+        assert m["card"]["title"] == title
+        flat, _, _ = gen_instance.generate(trial, tempfile.mkdtemp(prefix="card."))
+        h = AlfHost(os.path.dirname(flat))
+        static = set(h.static)
+        h.gym.close()
+        typed = dict(a[6:-1].split(",") for a in static if a.startswith(("otype(", "rtype(")))
+        kinds = {re.sub(r"\d+$", "", k): t for k, t in typed.items()}
+        checked = 0
+        for ask in m["card"]["asks"]:
+            w = re.match(r"^(?:put|bring|move) the (\w+) (?:in|on|to) the (\w+)$", ask["say"])
+            if w:
+                assert "cancontain(%s,%s)" % (kinds[w.group(2)], kinds[w.group(1)]) in static, (room, ask["say"])
+                checked += 1
+        assert checked, room
+
+
 def test_the_room_tables_are_the_datasets():
     """map-queries step 1: world/cancontain.json, presence.json and starts.json are world/gen_tables.py's output over
     every ALFWorld game (its --check)."""

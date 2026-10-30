@@ -60,11 +60,21 @@ def prep(place_type):
     return "on" if place_type in ON else "in"
 
 
-def world_card(scene, places, things, task):
+def room_type(scene):
+    """ALFRED's room type by its floor plan's number: FloorPlan401 → bathroom."""
+    m = re.search(r"(\d+)$", str(scene))
+    n = int(m.group(1)) if m else 0
+    return next((t for a, b, t in ((1, 30, "kitchen"), (201, 230, "living room"), (301, 330, "bedroom"), (401, 430, "bathroom")) if a <= n <= b), "room")
+
+
+def world_card(scene, places, things, task, fits=None):
     """The world card (alf-demo step 3b, the user's ask: a model-card-like page of what this world is
     and what can be asked of it, a dock beside TALK / HIERARCHY / JOURNAL): world-neutral keys —
     title, about (lines), room (place kinds with counts), things (thing kinds with counts), asks
-    (say, what), cannot (lines), source — generated from the game's own facts, never typed."""
+    (say, what), cannot (lines), source — generated from the game's own facts, never typed. fits(thing, place): the world
+    lets this thing go there; the examples offer only what it does (rooms, nina's F1: the bathroom's card offered the
+    candle in the bathtub)."""
+    fits = fits or (lambda t, p: True)
     pick = [t for t in things if t.get("pickupable")]
     rooms = _kinds(places)
     for r in rooms:
@@ -72,8 +82,9 @@ def world_card(scene, places, things, task):
     tk = _kinds(pick)
     target = next((t for t in things if t["id"] in task.get("targets", [])), None)
     dest = next((p for p in places if p["id"] in task.get("dests", [])), None)
-    other = next((t for t in pick if t["type"] != (target or {}).get("type")), None)
-    elsewhere = next((p for p in places if p["id"] != (dest or {}).get("id") and p["type"] in ("fridge", "countertop", "sinkbasin", "diningtable")), None) or (places[0] if places else None)
+    other = next((t for t in pick if t["type"] != (target or {}).get("type") and any(fits(t, p) for p in places)), None)
+    fit = [p for p in places if p["id"] != (dest or {}).get("id") and (other is None or fits(other, p))]
+    elsewhere = next((p for p in fit if p["type"] in ("fridge", "countertop", "sinkbasin", "diningtable")), None) or (fit[0] if fit else None)
     asks = []
     if task.get("text"):
         asks.append({"say": task["text"].rstrip(".").lower() if task["text"] else "", "what": "this game's task: the one that wins the game"})
@@ -85,13 +96,14 @@ def world_card(scene, places, things, task):
     if room and other and elsewhere:                  # … a second errand for the card's line: another kind to another place
         second = next((t for t in pick if t["type"] != other["type"]), None)
         there = next((p for p in places if p["type"] not in (elsewhere["type"], second and second.get("at", "").rstrip("0123456789"))
-                      and p["type"] in ON + ("fridge", "sinkbasin", "sink", "cabinet", "drawer", "microwave", "garbagecan")), None)
+                      and p["type"] in ON + ("fridge", "sinkbasin", "sink", "cabinet", "drawer", "microwave", "garbagecan")
+                      and (second is None or fits(second, p))), None)
         if second and there:                          # [an errand, it in other words, another]: the card's line says the first and the last
             asks[1:1] = [{"say": "bring the %s to the %s" % (other["type"], elsewhere["type"]), "what": "the same errand in other words"},
                          {"say": "move the %s to the %s" % (second["type"], there["type"]), "what": "another errand: in a room the tasks follow one another"}]
     asks += [{"say": "stop", "what": "the agent stops what it is doing and waits"},
              {"say": "new game", "what": "the same room from its start" + ("" if room else ", the task again")}]
-    return {"title": "ALFWorld kitchen %s" % scene,
+    return {"title": "ALFWorld %s %s" % (room_type(scene), re.sub(r"^FloorPlan", "", str(scene))),
             "about": ["ALFWorld: a household scene from ALFRED, in text mode (TextWorld): " +
                       ("one room; give the agent a task, then another." if room else "one game is one room and one task."),
                       "The agent moves between places, opens what is closed, takes one thing at a time and puts it in or on a place.",

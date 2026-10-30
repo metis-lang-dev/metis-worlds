@@ -188,7 +188,11 @@ function loading(game) {                             // another game on its way 
   world.loading = game;
   const sel = $('#game');
   sel.disabled = !!game;
-  if (!game) { sel.value = world.games?.current ?? sel.value; $('#gameall').hidden = true; return; }
+  if (!game) {                                       // refused, or arrived: the status line is the agent's again, not "moving"
+    sel.value = world.games?.current ?? sel.value; $('#gameall').hidden = true;
+    if (world.status) status(world.status);
+    return;
+  }
   const x = world.games?.games.find(g => g.id === game);
   $('#sstate').textContent = 'moving'; $('#stext').textContent = `the agent goes to ${x?.label ?? game}…`;
   $('#sopts').replaceChildren();

@@ -129,7 +129,7 @@ try {
     cab: [...document.querySelectorAll('#wcard .wc-kind summary')].map(x => x.textContent.replace(/\\s+/g, ' ').trim()).find(t => t.startsWith('cabinet')),
     asks: [...document.querySelectorAll('#wcasks .chip')].map(b => b.textContent), cannot: document.querySelectorAll('#wcard .wc-cannot li').length,
     src: document.querySelector('#wcard .wc-src')?.textContent, strip: !!document.querySelector('[data-strip="world"]') })`);
-  c.ok(wc.title === 'ALFWorld kitchen FloorPlan13' && wc.room === 10 && wc.things === 24 && wc.cab.startsWith('cabinet × 26') && wc.cab.endsWith('opens') && wc.cannot === 3
+  c.ok(wc.title === 'ALFWorld kitchen 13' && wc.room === 10 && wc.things === 24 && wc.cab.startsWith('cabinet × 26') && wc.cab.endsWith('opens') && wc.cannot === 3
     && wc.src.startsWith('generated from the game') && wc.strip && wc.asks[0] === 'put a tomato in the microwave' && wc.asks.includes('new game'),
     'the world card: its title, the room and the things by kind × count, the asks, what it cannot, the source', wc);
   c.ok(await ev(`document.getElementById('dock-world').classList.contains('open')`), 'the WORLD CARD dock: shown, so open (a tool, not folded)', null);
@@ -209,6 +209,15 @@ try {
   c.ok(!h.after.hidden && h.after.every === 3 && h.after.groups.join() === 'kitchen,bathroom' && h.after.back === 'k2',
     '"choose another" opens every room, grouped; the house stays on the current room', h.after);
   c.ok(await ev(`window.__stayed === true`), 'a room change does not reload the page', null);
+  // nina's F2: a refused door gives the status line back, not "moving"
+  const m = await ev(`(async () => {
+    world.frame({ ev: 'world/status', state: 'done', text: 'Done. Tell me another task.' });
+    await world.frame({ ev: 'world/loading', game: 'b1' });
+    const moving = document.querySelector('#sstate').textContent;
+    await world.frame({ ev: 'load_game_ack', game: 'b1', error: 'I am holding candle 1: tell me where to put it down first.' });
+    return { moving, after: document.querySelector('#sstate').textContent, text: document.querySelector('#stext').textContent, value: document.querySelector('#game').value };
+  })()`);
+  c.ok(m.moving === 'moving' && !/moving/i.test(m.after) && /Done/.test(m.text) && m.value === 'k2', 'a refused door: the status is the agent\'s again, the picker back', m);
 
   // 9. at phone width the page does not scroll sideways
   await page.cmd('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 2, mobile: true });

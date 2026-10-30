@@ -118,6 +118,10 @@ def text_map(game_dir, index=None, room=False):
     targets = re.findall(r"^target\((\w+)\)\.", facts, re.M)
     dests = re.findall(r"^dest\((\w+)\)\.", facts, re.M)
     ids = [p["id"] for p in places]
+    typed = dict(_args(a) for a in static if a.startswith(("otype(", "rtype(")))
+
+    def fits(t, p):                            # the card's examples: only what the world lets go there
+        return not any(a.startswith("cancontain(") for a in static) or "cancontain(%s,%s)" % (typed.get(p["id"]), typed.get(t["id"])) in static
     task = {"text": words[0] if words else "", "goal": "fetch(%s, %s)" % (targets[0], dests[0]) if targets and dests else "",
             "targets": targets, "dests": dests, "params": params,
             "source": "ALFWorld traj_data.json: turk_annotations (the annotators' words)"}
@@ -129,7 +133,7 @@ def text_map(game_dir, index=None, room=False):
             "agent": {"pos": [round(ia.get("x", 0.0), 2), round(ia.get("z", 0.0), 2)], "yaw": ia.get("rotation", 0),
                       "at": None, "holding": None},
             "edges": [[a, b] for i, a in enumerate(ids) for b in ids[i + 1:]],
-            "task": task, "intro": intro, "card": world_card(traj["scene"]["floor_plan"], places, things, task),
+            "task": task, "intro": intro, "card": world_card(traj["scene"]["floor_plan"], places, things, task, fits),
             "overview": None, "tileset": {"index": [index] if index else []}}
 
 

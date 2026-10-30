@@ -220,6 +220,9 @@ class AlfHost:
                 return "nothere(%s)" % a
         types = {h: t for x in self.static if x.startswith(("otype(", "rtype(")) for h, t in [x[6:-1].split(",")]}
         ot, rt = types.get(obj), types.get(rec)
+        fits = (d.get("compat") or {}).get(re.sub(r"\d+$", "", obj) + "_t")     # view mode: a kind word has no instance's type yet
+        if not ot and rt and fits is not None and rt not in fits:               # (nina's F1: the candle into the bathtub went unchecked)
+            return "unfit"
         if ot and rt and any(x.startswith("cancontain(") for x in self.static) and "cancontain(%s,%s)" % (rt, ot) not in self.static:
             return "unfit"
         return None
@@ -418,12 +421,48 @@ class AlfHost:
                "changed": self.changed, "won": self.won, "obs": self.obs[:120].replace("\n", " ")}
         if not admissible:
             rec["admissible_were"] = before      # what the game would have taken instead
+            self._refused_by_world(name, cmd)
         self._log(rec)
         if admissible and self.changed:
             self.pending_frames.append(dict(self.delta(cmd), ev="world/delta"))
         if self.commands_log:
             with open(self.commands_log, "a") as f:
                 f.write(json.dumps({"command": cmd, "rule": name, "admissible": admissible, "changed": self.changed}) + "\n")
+
+    def _refused_by_world(self, name, cmd):
+        """The rule has fired on the program's belief and the game took nothing: the result the rule produced is not so
+        (rooms s-b51a2e80, nina's F1: a put the world refused was reported placed, and done). What the agent says instead
+        comes from this: the refusal the program has a rule for, in its roles."""
+        if not self.spec:
+            return
+        _, b = bindings(name)
+        said = self.speak(" ".join(self._spoken_command(cmd)))
+        answer = ("refused_put(%s)" % b["R"] if cmd.startswith("move ") and b.get("R") else
+                  "refused_take(%s)" % b["O"] if cmd.startswith("take ") and b.get("O") else
+                  "refused(%s)" % (b.get("R") or b.get("O") or next(iter(b.values()), "")))
+        self._refusals = getattr(self, "_refusals", []) + [{"rule": name, "command": said, "answer": answer, "withdraw": sorted(self.out),
+                                                            "line": "The world refused it: %s." % said}]
+
+    def world_refused(self):
+        """The commands the world refused since the last ask (metis-agent's service, before a fired rule's result reaches
+        the director): [{rule, command, answer, withdraw: the result kinds that are not so, line}]."""
+        out, self._refusals = getattr(self, "_refusals", []), []
+        return out
+
+    def goal_unmet(self):
+        """A task said done: its goal against the world as it stands, our own check (the card's `agrees`, now asked before
+        the status says done). → the words when the goal does not hold, else None."""
+        if self.smap is None or self.spec != "task":
+            return None
+        b = self.smap.binding()
+        obj, rec = b.get("target"), b.get("dest")
+        if not (obj and rec):
+            return None
+        if getattr(self.gym, "shared", False) and self.gym.last is not None:
+            self._take(self.gym.last)
+        if "inrecep(%s,%s)" % (obj, rec) in self.dyn:
+            return None
+        return self.speak("%s is not in %s in the world: the task is not done." % (obj, rec))
 
     def _log(self, rec):
         """$METIS_ALF_LOG: one JSON line per command (the experiments' record of what the game said)."""
