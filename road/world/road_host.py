@@ -97,7 +97,7 @@ class RoadHost:
         pass
 
     def observe(self, counts):
-        return self.reading(counts)
+        return self.reading()
 
     def tick(self, counts):
         self.beat += 1
@@ -107,7 +107,7 @@ class RoadHost:
         return self.sync(counts)
 
     def sync(self, counts):
-        r = self.reading(counts)
+        r = self.reading()                             # no argument: the tick's latch takes none (a copy, spec/17 amendment 4)
         return sync_diff(r, counts, self.observed or {a.split("(")[0] for a in r})
 
     # ── the commands ──
