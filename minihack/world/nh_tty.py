@@ -109,6 +109,10 @@ class Tty:
             c = cells[cur[1]][cur[0]]
             if c and c["ch"] == "@" and c["tile"] < n_monsters():
                 self.hero = (cur[0], cur[1], c["tile"])
+        if not over and self.hero:                          # a prompt holds the cursor off the map: the hero is still the cell with its tile
+            at = [(x, y) for y, row in enumerate(cells) for x, c in enumerate(row) if c and c["tile"] == self.hero[2] and not c["flags"] & MG_PET]
+            if len(at) == 1:
+                self.hero = (at[0][0], at[0][1], self.hero[2])
         return {"cells": cells, "hero": self.hero, "message": message.replace("--More--", "").strip(),
                 "status": [s.display[22].rstrip(), s.display[23].rstrip()], "text": "\n".join(_trim(text)) if over else "",
                 "more": "--More--" in "\n".join(s.display), "waiting": self.waiting, "prompt": s.cursor.y == 0}

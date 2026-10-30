@@ -13,6 +13,7 @@ import asyncio
 import json
 import logging
 import os
+import re
 import sys
 import time
 
@@ -23,10 +24,10 @@ sys.path.insert(0, os.path.join(os.path.dirname(HERE), "world"))
 from nh_tty import COLS, MAP_COLS, MAP_ROWS, MG_PET, Game, Tty, describe   # noqa: E402
 
 WEB = os.path.join(os.path.dirname(HERE), "web")
-# the chat's words → the game's keys; one token goes as typed (`20s`, `y`), a `#command` with its Return; a sentence the
-# table does not know goes nowhere (each of its letters would be a command in the game)
+# the chat's words → the game's keys; one key goes as typed (`y`, `20s`: a count and a key), a `#command` with its Return;
+# any other words go nowhere (each of their letters would be a command in the game)
 WORDS = {"north": "k", "south": "j", "east": "l", "west": "h", "northeast": "u", "northwest": "y", "southeast": "n",
-         "southwest": "b", "up": "<", "down": ">", "search": "s", "wait": "s", "look": ":", "look here": ":",
+         "southwest": "b", "left": "h", "right": "l", "up": "<", "down": ">", "search": "s", "wait": "s", "look": ":", "look here": ":",
          "inventory": "i", "pick up": ",", "pickup": ",", "eat": "e", "open": "o", "close": "c", "kick": "\x04",
          "zap": "z", "quaff": "q", "read": "r", "wear": "W", "wield": "w", "drop": "d", "apply": "a", "pray": "#pray\r",
          "yes": "y", "no": "n", "more": "\r", "next": "\r", "enter": "\r", "escape": "\x1b", "esc": "\x1b", "cancel": "\x1b"}
@@ -45,12 +46,12 @@ CARD = {"title": "NetHack 3.6.6", "about": ["The real game, from its source, on 
 
 def key_of(text):
     t = text.strip()
-    w = WORDS.get(t.lower())
+    w = WORDS.get(re.sub(r"^(go|move|walk)\s+", "", t.lower()).rstrip(".!"))
     if w is not None:
         return w
     if t.startswith("#"):
         return t + "\r"
-    return None if " " in t else t
+    return t if re.fullmatch(r"\d*\S", t) else None
 
 
 class Demo:
@@ -199,7 +200,7 @@ class Demo:
                         await ws.send_str(json.dumps({"ev": "intent", "id": f["id"], "intent": "", "voice": f"I don't know that command: {text}. The world card lists what you can say."}))
                         continue
                     self.press(keys)
-                    await ws.send_str(json.dumps({"ev": "intent", "id": f["id"], "intent": {"intent": "KEYS", "keys": keys.replace("\r", "⏎").replace("\x1b", "esc")}, "voice": ""}))
+                    await ws.send_str(json.dumps({"ev": "intent", "id": f["id"], "intent": {"intent": "KEYS", "press": keys.replace("\r", "⏎").replace("\x1b", "esc")}, "voice": ""}))
                 elif f.get("ev") == "keys":
                     self.press(f.get("keys", ""))
         finally:

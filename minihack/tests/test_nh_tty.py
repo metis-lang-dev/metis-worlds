@@ -56,6 +56,23 @@ def test_waiting_and_the_hero_under_the_cursor():
     assert s["waiting"] and s["hero"] == (7, 3, 330)
 
 
+def test_a_prompt_does_not_leave_the_hero_behind():
+    """The hero moves and a prompt takes the cursor to the message line before the game waits on the map."""
+    t = Tty()
+    t.feed(SEL_MAP + glyph(4, 7, 330, b"@") + b"\x1b[5;8H\x1b[1;3z")
+    assert t.snapshot()["hero"] == (7, 3, 330)
+    t.feed(SEL_MAP + glyph(4, 7, 900, b".") + glyph(4, 8, 330, b"@") + b"\x1b[1;2;1z\x1b[1;1HWhat do you want to eat?\x1b[1;3z")
+    assert t.snapshot()["hero"] == (8, 3, 330)
+
+
+def test_a_pet_of_the_heros_kind_is_not_the_hero():
+    t = Tty()
+    t.feed(SEL_MAP + glyph(4, 7, 330, b"@") + b"\x1b[5;8H\x1b[1;3z")
+    assert t.snapshot()["hero"] == (7, 3, 330)
+    t.feed(SEL_MAP + glyph(6, 2, 330, b"@", 8) + b"\x1b[1;2;1z\x1b[1;1HWhat?")
+    assert t.snapshot()["hero"] == (7, 3, 330)
+
+
 @BUILT
 def test_the_sheet_is_the_games_tileset():
     """The tile numbers the game emits index minihack/web/tiles/nethack/glyphs.png: every tile of its win/share art against the
@@ -127,3 +144,5 @@ def test_the_chat_never_types_a_sentence_into_the_game():
     assert key_of("look here") == ":" and key_of("North") == "k"
     assert key_of("20s") == "20s" and key_of("#pray") == "#pray\r"
     assert key_of("nlook here f") is None
+    assert key_of("left") == "h" and key_of("go north") == "k" and key_of("Move west.") == "h"
+    assert key_of("complete") is None and key_of("east1") is None
