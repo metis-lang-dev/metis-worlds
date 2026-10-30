@@ -14,6 +14,7 @@ The package's game.json names the game, the flat package, the root and the comma
 import collections
 import json
 import os
+import subprocess
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -90,7 +91,27 @@ class DirectorHost:
 
     def _map(self):
         from semantic_map import SemanticMap
-        return SemanticMap(os.path.join(self.meta["root"], "domains", "hier", ".map.json"))
+        from semantic_world.world import open_map
+        return open_map(self.meta["map"], SemanticMap)
+
+    # ── the rooms (rooms s-b51a2e80): one agent, the room is data ──
+    def holding(self):
+        """What the robot holds, by the map: a thing of this room's game does not exist in the next's. None: empty hands."""
+        return self._map().load()["agent"].get("holding")
+
+    def enter_room(self, room):
+        """ROOM (a games.json id) installed over the tree, its own map and commands log, its world opened and its map the
+        active one; the agent reloads the domains next. Refused (None) for a package that is not one of a World's rooms."""
+        if not self.meta["map"].endswith(".world.json"):
+            return None
+        # in the world's own interpreter: reading a game needs what the agent's venv does not have (textworld)
+        cmd = [os.environ.get("METIS_ALF_PY") or sys.executable, os.path.join(os.path.dirname(HERE), "experiments", "demo.py"),
+               "room", room, self.meta["root"]] + ["--" + f for f in ("view", "tree", "room") if self.meta.get(f)]
+        r = subprocess.run(cmd, capture_output=True, text=True, env=dict(os.environ))
+        if r.returncode:
+            raise RuntimeError(((r.stderr or r.stdout).strip().splitlines() or ["the room's install failed"])[-1])
+        self.meta = json.load(open(os.path.join(self.package_dir, "game.json")))
+        return room
 
     def instance(self, domain, goal, tokens=()):
         """DOMAIN's next start when the agent reloads it (a new game, a reset: the hierarchy at its start):

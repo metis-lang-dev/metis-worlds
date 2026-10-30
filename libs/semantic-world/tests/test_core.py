@@ -7,6 +7,7 @@ import pytest
 from semantic_world import bayes, ports, project
 from semantic_world.room import SemanticMap, spoken, thor_id, want_handle
 from semantic_world.store import Store
+from semantic_world.world import World, open_map
 
 # a kitchen of four receptacles at three locations, two tomatoes, an apple; the robot at loc0 (no receptacle)
 STATIC = ["recat(countertop1,loc1)", "recat(countertop2,loc1)", "recat(fridge1,loc2)", "recat(microwave1,loc3)",
@@ -122,6 +123,20 @@ def test_a_kind_wanted_in_sight_of_places_has_looked_into_them(tmp_path):
                    for a in m.role_reading({}))
 
 
+def test_a_search_that_gave_up_does_not_keep_the_target(tmp_path):
+    """The user's session: the apple moved, a kettle search given up, then the apple again: its fetch was bound to the kettle
+    still wanted ("Apple 1 is not what this task fetches"). In a room the thing named is the target; the kind stays
+    wanted with what was learnt, so asking for it again answers from its belief."""
+    st = STATIC + ["cancontain(countertop_t,kettle_t)", "cancontain(fridge_t,kettle_t)"]
+    m = SemanticMap.build(str(tmp_path / "map.json"), st, DYN, [], [], view=True, room=True)
+    m.observe(["at(loc1)", "inrecep(apple1,countertop1)"])
+    m.intent_atom("fetch(kettle,fridge1)")
+    assert m.binding()["target"] == "kettle"
+    assert m.intent_atom("fetch(apple1,fridge1)") == "fetch(target,dest)" and m.binding()["target"] == "apple1"
+    assert m.load()["things"]["kettle"]["wanted"]
+    assert m.intent_atom("fetch(kettle,fridge1)") == "fetch(target,dest)" and m.binding()["target"] == "kettle"
+
+
 def test_the_room_names():
     assert thor_id("countertop_bar__minus_01_dot_87_bar__plus_00_dot_96_bar__plus_01_dot_80") == ("countertop", -1.87, 0.96, 1.8)
     assert spoken("cabinet12") == "cabinet 12" and want_handle("tomato2") == "tomato"
@@ -159,3 +174,63 @@ def test_the_query_api(tmp_path):
     p = m._prior("kettle")
     assert p and len(set(round(x, 9) for x in p.values())) == 1
     assert any(json.loads(l).get("kind") == "prior-fallback" for l in open(m.journal))
+
+
+def _two_rooms(tmp_path):
+    a = SemanticMap.build(str(tmp_path / "a.json"), STATIC, DYN, ["tomato1", "tomato2"], ["microwave1"], view=True)
+    st = ["recat(sink1,loc1)", "recat(shelf1,loc2)", "notopenable(sink1)", "notopenable(shelf1)", "otype(soap1,soap_t)",
+          "rtype(sink1,sink_t)", "rtype(shelf1,shelf_t)", "cancontain(sink_t,soap_t)", "cancontain(shelf_t,soap_t)", "pickupable(soap1)"]
+    b = SemanticMap.build(str(tmp_path / "b.json"), st, ["at(loc0)", "inrecep(soap1,shelf1)"], ["soap1"], ["sink1"], view=True)
+    return a, b
+
+
+def test_a_world_keeps_each_maps_state_across_enter_and_leave(tmp_path):
+    """rooms s-b51a2e80 step 1: named maps, one active; the query API answers on the active map; a map's state is its own
+    and survives leaving it; an unknown name is refused and leaves the active map as it was."""
+    a, b = _two_rooms(tmp_path)
+    w = World({"kitchen": a, "bathroom": b}, active="kitchen")
+    assert w.map_names() == ["bathroom", "kitchen"] and w.active == "kitchen" and "bathroom" in w
+    assert w.bind("countertop") == ["countertop1", "countertop2"] and w.bind("sink") == []
+    w.observe(["at(loc1)", "inrecep(apple1,countertop1)"])                  # the kitchen: both countertops looked into
+    assert set(w.load()["looked"]["tomato"]) == {"countertop1", "countertop2"}
+    assert w.enter("bathroom") is b and w.active == "bathroom"
+    assert w.bind("sink") == ["sink1"] and w.bind("countertop") == [] and not w.load().get("looked")
+    w.observe(["at(loc2)", "inrecep(soap1,shelf1)"])
+    w.enter("kitchen")
+    assert set(w.load()["looked"]["tomato"]) == {"countertop1", "countertop2"} and w.next("tomato") == "fridge1"
+    with pytest.raises(KeyError):
+        w.enter("attic")
+    assert w.active == "kitchen"
+    with pytest.raises(AttributeError):
+        World({"kitchen": a}).bind("tomato")                                 # none active: said, not a None
+
+
+def test_a_world_on_disk_is_followed_by_every_host_open_on_it(tmp_path):
+    """A host per domain, each with its own World on the one file: an enter through one is what every other reads next, and
+    each map's state stays on disk across it."""
+    a, b = _two_rooms(tmp_path)
+    p = str(tmp_path / "x.world.json")
+    host1 = World(path=p, make=SemanticMap)
+    host1.add_map("kitchen", a.path)
+    host1.add_map("bathroom", b.path)
+    host1.enter("kitchen")
+    host2 = open_map(p, SemanticMap)
+    assert isinstance(host2, World) and host2.active == "kitchen" and host2.bind("countertop")
+    host2.observe(["at(loc1)", "inrecep(apple1,countertop1)"])
+    assert host1.load()["agent"]["at"] == "loc1"                              # one document: the other host reads the write
+    host1.enter("bathroom")
+    assert host2.active == "bathroom" and host2.bind("sink") == ["sink1"] and host2.path == b.path
+    host2.enter("kitchen")
+    assert host1.load()["agent"]["at"] == "loc1" and set(host1.load()["looked"]["tomato"]) == {"countertop1", "countertop2"}
+    assert any(json.loads(l).get("kind") == "enter" for l in open(a.journal))
+    assert isinstance(open_map(a.path, SemanticMap), SemanticMap)             # a single map's file: the map itself
+
+
+def test_a_worlds_own_faces_shadow_nothing_a_map_has():
+    """A host reads the active map through the World as through the map: a World attribute named like a map's would answer
+    instead of it (World.names over SemanticMap.names: the lines said roles, not things)."""
+    from semantic_world.grid import GridMap
+    from semantic_world.mixed import MixedMap
+    own = {a for a in vars(World) if not a.startswith("__")}
+    for cls in (SemanticMap, GridMap, MixedMap):
+        assert not own & {a for a in dir(cls) if not a.startswith("__")}, cls

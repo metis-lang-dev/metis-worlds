@@ -116,26 +116,43 @@ def resolve(name):
     raise SystemExit("demo.py: no game %r (demo.py list names them)" % name)
 
 
-def setup(game, root, port=8398, view=False, tree=False, room=False):
-    """ROOT as the demo's catalog; → (config path, the map, the task's fetch). view: the semantic map sees
-    only what the robot sees (semantic-map step 3). room (alf-tasks step 1): the game is the room's state only,
-    the person gives the tasks (no task of the game's own, no episode end); the picker lists rooms."""
+def room_name(game):
+    """A game's name among a World's rooms: its id, safe in a file's name."""
+    return re.sub(r"[^A-Za-z0-9_]+", "-", id_of(game))
+
+
+def install_room(game, root, view=False, tree=False, room=False, world=False):
+    """GAME's data in ROOT's tree: the hierarchy's packages (their programs the same whatever the game), the card, the
+    page's map. world (rooms s-b51a2e80): one room of a World, so its map and commands log stand as it left them. → (the
+    page's map, the packages)."""
     root = Path(root)
-    if root.exists():
-        shutil.rmtree(root)
-    out = gen_hier.install(str(game), str(root), person=True, view=view, tree=tree, room=room)
+    name = room_name(game) if world else None
+    out = gen_hier.install(str(game), str(root), person=True, view=view, tree=tree, room=room, name=name)
     for spec in hda.NAMES[1:]:                 # metis-agent loads a host from <name>_host.py, or the manifest's host: file
         shutil.copy(Path(out[spec]) / "alf_host.py", Path(out[spec]) / ("%s_host.py" % spec))
     hda.card_files(root, out["task"])
     from semantic_map import text_map
     m = text_map(str(game), room=room)
-    if view:                                   # the page draws what the robot knows: every place dimmed until seen into
+    if view:                                   # the page draws what the robot knows: every place marked until looked into
+        mp = root / "domains" / "hier" / (".map.%s.json" % name if name else ".map.json")
+        seen = set(json.loads(mp.read_text()).get("seen") or ())
         m["view"] = True
         for p in m["places"]:
-            p["unseen"] = True
+            p["unseen"] = p["id"] not in seen
     (root / "world-map.json").write_text(json.dumps(m, indent=1))
-    # the world page's picker: the games this demo can load, this one current; a page's choice is written beside ROOT
-    # (ROOT.next.json, outside what the next setup removes) and the service stops for demo.sh to set it up
+    return m, out
+
+
+def setup(game, root, port=8398, view=False, tree=False, room=False, world=False):
+    """ROOT as the demo's catalog; → (config path, the map, the task's fetch). view: the semantic map sees
+    only what the robot sees (semantic-map step 3). room (alf-tasks step 1): the game is the room's state only,
+    the person gives the tasks (no task of the game's own, no episode end); the picker lists rooms. world (rooms
+    s-b51a2e80): the picker's choice is entered with the agent running (metis-agent's enter_room)."""
+    root = Path(root)
+    if root.exists():
+        shutil.rmtree(root)
+    m, out = install_room(game, root, view=view, tree=tree, room=room, world=world)
+    # the world page's picker: the games this demo can load, this one current
     (root / "games.json").write_text(json.dumps({"current": id_of(game), "rooms": room,
                                                  "games": room_list(id_of(game)) if room else game_list()}, indent=1))
     names = list(hda.NAMES)
@@ -144,7 +161,6 @@ def setup(game, root, port=8398, view=False, tree=False, room=False):
     c = hda.config_dict(run, port)
     c["v3"]["world_map"] = str(root / "world-map.json")
     c["v3"]["games"] = str(root / "games.json")
-    c["v3"]["game_request"] = str(root.parent / (root.name + ".next.json"))
     c["v3"]["catalog"] = names
     c["v3"]["loaded"] = ["director", "task"]
     c["domains"]["names"] = names
@@ -486,6 +502,12 @@ def main(argv=None):
     s.add_argument("--port", type=int, default=8398)
     s.add_argument("--view", action="store_true", help="the semantic map sees only what the robot sees (semantic-map step 3)")
     s.add_argument("--room", action="store_true", help="the game as a room: the person gives the tasks (alf-tasks step 1)")
+    ro = sub.add_parser("room")                # the agent's enter_room, in this interpreter (rooms s-b51a2e80)
+    ro.add_argument("game")
+    ro.add_argument("root")
+    ro.add_argument("--view", action="store_true")
+    ro.add_argument("--tree", action="store_true")
+    ro.add_argument("--room", action="store_true")
     c = sub.add_parser("check")
     c.add_argument("--game", default=None)
     c.add_argument("--out", default=str(HERE / "records" / "demo-check"))
@@ -501,8 +523,11 @@ def main(argv=None):
     g.add_argument("--out", default=str(HERE / "records" / "demo-games"))
     g.add_argument("--port", type=int, default=8398)
     a = ap.parse_args(argv)
+    if a.cmd == "room":
+        install_room(resolve(a.game), a.root, view=a.view, tree=a.tree, room=a.room, world=True)
+        return 0
     if a.cmd == "setup":
-        cfg, m, fetch, _ = setup(a.game, a.root, a.port, view=a.view, room=a.room)
+        cfg, m, fetch, _ = setup(a.game, a.root, a.port, view=a.view, room=a.room, world=True)
         print(json.dumps({"config": str(cfg), "task": m["task"]["text"], "fetch": fetch}))
         return 0
     if a.cmd == "list":

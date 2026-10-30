@@ -149,7 +149,8 @@ class AlfHost:
         # this host the room — it reads the world through the map's binding and says its commands, its
         # lines and its goals through it back in the room's things
         from semantic_map import SemanticMap
-        self.smap = SemanticMap(meta["map"]) if meta.get("map") else None
+        from semantic_world.world import open_map
+        self.smap = open_map(meta["map"], SemanticMap) if meta.get("map") else None   # one map, or a World's active one (rooms)
         # view mode (step 3): the map re-projects while the robot looks; a specialist reads the binding it
         # was woken with until its next activation (a role in its goal keeps its place: no surprise
         # mid-goal), the planner the map's own (the next place to look is its)
@@ -463,14 +464,25 @@ class AlfHost:
     def _root(self):
         return os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(self.smap.path)))) if self.smap is not None else None
 
-    def _task_begin(self, atom):
-        """The person's goal arrives (intent_atom): a card opens at the world's and the map's records as they stand."""
-        if getattr(self, "_task", None) is None and self._root():   # a card left open on disk (a stop reloads the task: another host)
+    def _close_open_task(self):
+        """The task before never ended (a stop, a new task over it, a door): its card says so. A stop reloads the task's
+        host, so its card may be open on disk only."""
+        if getattr(self, "_task", None) is None and self._root():
             f = os.path.join(self._root(), "records", "tasks", ".open.json")
             if os.path.exists(f):
                 self._task = json.load(open(f))
-        if getattr(self, "_task", None) is not None:   # the one before never ended (a stop, a new task over it): its card says so
+        if getattr(self, "_task", None) is not None:
             self._task_end(["stopped"])
+
+    def leave_room(self):
+        """The agent is leaving this room (metis-agent's enter_room): a running task's card closed as stopped, while the
+        map and the commands log are still this room's."""
+        if self.spec == "task":
+            self._close_open_task()
+
+    def _task_begin(self, atom):
+        """The person's goal arrives (intent_atom): a card opens at the world's and the map's records as they stand."""
+        self._close_open_task()
         mj = getattr(self.smap, "journal", None) if self.smap is not None else None   # the map's journal file (its store's)
         n = lambda f: sum(1 for _ in open(f)) if f and os.path.exists(f) else 0
         self._task = {"goal": atom, "beat": self.beat, "commands_at": n(self.commands_log), "map_at": n(mj), "map_journal": mj,

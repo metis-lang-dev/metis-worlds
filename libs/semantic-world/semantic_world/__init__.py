@@ -5,6 +5,7 @@ evidence) → project (the roles bound to the world's names, stable, frozen per 
 between bound roles retracted and asserted on the live session, the weight ports' readings) → the program's turn →
 an intent back in the world's terms.
 
+    world    named maps, one active: enter(name), the query API on the active map (same agent, next map)
     store    the map file (mtime cache, one writer) and its journal
     core     the cycle every adapter shares: cycle / observe / sync / role_reading, the adapter's hooks
     bayes    predict / seen / missed, exists log-odds; the reachable set (RSS's worst case); the association gate

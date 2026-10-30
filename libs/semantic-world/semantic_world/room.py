@@ -344,6 +344,8 @@ class SemanticMap(core.SemanticMap):
             return obj
         if obj in d["things"] and d["things"][obj].get("wanted"):
             return obj
+        if d["task"].get("room") and obj:             # a room has no task of its own: the thing the person named is the target
+            return obj                                # (not a kind left wanted by a search that gave up)
         if held in targets:
             return held
         seen = [t for t in targets if t in d["things"]]

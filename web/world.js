@@ -9,8 +9,8 @@
 //   world.html?live=1[&map=fixtures/x.json]            the journal, world/* frames);
 //                                                     live=1: this host's /ws (alfworld/demo.sh serves the page)
 // Live with a runner that loads games (the service's /world/games.json: alfworld/demo.sh), the top bar's picker
-// names another game: load_game, the service stops (world/loading), its runner sets that game up and starts it
-// again, and the page reloads on it once the socket is back. Under the map, the game: its name and its task.
+// names another room: load_game, the agent goes there and keeps running (world/loading, then world/map, a status and
+// world/room; the talk and journal panes go on). Under the map, the game: its name and its task.
 //
 // The frames (the same in both): {ev: 'world/map', url} · {ev: 'world/delta', …} (map.js's delta)
 // · {ev: 'world/hierarchy', beat, arrival, effects, state} (the director's atoms) · {ev:
@@ -81,10 +81,12 @@ function drawHierarchy() {
 
 // ── the journal pane: metis-agent's model, its chat rows ──
 const journal = new Journal();
-const jrecs = [];                                    // every record as it came (dlg-wire's timings too): the save button's file
-$('#jsave').onclick = () => {
+const jrecs = [];                                    // the records this page has seen (a recording's: live, the service keeps them all)
+$('#jsave').onclick = async () => {                  // live: the service's whole journal, from before this page loaded too
+  let text = null;
+  try { const r = await fetch(new URL('world/journal.jsonl', world.base)); if (r.ok) text = await r.text(); } catch { /* a recording: no service */ }
   const a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob([jrecs.map(r => JSON.stringify(r)).join('\n') + '\n'], { type: 'application/jsonl' }));
+  a.href = URL.createObjectURL(new Blob([text ?? jrecs.map(r => JSON.stringify(r)).join('\n') + '\n'], { type: 'application/jsonl' }));
   a.download = `world-journal-${Date.now()}.jsonl`;
   a.click();
   URL.revokeObjectURL(a.href);
@@ -175,7 +177,7 @@ function loading(game) {                             // another game on its way 
   sel.disabled = !!game;
   if (!game) { sel.value = world.games?.current ?? sel.value; return; }
   const x = world.games?.games.find(g => g.id === game);
-  $('#sstate').textContent = 'loading'; $('#stext').textContent = `the agent starts again on ${x?.label ?? game}…`;
+  $('#sstate').textContent = 'moving'; $('#stext').textContent = `the agent goes to ${x?.label ?? game}…`;
   $('#sopts').replaceChildren();
 }
 function gameInfo() {                                // under the map: the game (the picker's name for it) and its task
@@ -283,6 +285,7 @@ async function frame(f) {
   rec('frame', { ev: f.ev });
   if (f.ev === 'world/map') { world.mapUrl = new URL(f.url, world.base).href; await world.map.load(world.mapUrl); fitMap(); legend(); worldCard(); gameInfo(); drawHierarchy(); return; }   // the task row names this map's task
   if (f.ev === 'world/loading') { loading(f.game); return; }
+  if (f.ev === 'world/room') { if (world.games) world.games.current = f.game; loading(null); gameInfo(); return; }   // the agent is there: no reload, the panes go on
   if (f.ev === 'load_game_ack') { if (f.error) { loading(null); panel.note(f.error); } return; }
   if (f.ev === 'world/delta') { world.map.delta(f); if (f.task) { chainTo(world.map.map.task); } return; }
   if (f.ev === 'world/hierarchy') { hierarchy(f); return; }

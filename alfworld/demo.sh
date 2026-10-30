@@ -11,8 +11,7 @@
 #   another, and the game's own task never ends the session. ROOM: a room's label ("kitchen 13"), or any game of it.
 #   --episode: the game as one task (its own goal wins and ends it; the picker lists games). GAME: a game's name
 #   ("Bowl-None-Fridge-6", "pick_and_place_simple-Bowl-None-Fridge-6", "train/…"), its task directory or a trial
-#   directory. The page's top bar picks another room: the service stops, this script sets it up and starts it
-#   again, and the page reloads on it.
+#   directory. The page's top bar picks another room: the agent goes there and keeps running (rooms s-b51a2e80).
 #
 #   --view: the semantic map sees only what the robot sees (semantic-map step 3): it knows the places, a
 #   thing once seen; "a tomato" is looked for place by place, the belief choosing where first.
@@ -54,16 +53,8 @@ for p in "$AGENT/py/.venv/bin/python" "$PY"; do      # metis_agent installed in 
 done
 CAP=()
 command -v systemd-run >/dev/null && CAP=(systemd-run --user --scope -q -p MemoryMax=6G)
-NEXT="$ROOT.next.json"                         # the page's next game (the service's v3.game_request), read when it stops
-rm -f "$NEXT"
-while :; do
-  (cd "$HERE" && "$PY" experiments/demo.py setup "$GAME" "$ROOT" --port "${ADDR##*:}" ${VIEW[@]+"${VIEW[@]}"} ${ROOM[@]+"${ROOM[@]}"})
-  echo "the world page: http://$ADDR/world.html?live=1"
-  rc=0
-  (cd "${METIS_AGENT_DIR:-$AGENT}/py" && "${CAP[@]}" nice "$AGENT/py/.venv/bin/python" -m metis_agent.service \
-    --config "$ROOT/.run/config.yaml" --ui-dir "$HERE/../web" --lib-dir "$HERE/../web/vendor" --addr "$ADDR") || rc=$?
-  [ -f "$NEXT" ] || exit "$rc"                 # stopped by hand (^C): the demo ends
-  GAME="$("$PY" "$HERE/experiments/demo.py" resolve "$("$PY" -c 'import json, sys; print(json.load(open(sys.argv[1]))["game"])' "$NEXT")")"
-  rm -f "$NEXT"
-  echo "demo.sh: the next game, $GAME"
-done
+(cd "$HERE" && "$PY" experiments/demo.py setup "$GAME" "$ROOT" --port "${ADDR##*:}" ${VIEW[@]+"${VIEW[@]}"} ${ROOM[@]+"${ROOM[@]}"})
+echo "the world page: http://$ADDR/world.html?live=1"
+cd "${METIS_AGENT_DIR:-$AGENT}/py"
+exec "${CAP[@]}" nice "$AGENT/py/.venv/bin/python" -m metis_agent.service \
+  --config "$ROOT/.run/config.yaml" --ui-dir "$HERE/../web" --lib-dir "$HERE/../web/vendor" --addr "$ADDR"

@@ -40,7 +40,7 @@ another, through the intent interface.
   steps on. The episode's goal is still read (`episode_won`, reported) and never ends the session.
 - **No task in the map.** The map has no task of its own: the person's goal binds the roles.
 - **The picker.** The top bar's picker lists one room per ALFRED scene (24 kitchens, 28 living rooms, 27 bedrooms,
-  28 bathrooms). A pick restarts the service on that room, and the page reloads.
+  28 bathrooms). A pick moves the agent to that room with nothing restarted (rooms s-b51a2e80); a room it comes back to stands as it left it.
 
 **The tasks.** The task card (`domains/hier/task/intent.yaml`) maps the words; the program says the lines; the
 agent only renders them.

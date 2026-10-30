@@ -1022,7 +1022,7 @@ def test_a_specialist_reads_its_activation_binding(tmp_path):
 def test_the_demo_names_its_games_and_loads_one_by_name(tmp_path):
     """The world page's game picker (demo.sh): demo.py's game list (pick_and_place_simple, one per task directory,
     by room), a game resolved from its name in any of its forms, and setup's games.json (this game current) and the
-    service's v3.games / v3.game_request (the page's next game, beside the catalog)."""
+    service's v3.games (a pick is entered with the agent running: rooms s-b51a2e80)."""
     import yaml
     sys.path.insert(0, os.path.join(ROOT, "experiments"))
     import demo
@@ -1040,7 +1040,7 @@ def test_the_demo_names_its_games_and_loads_one_by_name(tmp_path):
     g = json.loads((tmp_path / "root" / "games.json").read_text())
     assert g["current"] == bowl["id"] and len(g["games"]) == len(gs)
     v3 = yaml.safe_load(cfg.read_text())["v3"]
-    assert v3["games"] == str(tmp_path / "root" / "games.json") and v3["game_request"] == str(tmp_path / "root.next.json")
+    assert v3["games"] == str(tmp_path / "root" / "games.json") and "game_request" not in v3
     assert list(fetch) == ["bowl1", "fridge1"]
 
 
@@ -1185,6 +1185,35 @@ def test_the_rooms_opening_text_is_on_the_map():
     intro = text_map(str(demo.resolve("kitchen 2")), room=True)["intro"]
     assert intro.startswith("You are in the middle of a room.") and "a countertop 1" in intro
     assert "_bar_" not in intro and "-=" not in intro and "Your task" not in intro
+
+
+def test_a_room_of_a_world_is_installed_over_the_tree_and_stands_as_it_was_left(tmp_path):
+    """rooms s-b51a2e80 step 1: the agent goes from room to room over one tree. Each room has its own map and commands log;
+    the programs do not change; the hosts read the World's active map; a room returned to is as it was left."""
+    import gen_hier
+    sys.path.insert(0, os.path.join(ROOT, "experiments"))
+    import demo
+    from semantic_map import SemanticMap
+    from semantic_world.world import World, open_map
+    root = str(tmp_path / "r")
+    programs = lambda: {sp: open(os.path.join(root, "domains", "hier", sp, sp + ".llp")).read() for sp in gen_hier.SPECS}
+    meta = lambda sp: json.load(open(os.path.join(root, "domains", "hier", sp, "game.json")))
+    kitchen, bathroom = demo.resolve("kitchen 2"), demo.resolve("bathroom 401")
+    gen_hier.install(str(kitchen), root, person=True, view=True, room=True, name="kitchen")
+    before = programs()
+    w = World(path=os.path.join(root, "domains", "hier", ".world.json"), make=SemanticMap)
+    assert meta("task")["map"] == meta("director")["map"] == w._path and w.active == "kitchen" and w.bind("fridge") == ["fridge1"]
+    w.observe(["at(loc1)"])
+    at, log = w.load()["agent"]["at"], meta("task")["commands_log"]
+    open(log, "a").write(json.dumps({"command": "go to fridge 1"}) + "\n")
+    gen_hier.install(str(bathroom), root, person=True, view=True, room=True, name="bathroom")
+    assert w.active == "bathroom" and w.bind("toilet") == ["toilet1"] and w.bind("fridge") == []
+    assert programs() == before and meta("task")["commands_log"] != log and "fridge1" not in open(os.path.join(root, "domains", "hier", "task", "intent.yaml")).read().lower().split()
+    host_map = open_map(meta("nav")["map"], SemanticMap)
+    assert host_map.active == "bathroom" and host_map.path.endswith(".map.bathroom.json")
+    gen_hier.install(str(kitchen), root, person=True, view=True, room=True, name="kitchen")
+    assert w.active == "kitchen" and w.load()["agent"]["at"] == at and meta("task")["commands_log"] == log
+    assert "go to fridge 1" in open(log).read() and host_map.bind("fridge") == ["fridge1"]
 
 
 def test_the_room_tables_are_the_datasets():

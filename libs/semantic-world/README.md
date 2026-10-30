@@ -20,6 +20,21 @@ A world's host runs one cycle every turn:
 5. **the program's turn** happens outside the library. Its intents come back through `ports.say_in_roles` and
    `ports.in_room`, and `names` gives name(role, thing) for the voice and the page.
 
+## Many maps: `World` (rooms s-b51a2e80)
+
+Same agent, next map: a room of a house, a level, a road segment, one of a wheelchair's nets. The programs are compiled
+over roles, so nothing in them changes; only the map under them does.
+
+```python
+World({"kitchen": a, "bathroom": b}, active="kitchen")      # in memory
+World(path="x.world.json", make=SemanticMap)                # on disk: every World open on the file follows an enter
+w.enter("bathroom")                                         # its state as it was left
+w.bind("towel"); w.next("towel"); w.observe(atoms)          # the query API, on the active map
+```
+
+`enter` is a world event: the caller applies it between ticks, so no host reads two maps in one tick. A map's state
+is the map's own and survives leaving it. `open_map(path, make)` gives a host the World or the single map a path names.
+
 ## The query API (map-queries s-396939dc step 1)
 
 The only faces a program's host and the dialog read the map through (`core.SemanticMap`):
