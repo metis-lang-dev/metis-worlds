@@ -114,7 +114,7 @@ def install(root, port=8399):
         pkg = out[sp]
         p = os.path.join(pkg, "level.json")
         level = json.load(open(p))
-        level.update(map_doc=doc, card=CARD)
+        level.update(map_doc=doc, card=CARD, surprises=os.path.join(os.path.dirname(root), "nh-records", "surprises.jsonl"))   # beside ROOT: this install starts ROOT afresh
         json.dump(level, open(p, "w"), indent=1)
         shim = os.path.join(pkg, "mh_host.py")
         text = open(shim).read().replace('MhHost = world_host(HERE, "mh_host"', 'MhHost = world_host(HERE, "nh_host"').replace('.MhHost\n', '.NhHost\n')
@@ -125,7 +125,7 @@ def install(root, port=8399):
     cfg_path = os.path.join(root, ".run", "config.yaml")
     c = yaml.safe_load(open(cfg_path))
     c["v3"]["world_map"] = doc
-    c["domains"]["consult"] = False            # the watch's surprises wait for no model: the world brings what no rule predicts
+    c["domains"]["consult"] = False            # no seat: the watch opens no record here (nh_host.py), surprises are written down and play goes on
     c["ws"] = {"addr": "127.0.0.1:%d" % port, "ui": WEB}
     yaml.safe_dump(c, open(cfg_path, "w"), sort_keys=False)
     return cfg_path

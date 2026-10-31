@@ -213,35 +213,9 @@ function gameInfo() {                                // under the map: the game 
     ${m.intro ? `<div class="gi-intro">${esc(m.intro)}</div>` : ''}`;
 }
 function showCard() { docks.set('world', { shown: true, open: true }); $('#dock-world')?.scrollIntoView?.({ block: 'nearest' }); }
-// the tiles as large as the left pane allows (the map, its attention slot beside it when there is room)
-// the real game (a map with `keys`): its 79 × 21 cells are mostly dark, so the view is what has been seen, as large as
-// the pane allows; it grows back out as the level is explored, and a new level zooms in again
-function fitSeen(v, L) {
-  const m = world.map.map, pad = 2;
-  let x0 = m.cols, x1 = 0, y0 = m.rows, y1 = 0;
-  m.cells.forEach((row, y) => row.forEach((c, x) => { if (c != null) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); } }));
-  if (x0 > x1) { x0 = 0; x1 = m.cols - 1; y0 = 0; y1 = m.rows - 1; }
-  x0 = Math.max(0, x0 - pad); y0 = Math.max(0, y0 - pad); x1 = Math.min(m.cols - 1, x1 + pad); y1 = Math.min(m.rows - 1, y1 + pad);
-  const w = L.clientWidth - 28, h = Math.max(240, L.clientHeight - 310);   // under the map: the pointed thing, the status lines
-  const z = Math.max(0.6, Math.min(3, w / ((x1 - x0 + 1) * 16), h / ((y1 - y0 + 1) * 16)));
-  $('#map').style.setProperty('--wm-z', z.toFixed(2));
-  v.style.maxHeight = `${h}px`;
-  const t = 16 * z;
-  v.scrollLeft = (x0 + x1 + 1) / 2 * t - v.clientWidth / 2;
-  v.scrollTop = (y0 + y1 + 1) / 2 * t - v.clientHeight / 2;
-}
-function fitMap() {
-  const v = $('#map .wm-view'), L = $('#left');
-  if (!v || !L) return;
-  if (world.map.map?.keys) return fitSeen(v, L);
-  const cols = Number(getComputedStyle(v).getPropertyValue('--cols')) || 1, rows = Number(getComputedStyle(v).getPropertyValue('--rows')) || 1;
-  const w = L.clientWidth - 28 - (L.clientWidth > 900 ? 280 : 0), h = L.clientHeight - 40;
-  const z = Math.max(1, Math.min(3, w / (cols * 16), h / (rows * 16)));
-  $('#map').style.setProperty('--wm-z', z.toFixed(2));
-}
-addEventListener('resize', () => fitMap());
-// the left pane's own size: the splitter, a dock hidden or shown, a window moved to another monitor
-new ResizeObserver(() => fitMap()).observe($('#left'));
+// the map's box follows the layout (the splitter, a dock hidden or shown, the window); its zoom and place are the person's
+// (viewport.js): only a new map or a new level starts them again, with all that has been seen
+new ResizeObserver(() => world.map.view.keep()).observe($('#map'));
 function status(f) {
   const was = world.status?.state;
   world.status = f;
@@ -252,7 +226,7 @@ function status(f) {
   chips($('#sopts'), f.state === 'asking' ? [] : [...(f.options || []), ...(f.state === 'waiting' && world.card ? [{ label: 'what can I ask?', card: true }] : [])]);
   if (f.state !== 'asking') $('#ask').hidden = true;
   if (f.state === 'waiting' || (f.state === 'working' && ['done', 'stuck', 'over', 'asking', 'waiting'].includes(was))) resetHierarchy();
-  if (f.state === 'waiting' && was === 'over' && world.mapUrl) world.map.load(world.mapUrl).then(fitMap);   // a new game: the room from its start
+  if (f.state === 'waiting' && was === 'over' && world.mapUrl) world.map.load(world.mapUrl).then(() => world.map.view.fit());   // a new game: the room from its start
   if (f.state !== 'working') { hier.goal = null; if (f.state !== 'asking') hier.attention = null; drawHierarchy(); }
   if ((f.state === 'waiting' || f.state === 'working') && world.map.map?.entities?.some(e => e.cornered)) world.map.delta({ cornered: null });   // the ask is over: no place in red
   if (f.state === 'working' && f.domain) { hier.goal = { domain: f.domain, text: f.text.replace(/^[^:]*:\s*/, '') }; drawHierarchy(); }
@@ -319,15 +293,16 @@ function floorLook(s) { if (panel) panel.dom.floor.textContent = `floor: ${FLOOR
 let say = 0, panel = null, send = () => {};
 async function frame(f) {
   rec('frame', { ev: f.ev });
-  if (f.ev === 'world/map') { world.mapUrl = new URL(f.url, world.base).href; await world.map.load(world.mapUrl); if (world.map.map.screen) screen(world.map.map.screen); fitMap(); legend(); worldCard(); gameInfo(); drawHierarchy(); return; }   // the task row names this map's task
+  if (f.ev === 'world/map') { world.mapUrl = new URL(f.url, world.base).href; await world.map.load(world.mapUrl); if (world.map.map.screen) screen(world.map.map.screen); world.dlvl = null; world.map.view.fit(); legend(); worldCard(); gameInfo(); drawHierarchy(); return; }   // the task row names this map's task
   if (f.ev === 'world/loading') { loading(f.game); return; }
   if (f.ev === 'world/room') { await gamePicker(); loading(null); gameInfo(); return; }   // the agent is there: no reload, the panes go on
   if (f.ev === 'load_game_ack') { if (f.error) { loading(null); panel.note(f.error); } return; }
-  if (f.ev === 'world/delta') { world.map.delta(f); if (world.map.map?.keys && f.cells) fitMap(); if (f.task) { chainTo(world.map.map.task); } return; }
+  if (f.ev === 'world/delta') { world.map.delta(f); if (f.task) { chainTo(world.map.map.task); } return; }
   if (f.ev === 'world/hierarchy') { hierarchy(f); return; }
   if (f.ev === 'world/status') { status(f); return; }
   if (f.ev === 'world/ask') { ask(f); return; }
   if (f.ev === 'world/screen') { screen(f); return; }
+  if (f.ev === 'world/surprise') { journalRow({ who: 'note', text: `surprise: ${f.text}` }); return; }
   if (f.ev === 'world/message') { panel.core.frame({ ev: 'narration', id: `g${++say}`, sentence: f.text, kind: 'v3-card' }); return frame({ ev: 'journal', rec: { kind: 'dlg-say', what: 'world', text: f.text } }); }
   if (f.ev === 'new_game_ack') { if (f.text) panel.note(f.text); return; }
   if (f.ev === 'page') return;                     // the hello's answer: this page owns no domain
@@ -346,9 +321,15 @@ async function frame(f) {
 // the real game's tty (minihack/demo.sh): the status lines and what lies over the map, a menu or a page
 function screen(f) {
   const el = $('#screen');
+  const dlvl = (f.status || []).join(' ').match(/Dlvl:(\d+)/)?.[1];
+  if (dlvl && world.dlvl && dlvl !== world.dlvl) world.map.view.fit();   // another level: its map came just before this frame
+  if (dlvl) world.dlvl = dlvl;
   el.hidden = false;
   el.textContent = [...(f.status || []), ...(f.text ? ['', f.text] : [])].join('\n');
   el.classList.toggle('over', !!f.text);
+  const items = $('#items');
+  items.hidden = !f.items?.length;
+  items.textContent = `carrying: ${(f.items || []).join(' · ')}`;
 }
 // the person's keys go to the game as world lines on the agent's wire (world/nh_host.py); in the chat one key (`y`), a count
 // and a key (`20s`) or a #command are the game's too: every other line is the agent's to read
@@ -367,6 +348,21 @@ addEventListener('keydown', e => {
   e.preventDefault(); e.stopPropagation();
   keys(k);
 }, true);
+// the new-game button: a real game ends for good, so the first press only asks and the second, within a few seconds, does it
+const newGame = $('#newgame');
+let armed = null;
+const disarm = () => { clearTimeout(armed); armed = null; newGame.textContent = 'new game'; newGame.classList.remove('armed'); };
+newGame.onclick = () => {
+  newGame.blur();
+  if (!armed) {
+    newGame.textContent = 'end this game?'; newGame.classList.add('armed');
+    armed = setTimeout(disarm, 4000);
+    return;
+  }
+  disarm();
+  rec('new_game', {});
+  send({ ev: 'new_game' });
+};
 // ── replay: the recording, frame by frame ──
 async function replay(url) {
   world.replay = true;

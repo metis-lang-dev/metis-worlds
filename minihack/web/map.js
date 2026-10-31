@@ -21,6 +21,8 @@
 // atom formalization made of them, the specialist chain so far, the result lines. Arrow keys move
 // between the entities, nearest first in that direction; Escape closes the card.
 
+import { Viewport } from './viewport.js';
+
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 const json = async u => { const r = await fetch(u); if (!r.ok) throw new Error(`${u}: ${r.status}`); return r.json(); };
 const nameOf = t => String(t).toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
@@ -63,13 +65,16 @@ export class WorldMap {
     Object.assign(this, { root, base, onTask, onAttend });
     this.index = {}; this.glyphs = null; this.map = null; this.els = new Map();
     root.classList.add('wm');
-    root.innerHTML = `<div class="wm-view"><div class="wm-grid" aria-hidden="true"></div>
-      <div class="wm-layer" role="list" aria-label="on the map"></div></div>
+    root.innerHTML = `<div class="wm-view"><div class="wm-world"><div class="wm-grid" aria-hidden="true"></div>
+      <div class="wm-layer" role="list" aria-label="on the map"></div></div></div>
       <aside class="wm-attn" aria-live="polite"><span class="wm-empty">point at something on the map</span></aside>
       <dialog class="wm-task" aria-label="the task"><div class="wm-card"></div>
       <form method="dialog"><button class="wm-close">close</button></form></dialog>`;
     [this.grid, this.layer] = root.querySelectorAll('.wm-grid, .wm-layer');
     this.attn = root.querySelector('.wm-attn'); this.card = root.querySelector('.wm-task');
+    this.view = new Viewport(root.querySelector('.wm-view'), root.querySelector('.wm-world'), {
+      focus: () => this.map?.agent?.pos ?? null, seen: () => this.seen(), cols: () => this.map?.cols ?? 0, rows: () => this.map?.rows ?? 0,
+    });
     this.layer.addEventListener('click', e => { const b = e.target.closest('.wm-ent'); if (b) this.showTask(b.dataset.id); });
     this.layer.addEventListener('pointerover', e => { const b = e.target.closest('.wm-ent'); if (b) this.attend(b.dataset.id); });
     this.layer.addEventListener('focusin', e => { const b = e.target.closest('.wm-ent'); if (b) this.attend(b.dataset.id); });
@@ -119,6 +124,13 @@ export class WorldMap {
     return m;
   }
 
+  // the box round every cell drawn so far: [x0, y0, x1, y1], or null when nothing is
+  seen() {
+    let x0 = Infinity, y0 = Infinity, x1 = -1, y1 = -1;
+    this.map?.cells.forEach((row, y) => row.forEach((c, x) => { if (c != null) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); } }));
+    return x1 < 0 ? null : [x0, y0, x1, y1];
+  }
+
   entity(id) { return id === '@agent' ? this.agentEnt() : this.map.entities.find(e => e.id === id); }
   agentEnt() { return { ...this.map.agent, id: '@agent', name: this.map.agent.name || 'the agent', kind: 'agent' }; }
   entries() { return [...this.layer.querySelectorAll('.wm-ent')]; }    // the focusable things, for the ui port's JUMP
@@ -166,6 +178,7 @@ export class WorldMap {
       e.cornered = e.id === d.cornered; this.els.get(e.id)?.classList.toggle('wm-cornered', e.cornered);
     }
     if (d.task) Object.assign(m.task, d.task);
+    if (d.agent) this.view.keep();
     if (this.card.open && this.cardFor) this.showTask(this.cardFor);
     const a = this.attn?.dataset.id;                  // the attention slot follows the world: its thing changed (opened, filled, moved)
     if (a && ((a === '@agent' && d.agent) || (d.entities || []).some(u => u.id === a))) this.attend(a);

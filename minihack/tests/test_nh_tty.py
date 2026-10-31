@@ -4,6 +4,8 @@ import os
 import pickle
 import re
 import select
+import shutil
+import subprocess
 import sys
 import time
 
@@ -47,6 +49,14 @@ def test_text_over_a_cell_takes_its_tile_and_is_the_text():
     t.feed(b"\x1b[1;2;4z\x1b[4;1HMenu (end)")
     s = t.snapshot()
     assert t.cell(3, 2) is None and "Menu (end)" in s["text"]
+
+
+def test_text_keeps_a_letter_equal_to_the_cell_under_it():
+    t = Tty()
+    t.feed(SEL_MAP + glyph(3, 12, 900, b"-"))
+    t.feed(b"\x1b[4;11Hc - a shield")                 # the menu's dash lands on the wall's own dash
+    s = t.snapshot()
+    assert "c - a shield" in s["text"]
 
 
 def test_waiting_and_the_hero_under_the_cursor():
@@ -182,6 +192,111 @@ def test_the_hierarchy_acts_in_the_real_game(tmp_path):
         g.keys("\x1b\x1b\r\r")
         if not g.over:
             g.game.stop()
+
+
+def test_a_command_that_did_not_do_what_it_said_is_a_surprise():
+    sys.path.insert(0, os.path.join(HERE, "..", "world"))
+    from nh_host import surprise
+    was = {"at": (5, 5), "turn": 10, "dlvl": 1}
+    assert surprise("move", ["E"], was, {"at": (6, 5), "turn": 11, "dlvl": 1}, []) is None
+    assert surprise("move", ["E"], was, {"at": (5, 5), "turn": 10, "dlvl": 1}, ["said(blocked)"])
+    assert surprise("move", ["E"], was, {"at": (30, 2), "turn": 11, "dlvl": 2}, [])    # a trap door under the step
+    assert surprise("move_fight", ["E"], was, {"at": (5, 5), "turn": 11, "dlvl": 1}, ["said(hit)"]) is None
+    assert surprise("move_fight", ["E"], was, {"at": (5, 5), "turn": 11, "dlvl": 1}, [])
+    assert surprise("open_door", ["OPEN", "N"], was, was, ["said(door_locked)"]) is None
+    assert surprise("pickup", ["PICKUP"], was, was, ["said(other)"])
+    assert surprise("pickup", ["PICKUP"], was, was, ["said(nothing_here)"]) is None
+    assert surprise("down", ["DOWN"], was, {"at": (5, 5), "turn": 11, "dlvl": 2}, []) is None
+    assert surprise("down", ["DOWN"], was, was, ["said(cant)"])
+    assert surprise("search", ["SEARCH"], was, {"at": (5, 5), "turn": 11, "dlvl": 1}, []) is None
+    assert surprise("search", ["SEARCH"], was, was, [])
+
+
+def test_an_errand_held_too_long_is_refused(monkeypatch):
+    sys.path.insert(0, os.path.join(HERE, "..", "world"))
+    import nh_host
+    from mh_host import MhHost
+    monkeypatch.setattr(MhHost, "pending", lambda self: False)
+    h = nh_host.NhHost.__new__(nh_host.NhHost)
+    h.spec, h.key = "task", "k"
+    nh_host.SHARED["k"] = {"last": {"atoms": ["agent_at(c1_1)", "turn(5)"], "dlvl": 1}}
+    clock = [100.0]
+    monkeypatch.setattr(nh_host.time, "monotonic", lambda: clock[0])
+    try:
+        assert h.pending() is False
+        clock[0] += nh_host.STALL_SECONDS - 1
+        assert h.pending() is False
+        nh_host.SHARED["k"]["last"]["atoms"] = ["agent_at(c1_1)", "turn(6)"]    # a turn passed: the clock starts again
+        assert h.pending() is False
+        clock[0] += nh_host.STALL_SECONDS - 1
+        assert h.pending() is False
+        clock[0] += 2
+        assert h.pending() is True
+        nh_host.SHARED["k"]["last"]["atoms"] = ["agent_at(c1_1)", "turn(7)"]    # a tick with no wake check before it reads the clock itself
+        dos = []
+        h.stalled({"want(goal)": 1}, dos)
+        assert dos == []
+        clock[0] += nh_host.STALL_SECONDS + 1
+        assert h.pending() is True
+        dos = []
+        h.stalled({"want(goal)": 1}, dos)
+        assert dos == ["+refused(goal) 1"] and h.stall_said and h.pending() is False
+        clock[0] += nh_host.STALL_SECONDS + 1
+        dos = []
+        h.stalled({"idle": 1}, dos)                   # no errand: nothing to stop
+        assert dos == []
+    finally:
+        del nh_host.SHARED["k"]
+
+
+def test_what_the_hero_carries_as_atoms():
+    from nh_gym import holds_atoms, items_of
+    page = " Weapons\n a - a +1 long sword (weapon in hand)\n b - 2 daggers (alternate weapon; not wielded)\n Comestibles\n d - a food ration\n (end)"
+    items = items_of(page)
+    assert [i[0] for i in items] == ["a", "b", "d"]
+    assert holds_atoms(items) == ["holds(1_long_sword)", "holds(daggers)", "holds(food_ration)"]
+
+
+@BUILT
+def test_the_hero_carries_picks_up_from_a_menu_and_starts_again(tmp_path):
+    """The inventory read, several things on one cell picked up through the game's menu, a new game with a new dungeon."""
+    from nh_gym import Gym
+    g = Gym(options="name:metisitems,role:Valkyrie,race:human,gender:female,align:neutral,pettype:none,!legacy,!splash_screen,!autopickup,color,time,vt_tiledata,windowtype:tty")
+    try:
+        first = g.open(map_doc=str(tmp_path / "map.json"), card={})
+        g.frames()
+        g.frames()
+        held = [w for _, w in g.items]
+        assert any("long sword" in w for w in held) and any("holds(" in a for a in g.perceive()["atoms"])
+        assert not g.tty.snapshot()["text"]               # the page is closed again, and the map is back
+        letters = [l for l, w in g.items if "long sword" not in w and "worn" not in w][:2]
+        for l in letters:
+            g.keys("d" + l)
+        g.frames()
+        assert len(g.items) == len(held) - 2
+        got = g.step("PICKUP")
+        assert "said(picked)" in got["events"]
+        g.frames()
+        assert len(g.items) == len(held)
+        game = first["game"]
+        g.keys("#quit\r")
+        g.keys("y")
+        ended = g.step("N")                               # the rules' next command answers the game's last questions: its end, no error
+        assert ended["done"] and g.over and "said(died)" in ended["events"]
+        again = g.new_game()
+        assert again["game"] == game + 1 and any(a.startswith("agent_at(") for a in again["atoms"])
+        assert next(a for a in again["atoms"] if a.startswith("turn(")) == "turn(1)"
+    finally:
+        if g.game and not g.over:
+            g.game.forget()
+
+
+def test_the_view_zooms_drags_and_follows():
+    node = shutil.which("node")
+    if not node:
+        pytest.skip("no node")
+    r = subprocess.run([node, os.path.join(HERE, "viewport_test.mjs")], capture_output=True, text=True)
+    assert r.returncode == 0, r.stdout + r.stderr
 
 
 def test_the_real_game_installs_for_the_agent(tmp_path):

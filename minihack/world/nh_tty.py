@@ -14,6 +14,7 @@ character and its colour (55% of the monsters and 93% of the objects share their
 Map cell (x, y) is the screen's column x, row y + 1 (row 0 the message line, 22 and 23 the status).
 """
 import fcntl
+import glob
 import os
 import pty
 import re
@@ -103,6 +104,9 @@ class Tty:
         over = [l for l in text if l.strip()]
         message = s.display[0].rstrip()
         if over:                                            # a menu's first line lies on the message line: it is the menu's
+            # from where the text starts, as the screen shows it: a letter that happens to be the map cell's own under it is the text's too
+            left = min(len(l) - len(l.lstrip()) for l in over)
+            text = [s.display[y + 1][left:].rstrip() if text[y].strip() else "" for y in range(MAP_ROWS)]
             text, message = [message] + text, ""
         cur = (s.cursor.x, s.cursor.y - 1)
         if not over and self.waiting and 0 <= cur[1] < MAP_ROWS and cur[0] < MAP_COLS:
@@ -184,6 +188,13 @@ class Game:
 
     def keys(self, data):
         os.write(self.fd, data)
+
+    def forget(self):
+        """The game ended for good: stopped, and its save gone, so the next start is a new hero in a new dungeon."""
+        self.stop()
+        name = re.search(r"name:([^,]+)", self.options)
+        for f in glob.glob(os.path.join(os.path.dirname(self.path), "lib", "nethackdir", "save", "%d%s*" % (os.getuid(), name[1] if name else ""))):
+            os.remove(f)
 
     def stop(self):
         """SIGHUP: the game saves itself, the next start restores it."""

@@ -6,6 +6,7 @@ grid in view mode: nothing known until seen); only the world under them changed.
   {"op": "reset", "seed": S}                      → the perception (the game goes on: a real game is never reset)
   {"op": "step", "action": NAME}                  → the perception + {"reward", "done", "won"}; prompts answered
   {"op": "keys", "keys": STR}                     → the perception: the person's keys, as typed, nothing answered
+  {"op": "new_game"}                              → the perception of a new hero in a new dungeon: the old game and its save are gone
   {"op": "frames"}                                → {"frames": [...]}: the page's world/* frames since the last call
 The perception: {"atoms", "events", "message", "done", "won", "dlvl", "game"}. Map cell (x, y) is c<x>_<y>; dlvl and game
 change when the level or the game does (the host then starts its map again).
@@ -27,6 +28,11 @@ KEYS = {"N": "k", "S": "j", "E": "l", "W": "h", "NE": "u", "NW": "y", "SE": "n",
 WANTS_DIR = {"OPEN", "KICK"}
 IMPASSABLE = re.compile(r"\b(bars|tree|pool|lava|water|air|cloud|closed drawbridge)\b")
 FRESH_SCREEN_EVERY = 10             # frames calls between two world/screen frames, unchanged (a page opened since)
+ITEM = re.compile(r"^\s*([a-zA-Z$]) - (.+?)\s*$", re.M)
+PAGE = re.compile(r"\((\d+) of (\d+)\)")
+ITEM_KEYS = set("dDeqrzwtTPRWAaQ,")   # the person's keys that can change what the hero carries
+ARTICLE = re.compile(r"^(an?|the|\d+)\s+")
+MESSAGES_ITEMS = re.compile(r"^\w - |you (drop|eat|finish eating|drink|read|throw)", re.I)   # said when what it carries changed
 
 
 def name_of(text):
@@ -37,6 +43,15 @@ def events_of(message):
     low = message.lower()
     kinds = [k for pat, k in MESSAGES if re.search(pat, low)]
     return ["said(%s)" % k for k in (kinds or (["other"] if message else []))]
+
+
+def items_of(text):
+    """A menu's or a page's item lines: [(letter, words)]."""
+    return ITEM.findall(text)
+
+
+def holds_atoms(items):
+    return ["holds(%s)" % name_of(ARTICLE.sub("", re.sub(r"\s*\(.*?\)", "", words))) for _, words in items]
 
 
 def status_atoms(status):
@@ -86,10 +101,12 @@ class Gym:
         self.game, self.tty, self.over, self.games, self.want_dir = None, None, False, 0, False
         self.map_doc, self.card = None, {}
         self.last, self.calls, self.said, self.sent_text = None, 0, "", None
+        self.items, self.items_stale = [], True
 
     # ── the process ──
     def start(self):
         self.game, self.tty, self.over, self.last, self.said = Game(self.options) if self.options else Game(), Tty(), False, None, ""
+        self.items, self.items_stale = [], True
         self.games += 1
         self.game.start()
         self.settle(1.0)
@@ -101,9 +118,13 @@ class Gym:
             self.settle(0.5)
 
     def press(self, keys):
-        if keys:
+        if keys and not self.over:
             self.tty.waiting = False
-            self.game.keys(keys.encode("latin-1", "ignore"))
+            try:
+                self.game.keys(keys.encode("latin-1", "ignore"))
+            except OSError:                 # it ended while the keys were on their way
+                self.over = True
+                self.game.stop()
 
     def drain(self):
         got = False
@@ -137,7 +158,7 @@ class Gym:
                     "reward": 0.0, "dlvl": 0, "game": self.games}
         cells = self.last["cells"] if s["text"] and self.last else s["cells"]
         hero = (self.last["hero"] if s["text"] and self.last else s["hero"])
-        atoms = set(status_atoms(s["status"]))
+        atoms = set(status_atoms(s["status"])) | set(holds_atoms(self.items))
         for y, row in enumerate(cells):
             for x, c in enumerate(row):
                 if not c:
@@ -190,9 +211,11 @@ class Gym:
             raise ValueError("no key for action %r" % action)
         self.press(keys)
         self.settle(1.0)
-        if action == "PICKUP" and self.tty.snapshot()["text"]:   # several things here: the menu, all of them
-            self.press(",\r")
-            self.settle(0.5)
+        if action == "PICKUP":
+            self.items_stale = True
+            if self.tty.snapshot()["text"]:     # several things here: the menu, all of them on all its pages
+                self.press(".\r")
+                self.settle(0.5)
         said, events = [], []
         for _ in range(12):
             if self.over:
@@ -222,9 +245,39 @@ class Gym:
             self.write_map()
             return self.perceive()
         self.want_dir = False
+        self.items_stale = self.items_stale or bool(ITEM_KEYS & set(keys)) or "#" in keys
         self.press(keys)
         self.settle(0.5)
         return self.perceive()
+
+    def new_game(self, **_):
+        if not self.over:
+            self.game.forget()
+        self.start()
+        self.sent_text = None
+        self.write_map()
+        return self.perceive()
+
+    def read_items(self):
+        """What the hero carries, from the game's own inventory page: it takes no turn. Only when the game waits for a command."""
+        s = self.tty.snapshot()
+        if self.over or not self.tty.waiting or s["text"] or s["prompt"] or s["more"]:
+            return False
+        self.items_stale, items = False, []
+        self.press("i")
+        self.settle(0.5)
+        for _ in range(10):
+            s = self.tty.snapshot()
+            items += items_of(s["text"])
+            page = PAGE.search(s["text"])
+            if not page or page[1] == page[2]:
+                break
+            self.press(">")
+            self.settle(0.5)
+        self.press("\x1b")
+        self.settle(0.5)
+        self.items = items
+        return True
 
     # ── the page ──
     def things(self, cells, hero):
@@ -252,7 +305,7 @@ class Gym:
                "cells": [[c and {"t": c["tile"], "ch": c["ch"]} for c in row] for row in s["cells"]],
                "entities": list(self.things(s["cells"], s["hero"]).values()), "agent": self.agent(s["hero"]),
                "task": {"text": "", "goal": "", "room": False, "source": "the person's words"}, "card": self.card, "tileset": {"index": []},
-               "screen": {"status": s["status"], "text": s["text"]}}
+               "screen": {"status": s["status"], "text": s["text"], "items": [w for _, w in self.items]}}
         if self.map_doc:
             t = self.map_doc + ".tmp"
             with open(t, "w") as f:
@@ -263,7 +316,8 @@ class Gym:
         self.drain()
         out, self.calls = [], self.calls + 1
         if self.over:
-            return {"frames": [{"ev": "world/message", "text": "The game has ended: press a key to start another."}] if self.last else []}
+            said, self.last = self.last, None      # said once
+            return {"frames": [{"ev": "world/message", "text": "The game has ended: press a key to start another."}] if said else []}
         s = self.tty.snapshot()
         was = self.last
         if not s["text"]:
@@ -289,7 +343,8 @@ class Gym:
                 self.write_map()
             elif not was:
                 self.last = {"cells": s["cells"], "things": things, "hero": s["hero"]}
-        screen = {"ev": "world/screen", "status": s["status"], "text": s["text"], "more": s["more"], "prompt": s["message"] if s["prompt"] else ""}
+        screen = {"ev": "world/screen", "status": s["status"], "text": s["text"], "more": s["more"], "prompt": s["message"] if s["prompt"] else "",
+                  "items": [w for _, w in self.items]}
         if screen != self.sent_text or self.calls % FRESH_SCREEN_EVERY == 0:
             out.append(screen)
             self.sent_text = screen
@@ -297,12 +352,15 @@ class Gym:
         if msg and msg != self.said:
             out.append({"ev": "world/message", "text": msg})
         self.said = msg
+        if self.items_stale or MESSAGES_ITEMS.search(msg):      # after the message went out: the page clears the top line
+            if self.read_items():
+                self.said, self.sent_text = "", None
         return {"frames": out}
 
 
 def main():
     gym, ops = Gym(), None
-    ops = {"open": gym.open, "reset": gym.reset, "step": gym.step, "keys": gym.keys, "frames": gym.frames}
+    ops = {"open": gym.open, "reset": gym.reset, "step": gym.step, "keys": gym.keys, "new_game": gym.new_game, "frames": gym.frames}
     for line in sys.stdin:
         req = json.loads(line)
         op = req.pop("op")

@@ -55,6 +55,10 @@ levels through `Level.des()` (`tests/test_an_exerciser_level_opens_in_its_own_co
 | `world/nh_gym.py` | `mh_gym.py`'s protocol over the real game: the screen as the hierarchy's atoms, prompts answered, the page's `world/*` frames |
 | `world/nh_host.py`, `world/nh_hier.py` | `MhHost` over that world (view mode: nothing known until seen; a new level starts the map again), the hierarchy installed for metis-agent's service: the person's words through the model: an errand (`reach(goal)`: the director, task, nav and act) or one command (a move, a search, a pick-up, the stairs). The watch's surprises are off here (`observe`) until the loop makes the domain |
 
+**The map's view** (`web/viewport.js`): the box takes what the layout gives it; the wheel zooms round the pointer, a drag moves the view, the buttons zoom, go to 1:1, fit all that has been seen and centre on the hero (following him until the next drag or wheel). **New game** (the top bar, two presses): the game and its save are gone, a new hero in a new dungeon. The hero's inventory is read from the game's own page (it takes no turn) and shown under the status.
+
+**Surprises** (`world/nh_host.py`, `.metis/nh-records/surprises.jsonl`, the journal pane): a command of the rules' own that did not do what it says (`missed`: a step that left the hero elsewhere, a blow not struck, a door with no answer), or a message the perception has no word for (`unread`). Play goes on: the watch's own record would stop the agent until a consult closes it, so `observe()` keeps it closed. **A stall**: an errand with no turn and no move for 20 s stops through the task's own `stuck_on` and the person is asked.
+
 The tile numbers index `web/tiles/nethack/glyphs.png` (this directory's) directly (`raw_tiles`, `tests/test_nh_tty.py` compares all 1082 by pixel). Glyph numbers differ from NLE's: this build has the mail daemon. The keyboard goes straight to the game (world lines on the agent's wire); chat lines are the model's to read, except a single key, a count and a key, or a #command. Stopping the service saves the game and the next start restores it.
 
 ## Findings while building (step 1)
