@@ -1,6 +1,7 @@
 // dash.js — the run's dashboard under the 3D view (road-agent s-357becc7 step 2): four small charts on one time axis, each its own scale, from the world/scene
 // frames, drawn twice a second on plain canvases (no chart library: minimal overhead). The run's numbers above them; the summary when it arrives.
-const INK = { text: '#d8dde3', mute: '#8a939e', grid: '#2c323a' };
+const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();   // the shell's tokens
+const INK = { get mute() { return css('--dim'); }, get grid() { return css('--line'); } };
 const CMD = { accel: '#3987e5', brake: '#d95926', keep: '#199e70', change: '#9085e9' };     // validated for the dark surface, in that order
 const OTHER = '#8a939e';
 const STRIP_ROWS = { restricted: '#c98500', violation: '#e66767', collision: '#e66767' };
@@ -86,7 +87,7 @@ function fit(c) {
   const w = c.clientWidth, h = c.clientHeight;
   if (c.width !== w || c.height !== h) { c.width = w; c.height = h; }
   const g = c.getContext('2d');
-  g.font = '10px system-ui, sans-serif';
+  g.font = `10px ${css('--mono')}`;
   return g;
 }
 

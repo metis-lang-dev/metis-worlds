@@ -26,14 +26,25 @@
   #status .text { color: var(--fg); overflow: hidden; text-overflow: ellipsis; }
   #status .opts { display: inline-flex; gap: 6px; flex: none; }
   #conn { color: var(--dim); }
-  /* the map takes what the left pane has left over the status lines */
-  #left { overflow: hidden; padding: 12px; display: flex; flex-direction: column; min-height: 0; }
-  #left > * { flex: none; }
+  /* the game picker (live, a runner that loads games: alfworld/demo.sh) and the game under the map */
+  #game, #gameall { background: var(--bg); color: var(--fg); border: 1px solid var(--line); font: inherit; padding: 1px 4px; max-width: 18em; }
+  #game:disabled { opacity: .6; }
+  #gameinfo { margin: 10px 0 0; padding: 8px 10px; border: 1px solid var(--line); max-width: 60em; }
+  #gameinfo .gi-name { color: var(--fg); font-weight: 600; }
+  #gameinfo .gi-task { margin-top: 3px; }
+  #gameinfo .gi-dim { color: var(--dim); font-size: 11.5px; margin-top: 3px; }
+  #gameinfo .gi-intro { margin-top: 6px; font-size: 12px; line-height: 1.45; }
+  #left { overflow: auto; padding: 12px; }
+  #map .wm-view { box-sizing: content-box; }
+  #legend { display: flex; flex-wrap: wrap; gap: 2px 14px; margin: 8px 0 0; color: var(--dim); font-size: 11.5px; }
+  #legend b { color: var(--fg); margin-right: 4px; }
   #jtools { margin-bottom: 6px; }
   #jsave { font: inherit; color: inherit; background: none; border: 0; padding: 0; text-decoration: underline; opacity: .7; cursor: pointer; }
+  /* map.css sizes the view to its grid; the shell's border-box would clip it */
   #dock-talk .dbody { display: flex; flex-direction: column; overflow: hidden; }
   #dock-talk #talkpanel { flex: 1 1 auto; min-height: 0; }
   .fw-panel .fw-title:empty { display: none; }
+  #map { min-width: 0; }
   /* the ask: the agent's question, its answers as chips (a chip says its answer, as typing it would) */
   #ask { border: 1px solid var(--yellow); background: #2a2111; padding: 6px 8px; margin: 0 0 6px; }
   #ask .q { color: var(--yellow); margin-bottom: 4px; }
@@ -59,6 +70,14 @@
   #dialogpart .fw-sec { border: 1px solid var(--line); padding: 2px 8px; background: var(--panel); }
   #dialogpart .fw-sec > summary { color: var(--dim); font-weight: normal; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; }
   #dialogpart .fw-sec[open] > summary { color: var(--fg); }
+  /* the hierarchy: who is attending, on what goal */
+  #hlist { list-style: none; margin: 0; padding: 0; }
+  #hlist li { display: flex; flex-wrap: wrap; gap: 6px; padding: 2px 6px; border-left: 2px solid transparent; }
+  #hlist li.on .st { color: var(--green); } #hlist li.off { color: var(--dim); }
+  #hlist li.att { border-left-color: var(--yellow); background: var(--sel); } #hlist li.att .st { color: var(--yellow); font-weight: bold; }
+  #hlist li[data-domain="task"] { cursor: pointer; }
+  #hlist .k { font-size: 11.5px; } #hlist .g { color: var(--dim); font-size: 11.5px; } #hlist .goal { color: var(--yellow); font-size: 11.5px; }
+  #hstate { color: var(--dim); text-transform: none; letter-spacing: 0; font-size: 11px; }
   /* the world card: what this world is and what you can ask it (the map's `card`) */
   #wcard .wc-title { color: var(--fg); font-weight: bold; margin: 0 0 4px; }
   #wcard .wc-about { color: var(--fg); margin: 0 0 3px; }
@@ -77,39 +96,25 @@
   #jlog { list-style: none; margin: 0; padding: 0; font-size: 11.5px; }
   #jlog li { padding: 1px 0; border-top: 1px solid var(--line); } #jlog .who { color: var(--dim); display: inline-block; min-width: 3.5em; }
   #jlog .j-you { color: var(--fg); font-weight: bold; } #jlog .j-note { color: var(--dim); }
-  /* the road: the 3D view with its tools over it, the dashboard under it */
-  #left { padding: 0; }
-  #col { flex: 1; min-width: 0; display: flex; flex-direction: column; position: relative; }
-  #tools { position: absolute; top: 8px; left: 8px; z-index: 3; background: rgba(20, 23, 28, .88); border: 1px solid var(--line); padding: 6px 8px; display: flex; flex-direction: column; gap: 6px; max-width: 17em; }
-  #tools .row { display: flex; gap: 6px; }
-  #tools .row[hidden] { display: none; }
-  #tools button { background: var(--bg); color: inherit; border: 1px solid var(--line); font: inherit; padding: 2px 8px; cursor: pointer; white-space: nowrap; }
-  #tools button[aria-pressed="true"] { background: var(--line); }
-  #tools summary { cursor: pointer; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--dim); }
-  #tools dl { display: grid; grid-template-columns: auto 1fr; gap: 1px 10px; margin: 4px 0 0; }
-  #tools dt { color: var(--dim); } #tools dd { margin: 0; }
-  #view { flex: 1; min-height: 0; width: 100%; border: 0; }
-  #dash { flex: 0 0 34%; min-height: 220px; border-top: 1px solid var(--line); padding: 6px 10px; display: flex; flex-direction: column; gap: 4px; overflow: hidden; position: relative; }
+  /* the road: the 3D view where the other worlds have the map, the dashboard under it, its tools docks like the others */
+  #left { overflow: hidden; padding: 0; }
+  #left > #map { flex: 1 1 auto; min-height: 0; display: flex; }
+  #view { flex: 1; min-width: 0; border: 0; display: block; }
+  #wait { flex: 1; display: flex; align-items: center; justify-content: center; color: var(--dim); }
+  #runbar { display: inline-flex; gap: 6px; align-items: center; color: var(--dim); }
+  #runbar select, #runbar input { background: var(--bg); color: var(--fg); border: 1px solid var(--line); font: inherit; padding: 1px 4px; }
+  #runbar input { width: 3.5em; }
+  .kv { display: grid; grid-template-columns: auto 1fr; gap: 1px 12px; margin: 0 0 10px; }
+  .kv dt { color: var(--dim); } .kv dd { margin: 0; overflow-wrap: anywhere; }
+  #dash { flex: 0 0 34%; min-height: 220px; border-top: 1px solid var(--line); background: var(--panel); padding: 6px 10px; display: flex; flex-direction: column; gap: 4px; overflow: hidden; position: relative; }
   #dash .stats { display: flex; flex-wrap: wrap; gap: 2px 18px; color: var(--dim); }
-  #dash .stats b { color: var(--fg); font-weight: 600; margin-left: 4px; }
+  #dash .stats b { color: var(--fg); font-weight: normal; margin-left: 4px; }
   #dash .charts { flex: 1; min-height: 0; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 4px 14px; }
   #dash figure { margin: 0; min-height: 0; display: flex; flex-direction: column; }
   #dash figcaption { color: var(--dim); font-size: 11px; display: flex; flex-wrap: wrap; gap: 0 10px; }
   #dash figcaption i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 3px; }
   #dash canvas { flex: 1; min-height: 0; width: 100%; }
-  #tip { position: absolute; display: none; pointer-events: none; background: var(--panel); border: 1px solid var(--line); padding: 2px 6px; font-size: 11px; white-space: pre; z-index: 2; }
-  #wait { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; color: var(--dim); }
-  #side { width: 18em; flex: none; padding: 10px; border-left: 1px solid var(--line); overflow: auto; }
-  #side h2 { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--dim); margin: 12px 0 4px; }
-  #side h2:first-child { margin-top: 0; }
-  #side dl { display: grid; grid-template-columns: auto 1fr; gap: 1px 10px; margin: 0; }
-  #side dt { color: var(--dim); }
-  #side dd { margin: 0; overflow-wrap: anywhere; }
-  #tools select { font: inherit; }
-  #bar-run { display: inline-flex; gap: 8px; align-items: center; }
-  #bar-run select, #bar-run input { background: var(--bg); color: var(--fg); border: 1px solid var(--line); font: inherit; padding: 1px 4px; }
-  #bar-run input { width: 3.5em; }
-  #jcmds { color: var(--dim); }
+  #tip { position: absolute; display: none; pointer-events: none; background: var(--bg); border: 1px solid var(--line); padding: 2px 6px; font-size: 11px; white-space: pre; z-index: 2; }
 </style>
 </head>
 <body>
@@ -119,31 +124,30 @@
       <span class="brand">ROAD</span>
       <span id="status" data-state="" aria-live="polite"><span class="state" id="sstate">…</span><span class="text" id="stext"></span><span class="opts" id="sopts"></span></span>
       <span id="sessbar">
-        <span id="bar-run">
+        <span id="runbar">
           <label>scenario <select id="scenario"><option>straight</option><option>cut_out</option><option>cut_in</option></select></label>
           <label>seed <input id="seed" type="number" min="1" value="1"></label>
           <button class="btn" id="run" type="button">new run</button>
-          <button class="btn" id="play" type="button">pause</button>
+          <button class="btn" id="hold" type="button">pause</button>
           <label>speed <select id="speed"><option>0.25</option><option>0.5</option><option selected>1</option><option>2</option><option>4</option></select></label>
         </span>
+        <select id="game" hidden aria-label="the room: the agent goes there"></select>
+      <select id="gameall" hidden aria-label="every room"></select>
         <span id="conn"></span>
         <span id="voice"></span>
+        <span id="ctrl" tabindex="-1" aria-label="the replay">
+          <button class="btn" id="play" type="button">play</button>
+          <button class="btn" id="step" type="button">step</button>
+        </span>
       </span>
     </div>
   </header>
   <main>
     <section id="left">
-      <div id="col">
-        <div id="wait">waiting for the road</div>
-        <div id="tools">
-          <div class="row"><button id="follow" aria-pressed="false">follow the ego</button><button id="center">center on the ego</button></div>
-          <details open><summary>The run, as SUMO has it</summary><dl id="run-info"></dl></details>
-          <details><summary>The ego, as SUMO has it</summary><dl id="ego"></dl></details>
-          <details><summary>Roles, as the ego believes</summary><dl id="roles"></dl></details>
-          <details open><summary>Selected car</summary><dl id="picked"></dl><div class="row" id="picked-tools" hidden><button id="follow-picked">follow it</button><button id="center-picked">center on it</button></div></details>
-        </div>
-        <div id="dash"></div>
-      </div>
+      <section id="map" tabindex="-1" aria-label="the road in 3D"><div id="wait">waiting for the road</div></section>
+      <section id="dash" aria-label="the run's dashboard"></section>
+      <p id="legend" hidden aria-label="the map's letters"></p>
+      <div id="gameinfo" hidden aria-label="this game"></div>
     </section>
     <div id="split"></div>
     <aside id="right">
@@ -152,6 +156,26 @@
         <div class="dbody">
           <div id="ask" hidden aria-live="assertive"><div class="q" id="askq"></div><div class="opts" id="askopts"></div></div>
           <div id="talkpanel"></div>
+        </div>
+      </section>
+      <section class="dock" id="dock-hierarchy" data-dock="hierarchy" tabindex="-1" aria-label="the hierarchy">
+        <header><span class="tw">▾</span><span class="tt">HIERARCHY</span><span id="hstate"></span><button class="x" type="button" aria-label="hide the hierarchy">✕</button></header>
+        <div class="dbody"><ul id="hlist" tabindex="-1" aria-label="the domains"></ul></div>
+      </section>
+      <section class="dock" id="dock-run" data-dock="run" tabindex="-1" aria-label="the run">
+        <header><span class="tw">▾</span><span class="tt">RUN</span><button class="x" type="button" aria-label="hide the run">✕</button></header>
+        <div class="dbody">
+          <div class="wrow"><button class="chip" id="follow" type="button" aria-pressed="false">follow the ego</button><button class="chip" id="center" type="button">center on the ego</button></div>
+          <div class="ph">THE RUN, AS SUMO HAS IT</div><dl class="kv" id="run-info"></dl>
+          <div class="ph">THE EGO, AS SUMO HAS IT</div><dl class="kv" id="ego"></dl>
+        </div>
+      </section>
+      <section class="dock" id="dock-cars" data-dock="cars" tabindex="-1" aria-label="the cars">
+        <header><span class="tw">▾</span><span class="tt">CARS</span><button class="x" type="button" aria-label="hide the cars">✕</button></header>
+        <div class="dbody">
+          <div class="ph">SELECTED CAR</div><dl class="kv" id="picked"></dl>
+          <div class="wrow" id="picked-tools" hidden><button class="chip" id="follow-picked" type="button">follow it</button><button class="chip" id="center-picked" type="button">center on it</button></div>
+          <div class="ph">ROLES, AS THE EGO BELIEVES</div><dl class="kv" id="roles"></dl>
         </div>
       </section>
       <section class="dock" id="dock-world" data-dock="world" tabindex="-1" aria-label="the world card">
@@ -167,7 +191,7 @@
         <div class="dbody"><div id="dialogpart"></div></div>
       </section>
     </aside>
-    <nav id="strip"><button type="button" data-strip="talk">Talk</button><button type="button" data-strip="world">World card</button><button type="button" data-strip="journal">Journal</button><button type="button" data-strip="dialog">Dialog</button></nav>
+    <nav id="strip"><button type="button" data-strip="talk">Talk</button><button type="button" data-strip="run">Run</button><button type="button" data-strip="cars">Cars</button><button type="button" data-strip="hierarchy">Hierarchy</button><button type="button" data-strip="world">World card</button><button type="button" data-strip="journal">Journal</button><button type="button" data-strip="dialog">Dialog</button></nav>
   </main>
 </div>
 <script type="module">
