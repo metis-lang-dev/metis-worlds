@@ -21,7 +21,9 @@ EGO = {"x": 20.0, "y": -4.8, "heading": 0.0, "lane": "E_0", "s": 20.0, "speed": 
 def loop(path):
     return SimpleNamespace(world=SimpleNamespace(net=str(path), ego_collisions=0), prev_truth={"ego": EGO, "lead": dict(EGO, x=60.0, s=60.0, type="calm")}, ego_id="ego", level_dest=950.0,
                            scenario="straight", seed=3, tick=7, t=0.7, restricted=2, log=[{"cmd": ["accel", None], "a": 1.5, "seen": 1, "tracks": 1}],
-                           proj={"binding": {"lead": "lead"}, "fold": {"resp_lon": "brake_min", "resp_lat": "none", "dangerous": True}}, arrived=lambda: False)
+                           proj={"binding": {"lead": "lead"}, "fold": {"resp_lon": "brake_min", "resp_lat": "none", "dangerous": True}}, arrived=lambda: False,
+                           violations=[], optimistic=[1], ms=[{"restrict": 0.001, "sumo": 0.002, "perceive": 0.01, "project": 0.001, "account": 0.001, "vehicles": 3}],
+                           summary=lambda: {"ticks": 7, "arrived": True, "ms": {"sumo": 1.0}, "first": [], "violations": 0})
 
 
 @pytest.fixture
@@ -50,6 +52,17 @@ def test_the_scene_has_the_truths_movers_and_the_beliefs_roles(net):
     assert f["ev"] == "world/scene" and f["ego"] == "ego" and [m["id"] for m in f["movers"]] == ["ego", "lead"]
     assert f["movers"][1]["class"] == "passenger" and f["movers"][1]["type"] == "calm" and f["movers"][1]["x"] == 60.0
     assert f["roles"] == {"lead": "lead"} and f["fold"] == {"resp_lon": "brake_min", "resp_lat": "none"} and f["cmd"] == ["accel", None] and f["a"] == 1.5
+    assert f["violations"] == 0 and f["optimistic"] == 1 and f["ms"] == 15.0
+
+
+def test_the_summary_is_said_once_at_the_end(net):
+    lp = loop(net)
+    lp.arrived = lambda: True
+    h = host(world=lp)
+    h.beat = 10
+    first = [f for f in h.frames() if f["ev"] == "world/summary"]
+    assert first == [{"ev": "world/summary", "ticks": 7, "arrived": True, "violations": 0}]
+    assert not [f for f in h.frames() if f["ev"] == "world/summary"]
 
 
 def host(spec="responder", page=True, world=None):
@@ -110,6 +123,18 @@ def test_paused_or_there_the_clock_is_held(net, monkeypatch):
     h.world(["pause"])
     h.tick({})
     assert slept == [road_host.DT] and not stepped
+
+
+def test_every_step_is_logged_with_or_without_a_page(tmp_path, monkeypatch):
+    monkeypatch.setattr(road_host.time, "sleep", lambda s: None)
+    for page in (True, False):
+        path = tmp_path / ("log%s.jsonl" % page)
+        world = SimpleNamespace(arrived=lambda: False, step=lambda: None, tick=0, observe=lambda: ({}, {}, {}, []), log=[{"tick": 1}])
+        h = host(page=page, world=world)
+        h.observed, h.period, h.beat = set(), 1, 5
+        h.shared["log"] = str(path)
+        h.tick({})
+        assert path.read_text().strip() == '{"tick": 1}'
 
 
 def test_a_new_episode_opens_one_world_for_the_hierarchy(monkeypatch):

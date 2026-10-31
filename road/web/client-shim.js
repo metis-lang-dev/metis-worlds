@@ -14,14 +14,6 @@ window.fetch = (u, opt) => {
   if (p.includes('/vehicle_route')) return Promise.resolve(json([]));
   return realFetch(u, opt);
 };
-// the bundle names its assets from the server's root; they stay in the fetched copy
-const HOME = '/vendor/sumo-web3d';
-const asset = u => (typeof u === 'string' && /^\/(vehicles|arrows|sky)\/|^\/(zebra\.jpg|sidewalk256\.jpg|rail64\.png|asphalt256\.jpg)$/.test(u) ? HOME + u : u);
-const xhrOpen = XMLHttpRequest.prototype.open;
-XMLHttpRequest.prototype.open = function (m, u, ...more) { return xhrOpen.call(this, m, asset(u), ...more); };
-const imgSrc = Object.getOwnPropertyDescriptor(HTMLImageElement.prototype, 'src');
-Object.defineProperty(HTMLImageElement.prototype, 'src', { get() { return imgSrc.get.call(this); }, set(u) { imgSrc.set.call(this, asset(u)); } });
-
 let socket = null;
 class Socket {
   constructor() { socket = this; setTimeout(() => this.onopen && this.onopen({}), 0); }
@@ -40,7 +32,7 @@ window.WebSocket = Socket;
 // the truth's x, y are the centre and its heading radians from +x; the client's are the front bumper and SUMO's degrees from north
 const info = m => ({ x: m.x + m.length / 2 * Math.cos(m.heading), y: m.y + m.length / 2 * Math.sin(m.heading), z: 0, speed: m.speed,
   angle: 90 - m.heading * 180 / Math.PI, type: 'passenger', length: m.length, width: m.width, signals: m.signals, vehicle: null, vClass: m.class });
-let last = {};
+let last = {}, wanted = null;
 function snapshot(scene) {
   const creations = {}, updates = {}, now = {};
   for (const m of scene.movers) { now[m.id] = info(m); (last[m.id] ? updates : creations)[m.id] = now[m.id]; }
@@ -53,14 +45,9 @@ function snapshot(scene) {
 addEventListener('message', e => {
   if (e.origin !== location.origin) return;
   if (e.data.net) gotNet(e.data.net);
-  if (e.data.scene && socket) socket.deliver(snapshot(e.data.scene));
-  if (e.data.follow) window.sumoFollow(e.data.follow);
-  if (e.data.unfollow) window.sumoUnfollow();
-});
-
-// the bundle, as fetched and unmodified on disk, run with its follow functions in reach (the bundle keeps them to its sidebar's buttons, and the ego has no look of its own to click)
-realFetch(`${HOME}/index.bundle.js`).then(r => r.text()).then(code => {
-  const script = document.createElement('script');
-  script.text = code.replace('function followObjectPOV(vehicleId) {', 'window.sumoFollow = followObjectPOV; window.sumoUnfollow = unfollowObjectPOV;\nfunction followObjectPOV(vehicleId) {');
-  document.body.appendChild(script);
+  if (e.data.scene && socket && socket.onmessage) socket.deliver(snapshot(e.data.scene));   // none before the client listens: it would miss a car's entry
+  if (e.data.follow) wanted = e.data.follow;
+  if (e.data.unfollow) { wanted = null; window.sumoUnfollow(); }
+  if (e.data.details !== undefined) document.getElementById('sidebar').style.display = e.data.details ? 'block' : 'none';
+  if (wanted && last[wanted] && window.sumoFollow) { window.sumoFollow(wanted); wanted = null; }   // asked before the car is on the road: as soon as it is
 });

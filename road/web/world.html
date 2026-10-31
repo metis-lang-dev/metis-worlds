@@ -13,8 +13,18 @@
   #bar button[aria-pressed="true"] { background: #2c323a; }
   #conn { margin-left: auto; color: #8a939e; }
   #main { flex: 1; min-height: 0; display: flex; }
-  #view { flex: 1; min-width: 0; border: 0; }
-  #wait { flex: 1; display: flex; align-items: center; justify-content: center; color: #8a939e; }
+  #col { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  #view { flex: 1; min-height: 0; width: 100%; border: 0; }
+  #dash { flex: 0 0 34%; min-height: 220px; border-top: 1px solid #2c323a; padding: 6px 10px; display: flex; flex-direction: column; gap: 4px; overflow: hidden; position: relative; }
+  #dash .stats { display: flex; flex-wrap: wrap; gap: 2px 18px; color: #8a939e; }
+  #dash .stats b { color: #d8dde3; font-weight: 600; margin-left: 4px; }
+  #dash .charts { flex: 1; min-height: 0; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 4px 14px; }
+  #dash figure { margin: 0; min-height: 0; display: flex; flex-direction: column; }
+  #dash figcaption { color: #8a939e; font-size: 11px; display: flex; flex-wrap: wrap; gap: 0 10px; }
+  #dash figcaption i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 3px; }
+  #dash canvas { flex: 1; min-height: 0; width: 100%; }
+  #tip { position: absolute; display: none; pointer-events: none; background: #20242b; border: 1px solid #2c323a; padding: 2px 6px; font-size: 11px; white-space: pre; z-index: 2; }
+  #wait { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; color: #8a939e; }
   #side { width: 18em; flex: none; padding: 10px; border-left: 1px solid #2c323a; overflow: auto; }
   #side h2 { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: #8a939e; margin: 12px 0 4px; }
   #side h2:first-child { margin-top: 0; }
@@ -33,10 +43,14 @@
     <button id="play">pause</button>
     <label>speed <select id="speed"><option>0.25</option><option>0.5</option><option selected>1</option><option>2</option><option>4</option></select></label>
     <button id="follow" aria-pressed="false">follow the ego</button>
+    <button id="details" aria-pressed="false">client details</button>
     <span id="conn">connecting</span>
   </div>
   <div id="main">
-    <div id="wait">waiting for the road</div>
+    <div id="col">
+      <div id="wait">waiting for the road</div>
+      <div id="dash"></div>
+    </div>
     <div id="side">
       <h2>The run, as SUMO has it</h2><dl id="run-info"></dl>
       <h2>The ego, as SUMO has it</h2><dl id="ego"></dl>

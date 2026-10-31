@@ -118,9 +118,9 @@ class RoadHost:
             if self.run.get("page"):
                 self.pace()
             self.road.step()
+            self._log(self.road.log[-1])
         elif self.steps and self.run.get("page"):
             time.sleep(DT)                             # paused or there: the Live's clock has no pace of its own
-            self._log(self.road.log[-1])
         return self.sync(counts)
 
     def sync(self, counts):
@@ -169,6 +169,9 @@ class RoadHost:
         out = [road_frames.scene_frame(self.road)] if watched or self.beat % UNWATCHED_EVERY == 0 else []
         if self.beat % NET_EVERY == 1:
             out.insert(0, road_frames.net_frame(self.road))
+        if self.road.arrived() and not self.shared.get("said_arrived"):
+            self.shared["said_arrived"] = True
+            out.append(road_frames.summary_frame(self.road))
         return out
 
     def new_episode(self):
@@ -183,7 +186,7 @@ class RoadHost:
         self.road = self.shared["world"]
         self.run = dict(self.run, scenario=self.road.scenario, seed=self.road.seed) if hasattr(self.road, "scenario") else self.run
         self.beat, self.latched, self.latched_at, self.now_due = 0, None, None, True
-        self.shared["paused"] = False
+        self.shared["paused"] = self.shared["said_arrived"] = False
 
     def pending(self):
         return False

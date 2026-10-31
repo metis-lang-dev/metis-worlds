@@ -3,6 +3,7 @@ client: world/net (the lanes, the ego's way, the net as the 3D client reads it) 
 fold as the ego's belief has them; the command and its cut)."""
 import xml.etree.ElementTree as ET
 
+STAGES = ("restrict", "sumo", "perceive", "project", "account")     # the Loop's stages, each tick's seconds
 LAND = 100.0          # the land around the road, m: a straight net's boundary has no height, and the client's ground would have no area
 
 
@@ -33,4 +34,10 @@ def scene_frame(loop):
     return {"ev": "world/scene", "tick": loop.tick, "t": loop.t, "ego": loop.ego_id, "movers": movers, "roles": loop.proj.get("binding") or {},
             "fold": {"resp_lon": fold.get("resp_lon", "none"), "resp_lat": fold.get("resp_lat", "none")},
             "cmd": last.get("cmd"), "a": last.get("a"), "restricted": loop.restricted, "seen": last.get("seen"), "tracks": last.get("tracks"),
-            "arrived": loop.arrived(), "collisions": loop.world.ego_collisions}
+            "arrived": loop.arrived(), "collisions": loop.world.ego_collisions, "violations": len(loop.violations), "optimistic": len(loop.optimistic),
+            "ms": round(sum(loop.ms[-1][k] for k in STAGES) * 1000, 1) if loop.ms else None}
+
+
+def summary_frame(loop):
+    """The run at its end, for the dashboard: the summary's plain numbers."""
+    return {"ev": "world/summary", **{k: v for k, v in loop.summary().items() if isinstance(v, (int, float, bool))}}

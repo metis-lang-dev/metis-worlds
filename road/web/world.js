@@ -1,6 +1,9 @@
 // world.js — the road's page (road-agent s-357becc7 step 1): the agent's wire to the 3D client's frame (client.html) and the run's numbers beside it. The
 // controls go to the responder's host as world lines (road_host.py): run:SCENARIO:SEED then a new game, play, pause, speed:X.
+import { Dash } from './dash.js';
+
 const $ = s => document.querySelector(s);
+const dash = new Dash($('#dash'));
 const rows = (el, pairs) => { el.replaceChildren(...pairs.flatMap(([k, v]) => { const dt = document.createElement('dt'), dd = document.createElement('dd'); dt.textContent = k; dd.textContent = v; return [dt, dd]; })); };
 let sock = null, view = null, viewReady = false, paused = false, following = false, ego = 'ego', queued = null;
 const send = o => { if (sock && sock.readyState === WebSocket.OPEN) sock.send(JSON.stringify(o)); };
@@ -11,7 +14,7 @@ function openView(net) {
   view = document.createElement('iframe');
   view.id = 'view';
   view.src = 'client.html';
-  view.addEventListener('load', () => { viewReady = true; post({ net }); });
+  view.addEventListener('load', () => { viewReady = true; post({ net }); if (following) post({ follow: ego }); });
   $('#wait').replaceWith(view);
 }
 function setPaused(p, tell = true) {
@@ -22,6 +25,7 @@ function setPaused(p, tell = true) {
 function scene(f) {
   ego = f.ego;
   post({ scene: f });
+  dash.scene(f);
   const me = f.movers.find(m => m.id === f.ego);
   rows($('#run-info'), [['time', `${f.t.toFixed(1)} s`], ['tick', f.tick], ['movers', f.movers.length], ['the sensor sees', f.seen ?? '-'], ['tracks', f.tracks ?? '-'],
     ['restricted ticks', f.restricted], ['collisions', f.collisions], ['arrived', f.arrived ? 'yes' : 'no']]);
@@ -31,7 +35,8 @@ function scene(f) {
   rows($('#roles'), known.length ? known.map(([r, id]) => [r, id]) : [['nobody', '']]);
 }
 function frame(f) {
-  if (f.ev === 'world/net') { if (!view) openView(f.net); else post({ net: f.net }); return; }
+  if (f.ev === 'world/summary') { dash.summary(f); return; }
+  if (f.ev === 'world/net') { dash.net(f); if (!view) openView(f.net); else post({ net: f.net }); return; }
   if (f.ev === 'world/scene') scene(f);
 }
 function connect() {
@@ -44,6 +49,7 @@ $('#run').onclick = () => { line(`run:${$('#scenario').value}:${Math.max(1, Numb
 $('#play').onclick = () => setPaused(!paused);
 $('#speed').onchange = e => line(`speed:${e.target.value}`);
 $('#follow').onclick = e => { following = !following; e.target.setAttribute('aria-pressed', following); post(following ? { follow: ego } : { unfollow: true }); };
+$('#details').onclick = e => { const on = e.target.getAttribute('aria-pressed') !== 'true'; e.target.setAttribute('aria-pressed', on); post({ details: on }); };
 setInterval(() => line('watching'), 2000);                 // the scene comes every step while a page says so, else every second
 addEventListener('message', e => {
   if (e.origin !== location.origin) return;

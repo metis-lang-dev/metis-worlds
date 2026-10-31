@@ -7,5 +7,3 @@ __pycache__/
 records/
 .venv/
 .worlds/
-
-road/web/vendor/

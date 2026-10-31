@@ -1,0 +1,10 @@
+sumo-web3d 1.0.1's built client, Copyright 2018 Sidewalk Labs, https://github.com/sidewalklabs/sumo-web3d
+Eclipse Public License 2.0 (LICENSE here), not the Apache License of metis-worlds: this directory alone is under it. The source of the original is at that URL.
+Vehicle models: OpenGameArt, CC0, as the project's source says.
+
+Changed from the original, in index.bundle.js, for this page:
+- asset paths under /client/; the sky box removed, a plain background
+- for performance: pixel ratio 1, no shadows, no post-processing passes (SSAO, SMAA), 30 frames a second, no stats panel, one car model (hatchback)
+- the car named "ego" is red, the others silver
+- window.sumoFollow and window.sumoUnfollow reach the follow functions
+Assets the page does not use were left out.
