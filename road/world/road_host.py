@@ -12,18 +12,28 @@ the commands go through restrict (the one restrictor), so the SUMO host (step 4)
     on_event(rule)     a fired rule that is a command (restrict.command) becomes the ego's, held for the member's
                        clock period (the planner's for ten ticks, the responder's for one)
 The log ($METIS_ROAD_LOG, or the run's "log"): one JSON line a world step (the ego's t, s, v, a, lane, the command,
-the fold), and the run's summary at the end (summary())."""
+the fold), and the run's summary at the end (summary()).
+
+The page (the run's "page": true, road_hier.py; road-agent s-357becc7 step 1): the responder's host says the frames (road_frames.py), takes the
+page's world lines (run:SCENARIO:SEED for the next run, play, pause, speed:X, watching: a page is open) and holds each world step to its real time times the speed; one
+Live beat stays one world step, as in road_tree. A new game (the service's new_episode) starts the run the line named."""
 import json
 import os
 import sys
+import time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import restrict  # noqa: E402
+import road_frames  # noqa: E402
 import road_world  # noqa: E402
 from semantic_world.ports import sync_diff  # noqa: E402
 
 SHARED = {}                       # run key -> {"world": RoadWorld}
+DT = 0.1                          # the world's step, s
+NET_EVERY = 50                    # beats between two world/net frames: a page opened since has its road
+WATCHED_S = 5.0                   # a page said `watching` this recently: a scene every step, else every second
+UNWATCHED_EVERY = 10
 
 
 def run_spec():
@@ -65,6 +75,7 @@ class RoadHost:
         run = run_spec()
         if run["key"] not in SHARED:
             SHARED[run["key"]] = {"world": new_world(run), "log": run.get("log") or os.environ.get("METIS_ROAD_LOG")}
+        self.run = run
         self.shared = SHARED[run["key"]]
         self.road = self.shared["world"]           # (the world(lines) face is AgentHost's: no attribute of that name)
         self.beat, self.due, self.script, self.last = 0, (), {}, None
@@ -97,12 +108,18 @@ class RoadHost:
         pass
 
     def observe(self, counts):
-        return self.reading()
+        """A world that moves by itself is no surprise. road_tree says so to its Live (watch.blind); the service has no such word, so on the page the
+        watch reads what the session holds, or its first open record would leave the responder observing only."""
+        return dict(counts) if self.run.get("page") else self.reading()
 
     def tick(self, counts):
         self.beat += 1
-        if self.steps and self.beat > 1 and not self.road.arrived():
+        if self.steps and self.beat > 1 and not self.road.arrived() and not self.shared.get("paused"):
+            if self.run.get("page"):
+                self.pace()
             self.road.step()
+        elif self.steps and self.run.get("page"):
+            time.sleep(DT)                             # paused or there: the Live's clock has no pace of its own
             self._log(self.road.log[-1])
         return self.sync(counts)
 
@@ -122,7 +139,51 @@ class RoadHost:
         pass
 
     def world(self, lines):
-        raise ValueError("world lines: the road is the world")
+        if not self.run.get("page"):
+            raise ValueError("world lines: the road is the world")
+        for line in lines:
+            if line == "watching":
+                self.shared["watched"] = time.monotonic() + WATCHED_S
+            elif line.startswith("run:"):
+                _, scenario, seed = line.split(":")
+                self.shared["next"] = dict(self.run, scenario=scenario, seed=int(seed))
+            elif line in ("play", "pause"):
+                self.shared["paused"] = line == "pause"
+            elif line.startswith("speed:"):
+                self.shared["speed"] = max(0.1, float(line[6:]))
+            else:
+                raise ValueError("the road's page says run:SCENARIO:SEED, play, pause, speed:X or watching, not %r" % line)
+
+    def pace(self):
+        """Hold this step until its time; a slow step is not made up after."""
+        now = time.monotonic()
+        due = self.shared.get("due", now)
+        if due > now:
+            time.sleep(due - now)
+        self.shared["due"] = max(due, now) + DT / self.shared.get("speed", 1.0)
+
+    def frames(self):
+        if not (self.steps and self.run.get("page")):
+            return []
+        watched = self.shared.get("watched", 0) > time.monotonic()
+        out = [road_frames.scene_frame(self.road)] if watched or self.beat % UNWATCHED_EVERY == 0 else []
+        if self.beat % NET_EVERY == 1:
+            out.insert(0, road_frames.net_frame(self.road))
+        return out
+
+    def new_episode(self):
+        """The next run: the first host of the hierarchy to come closes the old world and opens the new one, the others find it; each starts over."""
+        spec = self.shared.pop("next", None)
+        if spec is not None or self.shared["world"] is self.road:
+            close = getattr(self.shared["world"], "close", None)
+            if close:
+                close()                                # one SUMO at a time
+            self.run = spec or self.run
+            self.shared["world"] = new_world(self.run)
+        self.road = self.shared["world"]
+        self.run = dict(self.run, scenario=self.road.scenario, seed=self.road.seed) if hasattr(self.road, "scenario") else self.run
+        self.beat, self.latched, self.latched_at, self.now_due = 0, None, None, True
+        self.shared["paused"] = False
 
     def pending(self):
         return False

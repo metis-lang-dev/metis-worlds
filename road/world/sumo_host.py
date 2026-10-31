@@ -45,8 +45,8 @@ class Loop:
         args = dict(level.get("scenario_args", {}))
         if "vehicles" in level:
             args["n"] = int(level["vehicles"])
-        self.world = SumoWorld(level.get("scenario", "straight"), work, seed=int(level.get("seed", 1)), traci=traci,
-                               **args)
+        self.scenario, self.seed, self.ego_id = level.get("scenario", "straight"), int(level.get("seed", 1)), EGO
+        self.world = SumoWorld(self.scenario, work, seed=self.seed, traci=traci, **args)
         self.lanemap = netmod.load_net(self.world.net).lanemap()
         sen = level.get("sensor", {})
         self.perc = Perception(self.lanemap, Sensor(range=sen.get("range", 60.0), miss=sen.get("miss", 0.0),
