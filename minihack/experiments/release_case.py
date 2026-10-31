@@ -76,19 +76,6 @@ def run(root, timeout=float(os.environ.get("RACE_TIMEOUT", 120))):
     live.journal.emit = emit
     for ag in live.agents.agents.values():
         ag.watch.blind = True
-    if os.environ.get("RACE_DROP"):             # pascal's drop (NhHost.tick): a member's release with no grant in its session
-        for name in ("nav", "act"):
-            host = live.agents.agents[name].host
-            inner = getattr(host, "inner", host)
-            base = inner.tick
-
-            def dropping(counts, base=base, name=name):
-                dos = base(counts)
-                rel, grant = "tick__release(%s,motion)" % name, "tick__grant(%s,motion)" % name
-                if dos is not None and counts.get(rel, 0) > 0 and counts.get(grant, 0) <= 0:
-                    dos.append("-%s %d" % (rel, counts[rel]))
-                return dos
-            inner.tick = dropping
     # after each tick: the sessions' tokens, the state the journal's rows don't carry
     trace, tick = [], live.tick
 
