@@ -200,10 +200,15 @@ class Gym:
             self.every = replay.get("every", EVERY_TURNS)
             self.options = OPTIONS.replace("name:agent", "name:" + replay.get("player", "nh%dx" % os.getpid())) + ",!bones"
             os.makedirs(self.dir, exist_ok=True)
-            Game(self.options).forget()
-        self.start()
-        if replay:
-            self.save(replay.get("first", "start"))
+            self.game = Game(self.options)
+            self.game.forget()
+        first = replay.get("first", "start") if replay else None
+        if first and os.path.exists(os.path.join(self.dir, first + ".sav")):   # the game's first checkpoint is made once
+            self.load(first)
+        else:
+            self.start()
+            if first:
+                self.save(first)
         self.write_map()
         return dict(self.perceive(), size=[MAP_COLS, MAP_ROWS], cells=[], actions=sorted(KEYS))
 
@@ -233,6 +238,8 @@ class Gym:
                 if not self.clear_prompt():
                     break
         self.want_dir = action in WANTS_DIR
+        if action.startswith("UNLOCK:"):    # the rule's apply: the key the hero carries, toward the door; refused with none
+            return self.unlock(action[7:])
         keys = action[4:5] if action.startswith("KEY:") else KEYS.get(action)
         if keys is None:
             raise ValueError("no key for action %r" % action)
@@ -276,7 +283,7 @@ class Gym:
         out = self.perceive(events, message)
         if not self.over and self.due(out["dlvl"], turn_of(out["atoms"])):
             self.saved += 1
-            self.save("auto-%d" % self.saved)
+            self.save("auto-%d-%d" % (os.getpid(), self.saved))
             out["checkpoint"] = self.at
         return out
 
@@ -331,6 +338,21 @@ class Gym:
         self.items_stale = True
         self.read_items()
         return self.perceive()
+
+    def unlock(self, d):
+        if self.items_stale:
+            self.read_items()
+        tool = next((l for l, w in self.items if re.search(r"\b(key|lock pick|credit card)\b", w)), None)
+        if tool is None:
+            return self.after_step([], "You have no key.")
+        self.press("a" + tool + KEYS[d])
+        self.settle(1.0)
+        s = self.tty.snapshot()
+        if s["prompt"] and re.search(r"unlock|lock it", s["message"], re.I):
+            self.press("y")
+            self.settle(1.0)
+            s = self.tty.snapshot()
+        return self.after_step(events_of(s["message"]), s["message"])
 
     def keys(self, keys="", **_):
         if self.over:
