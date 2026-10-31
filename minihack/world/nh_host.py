@@ -74,7 +74,7 @@ class NhMap(GridMap):
 
 class NhGym(GymChild):
     def __init__(self, level):
-        super().__init__(os.path.join(HERE, "nh_gym.py"), interpreter(), "game", open_args={"map_doc": level.get("map_doc"), "card": level.get("card")})
+        super().__init__(os.path.join(HERE, "nh_gym.py"), interpreter(), "game", open_args={"map_doc": level.get("map_doc"), "card": level.get("card"), "replay": level.get("replay")})
 
 
 class NhHost(MhHost):
@@ -214,7 +214,23 @@ class NhHost(MhHost):
     def reseed(self, seed):
         pass
 
+    def snapshot(self):
+        """With the replay on (level.json `replay`, the loop's): the checkpoint and the keys since, and a sign of what the hero saw there."""
+        snap = super().snapshot()
+        if self.level.get("replay"):
+            snap.update(self.gym.call("where"), sign=sorted(self.atoms))
+        return snap
+
     def restore(self, snap):
+        if snap.get("checkpoint"):
+            self.gym.call("load", name=snap["checkpoint"])
+            out = self.gym.call("replay", keys=snap["keys_since"])
+            if self.cmap is not None:           # what the map learned after this point never happened
+                self.start_map()
+            self._take(out)
+            self.t, self.actions = snap["t"], list(snap["actions"])
+            if sorted(self.atoms) != snap["sign"]:   # counted, never hidden (the clock: moon, night; not in the seed)
+                self.divergences = getattr(self, "divergences", 0) + 1
         self.beat, self.pending_events, self.handed = snap["beat"], list(snap["pending"]), list(snap["handed"])
 
     def ports(self):

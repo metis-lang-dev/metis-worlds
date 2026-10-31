@@ -8,6 +8,13 @@ grid in view mode: nothing known until seen); only the world under them changed.
   {"op": "keys", "keys": STR}                     → the perception: the person's keys, as typed, nothing answered
   {"op": "new_game"}                              → the perception of a new hero in a new dungeon: the old game and its save are gone
   {"op": "frames"}                                → {"frames": [...]}: the page's world/* frames since the last call
+The loop's replay (open with "replay": {"seed", "checkpoints": DIR, "player"?, "every"?}; the page never gives it, and its game is as ever):
+  {"op": "save", "name": N}                       → the perception: the game hung up, its save copied to DIR/N.sav, and it goes on from there
+  {"op": "load", "name": N}                       → the perception: the game now is checkpoint N's; a game that ended comes back too
+  {"op": "where"}                                 → {"checkpoint", "keys_since", "seed", "turn"}: every key sent since the checkpoint
+  {"op": "replay", "keys": [...]}                 → the perception: those keys sent again, as they were
+The game then has its seed at every start and its own player name, so it shares no save and no bones with another. A step checkpoints by
+itself at a new level and every `every` turns (its perception then names it), so a replay never resends more than that.
 The perception: {"atoms", "events", "message", "done", "won", "dlvl", "game"}. Map cell (x, y) is c<x>_<y>; dlvl and game
 change when the level or the game does (the host then starts its map again).
 """
@@ -15,12 +22,13 @@ import json
 import os
 import re
 import select
+import shutil
 import sys
 import time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
-from nh_tty import COLS, MAP_COLS, MAP_ROWS, MG_PET, Game, Tty, describe   # noqa: E402
+from nh_tty import COLS, MAP_COLS, MAP_ROWS, MG_PET, OPTIONS, Game, Tty, describe   # noqa: E402
 from perceive import MESSAGES                                              # noqa: E402
 
 KEYS = {"N": "k", "S": "j", "E": "l", "W": "h", "NE": "u", "NW": "y", "SE": "n", "SW": "b", "PICKUP": ",", "EAT": "e", "DOWN": ">",
@@ -33,6 +41,7 @@ PAGE = re.compile(r"\((\d+) of (\d+)\)")
 ITEM_KEYS = set("dDeqrzwtTPRWAaQ,")   # the person's keys that can change what the hero carries
 ARTICLE = re.compile(r"^(an?|the|\d+)\s+")
 MESSAGES_ITEMS = re.compile(r"^\w - |you (drop|eat|finish eating|drink|read|throw)", re.I)   # said when what it carries changed
+EVERY_TURNS = 50                    # a checkpoint at least this often, so a replay stays short
 
 
 def name_of(text):
@@ -52,6 +61,10 @@ def items_of(text):
 
 def holds_atoms(items):
     return ["holds(%s)" % name_of(ARTICLE.sub("", re.sub(r"\s*\(.*?\)", "", words))) for _, words in items]
+
+
+def turn_of(atoms):
+    return next((int(a[5:-1]) for a in atoms if a.startswith("turn(")), 0)
 
 
 def status_atoms(status):
@@ -102,23 +115,29 @@ class Gym:
         self.map_doc, self.card = None, {}
         self.last, self.calls, self.said, self.sent_text = None, 0, "", None
         self.items, self.items_stale = [], True
+        self.seed, self.dir, self.every, self.at, self.at_turn, self.at_dlvl, self.saved, self.log = None, None, EVERY_TURNS, None, None, None, 0, []
 
     # ── the process ──
-    def start(self):
-        self.game, self.tty, self.over, self.last, self.said = Game(self.options) if self.options else Game(), Tty(), False, None, ""
+    def start(self, fresh=True):
+        self.game, self.tty, self.over, self.last, self.said = Game(self.options or OPTIONS, seed=self.seed), Tty(), False, None, ""
         self.items, self.items_stale = [], True
-        self.games += 1
+        self.games += bool(fresh)           # a checkpoint's restart is the same game
         self.game.start()
         self.settle(1.0)
         for _ in range(12):                 # the welcome and "Restoring save file...--More--": the map is behind them
             s = self.tty.snapshot()
             if s["hero"] and not s["more"]:
                 break
-            self.press("\r" if s["more"] else "")
+            self.press("\r" if s["more"] else "", log=False)
             self.settle(0.5)
 
-    def press(self, keys):
+    def press(self, keys, log=True):
         if keys and not self.over:
+            if log:
+                self.log.append(keys)
+                if self.at:
+                    with open(os.path.join(self.dir, self.at + ".keys"), "a") as f:
+                        f.write(json.dumps(keys) + "\n")
             self.tty.waiting = False
             try:
                 self.game.keys(keys.encode("latin-1", "ignore"))
@@ -174,9 +193,17 @@ class Gym:
                 "dlvl": int(m[1]) if m else None, "game": self.games}
 
     # ── the protocol ──
-    def open(self, map_doc=None, card=None, **_):
+    def open(self, map_doc=None, card=None, replay=None, **_):
         self.map_doc, self.card = map_doc, card or {}
+        if replay:
+            self.seed, self.dir = replay["seed"], replay["checkpoints"]
+            self.every = replay.get("every", EVERY_TURNS)
+            self.options = OPTIONS.replace("name:agent", "name:" + replay.get("player", "nh%dx" % os.getpid())) + ",!bones"
+            os.makedirs(self.dir, exist_ok=True)
+            Game(self.options).forget()
         self.start()
+        if replay:
+            self.save(replay.get("first", "start"))
         self.write_map()
         return dict(self.perceive(), size=[MAP_COLS, MAP_ROWS], cells=[], actions=sorted(KEYS))
 
@@ -237,7 +264,73 @@ class Gym:
             else:
                 break
             self.settle(0.5)
-        return self.perceive(events, " ".join(said))
+        return self.after_step(events, " ".join(said))
+
+    def after_step(self, events, message):
+        """The perception of a step; with the replay on, nobody asks for frames, so what the hero carries is read here, and the
+        checkpoint that is due is taken."""
+        if not self.dir:
+            return self.perceive(events, message)
+        if self.items_stale or MESSAGES_ITEMS.search(message):
+            self.read_items()
+        out = self.perceive(events, message)
+        if not self.over and self.due(out["dlvl"], turn_of(out["atoms"])):
+            self.saved += 1
+            self.save("auto-%d" % self.saved)
+            out["checkpoint"] = self.at
+        return out
+
+    def due(self, dlvl, turn):
+        return dlvl != self.at_dlvl or turn - self.at_turn >= self.every
+
+    # ── the loop's replay ──
+    def begin(self, name):
+        """The checkpoint is what the game is now: the keys count from here."""
+        self.settle(0.2)
+        self.read_items()
+        self.at, self.log = name, []
+        open(os.path.join(self.dir, name + ".keys"), "w").close()
+        out = self.perceive()
+        self.at_turn, self.at_dlvl = turn_of(out["atoms"]), out["dlvl"]
+        return out
+
+    def save(self, name, **_):
+        if not self.dir or self.over:
+            raise ValueError("no game to save" if self.dir else "the replay is off")
+        for _ in range(5):
+            if not self.clear_prompt():
+                break
+        self.game.stop()
+        files = self.game.saves()
+        if len(files) != 1:
+            raise RuntimeError("after the hangup: %d save files" % len(files))
+        shutil.copyfile(files[0], os.path.join(self.dir, name + ".sav"))
+        with open(os.path.join(self.dir, name + ".json"), "w") as f:
+            json.dump({"seed": self.seed, "file": os.path.basename(files[0]).partition(".")[2]}, f)
+        self.start(fresh=False)
+        return self.begin(name)
+
+    def load(self, name, **_):
+        with open(os.path.join(self.dir, name + ".json")) as f:
+            meta = json.load(f)
+        self.game.forget()
+        os.makedirs(self.game.save_dir(), exist_ok=True)
+        player = re.search(r"name:([^,]+)", self.options)[1]
+        shutil.copyfile(os.path.join(self.dir, name + ".sav"), os.path.join(self.game.save_dir(), "%d%s%s" % (os.getuid(), player, "." + meta["file"] if meta["file"] else "")))
+        self.seed = meta["seed"]
+        self.start(fresh=False)
+        return self.begin(name)
+
+    def where(self, **_):
+        return {"checkpoint": self.at, "keys_since": list(self.log), "seed": self.seed, "turn": turn_of(self.perceive()["atoms"])}
+
+    def replay(self, keys=(), **_):
+        for k in keys:
+            self.press(k)
+            self.settle(0.3)
+        self.items_stale = True
+        self.read_items()
+        return self.perceive()
 
     def keys(self, keys="", **_):
         if self.over:
@@ -264,7 +357,7 @@ class Gym:
         if self.over or not self.tty.waiting or s["text"] or s["prompt"] or s["more"]:
             return False
         self.items_stale, items = False, []
-        self.press("i")
+        self.press("i", log=False)
         self.settle(0.5)
         for _ in range(10):
             s = self.tty.snapshot()
@@ -272,9 +365,9 @@ class Gym:
             page = PAGE.search(s["text"])
             if not page or page[1] == page[2]:
                 break
-            self.press(">")
+            self.press(">", log=False)
             self.settle(0.5)
-        self.press("\x1b")
+        self.press("\x1b", log=False)
         self.settle(0.5)
         self.items = items
         return True
@@ -360,12 +453,15 @@ class Gym:
 
 def main():
     gym, ops = Gym(), None
-    ops = {"open": gym.open, "reset": gym.reset, "step": gym.step, "keys": gym.keys, "new_game": gym.new_game, "frames": gym.frames}
+    ops = {"open": gym.open, "reset": gym.reset, "step": gym.step, "keys": gym.keys, "new_game": gym.new_game, "frames": gym.frames,
+           "save": gym.save, "load": gym.load, "where": gym.where, "replay": gym.replay}
     for line in sys.stdin:
         req = json.loads(line)
         op = req.pop("op")
         if op == "close":
-            if gym.game and not gym.over:
+            if gym.game and gym.dir:        # the loop's game leaves nothing: its checkpoints are what is kept
+                gym.game.forget()
+            elif gym.game and not gym.over:
                 gym.game.stop()
             print(json.dumps({"ok": True}), flush=True)
             return

@@ -17,6 +17,9 @@ rm -rf "$SRC"; mkdir "$SRC"; tar -xzf src.tgz -C "$SRC" --strip-components=1; cd
 sed -i 's|^/\* #define TTY_TILES_ESCCODES \*/|#define TTY_TILES_ESCCODES|' include/config.h
 # glibc >= 2.34's cdefs.h tests __has_attribute(__warn_unused_result__): the game's empty macro of that name breaks it
 sed -i -e '/^#define __warn_unused_result__ /d' -e '/^#define warn_unused_result /d' include/tradstdc.h
+# NETHACK_SEED in the environment seeds the game's random numbers (else as ever): a start or a restore + the same keys = the same
+# game, for the loop's replay (world/nh_gym.py save, load). No level reseed then: one stream per process. No rule of the game changes
+sed -i '/^sys_random_seed()/,/^}/ s|^    return seed;|    if (nh_getenv("NETHACK_SEED")) {\n        has_strong_rngseed = FALSE;\n        seed = (unsigned long) atoi(nh_getenv("NETHACK_SEED"));\n    }\n    return seed;|' sys/unix/unixmain.c
 H=sys/unix/hints/linux
 sed -i -e "s|^PREFIX=.*|PREFIX=$ROOT/install|" -e 's|^#WINSRC += tile.c|WINSRC += tile.c|' -e 's|^#WINOBJ += tile.o|WINOBJ += tile.o|' "$H"
 sed -i -e 's|^CFLAGS+=-DCURSES_GRAPHICS|#&|' -e 's|^WINSRC = .*|WINSRC = $(WINTTYSRC)|' -e 's|^WINOBJ = .*|WINOBJ = $(WINTTYOBJ)|' -e 's|^WINLIB = .*|WINLIB = $(WINTTYLIB)|' "$H"

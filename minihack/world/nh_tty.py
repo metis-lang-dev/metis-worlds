@@ -164,14 +164,16 @@ def describe(tile):
 class Game:
     """The process behind the pty. The caller's loop reads game.fd, game.read() returns its bytes (b"" when it ended)."""
 
-    def __init__(self, options=OPTIONS, path=GAME):
-        self.options, self.path, self.pid, self.fd = options, path, None, None
+    def __init__(self, options=OPTIONS, path=GAME, seed=None):
+        self.options, self.path, self.seed, self.pid, self.fd = options, path, seed, None, None
 
     def start(self):
         if not os.access(self.path, os.X_OK):
             raise FileNotFoundError(f"{self.path}: run minihack/nethack/build.sh")
         env = dict(os.environ, TERM="xterm", LINES=str(ROWS), COLUMNS=str(COLS), NETHACKOPTIONS=self.options)
         env.pop("LD_LIBRARY_PATH", None)
+        if self.seed is not None:           # nethack/build.sh: the same start or restore + the same keys = the same game
+            env["NETHACK_SEED"] = str(self.seed)
         self.pid, self.fd = pty.fork()
         if self.pid == 0:
             os.execvpe(self.path, ["nethack"], env)
@@ -192,9 +194,16 @@ class Game:
     def forget(self):
         """The game ended for good: stopped, and its save gone, so the next start is a new hero in a new dungeon."""
         self.stop()
-        name = re.search(r"name:([^,]+)", self.options)
-        for f in glob.glob(os.path.join(os.path.dirname(self.path), "lib", "nethackdir", "save", "%d%s*" % (os.getuid(), name[1] if name else ""))):
+        for f in self.saves():
             os.remove(f)
+
+    def saves(self):
+        """This player's save files in the install's save directory."""
+        name = re.search(r"name:([^,]+)", self.options)
+        return glob.glob(os.path.join(self.save_dir(), "%d%s*" % (os.getuid(), name[1] if name else "")))
+
+    def save_dir(self):
+        return os.path.join(os.path.dirname(self.path), "lib", "nethackdir", "save")
 
     def stop(self):
         """SIGHUP: the game saves itself, the next start restores it."""
