@@ -1,84 +1,179 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>The road</title>
+<!-- the common web style of the loop and agent consoles (vendor/shell.css + shell.js: this repo's copies,
+     web/tests keep them equal to the consoles'); map.css keeps the tiles -->
+<link rel="stylesheet" href="vendor/shell.css">
+<link rel="stylesheet" href="vendor/panel.css">
+<link rel="stylesheet" href="vendor/switch.css">
+<script src="vendor/shell.js"></script>
+<script type="importmap">{"imports":{"fsttm-web/tts":"./vendor/tts.js","fsttm-web/ws":"./vendor/ws.js","fsttm-web/panel":"./vendor/panel.js"}}</script>
 <style>
-  html, body { height: 100%; margin: 0; background: #14171c; color: #d8dde3; font: 13px/1.4 system-ui, sans-serif; }
-  #page { height: 100%; display: flex; flex-direction: column; }
-  #bar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding: 6px 10px; border-bottom: 1px solid #2c323a; }
-  #bar select, #bar input, #bar button { background: #14171c; color: inherit; border: 1px solid #2c323a; font: inherit; padding: 2px 8px; }
-  #bar input { width: 4em; }
-  #bar button { cursor: pointer; }
-  #bar button[aria-pressed="true"] { background: #2c323a; }
-  #conn { margin-left: auto; color: #8a939e; }
-  #main { flex: 1; min-height: 0; display: flex; }
+  /* the map and the band in the shell's tokens (one look with the consoles) */
+  :root, :root[data-theme="dark"] { --wm-bg: var(--bg); --wm-fg: var(--fg); --wm-mute: var(--dim); --wm-line: var(--line); --wm-card: var(--panel);
+    --wm-hot: var(--yellow); --wm-focus: var(--cyan); --fw-accent: var(--fg); --fw-side: var(--yellow); }
+  #root { display: flex; flex-direction: column; flex: 1; min-height: 0; outline: none; }
+  /* the band's status: what the agent is doing, and what it wants from you */
+  #status { display: flex; gap: 8px; align-items: baseline; min-width: 0; flex: 1 1 320px; }
+  #status .state { font-size: 10.5px; padding: 0 6px; border: 1px solid var(--line); letter-spacing: .06em; text-transform: uppercase; flex: none; }
+  #status[data-state="waiting"] .state { color: var(--cyan); border-color: var(--cyan); }
+  #status[data-state="working"] .state { color: var(--green); border-color: #2a5a35; }
+  #status[data-state="asking"] .state, #status[data-state="stuck"] .state { color: var(--yellow); border-color: var(--yellow); }
+  #status[data-state="done"] .state, #status[data-state="over"] .state { color: var(--purple); border-color: #5a4580; }
+  #status .text { color: var(--fg); overflow: hidden; text-overflow: ellipsis; }
+  #status .opts { display: inline-flex; gap: 6px; flex: none; }
+  #conn { color: var(--dim); }
+  /* the map takes what the left pane has left over the status lines */
+  #left { overflow: hidden; padding: 12px; display: flex; flex-direction: column; min-height: 0; }
+  #left > * { flex: none; }
+  #jtools { margin-bottom: 6px; }
+  #jsave { font: inherit; color: inherit; background: none; border: 0; padding: 0; text-decoration: underline; opacity: .7; cursor: pointer; }
+  #dock-talk .dbody { display: flex; flex-direction: column; overflow: hidden; }
+  #dock-talk #talkpanel { flex: 1 1 auto; min-height: 0; }
+  .fw-panel .fw-title:empty { display: none; }
+  /* the ask: the agent's question, its answers as chips (a chip says its answer, as typing it would) */
+  #ask { border: 1px solid var(--yellow); background: #2a2111; padding: 6px 8px; margin: 0 0 6px; }
+  #ask .q { color: var(--yellow); margin-bottom: 4px; }
+  #ask .q::before { content: "the agent asks: "; color: var(--dim); }
+  #ask .opts { display: flex; flex-wrap: wrap; gap: 6px; }
+  #ask .chip { border-color: var(--yellow); }
+  #talkpanel { min-height: 160px; }
+  .fw-panel .fw-ask .fw-text { color: var(--yellow); font-weight: bold; }
+  .fw-panel .fw-ask .fw-who { color: var(--yellow); opacity: 1; }
+  .fw-panel .fw-status .fw-text { color: var(--dim); font-style: italic; }
+  .fw-panel .fw-intent code { color: var(--dim); }
+  .fw-panel .fw-note .fw-text { color: var(--dim); }
+  .fw-panel .fw-input .fw-text { background: var(--bg); border: 1px solid var(--line); padding: 1px 6px; }
+  .fw-panel .fw-input button { background: transparent; border: 1px solid var(--line); padding: 0 8px; cursor: pointer; }
+  /* fsttm-web's widgets in the shell's look: the voice (the mic, the narrator) in the band, the DIALOG drawer */
+  #band .fw-voicebar { border-color: var(--line); border-radius: 0; }
+  #sessbar { flex-wrap: wrap; justify-content: flex-end; }             /* the voice widget and the replay's buttons: two rows when narrow */
+  .fw-panel .fw-ctl { background: var(--bg); border-color: var(--line); border-radius: 0; }
+  .fw-panel .fw-attn[aria-pressed="true"] { color: var(--bg); background: var(--green); border-color: var(--green); }
+  #dock-dialog .dbody { display: flex; flex-direction: column; overflow: hidden; }
+  #dialogpart { flex: 1 1 auto; min-height: 0; }
+  #dialogpart > .fw-bar { padding: 0 0 6px; border-bottom: 1px solid var(--line); }
+  #dialogpart .fw-sec { border: 1px solid var(--line); padding: 2px 8px; background: var(--panel); }
+  #dialogpart .fw-sec > summary { color: var(--dim); font-weight: normal; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; }
+  #dialogpart .fw-sec[open] > summary { color: var(--fg); }
+  /* the world card: what this world is and what you can ask it (the map's `card`) */
+  #wcard .wc-title { color: var(--fg); font-weight: bold; margin: 0 0 4px; }
+  #wcard .wc-about { color: var(--fg); margin: 0 0 3px; }
+  #wcard .wc-h { color: var(--dim); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; margin: 10px 0 3px; }
+  #wcard .wc-kinds { display: flex; flex-wrap: wrap; gap: 2px 6px; }
+  #wcard details.wc-kind { border: 1px solid var(--line); padding: 0 6px; }
+  #wcard details.wc-kind[open] { flex-basis: 100%; }
+  #wcard details.wc-kind summary { cursor: pointer; list-style: none; }
+  #wcard details.wc-kind summary::-webkit-details-marker { display: none; }
+  #wcard .wc-n { color: var(--dim); } #wcard .wc-opens { color: var(--cyan); font-size: 10.5px; margin-left: 4px; }
+  #wcard .wc-ids { color: var(--dim); font-size: 11.5px; padding: 2px 0 3px; }
+  #wcard .wc-ask { display: flex; gap: 8px; align-items: baseline; margin: 3px 0; }
+  #wcard .wc-ask .chip { flex: none; } #wcard .wc-ask .what { color: var(--dim); }
+  #wcard ul.wc-cannot { margin: 0; padding-left: 16px; color: var(--fg); }
+  #wcard .wc-src { color: var(--faint); font-size: 10.5px; margin-top: 10px; }
+  #jlog { list-style: none; margin: 0; padding: 0; font-size: 11.5px; }
+  #jlog li { padding: 1px 0; border-top: 1px solid var(--line); } #jlog .who { color: var(--dim); display: inline-block; min-width: 3.5em; }
+  #jlog .j-you { color: var(--fg); font-weight: bold; } #jlog .j-note { color: var(--dim); }
+  /* the road: the 3D view with its tools over it, the dashboard under it */
+  #left { padding: 0; }
   #col { flex: 1; min-width: 0; display: flex; flex-direction: column; position: relative; }
-  #tools { position: absolute; top: 8px; left: 8px; z-index: 3; background: rgba(20, 23, 28, .88); border: 1px solid #2c323a; padding: 6px 8px; display: flex; flex-direction: column; gap: 6px; max-width: 17em; }
+  #tools { position: absolute; top: 8px; left: 8px; z-index: 3; background: rgba(20, 23, 28, .88); border: 1px solid var(--line); padding: 6px 8px; display: flex; flex-direction: column; gap: 6px; max-width: 17em; }
   #tools .row { display: flex; gap: 6px; }
   #tools .row[hidden] { display: none; }
-  #tools button { background: #14171c; color: inherit; border: 1px solid #2c323a; font: inherit; padding: 2px 8px; cursor: pointer; white-space: nowrap; }
-  #tools button[aria-pressed="true"] { background: #2c323a; }
-  #tools summary { cursor: pointer; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: #8a939e; }
+  #tools button { background: var(--bg); color: inherit; border: 1px solid var(--line); font: inherit; padding: 2px 8px; cursor: pointer; white-space: nowrap; }
+  #tools button[aria-pressed="true"] { background: var(--line); }
+  #tools summary { cursor: pointer; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--dim); }
   #tools dl { display: grid; grid-template-columns: auto 1fr; gap: 1px 10px; margin: 4px 0 0; }
-  #tools dt { color: #8a939e; } #tools dd { margin: 0; }
+  #tools dt { color: var(--dim); } #tools dd { margin: 0; }
   #view { flex: 1; min-height: 0; width: 100%; border: 0; }
-  #dash { flex: 0 0 34%; min-height: 220px; border-top: 1px solid #2c323a; padding: 6px 10px; display: flex; flex-direction: column; gap: 4px; overflow: hidden; position: relative; }
-  #dash .stats { display: flex; flex-wrap: wrap; gap: 2px 18px; color: #8a939e; }
-  #dash .stats b { color: #d8dde3; font-weight: 600; margin-left: 4px; }
+  #dash { flex: 0 0 34%; min-height: 220px; border-top: 1px solid var(--line); padding: 6px 10px; display: flex; flex-direction: column; gap: 4px; overflow: hidden; position: relative; }
+  #dash .stats { display: flex; flex-wrap: wrap; gap: 2px 18px; color: var(--dim); }
+  #dash .stats b { color: var(--fg); font-weight: 600; margin-left: 4px; }
   #dash .charts { flex: 1; min-height: 0; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 4px 14px; }
   #dash figure { margin: 0; min-height: 0; display: flex; flex-direction: column; }
-  #dash figcaption { color: #8a939e; font-size: 11px; display: flex; flex-wrap: wrap; gap: 0 10px; }
+  #dash figcaption { color: var(--dim); font-size: 11px; display: flex; flex-wrap: wrap; gap: 0 10px; }
   #dash figcaption i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 3px; }
   #dash canvas { flex: 1; min-height: 0; width: 100%; }
-  #tip { position: absolute; display: none; pointer-events: none; background: #20242b; border: 1px solid #2c323a; padding: 2px 6px; font-size: 11px; white-space: pre; z-index: 2; }
-  #wait { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; color: #8a939e; }
-  #side { width: 18em; flex: none; padding: 10px; border-left: 1px solid #2c323a; overflow: auto; }
-  #side h2 { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: #8a939e; margin: 12px 0 4px; }
+  #tip { position: absolute; display: none; pointer-events: none; background: var(--panel); border: 1px solid var(--line); padding: 2px 6px; font-size: 11px; white-space: pre; z-index: 2; }
+  #wait { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; color: var(--dim); }
+  #side { width: 18em; flex: none; padding: 10px; border-left: 1px solid var(--line); overflow: auto; }
+  #side h2 { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--dim); margin: 12px 0 4px; }
   #side h2:first-child { margin-top: 0; }
   #side dl { display: grid; grid-template-columns: auto 1fr; gap: 1px 10px; margin: 0; }
-  #side dt { color: #8a939e; }
+  #side dt { color: var(--dim); }
   #side dd { margin: 0; overflow-wrap: anywhere; }
-  #talk { display: flex; flex-direction: column; gap: 4px; }
-  #log { height: 12em; overflow: auto; border: 1px solid #2c323a; padding: 4px 6px; display: flex; flex-direction: column; gap: 3px; }
-  #log .me { color: #8a939e; }
-  #say { background: #14171c; color: inherit; border: 1px solid #2c323a; font: inherit; padding: 3px 6px; width: 100%; box-sizing: border-box; }
-  #card p { margin: 0 0 4px; }
-  #card ul { margin: 0; padding-left: 1.1em; color: #8a939e; }
-  #card b { color: #d8dde3; font-weight: 500; }
-  #journal { font-size: 11.5px; color: #8a939e; max-height: 9em; overflow: auto; }
+  #tools select { font: inherit; }
+  #bar-run { display: inline-flex; gap: 8px; align-items: center; }
+  #bar-run select, #bar-run input { background: var(--bg); color: var(--fg); border: 1px solid var(--line); font: inherit; padding: 1px 4px; }
+  #bar-run input { width: 3.5em; }
+  #jcmds { color: var(--dim); }
 </style>
 </head>
 <body>
-<div id="page">
-  <div id="bar">
-    <label>scenario <select id="scenario"><option>straight</option><option>cut_out</option><option>cut_in</option></select></label>
-    <label>seed <input id="seed" type="number" min="1" value="1"></label>
-    <button id="run">new run</button>
-    <button id="play">pause</button>
-    <label>speed <select id="speed"><option>0.25</option><option>0.5</option><option selected>1</option><option>2</option><option>4</option></select></label>
-    <span id="conn">connecting</span>
-  </div>
-  <div id="main">
-    <div id="col">
-      <div id="wait">waiting for the road</div>
-      <div id="tools">
-        <div class="row"><button id="follow" aria-pressed="false">follow the ego</button><button id="center">center on the ego</button></div>
-        <details open><summary>The run, as SUMO has it</summary><dl id="run-info"></dl></details>
-        <details open><summary>Selected car</summary><dl id="picked"></dl><div class="row" id="picked-tools" hidden><button id="follow-picked">follow it</button><button id="center-picked">center on it</button></div></details>
+<div id="root" tabindex="-1">
+  <header id="band" tabindex="-1">
+    <div class="l">
+      <span class="brand">ROAD</span>
+      <span id="status" data-state="" aria-live="polite"><span class="state" id="sstate">…</span><span class="text" id="stext"></span><span class="opts" id="sopts"></span></span>
+      <span id="sessbar">
+        <span id="bar-run">
+          <label>scenario <select id="scenario"><option>straight</option><option>cut_out</option><option>cut_in</option></select></label>
+          <label>seed <input id="seed" type="number" min="1" value="1"></label>
+          <button class="btn" id="run" type="button">new run</button>
+          <button class="btn" id="play" type="button">pause</button>
+          <label>speed <select id="speed"><option>0.25</option><option>0.5</option><option selected>1</option><option>2</option><option>4</option></select></label>
+        </span>
+        <span id="conn"></span>
+        <span id="voice"></span>
+      </span>
+    </div>
+  </header>
+  <main>
+    <section id="left">
+      <div id="col">
+        <div id="wait">waiting for the road</div>
+        <div id="tools">
+          <div class="row"><button id="follow" aria-pressed="false">follow the ego</button><button id="center">center on the ego</button></div>
+          <details open><summary>The run, as SUMO has it</summary><dl id="run-info"></dl></details>
+          <details><summary>The ego, as SUMO has it</summary><dl id="ego"></dl></details>
+          <details><summary>Roles, as the ego believes</summary><dl id="roles"></dl></details>
+          <details open><summary>Selected car</summary><dl id="picked"></dl><div class="row" id="picked-tools" hidden><button id="follow-picked">follow it</button><button id="center-picked">center on it</button></div></details>
+        </div>
+        <div id="dash"></div>
       </div>
-      <div id="dash"></div>
-    </div>
-    <div id="side">
-      <h2>Ask the drive</h2>
-      <div id="talk"><div id="log"></div><input id="say" placeholder="say what you want, e.g. pass this car" autocomplete="off"></div>
-      <h2>The ego, as SUMO has it</h2><dl id="ego"></dl>
-      <h2>Roles, as the ego believes</h2><dl id="roles"></dl>
-      <h2>The stack's commands</h2><div id="journal"></div>
-      <h2>This world</h2><div id="card"></div>
-    </div>
-  </div>
+    </section>
+    <div id="split"></div>
+    <aside id="right">
+      <section class="dock" id="dock-talk" data-dock="talk" tabindex="-1" aria-label="the dialog">
+        <header><span class="tw">▾</span><span class="tt">TALK</span><button class="x" type="button" aria-label="hide the dialog">✕</button></header>
+        <div class="dbody">
+          <div id="ask" hidden aria-live="assertive"><div class="q" id="askq"></div><div class="opts" id="askopts"></div></div>
+          <div id="talkpanel"></div>
+        </div>
+      </section>
+      <section class="dock" id="dock-world" data-dock="world" tabindex="-1" aria-label="the world card">
+        <header><span class="tw">▾</span><span class="tt">WORLD CARD</span><button class="x" type="button" aria-label="hide the world card">✕</button></header>
+        <div class="dbody" id="wcard"><p class="empty">loading the world…</p></div>
+      </section>
+      <section class="dock" id="dock-journal" data-dock="journal" tabindex="-1" aria-label="the journal">
+        <header><span class="tw">▾</span><span class="tt">JOURNAL</span><button class="x" type="button" aria-label="hide the journal">✕</button></header>
+        <div class="dbody"><div id="jtools"><button id="jsave" type="button" class="fw-link">save (JSONL)</button></div><ol id="jlog" tabindex="-1" aria-label="the journal's lines"></ol></div>
+      </section>
+      <section class="dock" id="dock-dialog" data-dock="dialog" tabindex="-1" aria-label="the dialog: the floor, barge-in, attention, the numbers">
+        <header><span class="tw">▾</span><span class="tt">DIALOG</span><button class="x" type="button" aria-label="hide the dialog">✕</button></header>
+        <div class="dbody"><div id="dialogpart"></div></div>
+      </section>
+    </aside>
+    <nav id="strip"><button type="button" data-strip="talk">Talk</button><button type="button" data-strip="world">World card</button><button type="button" data-strip="journal">Journal</button><button type="button" data-strip="dialog">Dialog</button></nav>
+  </main>
 </div>
-<script type="module" src="world.js"></script>
+<script type="module">
+const t = new URLSearchParams(location.search).get('theme');
+if (t) document.documentElement.dataset.theme = t;
+import('./world.js').catch(e => { document.getElementById('conn').textContent = 'the page: ' + (e?.message || e); throw e; });
+</script>
 </body>
 </html>
