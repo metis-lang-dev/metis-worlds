@@ -5,5 +5,6 @@ include "../responder_domain.llp".
 include "../capacity.llp".
 include "../tick_types.llp".
 #init idle 1
+#init tick__gen(responder, controls, g0) 1
 #steps 6
 #seeds 1

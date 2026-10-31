@@ -5,5 +5,5 @@ voice: third
 program: road_director.llp
 host: pass_host.py:make
 clock: {beats: 1, period: 1}
-shared: {tick__want: in, tick__release: in, tick__status: in, tick__active: in, tick__done: in, tick__stuck: in, tick__committed: in, tick__yield: in, tick__grant: out, tick__revoke: out, tick__goal: out, tick__cancel: out, tick__stop: in}
+shared: {tick__want: in, tick__released: in, tick__status: in, tick__active: in, tick__done: in, tick__stuck: in, tick__committed: in, tick__yield: in, tick__grant: out, tick__gen: out, tick__revoke: out, tick__goal: out, tick__cancel: out, tick__stop: in}
 resources: {controls: {count: 1, free: free, held_by: [holder]}}

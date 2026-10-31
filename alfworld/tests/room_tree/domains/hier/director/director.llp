@@ -58,6 +58,7 @@ mature_status(a3).
 #init inactive(grasp) 1
 #init inactive(place) 1
 #init free(motion) 1
+#init gen(motion, g0) 1
 #init issue(motion,t0) 1
 #init serving(motion,t0) 1
 #init path(task) 1

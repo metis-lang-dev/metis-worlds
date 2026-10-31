@@ -5,4 +5,4 @@ boundaries:
   - grant: [controls]
     deliver: [tick__grant(planner, controls)]
     world: [at_dest, below_limit, lead_ok, accel_ok, cross_settled(nextzone), keep_ok, zone_at(nextzone, none), now]
-    expect: {out: [tick__done(planner), tick__release(planner, controls)], status: success}
+    expect: {out: [tick__done(planner), tick__released(planner, controls, g0)], status: success}

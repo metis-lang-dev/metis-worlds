@@ -6,5 +6,6 @@ include "../capacity.llp".
 include "../tick_types.llp".
 #init idle 1
 #init trip 1
+#init tick__gen(planner, controls, g0) 1
 #steps 6
 #seeds 1

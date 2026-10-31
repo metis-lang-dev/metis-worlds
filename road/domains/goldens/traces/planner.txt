@@ -1,5 +1,6 @@
 case planner steps=6 seeds=1
 I idle 1
 I trip 1
+I tick__gen(planner,controls,g0) 1
 T 1 drive
-F 1 (done) busy:1 tick__active(planner):1 tick__want(planner,controls):1 trip:1
+F 1 (done) busy:1 tick__active(planner):1 tick__gen(planner,controls,g0):1 tick__want(planner,controls):1 trip:1

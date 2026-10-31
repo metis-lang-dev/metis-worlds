@@ -23,6 +23,7 @@ mature_status(a2).
 mature_status(a3).
 
 #init free(controls) 1
+#init gen(controls, g0) 1
 #init offpath(responder) 1
 #init offpath(planner) 1
 #init nowant(responder) 1

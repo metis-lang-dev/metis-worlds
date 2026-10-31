@@ -44,7 +44,7 @@ DIRECTOR_OUT = ("wake", "sleep", "forward", "ask", "ended", "tick__grant", "tick
 STATUS = {"nav": {"success": ["reached"], "failure": []}, "act": {"success": ["opened", "cleared"], "failure": []},
           "task": {"success": ["done"], "failure": ["stuck"]}}
 RESOURCES = ("motion",)
-DIRECTOR_FIELDS = ("shared: {tick__status: in, tick__active: in, tick__done: in, tick__stuck: in, tick__committed: in, tick__yield: in, tick__want: in, tick__release: in, tick__grant: out, "
+DIRECTOR_FIELDS = ("shared: {tick__status: in, tick__active: in, tick__done: in, tick__stuck: in, tick__committed: in, tick__yield: in, tick__want: in, tick__released: in, tick__grant: out, tick__gen: out, "
                    "tick__goal: out, tick__revoke: out, tick__cancel: out, tick__stop: in}\nresources: {motion: {count: 1, free: free, held_by: [holder]}}\n")
 HOLD_GRANT, HOLD_STATUS = 1, 1     # brief §9 rule 4: a grant is not revoked within k ticks, a status holds m ticks
 
@@ -93,7 +93,7 @@ def manifest_fields(spec, tree=False, policy=None, extra=None):
         shared.update({p: "out" for p in REPORTS[spec]})
         shared.update({p: "world-private" for p in TREE_DYN.get(spec, ())})
         if spec == "act":
-            shared.update({"tick__want": "out", "tick__release": "out"})
+            shared.update({"tick__want": "out", "tick__released": "out", "tick__gen": "in"})   # its tick__release stays its own (spec/15 amendment 10)
         if spec != "task":
             shared["tick__grant"] = "in"       # gating: program — the director's grant is an in-copy its rules read
         shared["tick__cancel"] = "in"                             # the director's on a stop (step 3c): the task's too
@@ -312,7 +312,7 @@ GUARD_CASE = {"case": "a beast comes at the robot: act takes the body by itself,
                   {"world": ["agent_at(p1)", "next(p1, e, p2)", "monster(b1, p2)", "oncoming(b1)", "resp_lon(brake_min_correct)"],
                    "expect": {"out": [], "status": "running", "fired": ["move_strike"]}},
                   {"world": ["agent_at(p1)", "next(p1, e, p2)", "step(p2)", "resp_lon(none)"],
-                   "expect": {"out": ["tick__done(act)", "tick__release(act, motion)"], "status": "running", "fired": ["struck_down"]}}]}
+                   "expect": {"out": ["tick__done(act)", "tick__released(act, motion, g0)"], "status": "running", "fired": ["struck_down", "released"]}}]}
 ABSORB_CASE = {"case": "act, already on a beast by itself, is asked to fight it too: it takes the request into its own, strikes once, "
                        "and answers it with cleared as well as its release",
                "boundaries": [
@@ -323,7 +323,7 @@ ABSORB_CASE = {"case": "act, already on a beast by itself, is asked to fight it 
                    {"world": ["agent_at(p1)", "next(p1, e, p2)", "monster(b1, p2)", "oncoming(b1)", "resp_lon(brake_min_correct)"],
                     "grant": ["motion"], "expect": {"out": [], "status": "running", "fired": ["move_strike"]}},
                    {"world": ["agent_at(p1)", "next(p1, e, p2)", "step(p2)", "resp_lon(none)"],
-                    "expect": {"out": ["cleared(p2)", "tick__done(act)", "tick__release(act, motion)"], "status": "success",
+                    "expect": {"out": ["cleared(p2)", "tick__done(act)", "tick__released(act, motion, g0)"], "status": "success",
                                "fired": ["struck_down", "pay"]}}]}
 TREE_DYN = {"act": ("oncoming", "closing", "resp_lon", "lost", "peaceful")}   # the tree variant's own readings (the beast case; lost: nav-belief step 3; peaceful: nav-belief-2)
 
@@ -341,7 +341,7 @@ def base(spec, geometry="pred", tree=False, policy=None, extra=None):
     lines = t.split("\n")
     at = [k for k, l in enumerate(lines) if l.lstrip().startswith("begin") or l.strip() == "stage act {"]
     i = at[-1] if spec != "task" else at[0]
-    return "\n".join(lines[:i + 1] + cancels + lines[i + 1:])
+    return "\n".join(lines[:i + 1] + cancels + protocol_stub.release_rules(t, spec) + lines[i + 1:])
 
 
 def _base(spec, geometry="pred", tree=False, policy=None, extra=None):
@@ -453,6 +453,7 @@ def committed(spec, tree=False):
                       'include "../%s_domain.llp".' % spec, 'include "../capacity.llp".']
                      + (['include "iface/protocol_domain.llp".', 'include "../tick_types.llp".'] if tree else [])
                      + (["", "#init idle 1"] if tree and spec != "task" else [])
+                     + (["#init tick__gen(act, motion, g0) 1"] if tree and spec == "act" else [])
                      + (["#init brakes(brake_min) 1", "#init brakes(brake_min_correct) 1"] if tree and spec == "act" else []) + [""])
 
 
@@ -480,7 +481,7 @@ def director_start(tree=False):
     out = ["active(task)", "attention(task)", "fresh", "inactive(nav)", "inactive(act)"]
     if tree:
         sp = [d for d in SPECS if d != "task"]
-        out += ["free(%s)" % r for r in RESOURCES] + ["issue(%s,t0)" % r for r in RESOURCES] + ["serving(%s,t0)" % r for r in RESOURCES]
+        out += ["free(%s)" % r for r in RESOURCES] + ["gen(%s,g0)" % r for r in RESOURCES] + ["issue(%s,t0)" % r for r in RESOURCES] + ["serving(%s,t0)" % r for r in RESOURCES]
         out += ["path(task)", "tick__goal(task)"] + ["offpath(%s)" % d for d in sp]   # the planner on the path (its done pops it)
         out += ["nowant(%s)" % d for d in sp] + ["nolate(%s)" % d for d in sp] + ["nocommit(%s)" % d for d in sp] + ["age_of(%s,a0)" % d for d in SPECS]
     return out

@@ -26,7 +26,7 @@ ROWS = ["|||||||||||||||||||||||",
 START, STAIRS = (2, 2), (20, 2)
 NEWT = (int(os.environ.get("RACE_NEWT_X", 8)), 2)
 DOOR = (int(os.environ.get("RACE_DOOR_X", 14)), 2)
-WATCH = ("tick__release(", "late(", "nolate(", "late_release(", "holder(", "held(", "free(", "want(", "queued(", "active(", "sleep(", "wake(")
+WATCH = ("tick__release(", "tick__released(", "tick__gen(", "gen(", "late(", "nolate(", "late_release(", "holder(", "held(", "free(", "want(", "queued(", "active(", "sleep(", "wake(")
 
 
 def des():
