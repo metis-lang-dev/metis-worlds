@@ -25,7 +25,7 @@ MESSAGES = [
     (r"the door is closed", "door_closed"), (r"the door opens", "door_opened"), (r"this door is locked", "door_locked"), (r"door resists|door is stuck", "door_stuck"), (r"whamm", "whamm"), (r"you succeed in unlocking", "unlocked"), (r"you don't have anything to use", "nothing_to_apply"),
     (r"you kill (the )?(.+?)!", "killed"), (r"you (hit|miss) (the )?(.+?)[.!]", "hit"), (r"(bites|hits|kicks|stings)!?", "hurt"),
     (r"you fall into a pit", "fell_pit"), (r"a trap door opens", "trap_door"), (r"you (eat|finish eating)", "ate"),
-    (r"(\w) - (.+?)\.", "picked"), (r"there is nothing here to pick up", "nothing_here"), (r"you can.?t (go|move) ", "cant"),
+    (r"([\w$]) - (.+?)\.", "picked"), (r"there is nothing here to pick up", "nothing_here"), (r"you can.?t (go|move) ", "cant"),
     (r"you are (hungry|weak|fainting)", "hunger"), (r"you die", "died"), (r"welcome", "welcome"), (r"it.s a wall", "blocked"),
     (r"you cannot pass", "blocked"), (r"you stop\.", "stopped"), (r"never mind", "nevermind"), (r"what do you want", "prompt"),
     (r"\[yn[aq]*\]", "asked"),          # a y/n question: the gym answers it "n" (mh_gym.World.answered; nav-belief-2 (c))
