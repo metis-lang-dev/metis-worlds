@@ -13,7 +13,15 @@
   #bar button[aria-pressed="true"] { background: #2c323a; }
   #conn { margin-left: auto; color: #8a939e; }
   #main { flex: 1; min-height: 0; display: flex; }
-  #col { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  #col { flex: 1; min-width: 0; display: flex; flex-direction: column; position: relative; }
+  #tools { position: absolute; top: 8px; left: 8px; z-index: 3; background: rgba(20, 23, 28, .88); border: 1px solid #2c323a; padding: 6px 8px; display: flex; flex-direction: column; gap: 6px; max-width: 17em; }
+  #tools .row { display: flex; gap: 6px; }
+  #tools .row[hidden] { display: none; }
+  #tools button { background: #14171c; color: inherit; border: 1px solid #2c323a; font: inherit; padding: 2px 8px; cursor: pointer; white-space: nowrap; }
+  #tools button[aria-pressed="true"] { background: #2c323a; }
+  #tools summary { cursor: pointer; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: #8a939e; }
+  #tools dl { display: grid; grid-template-columns: auto 1fr; gap: 1px 10px; margin: 4px 0 0; }
+  #tools dt { color: #8a939e; } #tools dd { margin: 0; }
   #view { flex: 1; min-height: 0; width: 100%; border: 0; }
   #dash { flex: 0 0 34%; min-height: 220px; border-top: 1px solid #2c323a; padding: 6px 10px; display: flex; flex-direction: column; gap: 4px; overflow: hidden; position: relative; }
   #dash .stats { display: flex; flex-wrap: wrap; gap: 2px 18px; color: #8a939e; }
@@ -31,7 +39,14 @@
   #side dl { display: grid; grid-template-columns: auto 1fr; gap: 1px 10px; margin: 0; }
   #side dt { color: #8a939e; }
   #side dd { margin: 0; overflow-wrap: anywhere; }
-  #side .danger { color: #ffb454; }
+  #talk { display: flex; flex-direction: column; gap: 4px; }
+  #log { height: 12em; overflow: auto; border: 1px solid #2c323a; padding: 4px 6px; display: flex; flex-direction: column; gap: 3px; }
+  #log .me { color: #8a939e; }
+  #say { background: #14171c; color: inherit; border: 1px solid #2c323a; font: inherit; padding: 3px 6px; width: 100%; box-sizing: border-box; }
+  #card p { margin: 0 0 4px; }
+  #card ul { margin: 0; padding-left: 1.1em; color: #8a939e; }
+  #card b { color: #d8dde3; font-weight: 500; }
+  #journal { font-size: 11.5px; color: #8a939e; max-height: 9em; overflow: auto; }
 </style>
 </head>
 <body>
@@ -42,19 +57,25 @@
     <button id="run">new run</button>
     <button id="play">pause</button>
     <label>speed <select id="speed"><option>0.25</option><option>0.5</option><option selected>1</option><option>2</option><option>4</option></select></label>
-    <button id="follow" aria-pressed="false">follow the ego</button>
-    <button id="details" aria-pressed="false">client details</button>
     <span id="conn">connecting</span>
   </div>
   <div id="main">
     <div id="col">
       <div id="wait">waiting for the road</div>
+      <div id="tools">
+        <div class="row"><button id="follow" aria-pressed="false">follow the ego</button><button id="center">center on the ego</button></div>
+        <details open><summary>The run, as SUMO has it</summary><dl id="run-info"></dl></details>
+        <details open><summary>Selected car</summary><dl id="picked"></dl><div class="row" id="picked-tools" hidden><button id="follow-picked">follow it</button><button id="center-picked">center on it</button></div></details>
+      </div>
       <div id="dash"></div>
     </div>
     <div id="side">
-      <h2>The run, as SUMO has it</h2><dl id="run-info"></dl>
+      <h2>Ask the drive</h2>
+      <div id="talk"><div id="log"></div><input id="say" placeholder="say what you want, e.g. pass this car" autocomplete="off"></div>
       <h2>The ego, as SUMO has it</h2><dl id="ego"></dl>
       <h2>Roles, as the ego believes</h2><dl id="roles"></dl>
+      <h2>The stack's commands</h2><div id="journal"></div>
+      <h2>This world</h2><div id="card"></div>
     </div>
   </div>
 </div>

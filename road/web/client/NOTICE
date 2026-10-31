@@ -5,6 +5,7 @@ Vehicle models: OpenGameArt, CC0, as the project's source says.
 Changed from the original, in index.bundle.js, for this page:
 - asset paths under /client/; the sky box removed, a plain background
 - for performance: pixel ratio 1, no shadows, no post-processing passes (SSAO, SMAA), 30 frames a second, no stats panel, one car model (hatchback)
+- a click on a car tells the page; the sidebar is not shown (client.html): the page has its own tools
 - the car named "ego" is red, the others silver
-- window.sumoFollow and window.sumoUnfollow reach the follow functions
+- window.sumoFollow, window.sumoUnfollow and window.sumoCenter reach the camera; Sumo3D.centerOn added; ending a follow centers on that car and tells the page
 Assets the page does not use were left out.

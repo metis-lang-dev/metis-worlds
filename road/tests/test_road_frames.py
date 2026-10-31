@@ -10,6 +10,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(os.path.dirname(HERE), "world"))
 import road_frames  # noqa: E402
 import road_host  # noqa: E402
+import road_wishes as W  # noqa: E402
 
 NET = """<net version="1.16"><location netOffset="0,0" convBoundary="0.00,0.00,1000.00,0.00" origBoundary="0,0,1000,0" projParameter="!"/>
 <edge id="E" from="a" to="b"><lane id="E_0" index="0" speed="15.00" length="1000.00" shape="0.00,-4.80 1000.00,-4.80"/>
@@ -107,16 +108,15 @@ def test_the_page_says_pause_play_speed_and_the_next_run():
     h = host()
     h.world(["pause"])
     assert h.shared["paused"]
-    h.world(["play", "speed:2", "run:cut_in:4"])
+    h.world(["play", "speed:2"])
     assert not h.shared["paused"] and h.shared["speed"] == 2.0
-    assert h.shared["next"]["scenario"] == "cut_in" and h.shared["next"]["seed"] == 4
     with pytest.raises(ValueError):
         h.world(["key:y"])
 
 
 def test_paused_or_there_the_clock_is_held(net, monkeypatch):
     slept, stepped = [], []
-    world = dict(arrived=lambda: False, step=lambda: stepped.append(1), tick=0, observe=lambda: ({}, {}, {}, []), log=[{}])
+    world = dict(arrived=lambda: False, step=lambda: stepped.append(1), tick=0, observe=lambda: ({}, {}, {}, []), log=[{}], proj={"ego": None})
     h = host(world=SimpleNamespace(**world))
     h.observed, h.period, h.beat = set(), 1, 5
     monkeypatch.setattr(road_host.time, "sleep", slept.append)
@@ -137,21 +137,32 @@ def test_every_step_is_logged_with_or_without_a_page(tmp_path, monkeypatch):
         assert path.read_text().strip() == '{"tick": 1}'
 
 
-def test_a_new_episode_opens_one_world_for_the_hierarchy(monkeypatch):
+def test_a_new_run_opens_one_world_and_the_planner_gets_a_trip(monkeypatch):
     closed, made = [], []
-    old = SimpleNamespace(close=lambda: closed.append(1), scenario="straight", seed=1)
+    old = SimpleNamespace(close=lambda: closed.append(1), scenario="straight", seed=1, arrived=lambda: True, tick=0, observe=lambda: ({}, {}, {}, []), log=[{}], proj={"ego": None})
 
     def new_world(run):
         made.append(run)
-        return SimpleNamespace(close=lambda: None, scenario=run["scenario"], seed=run["seed"])
+        return SimpleNamespace(close=lambda: None, scenario=run["scenario"], seed=run["seed"], arrived=lambda: False, tick=0, observe=lambda: ({}, {}, {}, []), log=[{}], proj={"ego": None})
     monkeypatch.setattr(road_host, "new_world", new_world)
     a, b = host(world=old), host("planner", world=old)
     b.shared = a.shared
-    a.world(["run:cut_out:5", "pause"])
-    a.new_episode()
-    b.new_episode()
-    assert closed == [1] and len(made) == 1 and a.road is b.road and made[0]["scenario"] == "cut_out" and made[0]["seed"] == 5
-    assert a.beat == 0 and b.latched is None and not a.shared["paused"]
+    a.observed = b.observed = set()
+    a.period, b.period = 1, 10
+    a.world(["pause", "run:cut_out:5"])
+    assert closed == [1] and len(made) == 1 and made[0]["scenario"] == "cut_out" and made[0]["seed"] == 5 and not a.shared["paused"]
+    assert b.road is old
+    assert "+trip 1" in (b.tick({}) or [])
+    assert b.road is a.shared["world"]
+    assert "+trip 1" not in (b.tick({}) or [])                # once
+
+
+def test_a_trip_still_held_is_not_doubled(monkeypatch):
+    old = SimpleNamespace(close=lambda: None, arrived=lambda: False, tick=0, observe=lambda: ({}, {}, {}, []), log=[{}], proj={"ego": None})
+    h = host("planner", world=old)
+    h.observed, h.period = set(), 10
+    h.shared["world"] = SimpleNamespace(arrived=lambda: False, tick=0, observe=lambda: ({}, {}, {}, []), log=[{}], proj={"ego": None})
+    assert "+trip 1" not in (h.tick({"trip": 1}) or [])
 
 
 def test_the_pace_holds_a_step_to_its_time(monkeypatch):
@@ -165,3 +176,56 @@ def test_the_pace_holds_a_step_to_its_time(monkeypatch):
     clock[0] += 5.0                                # a slow step is not made up after
     h.pace()
     assert len(slept) == 1
+
+
+FACTS = {"below_limit": 1, "lead_ok": 1, "keep_ok": 1, "adjacent(left)": 1, "settled(left)": 1, "settled(right)": 1, "safe_long(leadleft)": 1, "safe_lat(leadleft)": 1,
+         "safe_long(followleft)": 1, "safe_lat(followleft)": 1, "dangerous(lead)": 1}
+
+
+def test_a_wish_only_gates_what_the_planner_already_reads():
+    w = W.new()
+    assert W.planner_facts(w, FACTS, 10.0) == FACTS
+    W.take(w, "pace[P=easy]")
+    easy = W.planner_facts(w, FACTS, 10.0)
+    assert "below_limit" not in easy and easy["at_limit"] == 1
+    assert "below_limit" in W.planner_facts(w, FACTS, 3.0)              # under the easy speed it may speed up
+    W.take(w, "resume")
+    W.take(w, "lane[D=left]")
+    f = W.planner_facts(w, FACTS, 10.0)
+    assert f["lead_slow"] == 1 and "settled(left)" in f and "settled(right)" not in f and "below_limit" not in f and "lead_ok" not in f
+    assert f["dangerous(lead)"] == 1 and f["safe_long(leadleft)"] == 1  # the safety facts stand as the world has them
+    W.take(w, "follow")
+    f = W.planner_facts(w, FACTS, 10.0)
+    assert "settled(left)" not in f and "settled(right)" not in f and "lead_slow" not in f
+
+
+def test_a_lane_wish_is_met_or_dropped_with_its_reason():
+    w = W.new()
+    W.take(w, "lane[D=left]")
+    W.planner_tick(w, dict(FACTS, **{"changing(left)": 1}))
+    assert w["want"] is None and w["said"] == ["Changing lane now."]
+    w = W.new()
+    W.take(w, "lane[D=left]")
+    unsafe = {k: v for k, v in FACTS.items() if k != "safe_long(followleft)"}
+    for _ in range(W.WISH_TICKS):
+        W.planner_tick(w, unsafe)
+    assert w["want"] is None and w["said"] == ["Not now: a car is too close on the left. I have dropped it."]
+    w = W.new()
+    W.take(w, "lane[D=right]")
+    assert W.why_not(FACTS, "right") == "there is no lane on the right"
+
+
+def test_only_the_planner_reads_the_wish():
+    world = SimpleNamespace(observe=lambda: (dict(FACTS), {}, {}, []), proj={"ego": None}, tick=0)
+    for spec, seen in (("responder", True), ("planner", False)):
+        h = host(spec, world=world)
+        h.observed, h.period = set(), 1
+        h.shared["wish"] = W.new()
+        W.take(h.shared["wish"], "lane[D=left]")
+        assert ("below_limit" in h.fresh()) is seen
+
+
+def test_around_says_the_roles():
+    assert W.around({}, {"lead": "x", "followleft": "y"}) == "I see a car ahead, a car behind on the left."
+    assert "too close" in W.around({"dangerous(lead)": 1}, {"lead": "x"})
+    assert W.around({}, {}) == "I see no one near."

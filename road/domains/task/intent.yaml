@@ -1,0 +1,66 @@
+# task's intents (road_wishes.py): what the person asks of the drive. Each one is a preference for the planner, inside RSS: it may say not now.
+persona: |
+  You are the helper in a self-driving car on a road with two lanes. The car drives itself and keeps itself safe; the person may ask for a pace, a lane, or what is around.
+  Map what they say to exactly one intent JSON per utterance. Respond with only the JSON.
+
+verbs:
+  - {verb: PACE, meaning: "how fast to drive: easy is slowly, normal as usual, brisk is hurrying", slots: [pace]}
+  - {verb: LANE, meaning: "change to the left or the right lane", slots: [side]}
+  - {verb: PASS, meaning: "overtake the car ahead"}
+  - {verb: FOLLOW, meaning: "stay behind the car ahead, no lane changes"}
+  - {verb: RESUME, meaning: "forget what was asked and drive as usual"}
+  - {verb: AROUND, meaning: "say what is around the car"}
+  - {verb: CHITCHAT, meaning: "small talk: an acknowledgement, thanks, a greeting, a comment"}
+  - {verb: UNKNOWN, meaning: "anything else: something the car cannot do, or a question about what it can do"}
+
+slots:
+  pace: {enum: [EASY, NORMAL, BRISK]}
+  side: {enum: [LEFT, RIGHT]}
+
+guidance: |
+  Slowing down, relaxing or taking it easy is PACE EASY. Hurrying or going faster is PACE BRISK. Overtaking or getting past the car in front is PASS. Going left or right is
+  LANE. Staying in lane behind someone is FOLLOW. Asking what is around, who is near or what is ahead is AROUND. Braking and stopping are the car's own, so UNKNOWN.
+
+examples:
+  - ["take it easy", {"intent":"PACE","pace":"EASY"}]
+  - ["slow down a bit", {"intent":"PACE","pace":"EASY"}]
+  - ["normal speed please", {"intent":"PACE","pace":"NORMAL"}]
+  - ["hurry up", {"intent":"PACE","pace":"BRISK"}]
+  - ["move to the left lane", {"intent":"LANE","side":"LEFT"}]
+  - ["go right", {"intent":"LANE","side":"RIGHT"}]
+  - ["pass this car", {"intent":"PASS"}]
+  - ["get past the slow one", {"intent":"PASS"}]
+  - ["stay behind him", {"intent":"FOLLOW"}]
+  - ["don't change lanes", {"intent":"FOLLOW"}]
+  - ["carry on as usual", {"intent":"RESUME"}]
+  - ["what's around us", {"intent":"AROUND"}]
+  - ["is anyone ahead", {"intent":"AROUND"}]
+  - ["thanks", {"intent":"CHITCHAT"}]
+  - ["fly to the moon", {"intent":"UNKNOWN"}]
+  - ["what can you do", {"intent":"UNKNOWN"}]
+
+spoken:
+  heading: Spoken response (after the JSON)
+  text: |
+    After the JSON comes "Spoken response:" and one short sentence the helper says, in the first person. It only asks the car, so it never promises. Never JSON, never an intent name.
+  examples:
+    - ["take it easy", {"intent":"PACE","pace":"EASY"}, "I'll ask for an easy pace."]
+    - ["pass this car", {"intent":"PASS"}, "I'll ask to pass when it is safe."]
+    - ["thanks", {"intent":"CHITCHAT"}, "You're welcome."]
+
+map:
+  - {verb: PACE, atom: "set_pace({pace:pace})", act: set_pace}
+  - {verb: LANE, atom: "change_lane({side:side})", act: change_lane}
+  - {verb: PASS, atom: "pass_lead", act: pass_lead}
+  - {verb: FOLLOW, atom: "follow_lead", act: follow_lead}
+  - {verb: RESUME, atom: "resume_plan", act: resume_plan}
+  - {verb: AROUND, atom: "what_around", act: what_around}
+values:
+  pace: {EASY: easy, NORMAL: normal, BRISK: brisk}
+  side: {LEFT: left, RIGHT: right}
+
+asks: []
+outcomes: {}
+alternatives:
+  max: 0
+  rules: {}

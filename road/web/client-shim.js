@@ -47,7 +47,7 @@ addEventListener('message', e => {
   if (e.data.net) gotNet(e.data.net);
   if (e.data.scene && socket && socket.onmessage) socket.deliver(snapshot(e.data.scene));   // none before the client listens: it would miss a car's entry
   if (e.data.follow) wanted = e.data.follow;
+  if (e.data.center && window.sumoCenter) window.sumoCenter(e.data.center);
   if (e.data.unfollow) { wanted = null; window.sumoUnfollow(); }
-  if (e.data.details !== undefined) document.getElementById('sidebar').style.display = e.data.details ? 'block' : 'none';
   if (wanted && last[wanted] && window.sumoFollow) { window.sumoFollow(wanted); wanted = null; }   // asked before the car is on the road: as soon as it is
 });

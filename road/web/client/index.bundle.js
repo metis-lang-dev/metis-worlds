@@ -59653,6 +59653,7 @@
 	        });
 	        state.clickedVehicleId = clickedVehicle ? clickedVehicle.name : null;
 	        state.clickedVehicleInfo = clickedVehicle ? sumo3d.getVehicleInfo(clickedVehicle.name) : null;
+	        window.parent.postMessage({ clicked: clickedVehicle ? clickedVehicle.name : null }, window.location.origin);
 	        if (objects.length > 0) {
 	            objects.forEach(function (_a) {
 	                var name = _a.name;
@@ -59665,7 +59666,7 @@
 	        }
 	        stateChanged();
 	    }
-	    window.sumoFollow = followObjectPOV; window.sumoUnfollow = unfollowObjectPOV;
+	    window.sumoFollow = followObjectPOV; window.sumoUnfollow = unfollowObjectPOV; window.sumoCenter = function (id) { sumo3d.centerOn(id); };
 	    function followObjectPOV(vehicleId) {
 	        sumo3d.onSelectFollowPOV(vehicleId);
 	        state.followingVehicle = true;
@@ -60025,6 +60026,7 @@
 	        this.postprocessing.render();
 	    };
 	    Sumo3D.prototype.onSelectFollowPOV = function (vehicleId) {
+	        this.followedId = vehicleId;
 	        var vehicle = this.vehicles[vehicleId];
 	        if (vehicle) {
 	            var object = vehicle.mesh;
@@ -60042,7 +60044,16 @@
 	            this.controls = new pan_and_rotate_controls_1.default(this.camera, this.renderer.domElement, this.groundPlane);
 	            // Have the camera look out over the horizon
 	            this.camera.setRotationFromMatrix(utils_1.XZPlaneMatrix4);
+	            this.centerOn(this.followedId);        // the road's page: never lost after a follow
+	            window.parent.postMessage({ followed: false }, window.location.origin);
 	        }
+	    };
+	    Sumo3D.prototype.centerOn = function (vehicleId) {
+	        var vehicle = this.vehicles[vehicleId];
+	        if (!vehicle || this.controls instanceof follow_controls_1.default) return;
+	        var p = vehicle.mesh.position;
+	        this.camera.position.set(p.x, p.y + 30, p.z + 30);
+	        this.camera.lookAt(p);
 	    };
 	    Sumo3D.prototype.onShowRouteObject = function (edgeIds) {
 	        var _this = this;

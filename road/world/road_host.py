@@ -15,8 +15,9 @@ The log ($METIS_ROAD_LOG, or the run's "log"): one JSON line a world step (the e
 the fold), and the run's summary at the end (summary()).
 
 The page (the run's "page": true, road_hier.py; road-agent s-357becc7 step 1): the responder's host says the frames (road_frames.py), takes the
-page's world lines (run:SCENARIO:SEED for the next run, play, pause, speed:X, watching: a page is open) and holds each world step to its real time times the speed; one
-Live beat stays one world step, as in road_tree. A new game (the service's new_episode) starts the run the line named."""
+page's world lines (run:SCENARIO:SEED starts that run now, play, pause, speed:X, watching: a page is open) and holds each world step to its real time times the speed; one
+Live beat stays one world step, as in road_tree. A new run swaps the world under the running hierarchy and gives the planner a new trip if the last one ended: the service's
+new_game would re-instance the planner without its trip (so it never takes the page's button)."""
 import json
 import os
 import sys
@@ -26,6 +27,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import restrict  # noqa: E402
 import road_frames  # noqa: E402
+import road_wishes  # noqa: E402
 import road_world  # noqa: E402
 from semantic_world.ports import sync_diff  # noqa: E402
 
@@ -84,6 +86,11 @@ class RoadHost:
     # ── the world's facts, latched at the member's clock ──
     def fresh(self):
         facts = self.road.observe()[0]
+        if self.spec == "planner" and self.run.get("page"):
+            w = self.shared.setdefault("wish", road_wishes.new())
+            road_wishes.planner_tick(w, facts)
+            ego = self.road.proj.get("ego")
+            facts = road_wishes.planner_facts(w, facts, ego.dyn.vmax if ego is not None else 0.0)
         if self.observed:
             return {a: n for a, n in facts.items() if a.split("(")[0] in self.observed}
         return dict(facts)
@@ -114,6 +121,7 @@ class RoadHost:
 
     def tick(self, counts):
         self.beat += 1
+        self.world_now()
         if self.steps and self.beat > 1 and not self.road.arrived() and not self.shared.get("paused"):
             if self.run.get("page"):
                 self.pace()
@@ -121,7 +129,12 @@ class RoadHost:
             self._log(self.road.log[-1])
         elif self.steps and self.run.get("page"):
             time.sleep(DT)                             # paused or there: the Live's clock has no pace of its own
-        return self.sync(counts)
+        dos = self.sync(counts)
+        if getattr(self, "new_trip", False):           # the last trip ended at its destination: the planner has none to drive
+            self.new_trip = False
+            if counts.get("trip", 0) <= 0:
+                dos = list(dos or []) + ["+trip 1"]
+        return dos
 
     def sync(self, counts):
         r = self.reading()                             # no argument: the tick's latch takes none (a copy, spec/17 amendment 4)
@@ -129,6 +142,12 @@ class RoadHost:
 
     # ── the commands ──
     def on_event(self, name, args):
+        if self.spec == "task":
+            w = self.shared.setdefault("wish", road_wishes.new())
+            if road_wishes.take(w, name) == "around":
+                w["said"].append(road_wishes.around(self.road.observe()[0], self.road.observe()[1]))
+            self._log({"t": round(self.road.t, 2), "member": "task", "rule": name})
+            return
         cmd = restrict.command(name)
         if cmd is not None:
             self.now_due = False                       # this period's command is given
@@ -146,7 +165,7 @@ class RoadHost:
                 self.shared["watched"] = time.monotonic() + WATCHED_S
             elif line.startswith("run:"):
                 _, scenario, seed = line.split(":")
-                self.shared["next"] = dict(self.run, scenario=scenario, seed=int(seed))
+                self.start_run(dict(self.run, scenario=scenario, seed=int(seed)))
             elif line in ("play", "pause"):
                 self.shared["paused"] = line == "pause"
             elif line.startswith("speed:"):
@@ -169,24 +188,31 @@ class RoadHost:
         out = [road_frames.scene_frame(self.road)] if watched or self.beat % UNWATCHED_EVERY == 0 else []
         if self.beat % NET_EVERY == 1:
             out.insert(0, road_frames.net_frame(self.road))
+        w = self.shared.get("wish")
+        while w and w["said"]:
+            out.append({"ev": "world/message", "text": w["said"].pop(0)})
         if self.road.arrived() and not self.shared.get("said_arrived"):
             self.shared["said_arrived"] = True
             out.append(road_frames.summary_frame(self.road))
         return out
 
-    def new_episode(self):
-        """The next run: the first host of the hierarchy to come closes the old world and opens the new one, the others find it; each starts over."""
-        spec = self.shared.pop("next", None)
-        if spec is not None or self.shared["world"] is self.road:
-            close = getattr(self.shared["world"], "close", None)
-            if close:
-                close()                                # one SUMO at a time
-            self.run = spec or self.run
-            self.shared["world"] = new_world(self.run)
+    def start_run(self, spec):
+        """The next run, now: one SUMO at a time. Every host finds the new world at its next reading (world_now)."""
+        close = getattr(self.shared["world"], "close", None)
+        if close:
+            close()
+        self.run = spec
+        self.shared["world"] = new_world(spec)
+        self.shared.update(paused=False, said_arrived=False, wish=road_wishes.new())
+
+    def world_now(self):
+        """The shared world, if a new run replaced it: the copies start over. → True when it did."""
+        if self.road is self.shared["world"]:
+            return False
         self.road = self.shared["world"]
-        self.run = dict(self.run, scenario=self.road.scenario, seed=self.road.seed) if hasattr(self.road, "scenario") else self.run
-        self.beat, self.latched, self.latched_at, self.now_due = 0, None, None, True
-        self.shared["paused"] = self.shared["said_arrived"] = False
+        self.latched, self.latched_at, self.now_due = None, None, True
+        self.new_trip = self.spec == "planner"
+        return True
 
     def pending(self):
         return False

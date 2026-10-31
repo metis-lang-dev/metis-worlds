@@ -27,7 +27,7 @@ def packages():
 
 
 def test_the_road_packages_load():
-    assert {d.name for d in packages()} == {"responder", "planner", "road_director"}
+    assert {d.name for d in packages()} == {"responder", "planner", "road_director", "task"}
 
 
 @pytest.mark.parametrize("name", ["responder", "planner"])

@@ -1,0 +1,29 @@
+% task — what the person asks of the drive, one atom an utterance (intent.yaml), each taken at once; its rule's name tells the host (road_wishes.py), which turns it into the
+% planner's preference. The person asks, the planner decides, the responder shields.
+catalog task 1.
+provenance text "the person's words as the planner's preferences" "2026-10-31".
+stages (act).
+layers (dyn).
+type pace {easy normal brisk}.
+type side {left right}.
+pred set_pace(pace) : task.
+pred change_lane(side) : task.
+pred pass_lead : task.
+pred follow_lead : task.
+pred resume_plan : task.
+pred what_around : task.
+namespace task produce (dyn).
+stage act {
+  %% I set the pace: {P}.
+  pace [dyn] : set_pace(P) -o ().
+  %% I ask the planner for the {D} lane.
+  lane [dyn] : change_lane(D) -o ().
+  %% I ask the planner to pass the car ahead.
+  pass [dyn] : pass_lead -o ().
+  %% I ask the planner to stay behind the car ahead.
+  follow [dyn] : follow_lead -o ().
+  %% I drop what you asked: the planner goes on by itself.
+  resume [dyn] : resume_plan -o ().
+  %% I look around.
+  around [dyn] : what_around -o ().
+}

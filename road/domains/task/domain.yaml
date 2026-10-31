@@ -1,0 +1,11 @@
+# task — the person's words on the road (road-agent s-357becc7 step 3): one intent an utterance, a preference for the planner (road_wishes.py), never a command to the
+# controls. It stands outside the composition: it holds no resource and the director does not grant it anything, so road's image is unchanged. Only the page loads it.
+display: the task
+line: "what you ask of the drive: a pace, a lane, pass or follow the car ahead, what is around"
+voice: own
+program: task.llp
+host: road_host.py:make
+clock: {beats: 1}
+intent: {spec: intent.yaml}
+shared: {set_pace: in, change_lane: in, pass_lead: in, follow_lead: in, resume_plan: in, what_around: in}
+gating: program
