@@ -481,7 +481,7 @@ def director_start(tree=False):
     out = ["active(task)", "attention(task)", "fresh", "inactive(nav)", "inactive(act)"]
     if tree:
         sp = [d for d in SPECS if d != "task"]
-        out += ["free(%s)" % r for r in RESOURCES] + ["gen(%s,g0)" % r for r in RESOURCES] + ["issue(%s,t0)" % r for r in RESOURCES] + ["serving(%s,t0)" % r for r in RESOURCES]
+        out += ["free(%s)" % r for r in RESOURCES] + ["gen(%s,g0,woken)" % r for r in RESOURCES] + ["issue(%s,t0)" % r for r in RESOURCES] + ["serving(%s,t0)" % r for r in RESOURCES]
         out += ["path(task)", "tick__goal(task)"] + ["offpath(%s)" % d for d in sp]   # the planner on the path (its done pops it)
         out += ["nowant(%s)" % d for d in sp] + ["nolate(%s)" % d for d in sp] + ["nocommit(%s)" % d for d in sp] + ["age_of(%s,a0)" % d for d in SPECS]
     return out
