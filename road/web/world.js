@@ -48,19 +48,19 @@ function resetHierarchy() {                          // a new task: the last tas
   hier.ended = null; hier.goal = null;
   drawHierarchy();
 }
+// the road: the members beat on their clocks, none sleeps; what the tree director says is who holds the controls (free(controls) or holder(D, controls)), on hello from its
+// atoms and after that from its grants and revokes in the journal
+const DOING = { responder: 'watches the road', planner: 'plans', task: 'listens to you' };
 function hierarchy(f) {
-  const st = f.state || [];
-  const arg = a => a.slice(a.indexOf('(') + 1, -1).split(',');
-  const names = new Set([...ORDER.filter(d => st.some(a => arg(a)[0] === d)), ...st.filter(a => /^(in)?active\(/.test(a)).map(a => arg(a)[0])]);
-  for (const d of names) {
-    const r = hier.rows.get(d) || { name: d, goals: [] };
-    r.active = st.includes(`active(${d})`);
-    r.sent = st.find(a => a.startsWith(`sent(${d},`)) ? arg(st.find(a => a.startsWith(`sent(${d},`)))[1] : null;
-    r.pending = st.find(a => a.startsWith(`pending(${d},`)) ? arg(st.find(a => a.startsWith(`pending(${d},`)))[1] : null;
-    hier.rows.set(d, r);
-  }
-  hier.attention = (st.find(a => a.startsWith('attention(')) || '').slice(10, -1) || null;
-  hier.ended = (f.effects || []).find(e => e.startsWith('ended(')) || hier.ended;
+  for (const d of ORDER) if (!hier.rows.has(d)) hier.rows.set(d, { name: d, goals: [] });
+  const held = (f.state || []).find(a => /^holder\(.*,controls\)$/.test(a));
+  hier.holder = held ? held.slice(7, held.indexOf(',')) : null;
+  drawHierarchy();
+}
+function relay(rec) {
+  if (rec.res !== 'controls') return;
+  if (rec.what === 'grant') hier.holder = rec.domain;
+  else if (hier.holder === rec.domain) hier.holder = null;
   drawHierarchy();
 }
 function chainTo(task) {                             // the task's chain gives each specialist its last goal and result
@@ -71,14 +71,10 @@ function chainTo(task) {                             // the task's chain gives e
   drawHierarchy();
 }
 function drawHierarchy() {
-  const rows = [...hier.rows.values()].sort((a, b) => (ORDER.indexOf(a.name) + 99) % 99 - (ORDER.indexOf(b.name) + 99) % 99);
-  $('#hlist').innerHTML = rows.map(r => `<li data-domain="${esc(r.name)}" class="${r.active ? 'on' : 'off'}${hier.attention === r.name ? ' att' : ''}" tabindex="-1">
-    <b>${esc(r.name)}</b> <span class="st">${r.active ? (hier.attention === r.name ? 'attending' : 'active') : 'asleep'}</span>
-    ${r.sent ? `<span class="k">on ${esc(r.sent)}</span>` : ''}${r.pending ? `<span class="k">· put aside: ${esc(r.pending)}</span>` : ''}
-    ${hier.goal && hier.goal.domain === r.name ? `<span class="goal">goal: ${esc(hier.goal.text)}</span>` : ''}
-    ${r.last ? `<span class="g">${esc(r.last.goal)} → ${esc(r.last.result || '…')}</span>` : ''}
-    ${r.name === 'task' && (world.map?.map?.task?.text || world.map?.map?.task?.goal) ? `<span class="g">this game's task: ${esc(world.map.map.task.text || world.map.map.task.goal)}</span>` : ''}</li>`).join('');
-  $('#hstate').textContent = hier.ended ? `ended: ${hier.ended.slice(6, -1)}` : hier.attention ? `attention: ${hier.attention}` : '';
+  $('#hlist').innerHTML = ORDER.map(n => hier.rows.get(n)).filter(Boolean).map(r => `<li data-domain="${esc(r.name)}" class="on${hier.holder === r.name ? ' att' : ''}" tabindex="-1">
+    <b>${esc(r.name)}</b> <span class="st">${hier.holder === r.name ? 'holds the controls' : DOING[r.name]}</span>
+    ${r.said ? `<span class="g">${esc(r.said)}</span>` : ''}</li>`).join('');
+  $('#hstate').textContent = hier.holder ? `controls: ${hier.holder}` : 'controls: free';
 }
 
 // ── the journal pane: metis-agent's model, its chat rows ──
@@ -111,6 +107,8 @@ function commands(rec) {
     if (row.kind !== 'clause' || !COMMANDS.test(row.event) || row.event === lastCmd) continue;
     lastCmd = row.event;
     journalRow({ who: 'note', text: `${rec.domain}: ${row.line || row.event}` });
+    const r = hier.rows.get(rec.domain);
+    if (r) { r.said = row.line || row.event; drawHierarchy(); }
   }
 }
 
@@ -257,7 +255,6 @@ function status(f) {
     journalRow({ who: 'note', text: `${f.state}: ${f.text}` });
   }
   lastStatus = f.text || lastStatus;
-  $('#hstate').textContent = f.state === 'working' ? `attention: ${f.domain || hier.attention || ''}` : f.state || $('#hstate').textContent;
 }
 // the world's ask line carries its answers ("Fridge 1 is not … | put tomato 1 in microwave 1 | stop": task_domain's
 // asking lines); a recording without world/ask (record_run.py's) gives them so: the question, then each answer
@@ -317,6 +314,7 @@ async function frame(f) {
   if (f.ev === 'world/net') { world.map.net(f); return; }
   if (f.ev === 'world/summary') { world.map.summary(f); return; }
   if (f.ev === 'journal' && f.rec?.kind === 'dlg-world') return;       // the road: the page's own lines (watching, play, speed)
+  if (f.ev === 'journal' && f.rec?.kind === 'dlg-relay') relay(f.rec);
   if (f.ev === 'journal' && f.rec) commands(f.rec);
   rec('frame', { ev: f.ev });
   if (f.ev === 'world/message') { panel.core.frame({ ev: 'narration', id: `g${++say}`, sentence: f.text, kind: 'v3-card' }); journalRow({ who: 'agent', text: f.text }); return; }
