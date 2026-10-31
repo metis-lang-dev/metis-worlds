@@ -40,7 +40,7 @@ ITEM = re.compile(r"^\s*([a-zA-Z$]) - (.+?)\s*$", re.M)
 PAGE = re.compile(r"\((\d+) of (\d+)\)")
 ITEM_KEYS = set("dDeqrzwtTPRWAaQ,")   # the person's keys that can change what the hero carries
 ARTICLE = re.compile(r"^(an?|the|\d+)\s+")
-MESSAGES_ITEMS = re.compile(r"^\w - |you (drop|eat|finish eating|drink|read|throw)", re.I)   # said when what it carries changed
+MESSAGES_ITEMS = re.compile(r"^[\w$] - |you (drop|eat|finish eating|drink|read|throw)", re.I)   # said when what it carries changed
 EVERY_TURNS = 50                    # a checkpoint at least this often, so a replay stays short
 
 
