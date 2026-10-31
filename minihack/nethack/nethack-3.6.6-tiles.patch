@@ -1,0 +1,65 @@
+What minihack/nethack/build.sh changes in NetHack 3.6.6's source (nethack-366-src.tgz, sha256 cfde0c3a...), as a patch:
+the tile hints on (TTY_TILES_ESCCODES, tile.c), the tty window port only, and the glibc >= 2.34 build fix. No rule of the game
+changes. build.sh makes these same edits by sed, and also sets PREFIX to the install directory. Apply with patch -p1 in the source.
+
+--- a/include/config.h
++++ b/include/config.h
+@@ -498,7 +498,7 @@
+  * in the hints file or Makefile.
+  * Set boolean option vt_tiledata in your config file to turn this on.
+  * Note that gnome-terminal at least doesn't work with this. */
+-/* #define TTY_TILES_ESCCODES */
++#define TTY_TILES_ESCCODES
+ 
+ /* NetHack will execute an external program whenever a new message-window
+  * message is shown.  The program to execute is given in environment variable
+--- a/include/tradstdc.h
++++ b/include/tradstdc.h
+@@ -431,8 +431,6 @@
+ #define NORETURN __attribute__((noreturn))
+ /* disable gcc's __attribute__((__warn_unused_result__)) since explicitly
+    discarding the result by casting to (void) is not accepted as a 'use' */
+-#define __warn_unused_result__ /*empty*/
+-#define warn_unused_result /*empty*/
+ #endif
+ #endif
+ 
+--- a/sys/unix/hints/linux
++++ b/sys/unix/hints/linux
+@@ -20,7 +20,7 @@
+ 
+ POSTINSTALL=cp -n sys/unix/sysconf $(INSTDIR)/sysconf; $(CHOWN) $(GAMEUID) $(INSTDIR)/sysconf; $(CHGRP) $(GAMEGRP) $(INSTDIR)/sysconf; chmod $(VARFILEPERM) $(INSTDIR)/sysconf;
+ 
+-CFLAGS=-g -O -I../include -DNOTPARMDECL
++CFLAGS=-g -O -Wno-unused-result -I../include -DNOTPARMDECL
+ CFLAGS+=-DDLB
+ CFLAGS+=-DCOMPRESS=\"/bin/gzip\" -DCOMPRESS_EXTENSION=\".gz\"
+ CFLAGS+=-DSYSCF -DSYSCF_FILE=\"$(HACKDIR)/sysconf\" -DSECURE
+@@ -28,7 +28,7 @@
+ CFLAGS+=-DHACKDIR=\"$(HACKDIR)\"
+ CFLAGS+=-DDUMPLOG
+ CFLAGS+=-DCONFIG_ERROR_SECURE=FALSE
+-CFLAGS+=-DCURSES_GRAPHICS
++#CFLAGS+=-DCURSES_GRAPHICS
+ #CFLAGS+=-DEXTRA_SANITY_CHECKS
+ #CFLAGS+=-DEDIT_GETLIN
+ #CFLAGS+=-DSCORE_ON_BOTL
+@@ -39,13 +39,13 @@
+ # Only needed for GLIBC stack trace:
+ LFLAGS=-rdynamic
+ 
+-WINSRC = $(WINTTYSRC) $(WINCURSESSRC)
+-WINOBJ = $(WINTTYOBJ) $(WINCURSESOBJ)
+-WINLIB = $(WINTTYLIB) $(WINCURSESLIB)
++WINSRC = $(WINTTYSRC)
++WINOBJ = $(WINTTYOBJ)
++WINLIB = $(WINTTYLIB)
+ 
+ # if TTY_TILES_ESCCODES
+-#WINSRC += tile.c
+-#WINOBJ += tile.o
++WINSRC += tile.c
++WINOBJ += tile.o
+ 
+ WINTTYLIB=-lncurses -ltinfo
+ 
