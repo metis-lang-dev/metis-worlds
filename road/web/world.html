@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>The road</title>
+<style>
+  html, body { height: 100%; margin: 0; background: #14171c; color: #d8dde3; font: 13px/1.4 system-ui, sans-serif; }
+  #page { height: 100%; display: flex; flex-direction: column; }
+  #bar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding: 6px 10px; border-bottom: 1px solid #2c323a; }
+  #bar select, #bar input, #bar button { background: #14171c; color: inherit; border: 1px solid #2c323a; font: inherit; padding: 2px 8px; }
+  #bar input { width: 4em; }
+  #bar button { cursor: pointer; }
+  #bar button[aria-pressed="true"] { background: #2c323a; }
+  #conn { margin-left: auto; color: #8a939e; }
+  #main { flex: 1; min-height: 0; display: flex; }
+  #view { flex: 1; min-width: 0; border: 0; }
+  #wait { flex: 1; display: flex; align-items: center; justify-content: center; color: #8a939e; }
+  #side { width: 18em; flex: none; padding: 10px; border-left: 1px solid #2c323a; overflow: auto; }
+  #side h2 { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: #8a939e; margin: 12px 0 4px; }
+  #side h2:first-child { margin-top: 0; }
+  #side dl { display: grid; grid-template-columns: auto 1fr; gap: 1px 10px; margin: 0; }
+  #side dt { color: #8a939e; }
+  #side dd { margin: 0; overflow-wrap: anywhere; }
+  #side .danger { color: #ffb454; }
+</style>
+</head>
+<body>
+<div id="page">
+  <div id="bar">
+    <label>scenario <select id="scenario"><option>straight</option><option>cut_out</option><option>cut_in</option></select></label>
+    <label>seed <input id="seed" type="number" min="1" value="1"></label>
+    <button id="run">new run</button>
+    <button id="play">pause</button>
+    <label>speed <select id="speed"><option>0.25</option><option>0.5</option><option selected>1</option><option>2</option><option>4</option></select></label>
+    <button id="follow" aria-pressed="false">follow the ego</button>
+    <span id="conn">connecting</span>
+  </div>
+  <div id="main">
+    <div id="wait">waiting for the road</div>
+    <div id="side">
+      <h2>The run, as SUMO has it</h2><dl id="run-info"></dl>
+      <h2>The ego, as SUMO has it</h2><dl id="ego"></dl>
+      <h2>Roles, as the ego believes</h2><dl id="roles"></dl>
+    </div>
+  </div>
+</div>
+<script type="module" src="world.js"></script>
+</body>
+</html>
