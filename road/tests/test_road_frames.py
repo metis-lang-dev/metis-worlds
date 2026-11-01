@@ -229,3 +229,21 @@ def test_around_says_the_roles():
     assert W.around({}, {"lead": "x", "followleft": "y"}) == "I see a car ahead, a car behind on the left."
     assert "too close" in W.around({"dangerous(lead)": 1}, {"lead": "x"})
     assert W.around({}, {}) == "I see no one near."
+
+
+def test_a_town_gives_every_car_a_connected_way(tmp_path):
+    """Town01's routes, seeded: the same seed the same routes, each way connected edge to edge, no sidewalk-only edge. No SUMO runs."""
+    import xml.etree.ElementTree as ET
+    import sumo_world as SW
+    net, routes = SW.town(str(tmp_path), 1, n=5)
+    edges = SW._town(net)
+    root = ET.parse(routes).getroot()
+    cars = root.findall("vehicle")
+    assert len(cars) == 6 and sum(c.get("id") == SW.EGO for c in cars) == 1
+    departs = [float(c.get("depart")) for c in cars]
+    assert departs == sorted(departs)                       # SUMO drops an out-of-order one
+    for c in cars:
+        way = c.find("route").get("edges").split()
+        assert all(b in edges[a]["next"] for a, b in zip(way, way[1:]))
+    again = SW.town(str(tmp_path / "again"), 1, n=5)[1] if (tmp_path / "again").mkdir() is None else None
+    assert open(again).read() == open(routes).read()

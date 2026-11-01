@@ -3,7 +3,7 @@ over TraCI, headless, at the responder's step (0.1 s), the ego under the stack's
 
 - The net and the routes: a scenario writes them into a work directory (`straight`: the old harness's 1 km two-lane
   road with its planted calm / aggr vTypes, the ego behind the traffic and faster than the calm cap, so it must
-  brake or change lanes; more scenarios join as the cases need them). Every vehicle in depart order (SUMO drops an
+  brake or change lanes; `town01`: a CARLA town from road/maps, every car on its own way; more scenarios join as the cases need them). Every vehicle in depart order (SUMO drops an
   out-of-order one silently).
 - The ego: speed mode 0 and lane-change mode 0 (no SUMO safety, no strategic changes: the RSS stack is what is under
   test, and a TraCI change is done as asked); its acceleration set each step (setAcceleration for one step), a lane
@@ -15,16 +15,20 @@ over TraCI, headless, at the responder's step (0.1 s), the ego under the stack's
     w = SumoWorld(scenario, work, seed); w.start(); w.step(); w.truth() · w.ego() · w.control(accel, lane) · w.close()
 
 The TraCI module is injected (`traci=`) so the tests run without a simulator; the default imports the system's."""
+import heapq
 import math
 import os
 import random
 import subprocess
 import sys
+import xml.etree.ElementTree as ET
 
 DT = 0.1
 EGO = "ego"
 LC_DURATION = 1.0              # a lane change takes 1 s (the restrictor's contract, step 2)
 EDGE_M, LANES = 1000.0, 2
+MAPS = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "maps")   # road/maps: the towns' nets
+ROUTE_M = 1500.0               # a town's way, m
 VTYPES = {                     # the old harness's planted styles (metispy sumo_harness): the ground truth of a style
     "calm": dict(accel=1.0, decel=2.0, sigma=0.2, maxSpeed=8.0, tau=1.4, color="0,0,1"),
     "aggr": dict(accel=3.0, decel=4.5, sigma=0.8, maxSpeed=15.0, tau=0.9, color="1,0,0"),
@@ -107,7 +111,67 @@ def cut_in(work, seed, n=0):
     return _net(work), _routes(work, "cut_in_%d.rou.xml" % seed, rows), script
 
 
-SCENARIOS = {"straight": straight, "cut_out": cut_out, "cut_in": cut_in}
+def _town(net):
+    """A CARLA town's net as routes: the edges a car can drive, each with the edges it connects to and its length."""
+    root = ET.parse(net).getroot()
+    edges = {}
+    for e in root.findall("edge"):
+        lanes = e.findall("lane")
+        if e.get("function", "normal") == "normal" and lanes and any(la.get("allow") in (None, "passenger") or "passenger" in la.get("allow", "").split() for la in lanes):
+            edges[e.get("id")] = {"length": float(lanes[0].get("length")), "next": set()}
+    for c in root.findall("connection"):
+        if c.get("from") in edges and c.get("to") in edges:
+            edges[c.get("from")]["next"].add(c.get("to"))
+    return edges
+
+
+def _route_from(edges, start, want):
+    """The shortest way from START to the edge nearest WANT metres out (Dijkstra). → the edges in order."""
+    dist, prev, heap = {start: 0.0}, {}, [(0.0, start)]
+    while heap:
+        d, e = heapq.heappop(heap)
+        for n in sorted(edges[e]["next"]):
+            nd = d + edges[n]["length"]
+            if nd < dist.get(n, math.inf):
+                dist[n], prev[n] = nd, e
+                heapq.heappush(heap, (nd, n))
+    end = min(sorted(dist), key=lambda e: abs(dist[e] - want))
+    way = [end]
+    while way[-1] != start:
+        way.append(prev[way[-1]])
+    return way[::-1]
+
+
+def town(work, seed, n=30, name="Town01"):
+    """A CARLA town (road/maps): the ego on a seeded way about ROUTE_M long, N cars of the planted styles on their own seeded ways ahead of it. No destination: the ego arrives at
+    its route's end. → (net, routes)."""
+    net = os.path.join(MAPS, name + ".net.xml")
+    edges = _town(net)
+    rng = random.Random(seed)
+    names = sorted(edges)
+    longest = lambda s: _route_from(edges, s, ROUTE_M)
+    def way():
+        for _ in range(50):
+            w = longest(rng.choice(names))
+            if sum(edges[e]["length"] for e in w) > ROUTE_M / 3:
+                return w
+        raise RuntimeError("%s: no way of %g m" % (name, ROUTE_M / 3))
+    rows = [(8.0, '<vehicle id="%s" type="aggr" depart="8.0" departSpeed="6"><route edges="%s"/></vehicle>' % (EGO, " ".join(way())))]
+    for i in range(n):
+        vt = "calm" if rng.random() < 0.5 else "aggr"
+        rows.append((i * 0.5, '<vehicle id="%s_%d" type="%s" depart="%.1f" departLane="best" departSpeed="random"><route edges="%s"/></vehicle>'
+                     % (vt, i, vt, i * 0.5, " ".join(way()))))
+    lines = ["<routes>"]
+    lines += ['<vType id="%s" accel="%s" decel="%s" sigma="%s" maxSpeed="%s" tau="%s" color="%s"/>' % (k, p["accel"], p["decel"], p["sigma"], p["maxSpeed"], p["tau"], p["color"]) for k, p in VTYPES.items()]
+    lines += [x for _, x in sorted(rows, key=lambda r: r[0])]
+    lines.append("</routes>")
+    routes = os.path.join(work, "%s_%d.rou.xml" % (name, seed))
+    with open(routes, "w") as f:
+        f.write("\n".join(lines))
+    return net, routes
+
+
+SCENARIOS = {"straight": straight, "cut_out": cut_out, "cut_in": cut_in, "town01": town}
 DESTS = {"straight": 950.0, "cut_out": 400.0, "cut_in": 400.0}       # the ego's destination (s on its lane), short of the net's end: arrived
                                   # while it is still in the net (TraCI drops a vehicle that leaves)
 

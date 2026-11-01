@@ -46,7 +46,9 @@ export class RoadMap {
 
   net(f) {
     this.dash.net(f);
-    if (this.frame) { this.post({ net: f.net }); return; }
+    const key = f.lanes.map(l => l.id).join();          // the client reads its road once: another road, another frame
+    if (this.frame && key === this.netKey) return;
+    this.netKey = key; this.ready = false;
     this.frame = Object.assign(document.createElement('iframe'), { id: 'view', src: 'client.html' });
     this.frame.addEventListener('load', () => { this.ready = true; this.post({ net: f.net }); if (this.following) this.post({ follow: this.ego }); });
     this.box.replaceChildren(this.frame);

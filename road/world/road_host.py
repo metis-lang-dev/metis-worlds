@@ -186,7 +186,7 @@ class RoadHost:
             return []
         watched = self.shared.get("watched", 0) > time.monotonic()
         out = [road_frames.scene_frame(self.road)] if watched or self.beat % UNWATCHED_EVERY == 0 else []
-        if self.beat % NET_EVERY == 1:
+        if self.beat % NET_EVERY == 1 or self.shared.pop("net_due", False):
             out.insert(0, road_frames.net_frame(self.road))
         w = self.shared.get("wish")
         while w and w["said"]:
@@ -203,7 +203,7 @@ class RoadHost:
             close()
         self.run = spec
         self.shared["world"] = new_world(spec)
-        self.shared.update(paused=False, said_arrived=False, wish=road_wishes.new())
+        self.shared.update(paused=False, said_arrived=False, wish=road_wishes.new(), net_due=True)
 
     def world_now(self):
         """The shared world, if a new run replaced it: the copies start over. → True when it did."""
