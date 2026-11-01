@@ -1,5 +1,6 @@
 """The road page's frames and the responder host's page faces (road-agent s-357becc7 step 1): road_frames over a Loop's readings, the world lines,
 the pace, the next run. No SUMO runs here."""
+import json
 import os
 import sys
 from types import SimpleNamespace
@@ -471,3 +472,13 @@ def test_a_turn_changes_the_egos_route_or_says_there_is_none(tmp_path):
     assert w.turn("left") is None
     h.wish("turn[D=left]")
     assert h.shared["wish"]["said"][-1] == "There is no way left ahead."
+
+
+def test_the_rule_check_counts_a_short_log():
+    sys.path.insert(0, os.path.join(os.path.dirname(HERE), "tools"))
+    import rulecheck
+    with open(os.path.join(HERE, "rulecheck_log.jsonl")) as f:
+        runs = rulecheck.runs_of([json.loads(line) for line in f])
+    got = rulecheck.check(runs[0], rulecheck.read_net(os.path.join(os.path.dirname(HERE), "maps", "Town03.net.xml")))
+    assert len(runs) == 1 and got["ticks"] == 120 and got["stood"] == 0 and got["change_in_junction"] == 0 and got["abrupt"] == []
+    assert got["change_at_line"] == [] and got["signal_entries"] + got["minor_entries"] >= 1
