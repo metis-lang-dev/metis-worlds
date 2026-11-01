@@ -4,7 +4,7 @@ clock, `now`, commands and restrictor; only the world differs, SUMO's truth seen
 road_host picks it by the run spec (`"world": "sumo"`, with scenario, seed, sensor, vehicles, work).
 
 The interface (RoadWorld's): observe() → (facts, roles, fold, states) once a tick · command(cmd, life) · step() ·
-tick, t, log (a row a step: t, s, v, a, lane, cmd, resp) · arrived() · summary().
+tick, t, log (a row a step: t, s, v, a, lane, cmd, resp, zone, danger, truth) · arrived() · summary().
 
 The episode begins with the ego on the road: SUMO is stepped until the ego is inserted (its depart; not ticks), then
 perceived and projected once. One tick (dt 0.1 s, the SUMO step; road_host's responder steps it):
@@ -180,7 +180,10 @@ class Loop:
         self.log.append({"tick": self.tick, "t": self.t, "sumo_t": self.world.t, "s": round(ego.s, 2), "v": round(ego.dyn.vmax, 2),
                          "lane": ego.lane, "a": None if applied is None else round(applied[0], 2),
                          "cmd": None if applied is None else list(applied[2]), "resp": fold["resp_lon"],
-                         "seen": len(self.perc.last["seen"]), "tracks": len(movers), "binding": binding})
+                         "seen": len(self.perc.last["seen"]), "tracks": len(movers), "binding": binding,
+                         "zone": next((a[len("zone_at(nextzone,"):-1] for a in self.proj["facts"] if a.startswith("zone_at(nextzone")), None),
+                         "danger": danger_rows(self.proj["states"], {m.id: (m.lane, m.s, m.dyn.vmax) for m in movers}),
+                         "truth": danger_rows(self._truth_states, {k: (p["lane"], p["s"], p["speed"]) for k, p in truth.items()}, self._truth_pairs)})
         return True
 
     def truth_movers(self, truth):
@@ -197,6 +200,7 @@ class Loop:
         others = self.truth_movers(truth)
         pairs = {p.id: p for p in self.lanemap.pairs(ego, others, lights=lights)}
         states = self.truth_sit.check(list(pairs.values()))
+        self._truth_states, self._truth_pairs = states, pairs
         fold = Situation.fold(states, ego.dyn)
         before = getattr(self, "_truth_fold", None)       # the truth as it stood when the command was decided
         if applied is not None and before is not None:
@@ -250,6 +254,25 @@ class Loop:
 
     def close(self):
         self.world.close()
+
+
+def danger_rows(states, where, pairs=None):
+    """The log's dangerous pairs, which the fold's response answers: the other (WHERE: id → lane, s, speed), its verdict,
+    each side's response time and a crossing's distances to enter and leave the zone (PAIRS: the truth's, by the pair's id
+    "other:type[:zone]")."""
+    out = []
+    for s in states:
+        if s.dangerous:
+            lane, at, v = where.get(s.id.split(":")[0], (None, None, None))
+            row = {"id": s.id, "role": s.role, "type": s.type, "resp": s.resp_lon, "d_lon": round(s.d_lon, 2), "d_safe": round(s.d_safe, 2),
+                   "xing": s.xing, "lane": lane, "s": None if at is None else round(at, 2), "v": None if v is None else round(v, 2)}
+            p = (pairs or {}).get(s.id)
+            if p is not None:
+                row.update(rho=[p.ego.rho, p.obj.rho])
+            if p is not None and p.d_enter is not None:
+                row.update({k: round(getattr(p, k), 2) for k in ("d_enter", "d_leave", "o_enter", "o_leave") if getattr(p, k) is not None})
+            out.append(row)
+    return out
 
 
 def rss_card():

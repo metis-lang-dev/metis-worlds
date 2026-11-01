@@ -185,6 +185,9 @@ def test_loop_projects_the_belief_and_restricts(straight, tmp_path):
     assert [c for c in tr.conn.calls if c[0] == "setSpeed"]                      # and given as the speed it makes
     assert loop.restricted == 1 and loop.latency == [1] and loop.violations == [] and loop.life == 9
     assert loop.log[-1]["resp"] == "brake_min" and loop.log[-1]["cmd"] == ["accel", None]
+    seen, real = loop.log[-1]["danger"][0], loop.log[-1]["truth"][0]              # the pair the brake answers: as believed, as it is
+    assert seen["role"] == "lead" and seen["resp"] == "brake_min" and seen["id"].split(":")[0] == roles["lead"]
+    assert real["id"].startswith("stop:") and (real["lane"], real["s"], real["v"]) == ("E_0", 125.0, 0.0) and len(real["rho"]) == 2
     assert loop.level_dest == 950.0 and not loop.arrived()
     loop.proj["ego"].s = 951.0
     assert loop.arrived()                                                        # s at dest, still in the net
