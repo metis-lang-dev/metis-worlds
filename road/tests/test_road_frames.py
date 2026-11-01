@@ -472,6 +472,28 @@ def test_a_turn_changes_the_egos_route_or_says_there_is_none(tmp_path):
     assert h.shared["wish"]["said"][-1] == "There is no way left ahead."
 
 
+def test_rulecheck_sorts_a_violation_by_why_it_is_one():
+    sys.path.insert(0, os.path.join(os.path.dirname(HERE), "tools"))
+    import rulecheck
+    car = {"id": "c:xing_ego_prio:1", "role": "a1", "resp": "brake_min", "lane": "-18_0", "s": 40.98}
+    row = lambda v=16.0, a=0.0, cmd=("keep", None), truth=(car,), danger=(): {"tick": 1, "v": v, "a": a, "cmd": list(cmd), "truth": list(truth), "danger": list(danger), "zone": "near"}
+    assert [x[0]["tick"] for x in rulecheck.violations([row(), row()])] == [1]
+    assert not rulecheck.violations([row(), row(a=-4.0)])                         # at the bound: none
+    assert not rulecheck.violations([row(v=0.0), row(v=0.0)])                     # at rest: a standing car meets any brake
+    assert rulecheck.sort_row(row(), row(), ["resp_lon(none)"])[0] == 2           # the belief has no such pair
+    assert rulecheck.sort_row(row(), row(), ["resp_lon(brake_min)"])[0] == 3
+    seen = row(danger=(car,))
+    assert rulecheck.sort_row(seen, row(), ["resp_lon(none)"])[0] == 5            # dangerous, no response, no release
+    settled = ["resp_lon(none)", "settled_to(a1,right)"]
+    assert rulecheck.sort_row(seen, row(), settled, [row()])[0] == 2              # the truth saw it hold its lane: the release is a lie
+    assert rulecheck.sort_row(seen, row(), settled)[0] == 1                       # no row saw it: the release stands unjudged
+    moved = dict(car, lane="-18_1")
+    assert rulecheck.sort_row(seen, row(), settled, [row(truth=(moved,))])[0] == 1
+    with open(os.path.join(HERE, "sort_seed2.jsonl")) as f:
+        rows = [json.loads(line) for line in f]
+    assert rows[-1]["violations"] == 37 and rows[-1]["by_class"]["projection"] == 37 and all(r["class"] == 2 for r in rows[:-1])
+
+
 def test_the_rule_check_counts_a_short_log():
     sys.path.insert(0, os.path.join(os.path.dirname(HERE), "tools"))
     import rulecheck
