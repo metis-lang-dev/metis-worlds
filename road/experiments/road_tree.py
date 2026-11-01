@@ -50,6 +50,18 @@ def world_commands():
     return yaml.safe_load((HERE.parent / "domains" / "composition.yaml").read_text())["world"]["in"]
 
 
+def config(journal, seed):
+    """The Live's config for the tree, no model: the run's and its replay's."""
+    from metis_agent import service as S
+    agent = Path(S.__file__).resolve().parents[1]
+    cfg = S.load_config(agent / "config.live.yaml")
+    cfg["intent"] = {"grammar": str(agent.parent / "go" / "grammar" / "e11-next.gbnf")}
+    cfg["v3"].update(journal=journal, catalog=[], loaded=NAMES, director="road_director")
+    cfg["domains"].update(names=NAMES, narrate=None, consult=False, records=None, quiet=[], pairs=[], seed=seed,
+                          clocks=[{"domain": d, "n": 1} for d in NAMES], tick=True)
+    return cfg
+
+
 def run(scenario, seed, out_dir, ticks=1500, world_kind=None, vehicles=None, trace=None):
     from metis_agent import service as S
     import road_host
@@ -65,12 +77,7 @@ def run(scenario, seed, out_dir, ticks=1500, world_kind=None, vehicles=None, tra
         run_spec["vehicles"] = vehicles
     spec.write_text(json.dumps(run_spec))
     os.environ["METIS_ROAD_RUN"] = str(spec)
-    agent = Path(S.__file__).resolve().parents[1]
-    cfg = S.load_config(agent / "config.live.yaml")
-    cfg["intent"] = {"grammar": str(agent.parent / "go" / "grammar" / "e11-next.gbnf")}
-    cfg["v3"].update(journal=str(out_dir / ("j-%s-%d.jsonl" % (scenario, seed))), catalog=[], loaded=NAMES, director="road_director")
-    cfg["domains"].update(names=NAMES, narrate=None, consult=False, records=None, quiet=[], pairs=[], seed=seed,
-                          clocks=[{"domain": d, "n": 1} for d in NAMES], tick=True)
+    cfg = config(str(out_dir / ("j-%s-%d.jsonl" % (scenario, seed))), seed)
     if trace:
         cfg["trace"] = {"dir": str(Path(trace) / ("%s-%d" % (scenario, seed))), "every": 200, "ring": 0, "commands": world_commands()}
     lv = S.Live(cfg, NoModel())
