@@ -46,6 +46,7 @@ export class RoadMap {
 
   net(f) {
     this.dash.net(f);
+    if (document.activeElement !== $('#scenario') && document.activeElement !== $('#seed')) { $('#scenario').value = f.scenario; $('#seed').value = f.seed; }   // what runs, also when a page opens on it
     const key = f.lanes.map(l => l.id).join();          // the client reads its road once: another road, another frame
     if (this.frame && key === this.netKey) return;
     this.netKey = key; this.ready = false;

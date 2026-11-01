@@ -371,7 +371,7 @@ async function live(url) {
   $('#ctrl').hidden = true;                          // play / step are the replay's: live has nothing to step
   await frame({ ev: 'world/map', url: q.get('map') || 'world/map.json' });   // the road: the service's
   // the socket back after another game's restart: the page starts again on it (the map, the card, the docks' contents)
-  const backend = await connect(url, { timeoutMs: 5000, reconnect: 2000, onReopen: b => world.loading ? location.reload() : hello(b) });
+  const backend = await connect(url, { timeoutMs: 5000, reconnect: 2000, onReopen: () => location.reload() });   // the road: the service restarted, so the page's own code may be new
   if (!backend) { $('#conn').textContent = `no agent at ${url}`; return null; }
   send = m => { if (backend.isOpen) backend.send(m); };
   $('#conn').textContent = 'live';
