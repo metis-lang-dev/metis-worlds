@@ -11,3 +11,11 @@ road/domains/task/intent/
 road/maps/Town11.net.xml
 road/maps/Town12.net.xml
 road/maps/Town13.net.xml
+# vim
+[._]*.s[a-v][a-z]
+[._]*.sw[a-p]
+[._]*.un~
+# emacs
+*~
+\#*\#
+.\#*
