@@ -84,7 +84,7 @@ def run(scenario, seed, out_dir, ticks=1500, world_kind=None, vehicles=None, tra
         if world.arrived():
             break
     wall = time.perf_counter() - t0
-    if lv.tracer is not None:
+    if getattr(lv, "tracer", None) is not None:
         lv.tracer.close()
     recs = list(lv.journal.recs)
     out = report(world, recs, log, wall)
