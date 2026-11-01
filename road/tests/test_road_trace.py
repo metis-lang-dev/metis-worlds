@@ -8,6 +8,7 @@ import pytest
 
 ROAD = Path(__file__).resolve().parents[1]
 pytest.importorskip("metis.trace")
+pytest.importorskip("metis_agent.trace")              # the reader: road's CI runs the siblings at their heads, whichever merged first
 pytestmark = pytest.mark.skipif(importlib.util.find_spec("metis_agent") is None, reason="no metis_agent (its venv)")
 
 
