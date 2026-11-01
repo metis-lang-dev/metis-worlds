@@ -36,15 +36,20 @@ def belief_class(vclass):
 def ego_route(lanemap, lane, edges):
     """The ego's way as lanes: its lane, then each later edge of its route at the same index (clamped to the
     edge's lanes), the internal lanes between filled in (LaneMap.route_through). An edge the lane map cannot
-    reach ends the way there."""
+    reach ends the way there. In a junction: on through its internal lanes to the lane it comes out on, so the ego in a
+    junction still has a way ahead (its roles)."""
     by_edge = {}
     for l in lanemap.lanes.values():
         if l.edge and not l.internal:
             by_edge.setdefault(l.edge, []).append(l)
+    out = [lane]
     cur = lanemap.lanes[lane]
+    while cur.internal and cur.succ and len(out) < 8:
+        cur = lanemap.lanes[cur.succ[0]]
+        out.append(cur.id)
     if cur.internal or cur.edge not in edges:
-        return [lane]
-    idx, out = cur.index, [lane]
+        return out
+    idx = cur.index
     for e in edges[edges.index(cur.edge) + 1:]:
         ls = sorted(by_edge.get(e, ()), key=lambda l: l.index)
         if not ls:

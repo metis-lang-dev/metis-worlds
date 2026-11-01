@@ -375,7 +375,7 @@ class LaneMap:
         """The road roles of MOVERS around EGO → {role: mover id}, a role nobody fills left out. In NEAR_ROLES order,
         then a1..aK, then vru1..vruJ, a mover taking the first role that fits and no mover two; ties by mover id.
         - lead: the nearest ahead (`ahead` ≥ 0) on the ego's way, its lane or a later lane of its route; follower:
-          the nearest behind on the ego's lane.
+          the nearest behind on the ego's lane, and in a junction on the lanes that lead into its internal lane.
         - leadleft / followleft: the nearest ahead / behind (by s relative to the ego's) on the ego lane's left
           neighbour, a same-direction one only; leadright / followright likewise on the right.
         - a1..aK: the remaining vehicles whose pair (`pairs`, under LIGHTS) is not not_relevant, nearest first by d_lon,
@@ -386,8 +386,11 @@ class LaneMap:
         sides = (("left", None if la.left_opposite else la.left), ("right", None if la.right_opposite else la.right))
         cand = {r: [] for r in NEAR_ROLES}
         movers = [o for o in movers if o.id != ego.id]
+        behind = {l.id: l.length for l in self.lanes.values() if ego.lane in l.succ} if la.internal else {}
         for o in movers:
             d = self.ahead(route, ego.s, o.lane, o.s)
+            if o.lane in behind:
+                cand["follower"].append((ego.s + behind[o.lane] - o.s, o.id))
             if d is not None and d >= 0:
                 cand["lead"].append((d, o.id))
             if o.lane == ego.lane and o.s < ego.s:

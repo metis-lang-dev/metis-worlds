@@ -72,3 +72,12 @@ def test_the_next_zone_and_its_holder(m):
     assert m.zone_roles(ego, [inside], {}) == {"nextzone": z.id, "holder": None}  # inside, but no role
     past = ego_on(m, ["CE_0"], 10.0)
     assert m.zone_roles(past, [inside], r) == {"nextzone": None, "holder": None}
+
+
+def test_in_a_junction_the_roles_still_bind(m):
+    """On an internal lane the way goes on through it (the host's ego_route gives such a route): the car ahead is the lead, the car still on the lane into the junction the follower."""
+    inner = m.route_through(["EC_0", "CW_0"])[1]
+    route = m.route_through(["EC_0", "CW_0"])[1:]
+    ego = mover(m, "ego", inner, 2.0, route=route, ego=True)
+    roles = m.roles(ego, [mover(m, "ahead", "CW_0", 20.0), mover(m, "behind", "EC_0", m.lanes["EC_0"].length - 5.0)])
+    assert roles["lead"] == "ahead" and roles["follower"] == "behind"
