@@ -1,13 +1,13 @@
 """road_wishes.py — what the person asked of the drive (road-agent s-357becc7 step 3): the task's rules name a wish here, and the planner's copy of the world reads it. Only the
-planner's facts change, and only as far as they already gate its own rules: no new predicate, no change to the planner or the responder, road's image as it was. The planner
+planner's facts change, and only as far as they already gate its own rules: no new predicate. It never says a thing of the world: lead_slow is the truth of a slow lead, and a wish is a change_reason. The planner
 still decides by its keep-table, the restrictor and the responder see the world as it is, so a wish can never make the drive less safe than the planner alone.
 
-    easy      a target speed, EASY_MS (pace_limit): the host's classes read it as the lane's limit (road_facts.facts, pace), so the planner brakes down to it with its own soft brake
-    brisk     a lead ahead reads as slow: the planner looks for a way past sooner
-    lane D    the other side unsettled, the lead slow, no speeding up or keeping the limit: `change` to D is what is left, when it is safe; else it follows
+    easy      a target speed, EASY_MS (pace_limit): the host's target classes read it (road_facts.facts, pace), so the planner brakes down to it with its own soft brake
+    brisk     a lead ahead is a reason to change, each adjacent side: the planner looks for a way past sooner
+    lane D    a reason to change to D, the other side unsettled: `change` to D when it is safe; until then it drives on by the target classes
     pass      as lane, either side
     follow    no side settled: no lane change
-    stop      nothing to speed up or keep: the planner's own gentle brake (brake_follow) until the car stands, and holds it; go takes it back
+    stop      a target of 0: the planner's own gentle brake (brake_target) until the car stands (STOPPED), and it keeps that; go takes it back
     a turn    no wish of the planner's: the ego's route (SumoWorld.turn); when the turn needs another lane, the lane wish for it (turn_lanes)
     the route the host's own lane wish, QUIET (nothing said): towards a lane that continues the route (SumoWorld.lane_for_route)
 A one-shot wish (lane, pass) stands WISH_TICKS planner ticks, then is dropped and the reason said; at once when there is no lane on that side."""
@@ -16,6 +16,7 @@ import re
 EASY_MS = 6.0
 WISH_TICKS = 10
 SIDES = ("left", "right")
+STOPPED = 0.1      # m/s: under this, a stop wish's target of 0 is met
 
 
 def new():
@@ -63,6 +64,8 @@ def why_not(facts, want):
     for s in open_:
         if "settled(%s)" % s not in facts:
             return "I only just left the %s lane" % s
+        if "zone_at(nextzone,near)" in facts or "zone_at(nextzone,at)" in facts:
+            return "too close to the junction"
         for role in ("lead" + s, "follow" + s):
             if "safe_long(%s)" % role not in facts or "safe_lat(%s)" % role not in facts:
                 return "a car is too close on the %s" % s
@@ -78,13 +81,12 @@ def planner_facts(w, facts, v):
     """The planner's copy of the world, with the wish in it."""
     out = dict(facts)
     if w["stop"]:
-        for a in ("below_limit", "at_limit", "lead_ok", "lead_slow", "accel_ok", "keep_ok"):
+        for a in ("below_target", "at_target", "above_target", "lead_ok", "lead_slow", "accel_ok", "change_reason(left)", "change_reason(right)"):
             out.pop(a, None)
-        out["keep_no"] = 1
+        out["above_target" if v > STOPPED else "at_target"] = 1
         return out
-    if w["pace"] == "brisk" and "lead_ok" in out and "keep_ok" in out:
-        del out["lead_ok"]
-        out["lead_slow"] = 1
+    if w["pace"] == "brisk" and "type(lead,not_relevant)" not in out:
+        out.update(("change_reason(%s)" % s, 1) for s in SIDES if "adjacent(%s)" % s in out)
     if w["follow"]:
         for s in SIDES:
             out.pop("settled(%s)" % s, None)
@@ -92,10 +94,9 @@ def planner_facts(w, facts, v):
         for s in SIDES:
             if w["want"] not in ("any", s):
                 out.pop("settled(%s)" % s, None)
-        out.pop("below_limit", None)
-        out.pop("at_limit", None)
-        out.pop("lead_ok", None)
-        out["lead_slow"] = 1
+                out.pop("change_reason(%s)" % s, None)
+            elif "adjacent(%s)" % s in out:
+                out["change_reason(%s)" % s] = 1
     return out
 
 
@@ -117,7 +118,7 @@ def route_lane(w, edge, side):
 
 def without_sides(facts, sides):
     """The world with no lane on SIDES (SumoWorld.lane_sides): a shoulder beside the ego is no lane to change to."""
-    return {a: n for a, n in facts.items() if not any(a in ("adjacent(%s)" % s, "settled(%s)" % s) for s in sides)}
+    return {a: n for a, n in facts.items() if not any(a in ("adjacent(%s)" % s, "settled(%s)" % s, "change_reason(%s)" % s) for s in sides)}
 
 
 def planner_tick(w, facts):

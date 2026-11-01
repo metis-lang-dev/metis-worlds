@@ -20,8 +20,8 @@ a1..a3, vru1). The facts (every number stays here; the rules read classes):
   settled(D) when no change runs and the ego did not leave side D within SETTLE_S (LEFT_FROM: the world's (side, age
   s) of its last change): an observed fact of its own manoeuvre, never a belief (road step 5: the planner's change
   ping-pong between two lanes whose leads both read slow);
-- progress: below_limit (the ego under its lane's speed limit by more than 0.5 m/s), else at_limit; below_target, at_target, above_target
-  (the same against min(pace, limit), above by more than PACE_BAND); change_reason(D): a slow lead, each adjacent side; lead_slow (the
+- progress: below_target (the ego under what it wants by more than 0.5 m/s), above_target (over it by more than PACE_BAND), else at_target:
+  what it wants is min(pace, the limit in law; law_limit: inside a junction, the limit it came in on); change_reason(D): a slow lead, each adjacent side; lead_slow (the
   lead within SLOW_RANGE ahead, slower than the ego's limit by more than SLOW_MARGIN, and the ego not slower than it
   by more than SLOW_MARGIN: nothing to gain behind it), else lead_ok (accel_ok then brings the ego up to it); accel_ok when
   two plans (2 PLAN_T) of full acceleration keep the lead at a safe distance (gap_room), else accel_no; keep_ok when
@@ -118,6 +118,21 @@ def signal_of(link, lights):
     return LIGHTS.get(st[link.tl_link], "off") if link.tl_link < len(st) else "off"
 
 
+def law_limit(lm, lane):
+    """The limit in law at LANE. An internal lane's speed is netconvert's, from the turn's geometry, and no limit: inside a junction it is the
+    limit of the lane the ego came in on (where the map says none came in, the lane it comes out on)."""
+    for step in (lambda l: [o.id for o in lm.lanes.values() if l.id in o.succ], lambda l: l.succ):
+        cur = lm.lanes[lane]
+        for _ in range(8):                      # an internal chain's few lanes
+            if not cur.internal:
+                return lm.vcap(cur.id)
+            ways = step(cur)
+            if not ways:
+                break
+            cur = lm.lanes[ways[0]]
+    return lm.vcap(lane)
+
+
 def fold_of(states, movers, ego):
     """The fold: a dangerous pair whose other has settled into a lane not the ego's is released from it; a crossing never is: only geometry
     releases that one, or both standing (situation.respond_standing)."""
@@ -127,8 +142,8 @@ def fold_of(states, movers, ego):
 
 def facts(lm, ego, v, movers, sit, changing=None, dest=None, turn=None, lights=None, speeds=None, left_from=None, pace=None):
     """SPEEDS {mover id: v}: the movers' speeds (the lead's for lead_slow). LEFT_FROM (side, age s): the side the
-    ego's last lane change left, and how long ago. PACE: a target speed under the lane's limit, the limit its classes read; above it by PACE_BAND
-    the ego may not keep its speed (keep_no: the planner's soft brake)."""
+    ego's last lane change left, and how long ago. PACE: a target speed under the limit; above it by PACE_BAND the ego is above_target (the
+    planner's soft brake)."""
     ego.route = ego.route or [ego.lane]
     roles = lm.roles(ego, movers, lights=lights)
     role_of = {m: r for r, m in roles.items()}
@@ -173,8 +188,7 @@ def facts(lm, ego, v, movers, sit, changing=None, dest=None, turn=None, lights=N
         for side in ("left", "right"):
             if not (left_from and left_from[0] == side and left_from[1] < SETTLE_S):
                 out["settled(%s)" % side] = 1
-    cap = lm.vcap(ego.lane) if pace is None else min(pace, lm.vcap(ego.lane))
-    out["below_limit" if v < cap - 0.5 else "at_limit"] = 1
+    cap = law_limit(lm, ego.lane) if pace is None else min(pace, law_limit(lm, ego.lane))
     out["below_target" if v < cap - 0.5 else "above_target" if v > cap + PACE_BAND else "at_target"] = 1
     by_id = {m.id: m for m in movers}
     if "lead" in roles:
@@ -188,7 +202,7 @@ def facts(lm, ego, v, movers, sit, changing=None, dest=None, turn=None, lights=N
     if "lead_slow" not in out:
         out["lead_ok"] = 1
     out["accel_ok" if gap_room(pairs, ego, v, cap, ego.dyn.accel) else "accel_no"] = 1
-    out["keep_ok" if gap_room(pairs, ego, v, cap, 0.0) and (pace is None or v <= cap + PACE_BAND) else "keep_no"] = 1
+    out["keep_ok" if gap_room(pairs, ego, v, cap, 0.0) else "keep_no"] = 1
     if dest is not None and ego.s >= dest:
         out["at_dest"] = 1
     zr = lm.zone_roles(ego, movers, roles)                      # the zone binding: the library's, never by hand

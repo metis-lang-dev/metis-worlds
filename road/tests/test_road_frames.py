@@ -180,7 +180,7 @@ def test_the_pace_holds_a_step_to_its_time(monkeypatch):
     assert len(slept) == 1
 
 
-FACTS = {"below_limit": 1, "lead_ok": 1, "keep_ok": 1, "adjacent(left)": 1, "settled(left)": 1, "settled(right)": 1, "safe_long(leadleft)": 1, "safe_lat(leadleft)": 1,
+FACTS = {"below_target": 1, "lead_ok": 1, "keep_ok": 1, "adjacent(left)": 1, "settled(left)": 1, "settled(right)": 1, "safe_long(leadleft)": 1, "safe_lat(leadleft)": 1,
          "safe_long(followleft)": 1, "safe_lat(followleft)": 1, "dangerous(lead)": 1}
 
 
@@ -192,7 +192,8 @@ def test_a_wish_only_gates_what_the_planner_already_reads():
     W.take(w, "resume")
     W.take(w, "lane[D=left]")
     f = W.planner_facts(w, FACTS, 10.0)
-    assert f["lead_slow"] == 1 and "settled(left)" in f and "settled(right)" not in f and "below_limit" not in f and "lead_ok" not in f
+    assert f["change_reason(left)"] == 1 and "settled(left)" in f and "settled(right)" not in f and "change_reason(right)" not in f
+    assert "lead_slow" not in f and f["below_target"] == 1 and f["lead_ok"] == 1    # a wish says nothing of the lead: it drives on while it waits
     assert f["dangerous(lead)"] == 1 and f["safe_long(leadleft)"] == 1  # the safety facts stand as the world has them
     W.take(w, "follow")
     f = W.planner_facts(w, FACTS, 10.0)
@@ -213,6 +214,7 @@ def test_a_lane_wish_is_met_or_dropped_with_its_reason():
     w = W.new()
     W.take(w, "lane[D=right]")
     assert W.why_not(FACTS, "right") == "there is no lane on the right"
+    assert W.why_not(dict(FACTS, **{"zone_at(nextzone,near)": 1}), "left") == "too close to the junction"
 
 
 def test_only_the_planner_reads_the_wish():
@@ -222,7 +224,7 @@ def test_only_the_planner_reads_the_wish():
         h.observed, h.period = set(), 1
         h.shared["wish"] = W.new()
         W.take(h.shared["wish"], "lane[D=left]")
-        assert ("below_limit" in h.fresh()) is seen
+        assert ("settled(right)" in h.fresh()) is seen
 
 
 def test_around_says_the_roles():
@@ -348,7 +350,9 @@ def test_stop_is_the_planners_own_brake_and_go_takes_it_back():
     w = W.new()
     W.take(w, "stop")
     f = W.planner_facts(w, FACTS, 10.0)
-    assert f["keep_no"] == 1 and not {"below_limit", "at_limit", "lead_ok", "keep_ok"} & set(f) and f["dangerous(lead)"] == 1
+    assert f["above_target"] == 1 and not {"below_target", "at_target", "lead_ok", "accel_ok"} & set(f) and f["dangerous(lead)"] == 1
+    f = W.planner_facts(w, FACTS, 0.0)
+    assert f["at_target"] == 1 and "above_target" not in f and f["keep_ok"] == 1       # it stands: the keep holds it
     W.take(w, "go")
     assert W.planner_facts(w, FACTS, 10.0) == FACTS
 

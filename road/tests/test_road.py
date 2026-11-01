@@ -90,7 +90,7 @@ def planner_cmd(w):
     f = w.observe()[0]
     if "cross_overlap(nextzone)" in f:
         return ("brake", "brake_min_correct")
-    return ("accel", None) if "accel_ok" in f and "cross_settled(nextzone)" in f and "below_limit" in f else ("keep", None)
+    return ("accel", None) if "accel_ok" in f and "cross_settled(nextzone)" in f and "below_target" in f else ("keep", None)
 
 
 def planned(scenario, seed, phase=2):
@@ -180,6 +180,19 @@ def test_a_car_yields_only_from_another_lane_to_an_ego_with_the_priority():
     assert w._must_yield(same) is None                        # the ego's lane, the priority's: it drives on
 
 
+def test_inside_a_junction_the_limit_is_the_lane_it_came_in_on():
+    # netconvert's speed on an internal lane is the turn's geometry, no law: a car at the limit of its road is not above anything there
+    from types import SimpleNamespace as L
+    lanes = {"in": L(id="in", internal=False, succ=[":j_0"]), ":j_0": L(id=":j_0", internal=True, succ=[":j_1"]),
+             ":j_1": L(id=":j_1", internal=True, succ=["out"]), "out": L(id="out", internal=False, succ=[]),
+             ":k_0": L(id=":k_0", internal=True, succ=["out"])}
+    limit = {"in": 13.9, ":j_0": 6.5, ":j_1": 6.5, "out": 8.0, ":k_0": 5.0}
+    lm = L(lanes=lanes, vcap=limit.__getitem__)
+    assert road_facts.law_limit(lm, "in") == 13.9 and road_facts.law_limit(lm, "out") == 8.0
+    assert road_facts.law_limit(lm, ":j_0") == 13.9 and road_facts.law_limit(lm, ":j_1") == 13.9   # through the chain
+    assert road_facts.law_limit(lm, ":k_0") == 8.0                                                 # nothing leads in on this map: where it comes out
+
+
 def test_a_lead_slower_than_the_limit_but_faster_than_the_ego_is_no_slow_lead():
     # nina's SUMO run: the ego at 3.6 behind a lead at 6.7 (the limit 16.67) read lead_slow, so it never accelerated
     w = road_world.RoadWorld("cruise", 1)
@@ -190,8 +203,9 @@ def test_a_lead_slower_than_the_limit_but_faster_than_the_ego_is_no_slow_lead():
     assert "lead_slow" in facts(6.7, 6.7)                                         # at its speed: follow or change
     assert "lead_slow" in facts(5.0, 6.7)                                         # within the margin
     paced = lambda v: road_facts.facts(w.map, w.ego.m, v, [], Situation(), pace=6.0)[0]
-    assert "at_limit" in paced(6.0) and "keep_ok" in paced(8.0)                   # a pace's target reads as the limit
-    assert "below_limit" in paced(3.0) and "keep_no" in paced(14.0)               # far above it: the planner's soft brake
+    assert "at_target" in paced(6.0) and "at_target" in paced(8.0)                # a pace's target, its band
+    assert "below_target" in paced(3.0) and "above_target" in paced(14.0)         # far above it: the planner's soft brake
+    assert "keep_ok" in paced(14.0)                                               # no lead: keep_no is the lead's and nothing else's
 
 
 def test_the_merge_waits_when_the_other_lane_arrives_first():
