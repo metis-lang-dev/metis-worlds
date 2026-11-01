@@ -190,6 +190,7 @@ class State:
     xing_before: tuple = None          # a crossing: (case, ego in front) at the last safe cycle (Def 18); None: never safe
     resp_unst: str = "none"            # unstructured: none | continue | drive_away | brake
     bearing: float = None
+    resp_stand: str = "none"           # a crossing with both standing: none | drive_away | stay (respond_standing)
 
 
 def brake_set(dyn):
@@ -368,6 +369,7 @@ class Situation:
         self.xmemory = dict(xmemory or {})        # a crossing's id -> (Def 17 case, ego in front) at its last safe cycle
         self.umemory = dict(umemory or {})        # an unstructured pair's id -> the ego's continue set clear, then
         self.escalated = set()                    # crossings whose priority holder's response escalated (RSS rule 5)
+        self.away = set()                         # crossings the ego is driving away through, the other still standing
 
     def check(self, pairs):
         """→ [State] for PAIRS (the memory updated: rewritten while safe, frozen while dangerous, dropped for pairs
@@ -400,6 +402,13 @@ class Situation:
                 r_lon, r_lat = ("brake_min" if r_unst == "brake" else "none"), "none"
             else:
                 r_lon, r_lat = respond(p, dangerous, before, xbefore, escalated=p.id in self.escalated)
+            r_stand = "none"
+            if dangerous and p.type.startswith("xing") and (p.obj.vmax or 0.0) <= 0.0 and ((p.ego.vmax or 0.0) <= 0.0 or p.id in self.away):
+                r_stand, r_lon = respond_standing(p), "none"
+            if r_stand == "drive_away":
+                self.away.add(p.id)               # held once it moves, while the other stands
+            else:
+                self.away.discard(p.id)
             if dangerous and p.type == "xing_ego_prio" and r_lon == "brake_min":
                 self.escalated.add(p.id)          # held at least that while the pair stays dangerous
             else:
@@ -408,7 +417,7 @@ class Situation:
                              r_lon, r_lat, round(p.d_lon, 6), round(ds, 6), left, right,
                              r_lat if not left else "none", r_lat if not right else "none",
                              xing, xbefore if dangerous else ((xing, front) if xing else xbefore),
-                             r_unst, p.bearing))
+                             r_unst, p.bearing, r_stand))
         for k in [k for k in self.memory if k not in seen]:
             self.memory.pop(k)
         for k in [k for k in self.umemory if k not in seen]:
@@ -416,6 +425,7 @@ class Situation:
         for k in [k for k in self.xmemory if k not in seen]:
             self.xmemory.pop(k)
         self.escalated &= seen
+        self.away &= seen
         return out
 
     @staticmethod
@@ -467,6 +477,11 @@ class Situation:
                     out["resp_lon"] = max(out["resp_lon"], "brake_min", key=RESP_LON.index)
                     out["lon_range"][1] = min(out["lon_range"][1], -(ego.brake_min or 0.0))
             out["resp_unst"], out["drive_away_sector"] = r_u, sector
+        stand = [s.resp_stand for s in states if s.dangerous and s.resp_stand != "none"]
+        if "stay" in stand:
+            out["lon_range"][1] = min(out["lon_range"][1], 0.0)
+        elif stand and not unst and out["resp_lon"] == "none":  # along its way: the sector says nothing on a road
+            out["resp_unst"], out["drive_away_sector"] = "drive_away", 0
         return out
 
     @staticmethod
@@ -520,6 +535,17 @@ class Situation:
                 out["resp_lat_left(%s)" % folded.get("resp_lat_left", "none")] = 1
                 out["resp_lat_right(%s)" % folded.get("resp_lat_right", "none")] = 1
         return out
+
+
+def respond_standing(p):
+    """A dangerous crossing with both standing, which no brake can answer: → drive_away | stay. The danger stays true, the other may
+    start for all RSS's test knows, but a yielder in a dangerous situation may not start into the zone: its proper response is to stay,
+    so the one with the way can go and the pair cannot collide if both obey. With no priority the one already inside the zone goes."""
+    if p.type == "xing_ego_prio":
+        return "drive_away"
+    if p.type == "xing_same_prio" and p.d_enter == 0.0 and (p.d_leave or 0.0) > 0.0 and p.o_enter != 0.0:
+        return "drive_away"
+    return "stay"
 
 
 def respond(p, dangerous, before, xbefore=None, escalated=False):

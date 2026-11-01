@@ -148,3 +148,55 @@ def test_the_lateral_response_brakes_toward_the_object_only():
     plain = Situation.facts([s], fold)                                          # without detail: as before
     assert not any(k.startswith(("safe_lat_left", "safe_lat_right", "resp_side", "resp_lat_left", "xing"))
                    for k in plain)
+
+
+# -- a crossing with both standing: Town01 seed 1's stand, where no brake answers and the pair stays dangerous for ever -----
+
+PASSENGER = dict(accel=3.5, brake_min=4.0, brake_max=8.0, rho=2.0, min_dist=1.0)   # the road's: a standing one's stated stop is 14.125 m
+
+
+def standing(kind, d_enter=0.0, d_leave=10.34, o_enter=6.75, o_leave=25.75, ego_v=0.0, obj_v=0.0):
+    return Pair("x:" + kind, kind, d_enter=d_enter, d_leave=d_leave, o_enter=o_enter, o_leave=o_leave, role="a1",
+                ego=Dynamics(vmin=ego_v, vmax=ego_v, **PASSENGER), obj=Dynamics(vmin=obj_v, vmax=obj_v, **PASSENGER))
+
+
+def test_both_standing_the_way_goes_and_the_other_stays():
+    # the ego stands inside the zone holding the way, calm_5 stands short of it (the log's numbers at tick 300)
+    ego = Dynamics(vmin=0.0, vmax=0.0, **PASSENGER)
+    s = Situation().check([standing("xing_ego_prio")])[0]
+    assert s.dangerous and s.resp_stand == "drive_away" and s.resp_lon == "none"
+    f = Situation.fold([s], ego)
+    assert f["resp_lon"] == "none" and f["resp_unst"] == "drive_away" and f["drive_away_sector"] == 0
+    # the same pair from calm_5's seat: it stays, and nothing brakes
+    s = Situation().check([standing("xing_obj_prio", d_enter=6.75, d_leave=25.75, o_enter=0.0, o_leave=10.34)])[0]
+    assert s.dangerous and s.resp_stand == "stay" and s.resp_lon == "none"
+    f = Situation.fold([s], ego)
+    assert f["resp_lon"] == "none" and f["lon_range"][1] == 0.0 and "resp_unst" not in f
+
+
+def test_a_person_with_the_way_is_never_driven_away_from():
+    # the chair's people hold priority by its ports: a chair standing by a standing person stays, whatever its place
+    s = Situation().check([standing("xing_obj_prio")])[0]
+    assert s.resp_stand == "stay" and "resp_unst" not in Situation.fold([s], Dynamics(vmin=0.0, vmax=0.0, **PASSENGER))
+
+
+def test_no_priority_the_one_inside_goes():
+    assert Situation().check([standing("xing_same_prio")])[0].resp_stand == "drive_away"
+    outside = standing("xing_same_prio", d_enter=6.75, d_leave=25.75, o_enter=0.0, o_leave=10.34)
+    assert Situation().check([outside])[0].resp_stand == "stay"
+
+
+def test_a_drive_away_holds_while_the_other_stands_and_ends_when_it_moves():
+    sit = Situation()
+    assert sit.check([standing("xing_ego_prio")])[0].resp_stand == "drive_away"
+    assert sit.check([standing("xing_ego_prio", ego_v=2.0)])[0].resp_stand == "drive_away"      # moving now: not back to a brake
+    assert sit.check([standing("xing_ego_prio", ego_v=2.0, obj_v=1.0)])[0].resp_stand == "none"  # it moves after all
+    assert Situation().check([standing("xing_ego_prio", ego_v=2.0)])[0].resp_stand == "none"     # never stood: the usual response
+
+
+def test_one_pair_that_stays_or_brakes_holds_a_drive_away():
+    ego = Dynamics(vmin=0.0, vmax=0.0, **PASSENGER)
+    go = Situation().check([standing("xing_ego_prio")])[0]
+    stay = Situation().check([standing("xing_obj_prio")])[0]
+    f = Situation.fold([go, stay], ego)
+    assert "resp_unst" not in f and f["lon_range"][1] == 0.0
