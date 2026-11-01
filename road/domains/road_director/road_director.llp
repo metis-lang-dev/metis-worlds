@@ -5,7 +5,7 @@
 catalog road_director 1.
 provenance text "the road's director: the controls by request, grant and release, the responder first" "2026-10-26".
 include "iface/director_tree_domain.llp".
-include "../tick_types.llp".
+include "tick_types.llp".            % the family's, by name (METIS_HOME)
 
 type kind {none}.                         % it routes nothing (the Live still asks its arrival kinds)
 bwd specialist(domain).

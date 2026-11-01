@@ -12,6 +12,7 @@ import shutil
 import yaml
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+import road_host  # noqa: E402
 WEB = os.path.join(os.path.dirname(HERE), "web")
 NAMES = ["responder", "planner", "road_director", "task"]
 CARD = {"title": "The road, on SUMO", "about": ["An RSS road world: the responder answers every 0.1 s, the planner plans every second, the restrictor is the shield.",
@@ -34,6 +35,7 @@ def intent_files(task_dir):
 
 
 def install(root, agent_py, port=8400, scenario="straight", seed=1):
+    road_host.set_family_home()          # the road family through METIS_HOME (road-family s-f62c0ed8)
     intent_files(os.path.join(os.path.dirname(HERE), "domains", "task"))
     if os.path.exists(root):
         shutil.rmtree(root)
