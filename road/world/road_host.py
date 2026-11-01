@@ -311,6 +311,10 @@ class RoadHost:
         """Where the world is at a trace's checkpoint (metis.trace): the run and its time."""
         return {"scenario": self.run.get("scenario"), "seed": self.run.get("seed"), "world": self.run.get("world", "exerciser"), "t": round(self.road.t, 2)}
 
+    def trace_command(self, name):
+        """A fired rule's command as the restrictor emits it (kind, arg), for the trace's `out`."""
+        return restrict.command(name)
+
     def snapshot(self):
         return {"beat": self.beat}
 

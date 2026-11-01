@@ -42,6 +42,15 @@ def test_a_run_on_the_exerciser_replays_with_no_world(tmp_path, env):
     assert r["planner"].rules and r["road_director"].rules and r["planner"].out
 
 
+def test_a_command_in_the_trace_is_the_restrictors_kind_and_args(tmp_path, env):
+    from metis import trace
+    road_tree().run("cruise", 1, tmp_path, ticks=250, trace=tmp_path / "t")
+    out = [o for s in trace.read(tmp_path / "t" / "cruise-1") for t in s.ticks for o in t["members"].get("planner", {}).get("out", ())]
+    cmds = [o for o in out if isinstance(o, dict)]
+    assert {c["kind"] for c in cmds} >= {"accel", "keep"} and all(not c["args"] for c in cmds if c["kind"] in ("accel", "keep"))
+    assert any(isinstance(o, str) and o.startswith("tick__want(planner") for o in out), "every out port, not the commands alone"
+
+
 def test_a_checkpoint_says_the_runs_time(tmp_path, env):
     from metis import trace
     road_tree().run("cruise", 1, tmp_path, ticks=250, trace=tmp_path / "t")
