@@ -27,8 +27,8 @@ a1..a3, vru1). The facts (every number stays here; the rules read classes):
   two plans (2 PLAN_T) of full acceleration keep the lead at a safe distance (gap_room), else accel_no; keep_ok when
   two plans at the speed it has do, else keep_no; at_dest;
 - sight, by duty (SIGHT: the sensor's, a host with no sensor says seen_ahead and no road class): seen_ahead (its own way, to its stopping reach) else unseen_ahead;
-  road_in_view(nextzone) else road_hidden(nextzone), where the zone's priority is not the ego's (the crossing lanes back APPROACH);
-  with road_hidden, inch_room(nextzone) (at the line or past it, at a walk, short of the crossing lane by more than min_dist + INCH_MARGIN) else inch_no(nextzone);
+  road_in_view(nextzone) else road_hidden(nextzone), where the zone's priority is not the ego's and no red or amber governs (the crossing lanes back APPROACH);
+  with road_hidden, inch_room(nextzone) (at a walk, room behind any lead, short of the crossing lane by more than min_dist + INCH_MARGIN) else inch_no(nextzone);
 - signal(nextzone, L): the light on the next junction link of the way (signal_of), off with none or inside a junction; can_halt(nextzone):
   its line is within the hardest braking;
 - the next zone on the ego's route (role nextzone), or the next junction itself when its link has none (class by the line): zone_at(nextzone, C) with C far | near | at | in (the ego's
@@ -260,7 +260,8 @@ def facts(lm, ego, v, movers, sit, changing=None, dest=None, turn=None, lights=N
     zr = lm.zone_roles(ego, movers, roles)                      # the zone binding: the library's, never by hand
     near = lm.nearest_zone(ego.route, ego.s, length=ego.length) if zr["nextzone"] else None
     link = None if lm.lanes[ego.lane].internal else lm.next_link(ego.route, ego.s)   # inside a junction no line is ahead
-    out["signal(nextzone,%s)" % signal_of(link[0] if link else None, lights)] = 1
+    light = signal_of(link[0] if link else None, lights)
+    out["signal(nextzone,%s)" % light] = 1
     d = ego.dyn
     out["seen_ahead" if sight is None or seen_ahead(lm, ego.route, ego.s, sight, stated(v, 0.0, d.rho, d.brake_min)) else "unseen_ahead"] = 1
     reach = max(NEAR_RANGE, stated(v, 0.0, d.rho, d.brake_min) + NEAR_MARGIN)       # near: within its stopping reach
@@ -279,11 +280,11 @@ def facts(lm, ego, v, movers, sit, changing=None, dest=None, turn=None, lights=N
         out["zone_at(nextzone,%s)" % cls] = 1
         prio = lm.priority(z, lights)
         out["zprio(nextzone,%s)" % ("same" if prio is None else "ego" if prio == rl else "obj")] = 1
-        if sight is not None and prio is not None and prio != rl:
+        if sight is not None and prio is not None and prio != rl and light in ("off", "green_yield"):      # a red or an amber is the light's duty: no step forward
             hidden = not road_in_view(lm, z, rl, sight, APPROACH)
             out["road_hidden(nextzone)" if hidden else "road_in_view(nextzone)"] = 1
-            if hidden:                  # a step forward: from the line or past it, slowly, and never up to the crossing lane
-                room = (line <= AT_RANGE or lm.lanes[ego.lane].internal) and v <= INCH_MS + 0.2 and front > d.min_dist + INCH_MARGIN
+            if hidden:                  # on at a walk to where it can see: room behind any lead, and never up to the crossing lane
+                room = "accel_ok" in out and v <= INCH_MS + 0.2 and front > d.min_dist + INCH_MARGIN
                 out["inch_room(nextzone)" if room else "inch_no(nextzone)"] = 1
         out["can_stop(nextzone)" if stated(v, 0.0, d.rho, d.brake_min) <= max(0.0, line) else "late(nextzone)"] = 1
         occupants = [m for m in movers if inside(z, m)]
