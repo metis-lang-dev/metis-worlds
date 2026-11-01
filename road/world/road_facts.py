@@ -20,7 +20,8 @@ a1..a3, vru1). The facts (every number stays here; the rules read classes):
   settled(D) when no change runs and the ego did not leave side D within SETTLE_S (LEFT_FROM: the world's (side, age
   s) of its last change): an observed fact of its own manoeuvre, never a belief (road step 5: the planner's change
   ping-pong between two lanes whose leads both read slow);
-- progress: below_limit (the ego under its lane's speed limit by more than 0.5 m/s), else at_limit; lead_slow (the
+- progress: below_limit (the ego under its lane's speed limit by more than 0.5 m/s), else at_limit; below_target, at_target, above_target
+  (the same against min(pace, limit), above by more than PACE_BAND); change_reason(D): a slow lead, each adjacent side; lead_slow (the
   lead within SLOW_RANGE ahead, slower than the ego's limit by more than SLOW_MARGIN, and the ego not slower than it
   by more than SLOW_MARGIN: nothing to gain behind it), else lead_ok (accel_ok then brings the ego up to it); accel_ok when
   two plans (2 PLAN_T) of full acceleration keep the lead at a safe distance (gap_room), else accel_no; keep_ok when
@@ -174,6 +175,7 @@ def facts(lm, ego, v, movers, sit, changing=None, dest=None, turn=None, lights=N
                 out["settled(%s)" % side] = 1
     cap = lm.vcap(ego.lane) if pace is None else min(pace, lm.vcap(ego.lane))
     out["below_limit" if v < cap - 0.5 else "at_limit"] = 1
+    out["below_target" if v < cap - 0.5 else "above_target" if v > cap + PACE_BAND else "at_target"] = 1
     by_id = {m.id: m for m in movers}
     if "lead" in roles:
         lead = by_id[roles["lead"]]
@@ -181,6 +183,8 @@ def facts(lm, ego, v, movers, sit, changing=None, dest=None, turn=None, lights=N
         lv = (speeds or {}).get(lead.id, lead.dyn.vmax)
         if d is not None and 0 <= d <= SLOW_RANGE and lv < cap - SLOW_MARGIN and v >= lv - SLOW_MARGIN:
             out["lead_slow"] = 1
+    if "lead_slow" in out:
+        out.update(("change_reason(%s)" % s, 1) for s in ("left", "right") if "adjacent(%s)" % s in out)
     if "lead_slow" not in out:
         out["lead_ok"] = 1
     out["accel_ok" if gap_room(pairs, ego, v, cap, ego.dyn.accel) else "accel_no"] = 1
