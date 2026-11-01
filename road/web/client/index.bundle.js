@@ -108925,11 +108925,9 @@
 	var ANGULAR_VELOCITY = 5;
 	var ZOOM_SPEED = 0.95;
 	function onScroll(vector, event) {
-	    var delta = Math.ceil(event.deltaY / 10);
-	    // don't allow the user to continually infinitely scrolling
-	    if (delta > 3 || delta < -3) {
-	        vector.length *= Math.pow(ZOOM_SPEED, -delta);
-	    }
+	    event.preventDefault();
+	    var delta = event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? 400 : 1);
+	    vector.length = Math.max(6, Math.min(400, vector.length * Math.exp(Math.max(-120, Math.min(120, delta)) * 0.0015)));
 	}
 	function createOrbitKeyDown(angle) {
 	    var leftRotate = utils_1.createYAxisRotationMatrix3(three.Math.degToRad(5));
@@ -108982,11 +108980,27 @@
 	        this.rotationFn = rotateFn.bind(null, vector);
 	        this.scrollFn = onScroll.bind(null, vector);
 	        element.addEventListener('keydown', this.rotationFn);
-	        element.addEventListener('wheel', this.scrollFn);
+	        element.addEventListener('wheel', this.scrollFn, { passive: false });
+	        // the road's page: a drag on the view orbits the car
+	        var dragging = false;
+	        this.downFn = function (e) { dragging = e.target.tagName === 'CANVAS'; };
+	        this.upFn = function () { dragging = false; };
+	        this.moveFn = function (e) {
+	            if (!dragging || !e.buttons) return;
+	            var d = vector.direction, theta = Math.atan2(d.x, d.z) - e.movementX * 0.006;
+	            var phi = Math.max(0.1, Math.min(1.5, Math.acos(Math.max(-1, Math.min(1, d.y))) - e.movementY * 0.006));
+	            d.set(Math.sin(phi) * Math.sin(theta), Math.cos(phi), Math.sin(phi) * Math.cos(theta));
+	        };
+	        element.addEventListener('mousedown', this.downFn);
+	        window.addEventListener('mouseup', this.upFn);
+	        window.addEventListener('mousemove', this.moveFn);
 	    };
 	    FollowVehicleControls.prototype.dispose = function () {
 	        this.keyboardElement.removeEventListener('keydown', this.rotationFn, false);
 	        this.keyboardElement.removeEventListener('wheel', this.scrollFn, false);
+	        this.keyboardElement.removeEventListener('mousedown', this.downFn);
+	        window.removeEventListener('mouseup', this.upFn);
+	        window.removeEventListener('mousemove', this.moveFn);
 	    };
 	    FollowVehicleControls.prototype.update = function () {
 	        var objectPosition = this.object.getWorldPosition().clone();
@@ -109170,6 +109184,8 @@
 	var MIN_DISTANCE = 0;
 	var MAX_DISTANCE = Infinity;
 	var ZOOM_SPEED = 1.0;
+	var ZOOM_RATE = 0.0015;     // the road's page: the wheel's zoom per pixel of delta
+	var MIN_HEIGHT = 3, MAX_HEIGHT = 4000, MAX_GROUND = 6000, PAN_MARGIN = 200;   // m
 	var State;
 	(function (State) {
 	    State[State["NONE"] = 0] = "NONE";
@@ -109209,12 +109225,12 @@
 	        this.onMouseWheel = this.onMouseWheel.bind(this);
 	        mouseElement.addEventListener('keydown', this.onKeyDown, false);
 	        mouseElement.addEventListener('mousedown', this.onMouseDown, false);
-	        mouseElement.addEventListener('mousewheel', this.onMouseWheel, false);
+	        mouseElement.addEventListener('wheel', this.onMouseWheel, false);
 	    }
 	    PanAndRotateControls.prototype.dispose = function () {
 	        this.element.removeEventListener('keydown', this.onKeyDown, false);
 	        this.element.removeEventListener('mousedown', this.onMouseDown, false);
-	        this.element.removeEventListener('mousewheel', this.onMouseWheel, false);
+	        this.element.removeEventListener('wheel', this.onMouseWheel, false);
 	    };
 	    PanAndRotateControls.prototype.onKeyDown = function (event) {
 	        // we might miss keyup events when you switch tabs, e.g. by pressing ctrl+tab.
@@ -109244,47 +109260,50 @@
 	    };
 	    PanAndRotateControls.prototype.onMouseWheel = function (event) {
 	        event.preventDefault();
-	        this.zoom(event.deltaY);
+	        // the road's page: one speed for a wheel and a trackpad, towards the ground under the pointer, never through it
+	        var delta = event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? 400 : 1);
+	        delta = Math.max(-120, Math.min(120, delta));
+	        this.zoom(delta, this.getGroundCoordsForEvent(event));
 	        return true;
 	    };
-	    PanAndRotateControls.prototype.zoom = function (delta) {
-	        var zoomOffset = new three.Vector3();
-	        var te = this.camera.matrix.elements;
-	        zoomOffset.set(te[8], te[9], te[10]);
-	        zoomOffset.multiplyScalar(delta * ZOOM_SPEED * this.camera.position.y / 1000);
-	        this.camera.position.addVectors(this.camera.position, zoomOffset);
+	    PanAndRotateControls.prototype.zoom = function (delta, at) {
+	        var point = at || this.getGroundCoords(0, 0);
+	        var position = this.camera.position;
+	        if (!point) {                                 // looking over the horizon: straight along the view
+	            var te = this.camera.matrix.elements;
+	            position.add(new three.Vector3(te[8], te[9], te[10]).multiplyScalar(delta * Math.max(position.y, 5) / 400));
+	            position.y = Math.max(MIN_HEIGHT, Math.min(MAX_HEIGHT, position.y));
+	            return;
+	        }
+	        var offset = position.clone().sub(point).multiplyScalar(Math.exp(delta * ZOOM_RATE));
+	        var y = Math.max(MIN_HEIGHT, Math.min(MAX_HEIGHT, offset.y));
+	        offset.multiplyScalar(y / offset.y);
+	        position.copy(point).add(offset);
 	    };
-	    /** Get the ground plane coordinates for the given screen coordinate. x, y \in [-1, 1] */
+	    /** The ground under a screen point, x, y in [-1, 1]: the plane y = 0, unbounded, not the land's mesh; null at or above the horizon. */
 	    PanAndRotateControls.prototype.getGroundCoords = function (x, y) {
-	        var intersections = [];
 	        var raycaster = new three.Raycaster();
 	        raycaster.setFromCamera(new three.Vector2(x, y), this.camera);
-	        // This will produce results even if the groundPlane is hidden.
-	        this.groundPlane.raycast(raycaster, intersections);
-	        if (intersections.length !== 1) {
-	            return null;
-	        }
-	        else {
-	            return intersections[0].point;
-	        }
+	        var point = raycaster.ray.intersectPlane(new three.Plane(new three.Vector3(0, 1, 0), 0));
+	        return point && point.distanceTo(this.camera.position) < MAX_GROUND ? point : null;
 	    };
+	    /** From the canvas's own box: during a drag the event's target may be any element under the pointer. */
 	    PanAndRotateControls.prototype.getGroundCoordsForEvent = function (event) {
-	        var el = event.target;
-	        // Normalize coordinates to [-1, +1].
-	        var x = event.offsetX / el.offsetWidth * 2 - 1;
-	        var y = -(event.offsetY / el.offsetHeight) * 2 + 1;
-	        return this.getGroundCoords(x, y);
+	        var box = this.element.getBoundingClientRect();
+	        return this.getGroundCoords((event.clientX - box.left) / box.width * 2 - 1, -(event.clientY - box.top) / box.height * 2 + 1);
 	    };
 	    PanAndRotateControls.prototype.onMouseDown = function (event) {
 	        // programmatically force focus when you click on the element
 	        this.element.focus();
 	        var handleEvent = true;
 	        if (event.button === three.MOUSE.LEFT) {
-	            var panStart = this.getGroundCoordsForEvent(event);
-	            if (panStart) {
-	                this.state = State.PANNING;
-	                this.panStart = panStart;
-	            }
+	            // the road's page: a drag moves the view in step with the mouse, at the scale of the ground under the pointer when it began, not pinned to that point (near the
+	            // horizon one pixel is hundreds of metres, and the view would be thrown)
+	            var ground = this.getGroundCoordsForEvent(event);
+	            var far = ground ? ground.distanceTo(this.camera.position) : 2 * Math.max(this.camera.position.y, MIN_HEIGHT);
+	            this.panScale = 2 * Math.tan(three.Math.degToRad(this.camera.fov) / 2) * Math.min(far, 4 * Math.max(this.camera.position.y, MIN_HEIGHT)) / this.element.clientHeight;
+	            this.panAt = [event.clientX, event.clientY];
+	            this.state = State.PANNING;
 	        }
 	        else if (event.button === three.MOUSE.RIGHT) {
 	            // Ideally we'd like to orbit the ground coords for the center of the screen, (0, 0).
@@ -109306,12 +109325,16 @@
 	    };
 	    PanAndRotateControls.prototype.onMouseMove = function (event) {
 	        if (this.state === State.PANNING) {
-	            var panDelta = this.getGroundCoordsForEvent(event);
-	            if (!panDelta)
-	                return;
-	            var delta = new three.Vector3();
-	            delta.subVectors(this.panStart, panDelta);
-	            this.camera.position.addVectors(this.camera.position, delta);
+	            var dx = event.clientX - this.panAt[0], dy = event.clientY - this.panAt[1];
+	            this.panAt = [event.clientX, event.clientY];
+	            var te = this.camera.matrixWorld.elements;
+	            var right = new three.Vector3(te[0], 0, te[2]).normalize();
+	            var ahead = new three.Vector3(0, 1, 0).cross(right).normalize();    // on the ground, the way the camera looks
+	            var position = this.camera.position;
+	            position.addScaledVector(right, -dx * this.panScale).addScaledVector(ahead, dy * this.panScale);
+	            if (!this.panBox) this.panBox = new three.Box3().setFromObject(this.groundPlane);
+	            position.x = Math.max(this.panBox.min.x - PAN_MARGIN, Math.min(this.panBox.max.x + PAN_MARGIN, position.x));
+	            position.z = Math.max(this.panBox.min.z - PAN_MARGIN, Math.min(this.panBox.max.z + PAN_MARGIN, position.z));
 	        }
 	        else if (this.state === State.ROTATING) {
 	            var rotateDelta = new three.Vector2(event.movementX, event.movementY);
@@ -109378,10 +109401,10 @@
 	                this.camera.position.add(horizontal);
 	            }
 	            if (key_tracker_1.KEY_STATE[key_tracker_1.KEY_CODES.K] || key_tracker_1.KEY_STATE[key_tracker_1.KEY_CODES.W]) {
-	                this.zoom(-50);
+	                this.zoom(-40);
 	            }
 	            if (key_tracker_1.KEY_STATE[key_tracker_1.KEY_CODES.J] || key_tracker_1.KEY_STATE[key_tracker_1.KEY_CODES.S]) {
-	                this.zoom(+50);
+	                this.zoom(40);
 	            }
 	            if (key_tracker_1.KEY_STATE[key_tracker_1.KEY_CODES.LEFT]) {
 	                utils_1.rotateInWorldSpace(this.camera, new three.Vector3(0, 1, 0), VELOCITY_RAD);
