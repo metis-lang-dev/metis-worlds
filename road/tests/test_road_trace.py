@@ -124,7 +124,12 @@ stage safety {
 """
 
 
+family_units = pytest.mark.skipif("consumers" not in __import__("inspect").signature(getattr(__import__("metis_agent.trace", fromlist=["judge"]), "judge", lambda: None)).parameters,
+                                  reason="metis-agent before a family's unit: this CI's sibling at its head, until it merges")
+
+
 @judged
+@family_units
 def test_a_new_rule_of_a_commands_kind_shows_as_an_output(tmp_path, env):
     from metis_agent.trace import judge
     tree = road_tree()
