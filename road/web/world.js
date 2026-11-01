@@ -390,8 +390,8 @@ const backend = agentUrl ? await live(agentUrl) : null;
 const docks = world.docks = MetisShell.docks({
   // v3: the DIALOG drawer (fsttm-web's panel, its own part: the floor, barge-in, attention, the numbers), hidden until asked for
   // v4: the cards are tools, not folded (the world card and the journal shown by default as before; the dialog hidden)
-  names: ['talk', 'run', 'cars', 'traffic', 'hierarchy', 'world', 'journal', 'dialog'], key: 'roadpage.docks.v3', fold: false,
-  defaults: { talk: { shown: true, open: true }, run: { shown: true, open: true }, cars: { shown: false, open: true }, traffic: { shown: true, open: true }, hierarchy: { shown: false, open: true }, world: { shown: false, open: true }, journal: { shown: true, open: true },
+  names: ['talk', 'drive', 'run', 'cars', 'traffic', 'hierarchy', 'world', 'journal', 'dialog'], key: 'roadpage.docks.v4', fold: false,
+  defaults: { talk: { shown: true, open: true }, drive: { shown: true, open: true }, run: { shown: true, open: true }, cars: { shown: false, open: true }, traffic: { shown: false, open: true }, hierarchy: { shown: false, open: true }, world: { shown: false, open: true }, journal: { shown: true, open: true },
     dialog: { shown: false, open: true } },
   onChange: st => panel?.showDialog(!!st.dialog?.shown),              // hidden: the panel draws nothing there
 });
@@ -412,6 +412,7 @@ floorLook(panel.core.state());
 panel.showDialog(!!docks.state.dialog?.shown);
 // "stop" (the dialog's stop words) cuts the page's own voice; while the agent works or asks, it is also the
 // person's word to the agent (the ask's "stop" answer, F5): a turn of its own, past the floor's stop-word drop
+panel.core.dialog.stopWords = [];                    // the road: "stop" is the person's word for the car (road_hier.py), not the dialog's
 const say0 = panel.core.say.bind(panel.core);
 let stops = 0;
 panel.core.say = (text, opts = {}) => {

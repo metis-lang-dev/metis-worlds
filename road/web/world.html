@@ -164,6 +164,17 @@
         <header><span class="tw">▾</span><span class="tt">HIERARCHY</span><span id="hstate"></span><button class="x" type="button" aria-label="hide the hierarchy">✕</button></header>
         <div class="dbody"><ul id="hlist" tabindex="-1" aria-label="the domains"></ul></div>
       </section>
+      <section class="dock" id="dock-drive" data-dock="drive" tabindex="-1" aria-label="drive">
+        <header><span class="tw">▾</span><span class="tt">DRIVE</span><button class="x" type="button" aria-label="hide drive">✕</button></header>
+        <div class="dbody">
+          <div class="ph">AT THE NEXT JUNCTION</div>
+          <div class="wrow"><button class="chip" data-drive="turn:left" type="button">turn left</button><button class="chip" data-drive="turn:straight" type="button">straight on</button><button class="chip" data-drive="turn:right" type="button">turn right</button></div>
+          <div class="ph">LANE</div>
+          <div class="wrow"><button class="chip" data-drive="lane:left" type="button">left lane</button><button class="chip" data-drive="lane:right" type="button">right lane</button></div>
+          <div class="ph">SPEED</div>
+          <div class="wrow"><button class="chip" data-drive="stop" type="button">stop</button><button class="chip" data-drive="go" type="button">go</button><button class="chip" data-drive="pace:easy" type="button">easy</button><button class="chip" data-drive="pace:normal" type="button">normal</button><button class="chip" data-drive="pace:brisk" type="button">brisk</button></div>
+        </div>
+      </section>
       <section class="dock" id="dock-run" data-dock="run" tabindex="-1" aria-label="the run">
         <header><span class="tw">▾</span><span class="tt">RUN</span><button class="x" type="button" aria-label="hide the run">✕</button></header>
         <div class="dbody">
@@ -211,7 +222,7 @@
         <div class="dbody"><div id="dialogpart"></div></div>
       </section>
     </aside>
-    <nav id="strip"><button type="button" data-strip="talk">Talk</button><button type="button" data-strip="run">Run</button><button type="button" data-strip="cars">Cars</button><button type="button" data-strip="traffic">Traffic</button><button type="button" data-strip="hierarchy">Hierarchy</button><button type="button" data-strip="world">World card</button><button type="button" data-strip="journal">Journal</button><button type="button" data-strip="dialog">Dialog</button></nav>
+    <nav id="strip"><button type="button" data-strip="talk">Talk</button><button type="button" data-strip="drive">Drive</button><button type="button" data-strip="run">Run</button><button type="button" data-strip="cars">Cars</button><button type="button" data-strip="traffic">Traffic</button><button type="button" data-strip="hierarchy">Hierarchy</button><button type="button" data-strip="world">World card</button><button type="button" data-strip="journal">Journal</button><button type="button" data-strip="dialog">Dialog</button></nav>
   </main>
 </div>
 <script type="module">

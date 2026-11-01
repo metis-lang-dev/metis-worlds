@@ -88,6 +88,11 @@ class RoadHost:
         if self.spec == "planner" and self.run.get("page"):
             w = self.shared.setdefault("wish", road_wishes.new())
             road_wishes.planner_tick(w, facts)
+            me = self.road.prev_truth.get(self.road.ego_id) if hasattr(self.road, "prev_truth") else None
+            if me:
+                road_wishes.turn_lanes(w, (me["lane"].rsplit("_", 1)[0], me["index"]))
+            if hasattr(self.road, "world"):
+                self.road.world.keep_going()
             ego = self.road.proj.get("ego")
             facts = road_wishes.planner_facts(w, facts, ego.dyn.vmax if ego is not None else 0.0)
         if self.observed:
@@ -142,9 +147,7 @@ class RoadHost:
     # ── the commands ──
     def on_event(self, name, args):
         if self.spec == "task":
-            w = self.shared.setdefault("wish", road_wishes.new())
-            if road_wishes.take(w, name) == "around":
-                w["said"].append(road_wishes.around(self.road.observe()[0], self.road.observe()[1]))
+            self.wish(name)
             self._log({"t": round(self.road.t, 2), "member": "task", "rule": name})
             return
         cmd = restrict.command(name)
@@ -164,6 +167,9 @@ class RoadHost:
                 self.shared["watched"] = time.monotonic() + WATCHED_S
             elif line == "hello":                      # a page opened: the road once, it is big
                 self.shared["net_due"] = True
+            elif line.startswith("drive:"):
+                _, verb, value = (line.split(":") + [""])[:3]
+                self.wish("%s[X=%s]" % (verb, value) if value else verb)
             elif line.split(":")[0] in ("traffic", "car", "lane", "lights"):
                 self.traffic(line)
             elif line.startswith("run:"):
@@ -175,6 +181,22 @@ class RoadHost:
                 self.shared["speed"] = max(0.1, float(line[6:]))
             else:
                 raise ValueError("the road's page says run:SCENARIO:SEED, play, pause, speed:X or watching, not %r" % line)
+
+    def wish(self, rule):
+        """What the person asks, from the task's rule (the words) or the Drive dock (rule's own form): a preference for the planner, or the ego's way."""
+        w = self.shared.setdefault("wish", road_wishes.new())
+        name = road_wishes.take(w, rule)
+        says = {"lane": "I have asked for that lane.", "pass": "I have asked to pass.", "follow": "I stay behind.", "stop": "Stopping.", "go": "Going on.", "resume": "As usual.",
+                "pace": "Pace: %s." % w["pace"]}
+        if name == "around":
+            w["said"].append(road_wishes.around(self.road.observe()[0], self.road.observe()[1]))
+        elif name == "turn":
+            way = rule[rule.index("=") + 1:-1]
+            done = self.road.world.turn(way) if hasattr(self.road, "world") else None
+            w["turn"] = done
+            w["said"].append(("Going %s at the next junction." % way if way != "straight" else "Straight on at the next junction.") if done else "There is no way %s ahead." % way)
+        elif name in says:
+            w["said"].append(says[name])
 
     def traffic(self, line):
         """The page's Traffic dock: traffic:add:KIND:N, traffic:ahead:KIND:N, traffic:clear, traffic:scale:X, car:remove:ID, car:stop:ID, car:go:ID, lane:close:ID, lane:open, lights:on, lights:off.

@@ -45,7 +45,7 @@ def test_the_net_is_as_the_client_reads_it_and_its_ground_has_area(net):
 def test_the_net_frame_has_the_lanes_and_the_way(net):
     f = road_frames.net_frame(loop(net))
     assert f["ev"] == "world/net" and f["route"] == ["E"] and f["dest"] == 950.0 and f["scenario"] == "straight" and f["seed"] == 3
-    assert f["lanes"][1] == {"id": "E_1", "index": 1, "speed": 15.0, "length": 1000.0, "shape": [[0.0, -1.6], [1000.0, -1.6]]}
+    assert f["lanes"][1] == {"id": "E_1", "index": 1, "speed": 15.0, "length": 1000.0}
 
 
 def test_the_scene_has_the_truths_movers_and_the_beliefs_roles(net):
@@ -325,3 +325,70 @@ def test_a_towns_height_is_measured_from_its_lowest_point(net, tmp_path):
     lp = loop(high)
     lp.prev_truth = {"ego": dict(EGO, z=160.0)}
     assert road_frames.scene_frame(lp)["movers"][0]["z"] == 10.0
+
+
+def test_a_drawn_lane_keeps_its_bends_and_loses_the_rest():
+    straight = " ".join("%d.00,0.00" % x for x in range(0, 101))
+    assert road_frames.simpler(straight) == "0.00,0.00,0.00 100.00,0.00,0.00"
+    bent = " ".join("%d.00,%.2f,%d.00" % (x, 5.0 if x == 50 else 0.0, 0) for x in range(0, 101))
+    assert "50.00,5.00,0.00" in road_frames.simpler(bent)
+    hill = " ".join("%d.00,0.00,%.2f" % (x, 3.0 if x == 50 else 0.0) for x in range(0, 101))
+    assert "50.00,0.00,3.00" in road_frames.simpler(hill)
+
+
+def test_the_lane_map_comes_back_from_its_cache(net, monkeypatch, tmp_path):
+    import sumo_host
+    monkeypatch.setattr(sumo_host, "CACHE", str(tmp_path / "cache"))
+    first = sumo_host.lanemap_of(str(net))
+    monkeypatch.setattr(sumo_host.netmod, "load_net", lambda p: 1 / 0)      # no rebuild
+    second = sumo_host.lanemap_of(str(net))
+    assert set(second.lanes) == set(first.lanes) and second is not first
+
+
+def test_stop_is_the_planners_own_brake_and_go_takes_it_back():
+    w = W.new()
+    W.take(w, "stop")
+    f = W.planner_facts(w, FACTS, 10.0)
+    assert f["keep_no"] == 1 and not {"below_limit", "at_limit", "lead_ok", "keep_ok"} & set(f) and f["dangerous(lead)"] == 1
+    W.take(w, "go")
+    assert W.planner_facts(w, FACTS, 10.0) == FACTS
+
+
+def test_a_turn_from_another_lane_asks_for_that_lane():
+    w = W.new()
+    w["turn"] = ("E", [0])
+    W.turn_lanes(w, ("E", 1))
+    assert w["want"] == "right"
+    w = W.new()
+    w["turn"] = ("E", [2, 3])
+    W.turn_lanes(w, ("E", 0))
+    assert w["want"] == "left"
+    w = W.new()
+    w["turn"] = ("E", [1])
+    W.turn_lanes(w, ("E", 1))
+    W.turn_lanes(w, ("F", 0))
+    assert w["want"] is None
+
+
+def test_the_drive_dock_says_what_the_words_say(tmp_path):
+    h, w = traffic_host(tmp_path)
+    h.world(["drive:stop"])
+    assert h.shared["wish"]["stop"] and h.shared["wish"]["said"][-1] == "Stopping."
+    h.world(["drive:go", "drive:pace:easy", "drive:lane:left"])
+    assert not h.shared["wish"]["stop"] and h.shared["wish"]["pace"] == "easy" and h.shared["wish"]["want"] == "left"
+
+
+def test_a_turn_changes_the_egos_route_or_says_there_is_none(tmp_path):
+    import sumo_world as SW
+    edges = {"a": {"length": 50.0, "next": {"b", "c"}, "turns": {"right": [("b", 0)], "straight": [("c", 1), ("c", 2)]}}, "b": {"length": 50.0, "next": set(), "turns": {}},
+             "c": {"length": 50.0, "next": set(), "turns": {}}}
+    h, w = traffic_host(tmp_path)
+    w._graph = edges
+    w.conn.vehicle.getRoute = lambda e: ["a", "c"]
+    w.conn.vehicle.getRouteIndex = lambda e: 0
+    w.conn.vehicle.getLaneID = lambda e: "a_0"
+    assert w.turn("right") == ("a", [0]) and ("setRoute", SW.EGO, ["a", "b"]) in w.conn.calls
+    assert w.turn("straight") == ("a", [1, 2])
+    assert w.turn("left") is None
+    h.wish("turn[D=left]")
+    assert h.shared["wish"]["said"][-1] == "There is no way left ahead."

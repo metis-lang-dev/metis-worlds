@@ -117651,6 +117651,7 @@
 	            }
 	        }
 	    });
+	    mergedGeometry.sortFacesByMaterialIndex();     // the road's page: a draw call per material, not per run of faces
 	    var mesh = new three.Mesh(mergedGeometry, new three.MeshFaceMaterial(edgeMaterials));
 	    mesh.receiveShadow = true;
 	    // TODO(danvk): Make roads cast shadows using two faces, one for the top and one for the bottom.

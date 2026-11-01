@@ -6,12 +6,16 @@ stages (act).
 layers (dyn).
 type pace {easy normal brisk}.
 type side {left right}.
+type way {left right straight}.
 pred set_pace(pace) : task.
 pred change_lane(side) : task.
 pred pass_lead : task.
 pred follow_lead : task.
 pred resume_plan : task.
 pred what_around : task.
+pred turn_at(way) : task.
+pred stop_now : task.
+pred go_on : task.
 namespace task produce (dyn).
 stage act {
   %% I set the pace: {P}.
@@ -24,6 +28,12 @@ stage act {
   follow [dyn] : follow_lead -o ().
   %% I drop what you asked: the planner goes on by itself.
   resume [dyn] : resume_plan -o ().
+  %% I ask for the {D} way at the next junction.
+  turn [dyn] : turn_at(D) -o ().
+  %% I ask the planner to stop.
+  stop [dyn] : stop_now -o ().
+  %% I ask the planner to go on.
+  go [dyn] : go_on -o ().
   %% I look around.
   around [dyn] : what_around -o ().
 }

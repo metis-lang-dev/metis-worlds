@@ -15,11 +15,11 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 WEB = os.path.join(os.path.dirname(HERE), "web")
 NAMES = ["responder", "planner", "road_director", "task"]
 CARD = {"title": "The road, on SUMO", "about": ["An RSS road world: the responder answers every 0.1 s, the planner plans every second, the restrictor is the shield.",
-                                                "The stack drives. You may ask; it decides, and it may say not now."],
-        "asks": [{"say": "take it easy", "what": "a pace: easy, normal or brisk"}, {"say": "go to the left lane", "what": "the left or the right lane, when it is safe"},
-                 {"say": "pass this car", "what": "get past the car ahead, when it is safe"}, {"say": "stay behind him", "what": "no lane changes"},
-                 {"say": "carry on as usual", "what": "forget what you asked"}, {"say": "what's around us", "what": "the cars it sees, as it believes them"}],
-        "cannot": ["steer, brake or stop for you: the stack holds the controls"], "source": "metis-worlds road/world/road_hier.py"}
+                                                "The stack drives. You may ask; it decides, and it may say not now. The ego starts alone: the Traffic dock adds cars."],
+        "asks": [{"say": "go right", "what": "left, right or straight on at the next junction"}, {"say": "change to the left lane", "what": "the left or the right lane, when it is safe"},
+                 {"say": "stop", "what": "stop, then \"go\""}, {"say": "take it easy", "what": "a pace: easy, normal or brisk"}, {"say": "pass this car", "what": "get past the car ahead, when it is safe"},
+                 {"say": "stay behind him", "what": "no lane changes"}, {"say": "carry on as usual", "what": "forget what you asked"}, {"say": "what's around us", "what": "the cars it sees, as it believes them"}],
+        "cannot": ["steer or brake for you: the stack holds the controls"], "source": "metis-worlds road/world/road_hier.py"}
 
 
 def intent_files(task_dir):
@@ -33,13 +33,13 @@ def intent_files(task_dir):
         (d / fn).write_text(text)
 
 
-def install(root, agent_py, port=8400, scenario="straight", seed=1):
+def install(root, agent_py, port=8400, scenario="Town03", seed=1):
     intent_files(os.path.join(os.path.dirname(HERE), "domains", "task"))
     if os.path.exists(root):
         shutil.rmtree(root)
     os.makedirs(os.path.join(root, ".run"))
     root = os.path.abspath(root)
-    run = {"scenario": scenario, "seed": int(seed), "world": "sumo", "page": True, "key": "page",
+    run = {"scenario": scenario, "seed": int(seed), "world": "sumo", "page": True, "key": "page", "vehicles": 0,
            "work": os.path.join(root, "work"), "log": os.path.join(root, "log.jsonl")}
     os.makedirs(run["work"])
     json.dump(run, open(os.path.join(root, "run.json"), "w"), indent=1)
@@ -49,6 +49,7 @@ def install(root, agent_py, port=8400, scenario="straight", seed=1):
     c["model"] = os.path.join(os.path.abspath(agent_py), c["model"])
     c["v3"].update(journal=os.path.join(root, "journal.jsonl"), catalog=[], loaded=NAMES, director="road_director", world_map=doc, tick_ms=1)   # the responder's host holds the pace
     c["domains"].update(names=NAMES, seed=int(seed), narrate=None, consult=False, records=None, quiet=[], pairs=[], clocks=[{"domain": d, "n": 1} for d in NAMES], tick=True)
+    c["stop_words"] = ["(no word stops the hierarchy here)"]   # the service would take "stop" as stopping its hierarchy, the planner with it: here it is the person's word for the car (empty is its default)
     c["ws"] = {"addr": "127.0.0.1:%d" % port, "ui": WEB}
     path = os.path.join(root, ".run", "config.yaml")
     yaml.safe_dump(c, open(path, "w"), sort_keys=False)
@@ -60,7 +61,7 @@ if __name__ == "__main__":
     ap.add_argument("root")
     ap.add_argument("--agent", required=True)
     ap.add_argument("--port", type=int, default=8400)
-    ap.add_argument("--scenario", default="straight")
+    ap.add_argument("--scenario", default="Town03")
     ap.add_argument("--seed", type=int, default=1)
     a = ap.parse_args()
     print(install(a.root, a.agent, a.port, a.scenario, a.seed))

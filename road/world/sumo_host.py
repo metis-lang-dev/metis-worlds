@@ -21,6 +21,8 @@ perceived and projected once. One tick (dt 0.1 s, the SUMO step; road_host's res
                 ruling, its own column); the latency from a truth pair's first dangerous tick to the first braking applied;
                 the ms of each stage."""
 import os
+import pickle
+import tempfile
 import time
 
 import restrict
@@ -35,19 +37,39 @@ from sumo_world import DESTS, EGO, SumoWorld
 
 
 
+CACHE = os.path.join(tempfile.gettempdir(), "metis-road-lanemaps")
+
+
+def lanemap_of(path):
+    """The net's lane map, zones and all: seconds to build on a big town, a fraction of one to read back, so kept on disk until the net or the code that makes it changes. Each run gets
+    its own copy."""
+    tag = "%s-%d-%d" % (os.path.basename(path), os.stat(path).st_mtime_ns, os.stat(netmod.__file__).st_mtime_ns)
+    cached = os.path.join(CACHE, tag + ".pickle")
+    try:
+        with open(cached, "rb") as f:
+            return pickle.load(f)
+    except (OSError, EOFError, pickle.UnpicklingError, AttributeError):
+        pass
+    lanemap = netmod.load_net(path).lanemap()
+    os.makedirs(CACHE, exist_ok=True)
+    with open(cached + ".part", "wb") as f:
+        pickle.dump(lanemap, f, protocol=5)
+    os.replace(cached + ".part", cached)
+    return lanemap
+
+
 class Loop:
     """The world one hierarchy shares: the SUMO process, the perception, the situation memory, the held command, the
     last projection and the accounting."""
 
     def __init__(self, level, work=None, traci=None):
-        import tempfile
         work = work or level.get("work") or tempfile.mkdtemp(prefix="road-sumo-")
         args = dict(level.get("scenario_args", {}))
         if "vehicles" in level:
             args["n"] = int(level["vehicles"])
         self.scenario, self.seed, self.ego_id = level.get("scenario", "straight"), int(level.get("seed", 1)), EGO
         self.world = SumoWorld(self.scenario, work, seed=self.seed, traci=traci, **args)
-        self.lanemap = netmod.load_net(self.world.net).lanemap()
+        self.lanemap = lanemap_of(self.world.net)
         sen = level.get("sensor", {})
         self.perc = Perception(self.lanemap, Sensor(range=sen.get("range", 60.0), miss=sen.get("miss", 0.0),
                                                     seed=int(level.get("seed", 1))), dt=self.world.dt)

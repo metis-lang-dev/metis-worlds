@@ -6,6 +6,9 @@ persona: |
 verbs:
   - {verb: PACE, meaning: "how fast to drive: easy is slowly, normal as usual, brisk is hurrying", slots: [pace]}
   - {verb: LANE, meaning: "change to the left or the right lane", slots: [side]}
+  - {verb: TURN, meaning: "which way to go at the next junction: left, right or straight on", slots: [way]}
+  - {verb: STOP, meaning: "stop the car"}
+  - {verb: GO, meaning: "start again after a stop"}
   - {verb: PASS, meaning: "overtake the car ahead"}
   - {verb: FOLLOW, meaning: "stay behind the car ahead, no lane changes"}
   - {verb: RESUME, meaning: "forget what was asked and drive as usual"}
@@ -16,10 +19,10 @@ verbs:
 slots:
   pace: {enum: [EASY, NORMAL, BRISK]}
   side: {enum: [LEFT, RIGHT]}
+  way: {enum: [LEFT, RIGHT, STRAIGHT]}
 
 guidance: |
-  Slowing down, relaxing or taking it easy is PACE EASY. Hurrying or going faster is PACE BRISK. Overtaking or getting past the car in front is PASS. Going left or right is
-  LANE. Staying in lane behind someone is FOLLOW. Asking what is around, who is near or what is ahead is AROUND. Braking and stopping are the car's own, so UNKNOWN.
+  Slowing down, relaxing or taking it easy is PACE EASY. Hurrying or going faster is PACE BRISK. Overtaking or getting past the car in front is PASS. Going, turning or heading left or right is TURN, at the next junction; only a sentence that says lane or lanes is LANE. Stopping, halting or pulling up is STOP; going on, moving again or driving on after that is GO. Staying in lane behind someone is FOLLOW. Asking what is around, who is near or what is ahead is AROUND.
 
 examples:
   - ["take it easy", {"intent":"PACE","pace":"EASY"}]
@@ -27,7 +30,14 @@ examples:
   - ["normal speed please", {"intent":"PACE","pace":"NORMAL"}]
   - ["hurry up", {"intent":"PACE","pace":"BRISK"}]
   - ["move to the left lane", {"intent":"LANE","side":"LEFT"}]
-  - ["go right", {"intent":"LANE","side":"RIGHT"}]
+  - ["change to the right lane", {"intent":"LANE","side":"RIGHT"}]
+  - ["go right", {"intent":"TURN","way":"RIGHT"}]
+  - ["turn left at the junction", {"intent":"TURN","way":"LEFT"}]
+  - ["keep straight on", {"intent":"TURN","way":"STRAIGHT"}]
+  - ["stop", {"intent":"STOP"}]
+  - ["stop the car", {"intent":"STOP"}]
+  - ["go", {"intent":"GO"}]
+  - ["drive on", {"intent":"GO"}]
   - ["pass this car", {"intent":"PASS"}]
   - ["get past the slow one", {"intent":"PASS"}]
   - ["stay behind him", {"intent":"FOLLOW"}]
@@ -51,6 +61,9 @@ spoken:
 map:
   - {verb: PACE, atom: "set_pace({pace:pace})", act: set_pace}
   - {verb: LANE, atom: "change_lane({side:side})", act: change_lane}
+  - {verb: TURN, atom: "turn_at({way:way})", act: turn_at}
+  - {verb: STOP, atom: "stop_now", act: stop_now}
+  - {verb: GO, atom: "go_on", act: go_on}
   - {verb: PASS, atom: "pass_lead", act: pass_lead}
   - {verb: FOLLOW, atom: "follow_lead", act: follow_lead}
   - {verb: RESUME, atom: "resume_plan", act: resume_plan}
@@ -58,6 +71,7 @@ map:
 values:
   pace: {EASY: easy, NORMAL: normal, BRISK: brisk}
   side: {LEFT: left, RIGHT: right}
+  way: {LEFT: left, RIGHT: right, STRAIGHT: straight}
 
 asks: []
 outcomes: {}

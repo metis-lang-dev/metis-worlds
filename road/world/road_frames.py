@@ -1,6 +1,7 @@
 """road_frames.py — the road page's world/* frames (road-agent s-357becc7 step 1), read off the SUMO host's Loop, which stays the one TraCI
 client: world/net (the lanes, the ego's way, the net as the 3D client reads it) and world/scene (the movers as SUMO has them; the roles and the
 fold as the ego's belief has them; the command and its cut)."""
+import math
 import xml.etree.ElementTree as ET
 
 from sumo_world import SCENARIOS
@@ -10,6 +11,8 @@ LIGHTS_EVERY = 10     # ticks between two readings of the lights: every one cost
 LAND = 100.0          # the land around the road, m: margin on every side (a straight net's boundary has no height of its own)
 
 
+DRAW_TOLERANCE = 0.15   # m: how far a drawn lane may leave the net's shape
+DOCS = {}             # net path -> its document for the client
 FLOORS = {}           # net path -> the net's lowest point, m: CARLA's big towns lie hundreds of metres up, the client's ground is at 0
 
 
@@ -28,25 +31,53 @@ def lowered(shape, floor):
     return " ".join(point(p) for p in shape.split())
 
 
+def simpler(shape, tol=DRAW_TOLERANCE):
+    """A lane's shape with the points it can spare (Douglas-Peucker in x, y and height). A town's net has a point every metre or so of road; what is drawn does not need them, and the
+    client's time goes with their number. Only the drawing: SUMO and the lane map keep the net's own."""
+    pts = [([float(n) for n in p.split(",")] + [0.0])[:3] for p in shape.split()]
+    if len(pts) < 3:
+        return shape
+    keep, todo = {0, len(pts) - 1}, [(0, len(pts) - 1)]
+    while todo:
+        a, b = todo.pop()
+        (ax, ay, az), (bx, by, bz) = pts[a], pts[b]
+        length, worst, at = math.hypot(bx - ax, by - ay) or 1e-9, 0.0, None
+        for i in range(a + 1, b):
+            d = max(abs((bx - ax) * (ay - pts[i][1]) - (ax - pts[i][0]) * (by - ay)) / length, abs(pts[i][2] - az - (bz - az) * (i - a) / (b - a)))
+            if d > worst:
+                worst, at = d, i
+        if worst > tol:
+            keep.add(at)
+            todo += [(a, at), (at, b)]
+    return " ".join("%.2f,%.2f,%.2f" % tuple(pts[i]) for i in sorted(keep))
+
+
 def net_json(path):
-    """A .net.xml as the 3D client's /network: {net: {location, edge: [{..., lane: [...]}], junction: [...]}}, every value a string."""
+    """A .net.xml as the 3D client's /network: {net: {location, edge: [{..., lane: [...]}], junction: [...]}}, every value a string, what the client draws only: no internal edges
+    (it draws the junctions' polygons), the signals' connections alone. Once per net: the page's next hello asks again."""
+    if path not in DOCS:
+        DOCS[path] = _net_json(path)
+    return DOCS[path]
+
+
+def _net_json(path):
     root = ET.parse(path).getroot()
     x0, y0, x1, y1 = (float(v) for v in root.find("location").get("convBoundary").split(","))
     location = dict(root.find("location").attrib, convBoundary="%.2f,%.2f,%.2f,%.2f" % (x0 - LAND, y0 - LAND, x1 + LAND, y1 + LAND))
     floor = floor_of(path)
-    edges = [dict(e.attrib, lane=[dict(la.attrib, shape=lowered(la.get("shape", ""), floor)) for la in e.findall("lane")]) for e in root.findall("edge")]
+    edges = [dict(e.attrib, lane=[dict(la.attrib, shape=simpler(lowered(la.get("shape", ""), floor))) for la in e.findall("lane")]) for e in root.findall("edge")
+             if e.get("function", "normal") not in ("internal", "walkingarea")]
+    ids = {e["id"] for e in edges}
     logics = [dict(t.attrib, phase=[dict(p.attrib) for p in t.findall("phase")]) for t in root.findall("tlLogic")]
     # the client looks a program's states up by name: `off` (SUMO's own) as one phase of unlit signals
     logics += [{"id": t["id"], "type": "static", "offset": "0", "programID": "off", "phase": [{"duration": "1", "state": "x" * len(t["phase"][0]["state"])}]} for t in list(logics)]
     return {"net": dict(root.attrib, location=location, edge=edges, junction=[dict(j.attrib, shape=lowered(j.get("shape", ""), floor), z="%.2f" % (float(j.get("z", floor)) - floor)) for j in root.findall("junction")],
-                        connection=[dict(c.attrib) for c in root.findall("connection")], tlLogic=logics)}
+                        connection=[dict(c.attrib) for c in root.findall("connection") if "tl" in c.attrib and c.get("from") in ids], tlLogic=logics)}
 
 
 def net_frame(loop):
     doc = net_json(loop.world.net)
-    lanes = [{"id": la["id"], "index": int(la["index"]), "speed": float(la["speed"]), "length": float(la["length"]),
-              "shape": [[float(n) for n in p.split(",")] for p in la["shape"].split()]}
-             for e in doc["net"]["edge"] for la in e["lane"]]
+    lanes = [{"id": la["id"], "index": int(la["index"]), "speed": float(la["speed"]), "length": float(la["length"])} for e in doc["net"]["edge"] for la in e["lane"]]
     route = (loop.prev_truth.get(loop.ego_id) or {}).get("route", [])
     return {"ev": "world/net", "lanes": lanes, "route": route, "dest": loop.level_dest, "scenario": loop.scenario, "seed": loop.seed, "net": doc, "scenarios": list(SCENARIOS)}
 

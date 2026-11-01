@@ -30,6 +30,7 @@ LC_DURATION = 1.0              # a lane change takes 1 s (the restrictor's contr
 EDGE_M, LANES = 1000.0, 2
 MAPS = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "maps")   # road/maps: the towns' nets
 ROUTE_M = 1500.0               # a town's way, m
+TURNS = {"r": "right", "R": "right", "l": "left", "L": "left", "s": "straight"}     # a connection's dir
 VTYPES = {                     # the old harness's planted styles (metispy sumo_harness): the ground truth of a style
     "calm": dict(accel=1.0, decel=2.0, sigma=0.2, maxSpeed=8.0, tau=1.4, color="0,0,1"),
     "aggr": dict(accel=3.0, decel=4.5, sigma=0.8, maxSpeed=15.0, tau=0.9, color="1,0,0"),
@@ -119,10 +120,11 @@ def _town(net):
     for e in root.findall("edge"):
         lanes = e.findall("lane")
         if e.get("function", "normal") == "normal" and lanes and any(la.get("allow") in (None, "passenger") or "passenger" in la.get("allow", "").split() for la in lanes):
-            edges[e.get("id")] = {"length": float(lanes[0].get("length")), "next": set()}
+            edges[e.get("id")] = {"length": float(lanes[0].get("length")), "next": set(), "turns": {}}
     for c in root.findall("connection"):
         if c.get("from") in edges and c.get("to") in edges:
             edges[c.get("from")]["next"].add(c.get("to"))
+            edges[c.get("from")]["turns"].setdefault(TURNS.get(c.get("dir")), []).append((c.get("to"), int(c.get("fromLane"))))
     return edges
 
 
@@ -282,11 +284,43 @@ class SumoWorld:
             out[pid] = p
         return out
 
+    # ── the person's word on the ego's way ──
+    def graph(self):
+        if not hasattr(self, "_graph"):
+            self._graph = _town(self.net)
+        return self._graph
+
+    def turn(self, way):
+        """The ego's route, WAY at the next junction its route reaches that offers it, a shortest way on from there. → (the edge it turns from, the lanes that turn leaves from), or None."""
+        c, edges = self.conn, self.graph()
+        route = list(c.vehicle.getRoute(EGO))
+        at = c.vehicle.getRouteIndex(EGO)
+        first = at + 1 if c.vehicle.getLaneID(EGO).startswith(":") else at   # in a junction: that one is taken already
+        for k in range(first, len(route)):
+            options = edges.get(route[k], {}).get("turns", {}).get(way)
+            if not options:
+                continue
+            to = sorted({o[0] for o in options})[0]
+            c.vehicle.setRoute(EGO, route[at:k + 1] + _route_from(edges, to, ROUTE_M))
+            return route[k], sorted(o[1] for o in options if o[0] == to)
+        return None
+
+    def keep_going(self):
+        """On the route's last edge: a way on, so a drive by the person's word does not end by itself. Where there is none (the straight road), it arrives."""
+        c, edges = self.conn, self.graph()
+        if EGO not in c.vehicle.getIDList():
+            return
+        route = list(c.vehicle.getRoute(EGO))
+        at = c.vehicle.getRouteIndex(EGO)
+        if at < len(route) - 1 or not edges.get(route[-1], {}).get("next"):
+            return
+        c.vehicle.setRoute(EGO, route[at:] + _route_from(edges, route[-1], ROUTE_M)[1:])
+
     # ── the person's hand on the traffic (the page's Traffic dock): what sumo-gui offers, and adding cars, which it does not (TraCI does) ──
     def add_cars(self, kind="aggr", n=1, ahead=False):
         """N cars of a planted style: on their own ways, or AHEAD of the ego on its route. → how many SUMO took."""
         c, took = self.conn, 0
-        edges = _town(self.net)
+        edges = self.graph()
         rng = random.Random(self.steps + self.added)
         for i in range(int(n)):
             self.added += 1

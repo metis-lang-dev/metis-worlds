@@ -21,6 +21,7 @@ export class RoadMap {
     $('#center').onclick = () => this.post({ center: this.ego });
     $('#follow-picked').onclick = () => { this.follows(true); this.post({ unfollow: true }); this.post({ follow: this.picked }); };
     $('#center-picked').onclick = () => this.post({ center: this.picked });
+    for (const b of document.querySelectorAll('[data-drive]')) b.onclick = () => line(`drive:${b.dataset.drive}`);
     const n = () => Math.max(1, Math.min(50, Number($('#t-n').value) || 1));
     $('#t-add').onclick = () => line(`traffic:add:${$('#t-kind').value}:${n()}`);
     $('#t-ahead').onclick = () => line(`traffic:ahead:${$('#t-kind').value}:${n()}`);

@@ -7,6 +7,8 @@ still decides by its keep-table, the restrictor and the responder see the world 
     lane D    the other side unsettled, the lead slow, no speeding up or keeping the limit: `change` to D is what is left, when it is safe; else it follows
     pass      as lane, either side
     follow    no side settled: no lane change
+    stop      nothing to speed up or keep: the planner's own gentle brake (brake_follow) until the car stands, and holds it; go takes it back
+    a turn    no wish of the planner's: the ego's route (SumoWorld.turn); when the turn needs another lane, the lane wish for it (turn_lanes)
 A one-shot wish (lane, pass) stands WISH_TICKS planner ticks, then is dropped and the reason said."""
 import re
 
@@ -16,7 +18,7 @@ SIDES = ("left", "right")
 
 
 def new():
-    return {"pace": "normal", "want": None, "age": 0, "follow": False, "said": []}
+    return {"pace": "normal", "want": None, "age": 0, "follow": False, "stop": False, "turn": None, "said": []}
 
 
 def take(w, rule, binding=None):
@@ -29,10 +31,14 @@ def take(w, rule, binding=None):
         w.update(want=value, age=0, follow=False)
     elif name == "pass":
         w.update(want="any", age=0, follow=False)
+    elif name == "stop":
+        w.update(stop=True, want=None)
+    elif name == "go":
+        w["stop"] = False
     elif name == "follow":
         w.update(want=None, follow=True)
     elif name == "resume":
-        w.update(pace="normal", want=None, follow=False)
+        w.update(pace="normal", want=None, follow=False, stop=False, turn=None)
     return name
 
 
@@ -65,6 +71,11 @@ def why_not(facts, want):
 def planner_facts(w, facts, v):
     """The planner's copy of the world, with the wish in it."""
     out = dict(facts)
+    if w["stop"]:
+        for a in ("below_limit", "at_limit", "lead_ok", "lead_slow", "accel_ok", "keep_ok"):
+            out.pop(a, None)
+        out["keep_no"] = 1
+        return out
     if w["pace"] == "easy" and v >= EASY_MS and "below_limit" in out:
         del out["below_limit"]
         out["at_limit"] = 1
@@ -83,6 +94,14 @@ def planner_facts(w, facts, v):
         out.pop("lead_ok", None)
         out["lead_slow"] = 1
     return out
+
+
+def turn_lanes(w, lane):
+    """A turn asked for that leaves from other lanes of this edge: the lane wish towards them, as long as it takes. LANE: the ego's (edge, index)."""
+    edge, wanted = w["turn"] or (None, ())
+    if lane is None or lane[0] != edge or not wanted or lane[1] in wanted:
+        return
+    w.update(want="left" if lane[1] < min(wanted) else "right", age=0)      # SUMO counts lanes from the right
 
 
 def planner_tick(w, facts):
