@@ -145,7 +145,7 @@ def check(res):
     moves = [t for t, rule, _ in fired(recs, "nav") if rule == "move" and revoked is not None and revoked < t <= (back or 1 << 30)]
     held = [r for r in recs if r.get("kind") == "dlg-held"]
     out["3 no state ahead"] = (revoked is not None and not moves and not held, "nav moves while revoked %s, held %d" % (moves, len(held)))
-    rel = next((s for s, a in reports if "tick__release(act,motion)" in a), None)
+    rel = next((s for s, a in reports if a.startswith("+tick__released(act,motion,")), None)
     goto_after = [e for r in recs if r.get("kind") == "dlg-director" for e in r.get("effects") or [] if e.startswith("forward(nav,")]
     out["5 unwinding"] = (rel is not None and back is not None and back - rel <= 2,
                           "release@%s nav back@%s; director forwards to nav: %d" % (rel, back, len(goto_after)))

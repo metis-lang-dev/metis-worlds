@@ -163,14 +163,7 @@ class NhHost(MhHost):
             self.stall_said = True
 
     def tick(self, counts):
-        """A release left in a sleeping specialist's session after the director already took the way back (it answered the
-        result, not the release) would be read when the specialist next wakes, as a late release of its NEW grant: the
-        director gives the way to a sleeping nav and neither moves. Without a grant there is nothing to release."""
         dos = super().tick(counts)
-        if dos is not None and self.spec in ("nav", "act"):
-            rel, grant = "tick__release(%s,motion)" % self.spec, "tick__grant(%s,motion)" % self.spec
-            if counts.get(rel, 0) > 0 and counts.get(grant, 0) <= 0:
-                dos.append("-%s %d" % (rel, counts[rel]))
         if dos is not None and self.spec == "task":
             self.stalled(counts, dos)
         return dos
