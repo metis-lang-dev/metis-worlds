@@ -4,7 +4,7 @@ fold as the ego's belief has them; the command and its cut)."""
 import xml.etree.ElementTree as ET
 
 STAGES = ("restrict", "sumo", "perceive", "project", "account")     # the Loop's stages, each tick's seconds
-LAND = 100.0          # the land around the road, m: a straight net's boundary has no height, and the client's ground would have no area
+LAND = 100.0          # the land around the road, m: margin on every side (a straight net's boundary has no height of its own)
 
 
 def net_json(path):

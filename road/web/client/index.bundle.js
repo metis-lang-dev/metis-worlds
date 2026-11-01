@@ -109185,7 +109185,7 @@
 	var MAX_DISTANCE = Infinity;
 	var ZOOM_SPEED = 1.0;
 	var ZOOM_RATE = 0.0015;     // the road's page: the wheel's zoom per pixel of delta
-	var MIN_HEIGHT = 3, MAX_HEIGHT = 4000, MAX_GROUND = 6000, PAN_MARGIN = 200;   // m
+	var MIN_HEIGHT = 3, MAX_GROUND = 6000, ROAD_MARGIN = 100;   // m
 	var State;
 	(function (State) {
 	    State[State["NONE"] = 0] = "NONE";
@@ -109272,17 +109272,40 @@
 	        if (!point) {                                 // looking over the horizon: straight along the view
 	            var te = this.camera.matrix.elements;
 	            position.add(new three.Vector3(te[8], te[9], te[10]).multiplyScalar(delta * Math.max(position.y, 5) / 400));
-	            position.y = Math.max(MIN_HEIGHT, Math.min(MAX_HEIGHT, position.y));
+	            position.y = Math.max(MIN_HEIGHT, Math.min(this.maxHeight(), position.y));
+	            this.keepRoad();
 	            return;
 	        }
 	        var offset = position.clone().sub(point).multiplyScalar(Math.exp(delta * ZOOM_RATE));
-	        var y = Math.max(MIN_HEIGHT, Math.min(MAX_HEIGHT, offset.y));
+	        var y = Math.max(MIN_HEIGHT, Math.min(this.maxHeight(), offset.y));
 	        offset.multiplyScalar(y / offset.y);
 	        position.copy(point).add(offset);
+	        this.keepRoad();
+	    };
+	    PanAndRotateControls.prototype.land = function () {
+	        if (!this.landBox) this.landBox = new three.Box3().setFromObject(this.groundPlane);
+	        return this.landBox;
+	    };
+	    /** Never higher than the whole land seen from far enough. */
+	    PanAndRotateControls.prototype.maxHeight = function () {
+	        var box = this.land();
+	        return 1.0 * Math.max(box.max.x - box.min.x, box.max.z - box.min.z);
+	    };
+	    /** What the camera looks at stays on the land, so the road cannot be sent off the screen. */
+	    PanAndRotateControls.prototype.keepRoad = function () {
+	        // the land less its margin (road_frames.py's LAND) is the road's own box
+	        var box = this.land().clone().expandByScalar(-ROAD_MARGIN), position = this.camera.position, at = this.getGroundCoords(0, 0);
+	        if (!at) {                                    // over the horizon: the ground a little ahead of the camera
+	            var te = this.camera.matrixWorld.elements;
+	            at = position.clone().add(new three.Vector3(-te[8], 0, -te[10]).normalize().multiplyScalar(2 * Math.max(position.y, MIN_HEIGHT)));
+	        }
+	        position.x += Math.max(box.min.x, Math.min(Math.max(box.min.x, box.max.x), at.x)) - at.x;
+	        position.z += Math.max(box.min.z, Math.min(Math.max(box.min.z, box.max.z), at.z)) - at.z;
 	    };
 	    /** The ground under a screen point, x, y in [-1, 1]: the plane y = 0, unbounded, not the land's mesh; null at or above the horizon. */
 	    PanAndRotateControls.prototype.getGroundCoords = function (x, y) {
 	        var raycaster = new three.Raycaster();
+	        this.camera.updateMatrixWorld();              // the camera moved since the last frame drew
 	        raycaster.setFromCamera(new three.Vector2(x, y), this.camera);
 	        var point = raycaster.ray.intersectPlane(new three.Plane(new three.Vector3(0, 1, 0), 0));
 	        return point && point.distanceTo(this.camera.position) < MAX_GROUND ? point : null;
@@ -109332,9 +109355,7 @@
 	            var ahead = new three.Vector3(0, 1, 0).cross(right).normalize();    // on the ground, the way the camera looks
 	            var position = this.camera.position;
 	            position.addScaledVector(right, -dx * this.panScale).addScaledVector(ahead, dy * this.panScale);
-	            if (!this.panBox) this.panBox = new three.Box3().setFromObject(this.groundPlane);
-	            position.x = Math.max(this.panBox.min.x - PAN_MARGIN, Math.min(this.panBox.max.x + PAN_MARGIN, position.x));
-	            position.z = Math.max(this.panBox.min.z - PAN_MARGIN, Math.min(this.panBox.max.z + PAN_MARGIN, position.z));
+	            this.keepRoad();
 	        }
 	        else if (this.state === State.ROTATING) {
 	            var rotateDelta = new three.Vector2(event.movementX, event.movementY);
@@ -109463,7 +109484,7 @@
 	            return [x, 0, bottom - y];
 	        },
 	        center: function () {
-	            return [(left + right) / 2, (top + bottom) / 2];
+	            return [(left + right) / 2, (bottom - top) / 2];
 	        },
 	        width: function () {
 	            return Math.abs(right - left);
@@ -117813,7 +117834,7 @@
 	    var group = new three.Group();
 	    var _a = network.net.location.convBoundary.split(',').map(Number), left = _a[0], top = _a[1], right = _a[2], bottom = _a[3];
 	    // Land mesh
-	    var bgMesh = three_utils_1.flatRectMesh({ left: left, top: top, right: right, bottom: bottom }, materials.LAND);
+	    var bgMesh = three_utils_1.flatRectMesh({ left: left, top: 0, right: right, bottom: bottom - top }, materials.LAND);
 	    bgMesh.name = 'Land';
 	    bgMesh.receiveShadow = true;
 	    group.add(bgMesh);

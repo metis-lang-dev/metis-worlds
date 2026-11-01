@@ -6,9 +6,10 @@ Changed from the original, in index.bundle.js, for this page:
 - asset paths under /client/; the sky box removed, a plain background
 - for performance: pixel ratio 1, no shadows, no post-processing passes (SSAO, SMAA), 30 frames a second, no stats panel, one car model (hatchback)
 - the camera: the wheel zooms towards the point under the pointer at one speed for a wheel and a trackpad, between 3 m and 4 km high, never through the ground; a drag moves the
-  view in step with the mouse, within the land and a margin, not pinned to the ground point it grabbed (the original threw the view near the horizon and read the coordinates of whatever
+  view in step with the mouse, what it looks at kept on the land, not pinned to the ground point it grabbed (the original threw the view near the horizon and read the coordinates of whatever
   element lay under the pointer); following, the wheel zooms
   smoothly and a drag orbits the car
+- the land plane under the road: the original placed it in SUMO's y, not the scene's, off the road by the boundary's start
 - a click on a car tells the page; the sidebar is not shown (client.html): the page has its own tools
 - the car named "ego" is red, the others silver
 - window.sumoFollow, window.sumoUnfollow and window.sumoCenter reach the camera; Sumo3D.centerOn added; ending a follow centers on that car and tells the page
