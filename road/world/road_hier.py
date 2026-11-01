@@ -53,6 +53,8 @@ def install(root, agent_py, port=8400, scenario="Town03", seed=1):
     c["domains"].update(names=NAMES, seed=int(seed), narrate=None, consult=False, records=None, quiet=[], pairs=[], clocks=[{"domain": d, "n": 1} for d in NAMES], tick=True)
     c["stop_words"] = ["(no word stops the hierarchy here)"]   # the service would take "stop" as stopping its hierarchy, the planner with it: here it is the person's word for the car (empty is its default)
     c["ws"] = {"addr": "127.0.0.1:%d" % port, "ui": WEB}
+    # the run's trace under ROOT/.run/trace (metis.trace): at 10 ticks a second and about 220 bytes a tick, the last 10 minutes
+    c["trace"] = {"every": 200, "ring": 6000, "commands": yaml.safe_load(open(os.path.join(os.path.dirname(HERE), "domains", "composition.yaml")))["world"]["in"]}
     path = os.path.join(root, ".run", "config.yaml")
     yaml.safe_dump(c, open(path, "w"), sort_keys=False)
     return path

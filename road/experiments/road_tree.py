@@ -5,9 +5,10 @@ exerciser (road/world: road_world through road_host). No model, no person: the p
 destination, the responder answers the situation layer.
 
     cd metis-agent/py && .venv/bin/python <worlds>/road/experiments/road_tree.py SCENARIO SEED [SEED …] [--ticks N] [--out DIR] \\
-        [--world sumo] [--vehicles N]
+        [--world sumo] [--vehicles N] [--trace DIR]
 
 --world sumo runs nina's SUMO loop (road_host.new_world) in place of the exerciser; --vehicles goes into its run spec.
+--trace DIR: the run's trace (metis.trace) under DIR/SCENARIO-SEED, all of it; road/tests/test_road_trace.py replays one.
 
 One process runs the seeds one after another (a run is its own key in road_host.SHARED). Per run, one JSON line: the
 world's summary (collisions, violations, restricted, arrived, t), the journal's (grants, preempts, the responder's
@@ -43,7 +44,13 @@ class NoModel:
         raise RuntimeError("the model is not loaded (%s)" % name)
 
 
-def run(scenario, seed, out_dir, ticks=1500, world_kind=None, vehicles=None):
+def world_commands():
+    """The world's commands, the composition's `world.in`: what a trace's `out` names beside the members' out ports."""
+    import yaml
+    return yaml.safe_load((HERE.parent / "domains" / "composition.yaml").read_text())["world"]["in"]
+
+
+def run(scenario, seed, out_dir, ticks=1500, world_kind=None, vehicles=None, trace=None):
     from metis_agent import service as S
     import road_host
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -64,6 +71,8 @@ def run(scenario, seed, out_dir, ticks=1500, world_kind=None, vehicles=None):
     cfg["v3"].update(journal=str(out_dir / ("j-%s-%d.jsonl" % (scenario, seed))), catalog=[], loaded=NAMES, director="road_director")
     cfg["domains"].update(names=NAMES, narrate=None, consult=False, records=None, quiet=[], pairs=[], seed=seed,
                           clocks=[{"domain": d, "n": 1} for d in NAMES], tick=True)
+    if trace:
+        cfg["trace"] = {"dir": str(Path(trace) / ("%s-%d" % (scenario, seed))), "every": 200, "ring": 0, "commands": world_commands()}
     lv = S.Live(cfg, NoModel())
     for ag in lv.agents.agents.values():
         ag.watch.blind = True                       # a world that moves by itself: no surprise from its motion
@@ -75,6 +84,8 @@ def run(scenario, seed, out_dir, ticks=1500, world_kind=None, vehicles=None):
         if world.arrived():
             break
     wall = time.perf_counter() - t0
+    if lv.tracer is not None:
+        lv.tracer.close()
     recs = list(lv.journal.recs)
     out = report(world, recs, log, wall)
     close = getattr(world, "close", None)          # one SUMO at a time: the next seed's world opens after this one shuts
@@ -141,7 +152,7 @@ def main(argv):
     out = Path(opts["--out"]) if "--out" in opts else Path(tempfile.mkdtemp(prefix="road-tree-"))
     scenario, seeds = args[0], [int(x) for x in args[1:]] or [1]
     for seed in seeds:
-        print(json.dumps(run(scenario, seed, out, ticks, world_kind, vehicles)))
+        print(json.dumps(run(scenario, seed, out, ticks, world_kind, vehicles, trace=opts.get("--trace"))))
         sys.stdout.flush()
 
 

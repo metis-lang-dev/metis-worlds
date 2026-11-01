@@ -307,6 +307,10 @@ class RoadHost:
     def pending(self):
         return False
 
+    def trace_ref(self):
+        """Where the world is at a trace's checkpoint (metis.trace): the run and its time."""
+        return {"scenario": self.run.get("scenario"), "seed": self.run.get("seed"), "world": self.run.get("world", "exerciser"), "t": round(self.road.t, 2)}
+
     def snapshot(self):
         return {"beat": self.beat}
 
