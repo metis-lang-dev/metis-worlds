@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # demo.sh — the road on SUMO on its own page, under metis-agent's service: the tree of road/domains (world/road_hier.py) drives, the page shows it.
 # ADDR (default 127.0.0.1:8400), METIS_AGENT (default the sibling checkout: its py/.venv and models), SUMO_VENV (a venv with eclipse-sumo 1.18: sumo,
-# netconvert, the tools), CUDA_LIB (the libcudart the agent's llama was built with, where it is not on the path). One SUMO at a time.
+# netconvert, the tools; road/setup-sumo.sh makes it), CUDA_LIB (the libcudart the agent's llama was built with, where it is not on the path). One SUMO at a time.
 set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 WORLDS="$(dirname "$HERE")"
