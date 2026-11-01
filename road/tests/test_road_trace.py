@@ -93,6 +93,43 @@ def test_the_composition_replays_with_no_candidate_to_the_record(tmp_path, env):
     assert r.ticks == 250 and r.checkpoints == 1
 
 
+judged = pytest.mark.skipif(not hasattr(__import__("metis_agent.trace", fromlist=["judge"]), "judge"), reason="metis-agent before the judgement: this CI's sibling at its head, until it merges")
+AGAIN = """
+stage safety {
+  %% The same reading, another name.
+  yield_again [dyn] : $busy * $tick__grant(planner, controls) * $zone_at(nextzone, C) * $closing_in(C) * $zprio(nextzone, P) * $yields_to(P) * $conflict(nextzone) * $zbusy(nextzone) * now -o ().
+}
+"""
+BESIDE = """
+pred went_on : planner.
+stage progress {
+  %% I go on, by a rule beside the ones that say how.
+  go_on [dyn] : go -o went_on.
+}
+"""
+
+
+def judged_on_road(tmp_path, pack):
+    from metis_agent.trace import judge
+    tree = road_tree()
+    tree.run("cruise", 1, tmp_path, ticks=120, trace=tmp_path / "t")
+    return judge(tmp_path / "t" / "cruise-1", "planner", pack, ROAD, lambda root: tree.config(None, 1), composition="domains")
+
+
+@judged
+def test_a_pack_repeating_a_family_rule_is_refused_naming_it(tmp_path, env):
+    e = judged_on_road(tmp_path, AGAIN)
+    assert e["verdict"] == "refused" and "yield_again repeats yield_zone in planner_domain.llp" in " ".join(e["reasons"]), e["reasons"]
+
+
+@judged
+def test_a_pack_breaking_the_familys_goldens_is_refused_naming_them(tmp_path, env):
+    e = judged_on_road(tmp_path, BESIDE)
+    assert e["verdict"] == "refused" and "golden drive.yaml of planner" in " ".join(e["reasons"]), e["reasons"]
+    assert e["goldens"]["ran"]["planner"] >= 5 and e["receipt"]["moved"] == ["planner"] and e["receipt"]["ei_holds"]
+    assert e["first_enabled"]["rule"] == "go_on" and e["first_fired_diff"]["member"] == "planner" and e["open_loop_after"] == e["first_out_diff"]["k"]
+
+
 @composition
 @pytest.mark.skipif(not os.environ.get("METIS_ROAD_SUMO"), reason="METIS_ROAD_SUMO=1: straight on SUMO")
 def test_straight_on_sumo_replays_with_no_sumo(tmp_path, env):
