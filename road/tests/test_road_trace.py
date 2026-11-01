@@ -116,6 +116,25 @@ def judged_on_road(tmp_path, pack):
     return judge(tmp_path / "t" / "cruise-1", "planner", pack, ROAD, lambda root: tree.config(None, 1), composition="domains")
 
 
+LATE = """
+stage safety {
+  %% The zone ahead comes too late to stop for at my pace: I ease off, {R}.
+  brake_late [dyn] : $busy * $tick__grant(planner, controls) * $late(nextzone) * $soft(R) * now -o ().
+}
+"""
+
+
+@judged
+def test_a_new_rule_of_a_commands_kind_shows_as_an_output(tmp_path, env):
+    from metis_agent.trace import judge
+    tree = road_tree()
+    tree.run("cruise", 1, tmp_path, ticks=200, trace=tmp_path / "t")
+    e = judge(tmp_path / "t" / "cruise-1", "planner", LATE, ROAD, lambda root: tree.config(None, 1), composition="domains", unit=Path(os.environ["METIS_HOME"]) / "planner_domain.llp")
+    assert e["verdict"] == "accepted" and e["unit"] == "METIS_HOME/planner_domain.llp", e["reasons"]
+    assert any(x.startswith("brake_late") for x in e["first_out_diff"]["candidate"]), e["first_out_diff"]
+    assert e["first_enabled"]["rule"].startswith("brake_late") and e["open_loop_after"] == e["first_enabled"]["k"]
+
+
 @judged
 def test_a_pack_repeating_a_family_rule_is_refused_naming_it(tmp_path, env):
     e = judged_on_road(tmp_path, AGAIN)
