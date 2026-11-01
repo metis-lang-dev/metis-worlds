@@ -3,8 +3,29 @@ client: world/net (the lanes, the ego's way, the net as the 3D client reads it) 
 fold as the ego's belief has them; the command and its cut)."""
 import xml.etree.ElementTree as ET
 
+from sumo_world import SCENARIOS
+
 STAGES = ("restrict", "sumo", "perceive", "project", "account")     # the Loop's stages, each tick's seconds
+LIGHTS_EVERY = 10     # ticks between two readings of the lights: every one costs TraCI calls, a big town has hundreds
 LAND = 100.0          # the land around the road, m: margin on every side (a straight net's boundary has no height of its own)
+
+
+FLOORS = {}           # net path -> the net's lowest point, m: CARLA's big towns lie hundreds of metres up, the client's ground is at 0
+
+
+def floor_of(path):
+    if path not in FLOORS:
+        zs = (float(p.split(",")[2]) for la in ET.parse(path).getroot().iter("lane") for p in la.get("shape", "").split() if p.count(",") == 2)
+        FLOORS[path] = min(zs, default=0.0)
+    return FLOORS[path]
+
+
+def lowered(shape, floor):
+    """A shape's points with the floor taken from their height."""
+    def point(p):
+        q = p.split(",")
+        return ",".join(q[:2] + ["%.2f" % (float(q[2]) - floor)]) if len(q) == 3 else p
+    return " ".join(point(p) for p in shape.split())
 
 
 def net_json(path):
@@ -12,8 +33,13 @@ def net_json(path):
     root = ET.parse(path).getroot()
     x0, y0, x1, y1 = (float(v) for v in root.find("location").get("convBoundary").split(","))
     location = dict(root.find("location").attrib, convBoundary="%.2f,%.2f,%.2f,%.2f" % (x0 - LAND, y0 - LAND, x1 + LAND, y1 + LAND))
-    edges = [dict(e.attrib, lane=[dict(la.attrib) for la in e.findall("lane")]) for e in root.findall("edge")]
-    return {"net": dict(root.attrib, location=location, edge=edges, junction=[dict(j.attrib) for j in root.findall("junction")])}
+    floor = floor_of(path)
+    edges = [dict(e.attrib, lane=[dict(la.attrib, shape=lowered(la.get("shape", ""), floor)) for la in e.findall("lane")]) for e in root.findall("edge")]
+    logics = [dict(t.attrib, phase=[dict(p.attrib) for p in t.findall("phase")]) for t in root.findall("tlLogic")]
+    # the client looks a program's states up by name: `off` (SUMO's own) as one phase of unlit signals
+    logics += [{"id": t["id"], "type": "static", "offset": "0", "programID": "off", "phase": [{"duration": "1", "state": "x" * len(t["phase"][0]["state"])}]} for t in list(logics)]
+    return {"net": dict(root.attrib, location=location, edge=edges, junction=[dict(j.attrib, shape=lowered(j.get("shape", ""), floor), z="%.2f" % (float(j.get("z", floor)) - floor)) for j in root.findall("junction")],
+                        connection=[dict(c.attrib) for c in root.findall("connection")], tlLogic=logics)}
 
 
 def net_frame(loop):
@@ -22,11 +48,12 @@ def net_frame(loop):
               "shape": [[float(n) for n in p.split(",")] for p in la["shape"].split()]}
              for e in doc["net"]["edge"] for la in e["lane"]]
     route = (loop.prev_truth.get(loop.ego_id) or {}).get("route", [])
-    return {"ev": "world/net", "lanes": lanes, "route": route, "dest": loop.level_dest, "scenario": loop.scenario, "seed": loop.seed, "net": doc}
+    return {"ev": "world/net", "lanes": lanes, "route": route, "dest": loop.level_dest, "scenario": loop.scenario, "seed": loop.seed, "net": doc, "scenarios": list(SCENARIOS)}
 
 
 def scene_frame(loop):
-    movers = [{"id": k, "x": round(p["x"], 2), "y": round(p["y"], 2), "heading": round(p["heading"], 4), "lane": p["lane"], "s": round(p["s"], 2),
+    floor = floor_of(loop.world.net)
+    movers = [{"id": k, "x": round(p["x"], 2), "y": round(p["y"], 2), "z": round(p.get("z", floor) - floor, 2), "heading": round(p["heading"], 4), "lane": p["lane"], "s": round(p["s"], 2),
                "speed": round(p["speed"], 2), "class": p["vclass"], "type": p["type"], "length": p["length"], "width": p["width"],
                "signals": p.get("signals", 0)} for k, p in sorted(loop.prev_truth.items())]
     last = loop.log[-1] if loop.log else {}
@@ -35,7 +62,8 @@ def scene_frame(loop):
             "fold": {"resp_lon": fold.get("resp_lon", "none"), "resp_lat": fold.get("resp_lat", "none")},
             "cmd": last.get("cmd"), "a": last.get("a"), "restricted": loop.restricted, "seen": last.get("seen"), "tracks": last.get("tracks"),
             "arrived": loop.arrived(), "collisions": loop.world.ego_collisions, "violations": len(loop.violations), "optimistic": len(loop.optimistic),
-            "ms": round(sum(loop.ms[-1][k] for k in STAGES) * 1000, 1) if loop.ms else None}
+            "ms": round(sum(loop.ms[-1][k] for k in STAGES) * 1000, 1) if loop.ms else None,
+            "lights": loop.world.light_states() if loop.tick % LIGHTS_EVERY == 0 and hasattr(loop.world, "light_states") else None}
 
 
 def summary_frame(loop):

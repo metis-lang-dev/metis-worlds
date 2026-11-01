@@ -15,7 +15,7 @@ The log ($METIS_ROAD_LOG, or the run's "log"): one JSON line a world step (the e
 the fold), and the run's summary at the end (summary()).
 
 The page (the run's "page": true, road_hier.py; road-agent s-357becc7 step 1): the responder's host says the frames (road_frames.py), takes the
-page's world lines (run:SCENARIO:SEED starts that run now, play, pause, speed:X, watching: a page is open) and holds each world step to its real time times the speed; one
+page's world lines (run:SCENARIO:SEED starts that run now, play, pause, speed:X, watching: a page is open, hello: it wants the road, and the Traffic dock's: traffic()) and holds each world step to its real time times the speed; one
 Live beat stays one world step, as in road_tree. A new run swaps the world under the running hierarchy and gives the planner a new trip if the last one ended: the service's
 new_game would re-instance the planner without its trip (so it never takes the page's button)."""
 import json
@@ -33,7 +33,6 @@ from semantic_world.ports import sync_diff  # noqa: E402
 
 SHARED = {}                       # run key -> {"world": RoadWorld}
 DT = 0.1                          # the world's step, s
-NET_EVERY = 50                    # beats between two world/net frames: a page opened since has its road
 WATCHED_S = 5.0                   # a page said `watching` this recently: a scene every step, else every second
 UNWATCHED_EVERY = 10
 
@@ -163,6 +162,10 @@ class RoadHost:
         for line in lines:
             if line == "watching":
                 self.shared["watched"] = time.monotonic() + WATCHED_S
+            elif line == "hello":                      # a page opened: the road once, it is big
+                self.shared["net_due"] = True
+            elif line.split(":")[0] in ("traffic", "car", "lane", "lights"):
+                self.traffic(line)
             elif line.startswith("run:"):
                 _, scenario, seed = line.split(":")
                 self.start_run(dict(self.run, scenario=scenario, seed=int(seed)))
@@ -172,6 +175,42 @@ class RoadHost:
                 self.shared["speed"] = max(0.1, float(line[6:]))
             else:
                 raise ValueError("the road's page says run:SCENARIO:SEED, play, pause, speed:X or watching, not %r" % line)
+
+    def traffic(self, line):
+        """The page's Traffic dock: traffic:add:KIND:N, traffic:ahead:KIND:N, traffic:clear, traffic:scale:X, car:remove:ID, car:stop:ID, car:go:ID, lane:close:ID, lane:open, lights:on, lights:off.
+        A word back for each; what SUMO refuses is said too, and the run goes on."""
+        w = self.road.world
+        says = self.shared.setdefault("wish", road_wishes.new())["said"]
+        what, _, rest = line.partition(":")
+        verb, _, arg = rest.partition(":")
+        try:
+            if line.startswith("traffic:add") or line.startswith("traffic:ahead"):
+                kind, n = arg.split(":")
+                says.append("Added %d %s car%s%s." % (w.add_cars(kind, int(n), ahead=verb == "ahead"), kind, "" if n == "1" else "s", " ahead of the ego" if verb == "ahead" else ""))
+            elif line == "traffic:clear":
+                says.append("Removed %d cars." % w.clear_cars())
+            elif verb == "scale":
+                w.scale(float(arg))
+                says.append("Traffic scale %s: it applies to the cars still to depart." % arg)
+            elif what == "car" and arg == road_host_ego(self.road):
+                says.append("The ego is the stack's: it stays.")
+            elif what == "car":
+                {"remove": w.remove_car, "stop": w.stop_car, "go": lambda v: w.stop_car(v, False)}[verb](arg)
+                says.append("%s: %s." % (arg, {"remove": "removed", "stop": "stopped", "go": "going again"}[verb]))
+            elif what == "lane" and verb == "close":
+                w.close_lane(arg)
+                says.append("Lane %s closed." % arg)
+            elif what == "lane":
+                says.append("Reopened %d lanes." % w.open_lanes())
+            elif what == "lights":
+                w.lights_on(verb == "on")
+                says.append("Traffic lights %s." % verb)
+            else:
+                raise ValueError("the road's page does not say %r" % line)
+        except ValueError:
+            raise
+        except Exception as e:  # noqa: BLE001 — TraCI's refusal, in its own words
+            says.append("SUMO refused %s: %s" % (line, e))
 
     def pace(self):
         """Hold this step until its time; a slow step is not made up after."""
@@ -186,7 +225,7 @@ class RoadHost:
             return []
         watched = self.shared.get("watched", 0) > time.monotonic()
         out = [road_frames.scene_frame(self.road)] if watched or self.beat % UNWATCHED_EVERY == 0 else []
-        if self.beat % NET_EVERY == 1 or self.shared.pop("net_due", False):
+        if self.shared.pop("net_due", False):
             out.insert(0, road_frames.net_frame(self.road))
         w = self.shared.get("wish")
         while w and w["said"]:
@@ -228,6 +267,10 @@ class RoadHost:
         if p:
             with open(p, "a") as f:
                 f.write(json.dumps(rec) + "\n")
+
+
+def road_host_ego(road):
+    return getattr(road, "ego_id", None)
 
 
 def make(case=None, package_dir=None):

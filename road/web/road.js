@@ -21,9 +21,22 @@ export class RoadMap {
     $('#center').onclick = () => this.post({ center: this.ego });
     $('#follow-picked').onclick = () => { this.follows(true); this.post({ unfollow: true }); this.post({ follow: this.picked }); };
     $('#center-picked').onclick = () => this.post({ center: this.picked });
+    const n = () => Math.max(1, Math.min(50, Number($('#t-n').value) || 1));
+    $('#t-add').onclick = () => line(`traffic:add:${$('#t-kind').value}:${n()}`);
+    $('#t-ahead').onclick = () => line(`traffic:ahead:${$('#t-kind').value}:${n()}`);
+    $('#t-clear').onclick = () => line('traffic:clear');
+    $('#t-scale').oninput = e => { $('#t-scale-v').textContent = e.target.value; };
+    $('#t-scale').onchange = e => line(`traffic:scale:${e.target.value}`);
+    $('#t-stop').onclick = () => line(`car:stop:${this.picked}`);
+    $('#t-go').onclick = () => line(`car:go:${this.picked}`);
+    $('#t-remove').onclick = () => line(`car:remove:${this.picked}`);
+    $('#t-close').onclick = () => line(`lane:close:${this.lane}`);
+    $('#t-open').onclick = () => line('lane:open');
+    $('#t-lights-off').onclick = () => line('lights:off');
+    $('#t-lights-on').onclick = () => line('lights:on');
     addEventListener('message', e => {
       if (e.origin !== location.origin) return;
-      if ('clicked' in e.data) this.picked = e.data.clicked;
+      if ('clicked' in e.data) { this.picked = e.data.clicked; this.lane = e.data.lane; this.selection(); }
       if (e.data.followed === false) this.follows(false);
       if (e.data.client === 'pause') this.hold(true);
       if (e.data.client === 'resume') this.hold(false);
@@ -36,6 +49,14 @@ export class RoadMap {
   showTask() {}
   entries() { return []; }
 
+  selection() {
+    const car = this.picked, other = car && car !== this.ego;
+    $('#t-car').textContent = car ? (other ? car : 'the ego: the stack drives it') : 'click a car in the view';
+    for (const b of ['#t-stop', '#t-go', '#t-remove']) $(b).disabled = !other;
+    $('#t-lane').textContent = this.lane || 'click a lane in the view';
+    $('#t-close').disabled = !this.lane;
+  }
+
   post(o) { if (this.ready) this.frame.contentWindow.postMessage(o, location.origin); }
   follows(on) { this.following = on; $('#follow').setAttribute('aria-pressed', String(on)); }
   hold(on, tell = true) {
@@ -46,6 +67,7 @@ export class RoadMap {
 
   net(f) {
     this.dash.net(f);
+    if (f.scenarios && $('#scenario').options.length !== f.scenarios.length) $('#scenario').replaceChildren(...f.scenarios.map(s => Object.assign(document.createElement('option'), { textContent: s })));
     if (document.activeElement !== $('#scenario') && document.activeElement !== $('#seed')) { $('#scenario').value = f.scenario; $('#seed').value = f.seed; }   // what runs, also when a page opens on it
     const key = f.lanes.map(l => l.id).join();          // the client reads its road once: another road, another frame
     if (this.frame && key === this.netKey) return;

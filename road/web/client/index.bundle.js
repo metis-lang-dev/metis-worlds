@@ -59653,7 +59653,8 @@
 	        });
 	        state.clickedVehicleId = clickedVehicle ? clickedVehicle.name : null;
 	        state.clickedVehicleInfo = clickedVehicle ? sumo3d.getVehicleInfo(clickedVehicle.name) : null;
-	        window.parent.postMessage({ clicked: clickedVehicle ? clickedVehicle.name : null }, window.location.origin);
+	        var laneHit = _.find(objects, function (o) { return /, Lane /.test(o.name); });
+	        window.parent.postMessage({ clicked: clickedVehicle ? clickedVehicle.name : null, lane: laneHit ? laneHit.name.split(', Lane ')[1] : null }, window.location.origin);
 	        if (objects.length > 0) {
 	            objects.forEach(function (_a) {
 	                var name = _a.name;

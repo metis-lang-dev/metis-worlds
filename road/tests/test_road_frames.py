@@ -89,8 +89,9 @@ def test_on_the_page_the_watch_sees_no_surprise():
 def test_only_the_responders_host_says_the_frames(net):
     assert host("planner", world=loop(net)).frames() == []
     h = host(world=loop(net))
-    h.world(["watching"])
+    h.world(["watching", "hello"])
     assert [f["ev"] for f in h.frames()] == ["world/net", "world/scene"]
+    assert [f["ev"] for f in h.frames()] == ["world/scene"]        # the road once
 
 
 def test_the_scene_comes_every_second_with_no_page_watching(net):
@@ -247,3 +248,80 @@ def test_a_town_gives_every_car_a_connected_way(tmp_path):
         assert all(b in edges[a]["next"] for a, b in zip(way, way[1:]))
     again = SW.town(str(tmp_path / "again"), 1, n=5)[1] if (tmp_path / "again").mkdir() is None else None
     assert open(again).read() == open(routes).read()
+
+
+class FakeSumo:
+    """What the Traffic dock calls of TraCI, and what it was told."""
+    def __init__(self):
+        self.calls = []
+        self.vehicle, self.route, self.lane, self.trafficlight, self.simulation = self, self, self, self, self
+    def __getattr__(self, name):
+        def call(*a, **k):
+            self.calls.append((name,) + a)
+            return {"getIDList": ["ego", "calm_1"], "getRoute": ["E"], "getRouteIndex": 0, "getLanePosition": 10.0, "getLaneID": "E_0", "getAllowed": ["passenger"]}.get(name)
+        return call
+
+
+def traffic_host(tmp_path):
+    import sumo_world as SW
+    w = SW.SumoWorld.__new__(SW.SumoWorld)
+    w.conn, w.net, w.steps, w.added, w.closed = FakeSumo(), str(tmp_path / "n.net.xml"), 0, 0, {}
+    (tmp_path / "n.net.xml").write_text(NET)
+    return host(world=SimpleNamespace(world=w, ego_id="ego")), w
+
+
+def test_the_traffic_dock_adds_removes_and_says(tmp_path):
+    h, w = traffic_host(tmp_path)
+    said = lambda: h.shared["wish"]["said"]
+    h.world(["traffic:ahead:calm:2"])
+    adds = [c for c in w.conn.calls if c[0] == "add" and c[1].startswith("calm_h")]
+    assert len(adds) == 2 and adds[0][1].startswith("calm_h") and said()[-1] == "Added 2 calm cars ahead of the ego."
+    h.world(["traffic:add:aggr:1"])
+    assert said()[-1] == "Added 1 aggr car."
+    h.world(["traffic:clear"])
+    assert ("remove", "calm_1") in w.conn.calls and ("remove", "ego") not in w.conn.calls
+    h.world(["car:remove:ego"])
+    assert ("remove", "ego") not in w.conn.calls and "stays" in said()[-1]
+    h.world(["car:stop:calm_1", "car:go:calm_1"])
+    assert ("setSpeed", "calm_1", 0.0) in w.conn.calls and ("setSpeed", "calm_1", -1.0) in w.conn.calls
+    h.world(["traffic:scale:2"])
+    assert ("setScale", 2.0) in w.conn.calls
+
+
+def test_a_lane_closes_and_reopens_as_it_was(tmp_path):
+    h, w = traffic_host(tmp_path)
+    h.world(["lane:close:E_0", "lane:close:E_0", "lane:open"])
+    assert ("setDisallowed", "E_0", ["all"]) in w.conn.calls and ("setAllowed", "E_0", ["passenger"]) in w.conn.calls and not w.closed
+
+
+def test_lights_go_off_and_on_by_program(tmp_path):
+    h, w = traffic_host(tmp_path)
+    h.world(["lights:off", "lights:on"])
+    assert ("setProgram", "ego", "off") in w.conn.calls and ("setProgram", "ego", "0") in w.conn.calls
+
+
+def test_a_refused_line_is_said_and_the_run_goes_on(tmp_path):
+    h, w = traffic_host(tmp_path)
+    def refuse(*a):
+        raise RuntimeError("no such vehicle")
+    w.remove_car = refuse
+    h.world(["car:remove:calm_9"])
+    assert "no such vehicle" in h.shared["wish"]["said"][-1]
+
+
+def test_every_town_is_a_scenario_with_its_lights_for_the_client():
+    import sumo_world as SW
+    assert {"straight", "Town01", "Town03"} <= set(SW.SCENARIOS)
+    doc = road_frames.net_json(SW.os.path.join(SW.MAPS, "Town03.net.xml"))["net"]
+    programs = {t["programID"] for t in doc["tlLogic"]}
+    assert programs == {"0", "off"} and any("tl" in c for c in doc["connection"])
+
+
+def test_a_towns_height_is_measured_from_its_lowest_point(net, tmp_path):
+    high = tmp_path / "h.net.xml"
+    high.write_text(NET.replace('shape="0.00,-4.80 1000.00,-4.80"', 'shape="0.00,-4.80,150.00 1000.00,-4.80,170.00"').replace('shape="0.00,-1.60 1000.00,-1.60"', 'shape="0.00,-1.60,150.00 1000.00,-1.60,170.00"'))
+    assert road_frames.floor_of(str(net)) == 0.0 and road_frames.floor_of(str(high)) == 150.0
+    assert road_frames.net_json(str(high))["net"]["edge"][0]["lane"][0]["shape"] == "0.00,-4.80,0.00 1000.00,-4.80,20.00"
+    lp = loop(high)
+    lp.prev_truth = {"ego": dict(EGO, z=160.0)}
+    assert road_frames.scene_frame(lp)["movers"][0]["z"] == 10.0

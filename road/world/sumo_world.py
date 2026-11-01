@@ -3,7 +3,7 @@ over TraCI, headless, at the responder's step (0.1 s), the ego under the stack's
 
 - The net and the routes: a scenario writes them into a work directory (`straight`: the old harness's 1 km two-lane
   road with its planted calm / aggr vTypes, the ego behind the traffic and faster than the calm cap, so it must
-  brake or change lanes; `town01`: a CARLA town from road/maps, every car on its own way; more scenarios join as the cases need them). Every vehicle in depart order (SUMO drops an
+  brake or change lanes; each CARLA town in road/maps by its name, every car on its own way; more scenarios join as the cases need them). Every vehicle in depart order (SUMO drops an
   out-of-order one silently).
 - The ego: speed mode 0 and lane-change mode 0 (no SUMO safety, no strategic changes: the RSS stack is what is under
   test, and a TraCI change is done as asked); its acceleration set each step (setAcceleration for one step), a lane
@@ -15,6 +15,7 @@ over TraCI, headless, at the responder's step (0.1 s), the ego under the stack's
     w = SumoWorld(scenario, work, seed); w.start(); w.step(); w.truth() · w.ego() · w.control(accel, lane) · w.close()
 
 The TraCI module is injected (`traci=`) so the tests run without a simulator; the default imports the system's."""
+import functools
 import heapq
 import math
 import os
@@ -171,7 +172,9 @@ def town(work, seed, n=30, name="Town01"):
     return net, routes
 
 
-SCENARIOS = {"straight": straight, "cut_out": cut_out, "cut_in": cut_in, "town01": town}
+SCENARIOS = {"straight": straight, "cut_out": cut_out, "cut_in": cut_in}
+for _name in sorted(f[:-len(".net.xml")] for f in (os.listdir(MAPS) if os.path.isdir(MAPS) else ()) if f.endswith(".net.xml")):
+    SCENARIOS[_name] = functools.partial(town, name=_name)
 DESTS = {"straight": 950.0, "cut_out": 400.0, "cut_in": 400.0}       # the ego's destination (s on its lane), short of the net's end: arrived
                                   # while it is still in the net (TraCI drops a vehicle that leaves)
 
@@ -195,6 +198,7 @@ class SumoWorld:
         self.label = label or "road-%s-%d" % (scenario, seed)
         self.t, self.steps, self.collisions, self.ego_collisions = 0.0, 0, [], 0
         self.ego_seen = self.ego_done = False
+        self.added, self.closed = 0, {}
         self.conn = None
 
     def cmd(self):
@@ -252,7 +256,11 @@ class SumoWorld:
         length, width = dom.getLength(vid), dom.getWidth(vid)
         if vehicle:                                     # the front bumper → the centre
             x, y = x - 0.5 * length * math.cos(h), y - 0.5 * length * math.sin(h)
-        out = {"x": x, "y": y, "heading": h, "length": length, "width": width, "speed": dom.getSpeed(vid),
+        try:
+            z = dom.getPosition3D(vid)[2]               # the towns have hills
+        except (AttributeError, KeyError, TypeError):
+            z = 0.0
+        out = {"x": x, "y": y, "z": z, "heading": h, "length": length, "width": width, "speed": dom.getSpeed(vid),
                "lane": dom.getLaneID(vid), "s": dom.getLanePosition(vid)}
         if vehicle:                                     # what an indicator and the lane offset show (road-2 item 2)
             out["signals"], out["lat"] = _read(dom, "getSignals", vid, 0), _read(dom, "getLateralLanePosition", vid, 0.0)
@@ -273,6 +281,66 @@ class SumoWorld:
             p.update(vclass="pedestrian", index=0, type="pedestrian")
             out[pid] = p
         return out
+
+    # ── the person's hand on the traffic (the page's Traffic dock): what sumo-gui offers, and adding cars, which it does not (TraCI does) ──
+    def add_cars(self, kind="aggr", n=1, ahead=False):
+        """N cars of a planted style: on their own ways, or AHEAD of the ego on its route. → how many SUMO took."""
+        c, took = self.conn, 0
+        edges = _town(self.net)
+        rng = random.Random(self.steps + self.added)
+        for i in range(int(n)):
+            self.added += 1
+            vid, rid = "%s_h%d" % (kind, self.added), "hand%d" % self.added
+            pos, lane = "random_free", "best"
+            if ahead:
+                way = list(c.vehicle.getRoute(EGO))[c.vehicle.getRouteIndex(EGO):]
+                at = c.vehicle.getLanePosition(EGO) + 25.0 + 15.0 * i
+                if c.vehicle.getLaneID(EGO).startswith(":"):      # in a junction: from the next edge's start
+                    at = 5.0 + 15.0 * i
+                pos = "%.1f" % min(at, edges[way[0]]["length"] - 1.0)
+            else:
+                way = _route_from(edges, rng.choice(sorted(edges)), ROUTE_M)
+            c.route.add(rid, way)
+            c.vehicle.add(vid, rid, typeID=kind, depart="now", departLane=lane, departPos=pos, departSpeed="max")
+            took += 1
+        return took
+
+    def others(self):
+        return [v for v in self.conn.vehicle.getIDList() if v != EGO]
+
+    def clear_cars(self):
+        gone = self.others()
+        for v in gone:
+            self.conn.vehicle.remove(v)
+        return len(gone)
+
+    def remove_car(self, vid):
+        self.conn.vehicle.remove(vid)
+
+    def stop_car(self, vid, stop=True):
+        self.conn.vehicle.setSpeed(vid, 0.0 if stop else -1.0)    # -1: its own car-following again
+
+    def scale(self, x):
+        self.conn.simulation.setScale(float(x))
+
+    def close_lane(self, lane):
+        self.closed.setdefault(lane, self.conn.lane.getAllowed(lane))
+        self.conn.lane.setDisallowed(lane, ["all"])
+
+    def open_lanes(self):
+        for lane, allowed in self.closed.items():
+            self.conn.lane.setAllowed(lane, allowed)
+        n, self.closed = len(self.closed), {}
+        return n
+
+    def lights_on(self, on):
+        """Off: SUMO's own program `off`, the junction by right of way. On: the net's program."""
+        for tl in self.conn.trafficlight.getIDList():
+            self.conn.trafficlight.setProgram(tl, "0" if on else "off")
+
+    def light_states(self):
+        c = self.conn
+        return {tl: {"phase": c.trafficlight.getPhase(tl), "programID": c.trafficlight.getProgram(tl)} for tl in c.trafficlight.getIDList()}
 
     def lights(self):
         c = self.conn

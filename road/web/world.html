@@ -104,6 +104,8 @@
   #runbar { display: inline-flex; gap: 6px; align-items: center; color: var(--dim); }
   #runbar select, #runbar input { background: var(--bg); color: var(--fg); border: 1px solid var(--line); font: inherit; padding: 1px 4px; }
   #runbar input { width: 3.5em; }
+  #dock-traffic select, #dock-traffic input[type=number] { background: var(--bg); color: var(--fg); border: 1px solid var(--line); font: inherit; padding: 1px 4px; }
+  #dock-traffic input[type=number] { width: 4em; }
   .kv { display: grid; grid-template-columns: auto 1fr; gap: 1px 12px; margin: 0 0 10px; }
   .kv dt { color: var(--dim); } .kv dd { margin: 0; overflow-wrap: anywhere; }
   #dash { flex: 0 0 34%; min-height: 220px; border-top: 1px solid var(--line); background: var(--panel); padding: 6px 10px; display: flex; flex-direction: column; gap: 4px; overflow: hidden; position: relative; }
@@ -125,7 +127,7 @@
       <span id="status" data-state="" aria-live="polite"><span class="state" id="sstate">…</span><span class="text" id="stext"></span><span class="opts" id="sopts"></span></span>
       <span id="sessbar">
         <span id="runbar">
-          <label>scenario <select id="scenario"><option>straight</option><option>cut_out</option><option>cut_in</option><option>town01</option></select></label>
+          <label>scenario <select id="scenario"><option>straight</option></select></label>
           <label>seed <input id="seed" type="number" min="1" value="1"></label>
           <button class="btn" id="run" type="button">new run</button>
           <button class="btn" id="hold" type="button">pause</button>
@@ -178,6 +180,24 @@
           <div class="ph">ROLES, AS THE EGO BELIEVES</div><dl class="kv" id="roles"></dl>
         </div>
       </section>
+      <section class="dock" id="dock-traffic" data-dock="traffic" tabindex="-1" aria-label="the traffic">
+        <header><span class="tw">▾</span><span class="tt">TRAFFIC</span><button class="x" type="button" aria-label="hide the traffic">✕</button></header>
+        <div class="dbody">
+          <div class="ph">ADD CARS</div>
+          <div class="wrow"><label>style <select id="t-kind"><option value="aggr">aggressive</option><option value="calm">calm</option></select></label><label>how many <input id="t-n" type="number" min="1" max="50" value="5"></label></div>
+          <div class="wrow"><button class="chip" id="t-add" type="button">on the road</button><button class="chip" id="t-ahead" type="button">ahead of the ego</button><button class="chip" id="t-clear" type="button">remove all but the ego</button></div>
+          <div class="ph">TRAFFIC SCALE</div>
+          <div class="wrow"><input id="t-scale" type="range" min="0" max="4" step="0.25" value="1"><span id="t-scale-v">1</span></div>
+          <div class="ph">SELECTED CAR</div>
+          <div class="wrow"><span id="t-car" class="empty">click a car in the view</span></div>
+          <div class="wrow"><button class="chip" id="t-stop" type="button" disabled>stop</button><button class="chip" id="t-go" type="button" disabled>go again</button><button class="chip" id="t-remove" type="button" disabled>remove</button></div>
+          <div class="ph">LANES</div>
+          <div class="wrow"><span id="t-lane" class="empty">click a lane in the view</span></div>
+          <div class="wrow"><button class="chip" id="t-close" type="button" disabled>close this lane</button><button class="chip" id="t-open" type="button">reopen all</button></div>
+          <div class="ph">TRAFFIC LIGHTS</div>
+          <div class="wrow"><button class="chip" id="t-lights-off" type="button">all off</button><button class="chip" id="t-lights-on" type="button">all on</button></div>
+        </div>
+      </section>
       <section class="dock" id="dock-world" data-dock="world" tabindex="-1" aria-label="the world card">
         <header><span class="tw">▾</span><span class="tt">WORLD CARD</span><button class="x" type="button" aria-label="hide the world card">✕</button></header>
         <div class="dbody" id="wcard"><p class="empty">loading the world…</p></div>
@@ -191,7 +211,7 @@
         <div class="dbody"><div id="dialogpart"></div></div>
       </section>
     </aside>
-    <nav id="strip"><button type="button" data-strip="talk">Talk</button><button type="button" data-strip="run">Run</button><button type="button" data-strip="cars">Cars</button><button type="button" data-strip="hierarchy">Hierarchy</button><button type="button" data-strip="world">World card</button><button type="button" data-strip="journal">Journal</button><button type="button" data-strip="dialog">Dialog</button></nav>
+    <nav id="strip"><button type="button" data-strip="talk">Talk</button><button type="button" data-strip="run">Run</button><button type="button" data-strip="cars">Cars</button><button type="button" data-strip="traffic">Traffic</button><button type="button" data-strip="hierarchy">Hierarchy</button><button type="button" data-strip="world">World card</button><button type="button" data-strip="journal">Journal</button><button type="button" data-strip="dialog">Dialog</button></nav>
   </main>
 </div>
 <script type="module">

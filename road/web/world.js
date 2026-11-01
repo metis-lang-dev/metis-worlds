@@ -382,7 +382,7 @@ async function live(url) {
 // ── start ──
 world.map = new RoadMap($('#map'), { line: l => send({ ev: 'world', domain: 'responder', atoms: [l] }) });   // the road:
 const agentUrl = q.get('agent') || `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws`;   // the road: always live
-const hello = b => { b.send({ ev: 'hello', since: 1e15 }); b.send({ ev: 'world', domain: 'responder', atoms: ['watching'] }); };   // the road: a page is open
+const hello = b => { b.send({ ev: 'hello', since: 1e15 }); b.send({ ev: 'world', domain: 'responder', atoms: ['watching', 'hello'] }); };   // the road: a page is open
 setInterval(() => send({ ev: 'world', domain: 'responder', atoms: ['watching'] }), 2000);
 const backend = agentUrl ? await live(agentUrl) : null;
 // the shell's docks (the consoles' look): tools the strip shows and hides, each open while shown (fold: false — "go to
@@ -390,8 +390,8 @@ const backend = agentUrl ? await live(agentUrl) : null;
 const docks = world.docks = MetisShell.docks({
   // v3: the DIALOG drawer (fsttm-web's panel, its own part: the floor, barge-in, attention, the numbers), hidden until asked for
   // v4: the cards are tools, not folded (the world card and the journal shown by default as before; the dialog hidden)
-  names: ['talk', 'run', 'cars', 'hierarchy', 'world', 'journal', 'dialog'], key: 'roadpage.docks.v2', fold: false,
-  defaults: { talk: { shown: true, open: true }, run: { shown: true, open: true }, cars: { shown: false, open: true }, hierarchy: { shown: false, open: true }, world: { shown: false, open: true }, journal: { shown: true, open: true },
+  names: ['talk', 'run', 'cars', 'traffic', 'hierarchy', 'world', 'journal', 'dialog'], key: 'roadpage.docks.v3', fold: false,
+  defaults: { talk: { shown: true, open: true }, run: { shown: true, open: true }, cars: { shown: false, open: true }, traffic: { shown: true, open: true }, hierarchy: { shown: false, open: true }, world: { shown: false, open: true }, journal: { shown: true, open: true },
     dialog: { shown: false, open: true } },
   onChange: st => panel?.showDialog(!!st.dialog?.shown),              // hidden: the panel draws nothing there
 });
