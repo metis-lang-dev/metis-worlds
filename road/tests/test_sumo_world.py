@@ -225,6 +225,23 @@ def test_what_a_car_shows_its_indicator_and_its_lane_change(straight):
     assert m.settled is None
 
 
+def test_travel_is_no_lane_change(straight, monkeypatch):
+    """Seed 2's lie: a track seen on another edge, or back from an earlier sighting, is not a car that changed lanes."""
+    lm = straight
+    p = Perception(lm, Sensor(range=60.0), dt=0.1)
+    def step(lane, s):
+        movers, _ = p.step({"ego": pose(lm, "E_0", 100.0), "a": dict(pose(lm, lane, s, speed=8.0), signals=0, lat=0.0)})
+        return movers[0]
+    step("E_0", 130.0)
+    monkeypatch.setattr(lm.lanes["E_1"], "edge", "another")
+    for k in range(3):
+        assert step("E_1", 131.0 + k).settled is None
+    monkeypatch.undo()
+    assert step("E_1", 134.0).settled is None                       # no change yet: it is on that lane already
+    assert step("E_0", 135.0).settled is None                       # the change, seen once
+    assert step("E_0", 136.0).settled == "right"                    # and a second time: complete
+
+
 def test_no_responder_brake_without_a_dangerous_pair(straight, tmp_path):
     """road-2 (the ruling): on the straight, a responder brake (brake_min) is applied only with a dangerous pair in the
     fold it was decided on — the summary's undue_brakes counts the others (0 by construction); and the run card

@@ -103,6 +103,13 @@ def gap_room(pairs, ego, v, cap, accel, t=2 * PLAN_T):
 SETTLE_S = 10.0                 # s: the side the ego left is not settled again before this
 
 
+def fold_of(states, movers, ego):
+    """The fold: a dangerous pair whose other has settled into a lane not the ego's is released from it; a crossing never is: only geometry
+    releases that one, or both standing (situation.respond_standing)."""
+    released = {m.id for m in movers if getattr(m, "settled", None) and m.lane != ego.lane}
+    return Situation.fold([s for s in states if s.type.startswith("xing") or s.id.split(":")[0] not in released], ego.dyn)
+
+
 def facts(lm, ego, v, movers, sit, changing=None, dest=None, turn=None, lights=None, speeds=None, left_from=None, pace=None):
     """SPEEDS {mover id: v}: the movers' speeds (the lead's for lead_slow). LEFT_FROM (side, age s): the side the
     ego's last lane change left, and how long ago. PACE: a target speed under the lane's limit, the limit its classes read; above it by PACE_BAND
@@ -120,14 +127,15 @@ def facts(lm, ego, v, movers, sit, changing=None, dest=None, turn=None, lights=N
                     sit.memory.pop(p.id, None)
     states = sit.check(pairs)
     # road-2 item 2: what the other cars SHOW (sumo_perceive: a mover's signal and settled), world facts, never an
-    # intent belief: a dangerous pair whose other has settled into a lane not the ego's is released from the fold
-    released = {m.id for m in movers if getattr(m, "settled", None) and m.lane != ego.lane}
-    fold = Situation.fold([s for s in states if s.id.split(":")[0] not in released], ego.dyn)
+    # intent belief: fold_of
+    fold = fold_of(states, movers, ego)
     out = {}
     for a, n in Situation.facts(states, fold, detail=True).items():
         if a.startswith("resp_lat(") and a.count(",") == 2:        # the pair's lateral response: its own name (a
             a = "resp_side(" + a[len("resp_lat("):]               # pred has one arity; resp_lat(R) is the fold's)
         out[a] = n
+    if "resp_unst" not in fold:                                     # the responder's drive away ends on it (away_done)
+        out["resp_unst(none)"] = 1
     bound = set(roles)
     for r in OBJ_ROLES:
         if r not in bound:

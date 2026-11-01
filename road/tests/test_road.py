@@ -1,6 +1,7 @@
 """The road exerciser's pieces (road-world s-e812715d step 2): the commands and the restrictor (restrict.py, every road
 host's), the facts over roles (road_facts.py), the world (road_world.py). No Live here: the tree demo is
 road/experiments/road_tree.py. Run in a python with libs/semantic-world installed (metis-agent's venv, or a world's)."""
+import json
 import sys
 from pathlib import Path
 
@@ -12,7 +13,7 @@ import restrict  # noqa: E402
 import road_facts  # noqa: E402
 import road_world  # noqa: E402
 from semantic_world.lane import Mover, dynamics_for  # noqa: E402
-from semantic_world.situation import Pair, Situation  # noqa: E402
+from semantic_world.situation import Pair, Situation, State  # noqa: E402
 
 
 def test_a_rule_names_its_command():
@@ -243,3 +244,37 @@ def test_what_the_other_cars_show_are_facts_and_a_settled_pair_is_released():
     cut.settled = "right"
     _, _, fold, _ = road_facts.facts(w.map, ego, 11.0, [cut], sit, speeds={"c": 6.0})
     assert fold["resp_lon"] != "none"                                                   # settled in: along the way
+
+
+def state(row):
+    return State(row["id"], row["type"], row["role"], False, False, True, None, row["resp"], "none", row["d_lon"], row["d_safe"], xing=row["xing"])
+
+
+def test_a_crossing_is_never_released_by_a_settled_car():
+    """The shield's hole: seed 2's rows 587-606 (road/tests/seed2_released.jsonl): calm_12 standing at its line, called settled, released
+    with the ego at 16 m/s; and the page's t=3469.8, a car inside the zone with the way, moving. Neither leaves the fold."""
+    ego = Mover("ego", "-12_0", 180.0, dynamics_for("passenger", v=16.15))
+    with open(Path(__file__).with_name("seed2_released.jsonl")) as f:
+        rows = [json.loads(line) for line in f]
+    assert len(rows) == 20
+    for row in rows:
+        p = row["danger"][0]
+        other = Mover(p["id"].split(":")[0], p["lane"], p["s"], dynamics_for("passenger", v=p["v"]))
+        other.settled = "right"
+        assert road_facts.fold_of([state(p)], [other], ego)["resp_lon"] == "brake_min"
+    inside = {"id": "c:xing_obj_prio:356", "type": "xing_obj_prio", "role": "a1", "resp": "brake_min", "d_lon": 0.0, "d_safe": 4.3, "xing": None}
+    other = Mover("c", ":356_11_0", 3.7, dynamics_for("passenger", v=6.84))
+    other.settled = "right"
+    assert road_facts.fold_of([state(inside)], [other], ego)["resp_lon"] == "brake_min"
+    merged = dict(inside, id="c:same_dir", type="same_dir")         # a car that did change away is still released
+    assert road_facts.fold_of([state(merged)], [other], ego)["resp_lon"] == "none"
+
+
+def test_the_restrictor_on_a_standing_pair():
+    d = dynamics_for("passenger", v=0.0)
+    assert restrict.command("drive_away[S=s0]") == ("drive_away", None)
+    away = {"resp_lon": "none", "lon_range": [-8.0, 3.5], "resp_unst": "drive_away"}
+    assert restrict.restrict(("drive_away", None), away, d, 0.0)[0] == d.accel
+    assert restrict.restrict(("drive_away", None), away, d, restrict.AWAY_MS)[0] == 0.0
+    stay = {"resp_lon": "none", "lon_range": [-8.0, 0.0]}
+    assert restrict.restrict(("accel", None), stay, d, 0.0)[0] == 0.0

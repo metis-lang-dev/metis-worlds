@@ -17,6 +17,7 @@ ego may do. Truth-free: it reads the fold of the situation layer, the ego's Dyna
 
 KINDS = ("accel", "keep", "brake", "change", "yield", "stop")
 CHANGE_S = 1.0                    # a lane change's duration (s)
+AWAY_MS = 3.0                     # a drive away past a standing car (situation.respond_standing) is at no more than this
 
 
 def bindings(rule):
@@ -28,6 +29,8 @@ def bindings(rule):
 def command(rule):
     base, b = bindings(rule)
     kind = base.split("_")[0]
+    if base == "drive_away":                # the responder's; the planner's `drive` is no command
+        return ("drive_away", None)
     if kind not in KINDS:
         return None
     if kind == "stop":
@@ -41,8 +44,10 @@ def command(rule):
 
 
 def bound(fold, dyn):
-    """The proper response's upper bound on the ego's acceleration."""
+    """The proper response's upper bound on the ego's acceleration; a pair that says stay (lon_range) holds it at 0."""
     r = fold.get("resp_lon", "none")
+    if r == "none" and fold.get("lon_range", (0, 1))[1] == 0.0:
+        return 0.0
     if r == "brake_min":
         return -dyn.brake_min
     if r == "brake_min_correct":
@@ -54,6 +59,8 @@ def wanted(cmd, dyn, v, yield_gap=None):
     kind, arg = cmd or ("keep", None)
     if kind == "accel":
         return dyn.accel
+    if kind == "drive_away":
+        return dyn.accel if v < AWAY_MS else 0.0
     if kind == "brake":
         return -(getattr(dyn, arg, None) or dyn.brake_min)
     if kind == "yield" and yield_gap is not None:

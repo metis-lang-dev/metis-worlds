@@ -206,7 +206,7 @@ class Loop:
         if applied is not None and before is not None:
             a, lane, _ = applied
             hi = restrict.bound(before, ego.dyn)
-            if a > hi + 1e-9:
+            if a > hi + 1e-9 and ego.dyn.vmax > 0:           # standing still meets any braking response (road_world's)
                 self.violations.append({"tick": self.tick, "what": "accel above the truth response", "a": a, "max": hi,
                                         "dangerous": before["dangerous"]})
         self._truth_fold = fold

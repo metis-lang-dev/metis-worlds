@@ -105,7 +105,8 @@ class Perception:
     def observed(self, dets):
         """What a seen track SHOWS this tick, never what it intends (road-2 item 2): its indicator (signal: left |
         right | None) and a lane change seen complete (settled: the side it moved to, for SETTLED_TICKS once its lane
-        changed and its lane offset is within SETTLED_LAT). A track is matched to its detection by its exact sighting
+        index moved on one edge, and the next sighting has it still there with its lane offset within SETTLED_LAT; an edge
+        change is travel, never a lane change). A track is matched to its detection by its exact sighting
         (lane, s), the association's own rule."""
         self.k += 1
         d = self.map.load()
@@ -119,12 +120,15 @@ class Perception:
             if bits & 3:
                 self.signal[t] = ("left" if bits & 2 else "right", self.k)
             prev = self.track_lane.get(t)
+            if t in self.pending and self.pending[t][1] != x["lane"]:
+                self.pending.pop(t)                                   # it went on: no change seen complete
+            elif t in self.pending and abs(float(x.get("lat") or 0.0)) <= SETTLED_LAT:
+                self.settled[t] = (self.pending.pop(t)[0], self.k)
             if prev is not None and prev != x["lane"] and prev in self.lanemap.lanes and x["lane"] in self.lanemap.lanes:
-                a, b = self.lanemap.lanes[prev].index, self.lanemap.lanes[x["lane"]].index
-                self.pending[t] = "left" if b > a else "right"        # SUMO's index 0 is the rightmost
+                a, b = self.lanemap.lanes[prev], self.lanemap.lanes[x["lane"]]
+                if a.edge is not None and a.edge == b.edge and a.index != b.index:
+                    self.pending[t] = ("left" if b.index > a.index else "right", x["lane"])   # SUMO's index 0 is the rightmost
             self.track_lane[t] = x["lane"]
-            if t in self.pending and abs(float(x.get("lat") or 0.0)) <= SETTLED_LAT:
-                self.settled[t] = (self.pending.pop(t), self.k)
 
     def movers(self, ego):
         d = self.map.load()
