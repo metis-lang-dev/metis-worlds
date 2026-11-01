@@ -370,6 +370,85 @@ def test_a_turn_from_another_lane_asks_for_that_lane():
     assert w["want"] is None
 
 
+def test_there_is_no_lane_on_a_shoulder_and_the_wish_is_refused_at_once():
+    w = W.new()
+    W.take(w, "lane[D=right]")
+    facts = W.without_sides({"adjacent(right)": 1, "settled(right)": 1, "adjacent(left)": 1}, {"right"})
+    assert facts == {"adjacent(left)": 1}
+    W.planner_tick(w, facts)
+    assert w["want"] is None and w["said"][-1] == "Not now: there is no lane on the right. I have dropped it."
+
+
+LANES = {"a": {"length": 50.0, "next": {"b", "c"}, "turns": {}, "ways": {1: {"b"}, 2: {"c"}}, "speeds": [1.39, 13.89, 13.89, 1.39]},
+         "b": {"length": 50.0, "next": set(), "turns": {}, "ways": {}, "speeds": [13.89]}, "c": {"length": 50.0, "next": set(), "turns": {}, "ways": {}, "speeds": [13.89]}}
+
+
+def test_the_lanes_beside_read_shoulders_and_the_way_back():
+    import sumo_world as SW
+    w = SW.SumoWorld.__new__(SW.SumoWorld)
+    w._graph = LANES
+    assert w.lane_sides("a", 1) == ({"right"}, None)
+    assert w.lane_sides("a", 2) == ({"left"}, None)
+    assert w.lane_sides("a", 0) == (set(), "left")
+    assert w.lane_sides("a", 3) == (set(), "right")
+    assert w.lane_sides(":j_0", 0) == (set(), None)
+
+
+def lane_host(tmp_path, s, v=14.0, index=1, route=("a", "c")):
+    h, w = traffic_host(tmp_path)
+    w._graph = LANES
+    x = w.conn.vehicle
+    x.getIDList, x.getLaneID, x.getLaneIndex, x.getLanePosition, x.getSpeed = lambda: ["ego"], lambda e: "a_%d" % index, lambda e: index, lambda e: s, lambda e: v
+    x.getRoute, x.getRouteIndex = lambda e: list(route), lambda e: 0
+    return h, w
+
+
+def test_near_the_lanes_end_the_route_goes_where_the_lane_goes(tmp_path):
+    import sumo_world as SW
+    _, w = lane_host(tmp_path, 10.0)                # far yet: a lane change may still come
+    assert w.follow_lane() is None and not [c for c in w.conn.calls if c[0] == "setRoute"]
+    _, w = lane_host(tmp_path, 30.0)                # 20 m left at 14 m/s
+    assert w.follow_lane() == "a" and ("setRoute", SW.EGO, ["a", "b"]) in w.conn.calls
+    _, w = lane_host(tmp_path, 30.0, index=2)       # this lane leads where the route goes
+    assert w.follow_lane() is None
+
+
+def test_the_host_asks_quietly_for_the_lane_that_continues_the_route(tmp_path):
+    _, world = lane_host(tmp_path, 5.0)
+    world.conn.vehicle.getBestLanes = lambda e: [("a_1", 50.0, 0.0, 1, True, ()), ("a_2", 90.0, 0.0, 0, True, ())]
+    assert world.lane_for_route() == "left"
+    world.conn.vehicle.getLanePosition = lambda e: 30.0      # too near the end: no change at the stop line
+    assert world.lane_for_route() is None
+    w = W.new()
+    W.route_lane(w, "a", "left")
+    assert w["want"] == "left" and w["quiet"]
+    W.planner_tick(w, {"changing(left)": 1})
+    assert w["want"] is None and w["said"] == []
+    W.route_lane(w, "a", None)
+    W.planner_tick(w, {})
+    assert w["said"] == []
+
+
+def test_the_person_chooses_the_lane_on_this_edge(tmp_path):
+    w = W.new()
+    W.take(w, "lane[D=right]")
+    W.route_lane(w, "a", "left")
+    assert w["want"] == "right" and not w["quiet"]
+    w["want"] = None
+    W.route_lane(w, "a", "left")            # the host does not undo it here
+    assert w["want"] is None
+    W.route_lane(w, "b", "left")
+    assert w["want"] == "left"
+
+
+def test_a_turn_missed_for_the_lane_is_said(tmp_path):
+    h, _ = lane_host(tmp_path, 30.0)
+    wish = h.shared.setdefault("wish", W.new())
+    wish.update(turn=("a", [2]), want="left")
+    h.follow_lane()
+    assert wish["turn"] is None and wish["want"] is None and "could not get over" in wish["said"][-1]
+
+
 def test_the_drive_dock_says_what_the_words_say(tmp_path):
     h, w = traffic_host(tmp_path)
     h.world(["drive:stop"])

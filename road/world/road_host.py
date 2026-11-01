@@ -116,8 +116,14 @@ class RoadHost:
         facts = self.road.observe()[0]
         if self.spec == "planner" and self.run.get("page"):
             w = self.shared.setdefault("wish", road_wishes.new())
-            road_wishes.planner_tick(w, facts)
             me = self.road.prev_truth.get(self.road.ego_id) if hasattr(self.road, "prev_truth") else None
+            if me and hasattr(self.road, "world"):
+                edge = me["lane"].rsplit("_", 1)[0]
+                sides, back = self.road.world.lane_sides(edge, me["index"])
+                facts = road_wishes.without_sides(facts, sides)
+                side = back or self.road.world.lane_for_route()      # on a shoulder: back to a lane
+                road_wishes.route_lane(w, edge, None if side in sides else side)
+            road_wishes.planner_tick(w, facts)
             if me:
                 road_wishes.turn_lanes(w, (me["lane"].rsplit("_", 1)[0], me["index"]))
             if hasattr(self.road, "world"):
@@ -160,6 +166,8 @@ class RoadHost:
                 self.pace()
             self.road.step()
             self._log(self.road.log[-1])
+            if self.run.get("page"):
+                self.follow_lane()
         elif self.steps and self.run.get("page"):
             time.sleep(DT)                             # paused or there: the Live's clock has no pace of its own
         dos = self.sync(counts)
@@ -262,6 +270,16 @@ class RoadHost:
             raise
         except Exception as e:  # noqa: BLE001 — TraCI's refusal, in its own words
             says.append("SUMO refused %s: %s" % (line, e))
+
+    def follow_lane(self):
+        """Every tick, an edge can be shorter than a planner's tick: the route follows the ego's lane; a turn the person asked for and the ego could not get over for is said."""
+        if not hasattr(self.road, "world"):
+            return
+        edge = self.road.world.follow_lane()
+        w = self.shared.setdefault("wish", road_wishes.new())
+        if edge and w["turn"] and w["turn"][0] == edge:
+            w.update(turn=None, want=None)
+            w["said"].append("I could not get over in time for that turn: I go on from this lane.")
 
     def pace(self):
         """Hold this step until its time; a slow step is not made up after."""

@@ -30,6 +30,8 @@ LC_DURATION = 1.0              # a lane change takes 1 s (the restrictor's contr
 EDGE_M, LANES = 1000.0, 2
 MAPS = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "maps")   # road/maps: the towns' nets
 ROUTE_M = 1500.0               # a town's way, m
+CRAWL_MS = 3.0                 # a lane limited below this is a shoulder in CARLA's nets, not a lane to drive, m/s
+LATE_M = 5.0                   # how near a lane's end its way is settled, beyond two seconds of the ego's speed, m
 TURNS = {"r": "right", "R": "right", "l": "left", "L": "left", "s": "straight"}     # a connection's dir
 VTYPES = {                     # the old harness's planted styles (metispy sumo_harness): the ground truth of a style
     "calm": dict(accel=1.0, decel=2.0, sigma=0.2, maxSpeed=8.0, tau=1.4, color="0,0,1"),
@@ -120,10 +122,11 @@ def _town(net):
     for e in root.findall("edge"):
         lanes = e.findall("lane")
         if e.get("function", "normal") == "normal" and lanes and any(la.get("allow") in (None, "passenger") or "passenger" in la.get("allow", "").split() for la in lanes):
-            edges[e.get("id")] = {"length": float(lanes[0].get("length")), "next": set(), "turns": {}}
+            edges[e.get("id")] = {"length": float(lanes[0].get("length")), "next": set(), "turns": {}, "ways": {}, "speeds": [float(la.get("speed")) for la in lanes]}
     for c in root.findall("connection"):
         if c.get("from") in edges and c.get("to") in edges:
             edges[c.get("from")]["next"].add(c.get("to"))
+            edges[c.get("from")]["ways"].setdefault(int(c.get("fromLane")), set()).add(c.get("to"))
             edges[c.get("from")]["turns"].setdefault(TURNS.get(c.get("dir")), []).append((c.get("to"), int(c.get("fromLane"))))
     return edges
 
@@ -302,7 +305,9 @@ class SumoWorld:
                 continue
             to = sorted({o[0] for o in options})[0]
             c.vehicle.setRoute(EGO, route[at:k + 1] + _route_from(edges, to, ROUTE_M))
-            return route[k], sorted(o[1] for o in options if o[0] == to)
+            lanes = sorted(o[1] for o in options if o[0] == to)
+            speeds = edges[route[k]].get("speeds", ())
+            return route[k], [i for i in lanes if i >= len(speeds) or speeds[i] >= CRAWL_MS] or lanes
         return None
 
     def keep_going(self):
@@ -315,6 +320,48 @@ class SumoWorld:
         if at < len(route) - 1 or not edges.get(route[-1], {}).get("next"):
             return
         c.vehicle.setRoute(EGO, route[at:] + _route_from(edges, route[-1], ROUTE_M)[1:])
+
+    def follow_lane(self):
+        """Too near an edge's end to change lane (lane_for_route had its time), on a lane that does not lead to the route's next edge: the route goes where the lane goes, where SUMO
+        would hold the ego at the lane's end. → the edge the route changed on, or None."""
+        c, edges = self.conn, self.graph()
+        if EGO not in c.vehicle.getIDList() or c.vehicle.getLaneID(EGO).startswith(":"):
+            return None
+        route = list(c.vehicle.getRoute(EGO))
+        at = c.vehicle.getRouteIndex(EGO)
+        ways = edges.get(route[at], {}).get("ways", {}).get(c.vehicle.getLaneIndex(EGO))
+        if at >= len(route) - 1 or not ways or route[at + 1] in ways or not self._late(edges[route[at]]):
+            return None
+        c.vehicle.setRoute(EGO, [route[at]] + _route_from(edges, sorted(ways)[0], ROUTE_M))
+        return route[at]
+
+    def _late(self, edge):
+        """The ego is too near EDGE's end for a lane change."""
+        c = self.conn
+        return edge["length"] - c.vehicle.getLanePosition(EGO) <= 2.0 * c.vehicle.getSpeed(EGO) + LATE_M
+
+    def lane_for_route(self):
+        """The side towards a lane that continues the route, SUMO's reading of the connections down the route (getBestLanes' offset); None on a lane that does, in a junction, or too
+        near the edge's end: no lane change at the stop line."""
+        c, edges = self.conn, self.graph()
+        lane = c.vehicle.getLaneID(EGO) if EGO in c.vehicle.getIDList() else ":"
+        if lane.startswith(":"):
+            return None
+        off = next((b[3] for b in c.vehicle.getBestLanes(EGO) if b[0] == lane), 0)
+        edge = edges.get(lane.rsplit("_", 1)[0])
+        if not off or edge is None or self._late(edge):
+            return None
+        return "left" if off > 0 else "right"
+
+    def lane_sides(self, edge, index):
+        """The lanes beside lane INDEX of EDGE. → (the sides that are no lane to drive: a shoulder, or a lane that leads nowhere; the side towards a driving lane when this one is none)."""
+        e = self.graph().get(edge) or {}
+        speeds, ways = e.get("speeds", ()), e.get("ways", {})
+        road = [i for i, v in enumerate(speeds) if v >= CRAWL_MS and (i in ways or not ways)]
+        sides = {s for s, i in (("right", index - 1), ("left", index + 1)) if 0 <= i < len(speeds) and i not in road}
+        if index in road or not road:
+            return sides, None
+        return sides, "left" if min(road, key=lambda i: abs(i - index)) > index else "right"
 
     # ── the person's hand on the traffic (the page's Traffic dock): what sumo-gui offers, and adding cars, which it does not (TraCI does) ──
     def add_cars(self, kind="aggr", n=1, ahead=False):

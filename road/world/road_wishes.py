@@ -9,7 +9,8 @@ still decides by its keep-table, the restrictor and the responder see the world 
     follow    no side settled: no lane change
     stop      nothing to speed up or keep: the planner's own gentle brake (brake_follow) until the car stands, and holds it; go takes it back
     a turn    no wish of the planner's: the ego's route (SumoWorld.turn); when the turn needs another lane, the lane wish for it (turn_lanes)
-A one-shot wish (lane, pass) stands WISH_TICKS planner ticks, then is dropped and the reason said."""
+    the route the host's own lane wish, QUIET (nothing said): towards a lane that continues the route (SumoWorld.lane_for_route)
+A one-shot wish (lane, pass) stands WISH_TICKS planner ticks, then is dropped and the reason said; at once when there is no lane on that side."""
 import re
 
 EASY_MS = 6.0
@@ -18,7 +19,7 @@ SIDES = ("left", "right")
 
 
 def new():
-    return {"pace": "normal", "want": None, "age": 0, "follow": False, "stop": False, "turn": None, "said": []}
+    return {"pace": "normal", "want": None, "age": 0, "quiet": False, "own_edge": None, "follow": False, "stop": False, "turn": None, "said": []}
 
 
 def take(w, rule, binding=None):
@@ -28,9 +29,9 @@ def take(w, rule, binding=None):
     if name == "pace":
         w["pace"] = value
     elif name == "lane":
-        w.update(want=value, age=0, follow=False)
+        w.update(want=value, age=0, quiet=False, follow=False)
     elif name == "pass":
-        w.update(want="any", age=0, follow=False)
+        w.update(want="any", age=0, quiet=False, follow=False)
     elif name == "stop":
         w.update(stop=True, want=None)
     elif name == "go":
@@ -101,7 +102,20 @@ def turn_lanes(w, lane):
     edge, wanted = w["turn"] or (None, ())
     if lane is None or lane[0] != edge or not wanted or lane[1] in wanted:
         return
-    w.update(want="left" if lane[1] < min(wanted) else "right", age=0)      # SUMO counts lanes from the right
+    w.update(want="left" if lane[1] < min(wanted) else "right", age=0, quiet=False)      # SUMO counts lanes from the right
+
+
+def route_lane(w, edge, side):
+    """The host's wish for the lane that continues the route (SIDE, or None), unless a wish stands or the person chose the lane on this EDGE: the route then follows that lane."""
+    if w["want"] and not w["quiet"]:
+        w["own_edge"] = edge
+    if side and not w["want"] and not w["stop"] and w["own_edge"] != edge:
+        w.update(want=side, age=0, quiet=True)
+
+
+def without_sides(facts, sides):
+    """The world with no lane on SIDES (SumoWorld.lane_sides): a shoulder beside the ego is no lane to change to."""
+    return {a: n for a, n in facts.items() if not any(a in ("adjacent(%s)" % s, "settled(%s)" % s) for s in sides)}
 
 
 def planner_tick(w, facts):
@@ -109,10 +123,12 @@ def planner_tick(w, facts):
     if not w["want"]:
         return
     if any(a.startswith("changing(") for a in facts):
-        w["said"].append("Changing lane now.")
+        if not w["quiet"]:
+            w["said"].append("Changing lane now.")
         w["want"] = None
         return
     w["age"] += 1
-    if w["age"] >= WISH_TICKS:
-        w["said"].append("Not now: %s. I have dropped it." % why_not(facts, w["want"]))
+    if w["age"] >= WISH_TICKS or not any("adjacent(%s)" % s in facts for s in (SIDES if w["want"] == "any" else (w["want"],))):
+        if not w["quiet"]:
+            w["said"].append("Not now: %s. I have dropped it." % why_not(facts, w["want"]))
         w["want"] = None
