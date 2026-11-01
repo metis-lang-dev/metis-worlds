@@ -41,6 +41,37 @@ def env(monkeypatch):
         monkeypatch.setenv(k, os.environ.get(k, ""))
 
 
+def test_asking_a_trace_of_an_agent_without_the_reader_is_refused(tmp_path, env, monkeypatch):
+    tree = road_tree()
+    monkeypatch.setattr(tree, "has_reader", lambda: False)
+    with pytest.raises(SystemExit) as e:
+        tree.run("cruise", 1, tmp_path, ticks=5, trace=tmp_path / "t")
+    assert "no trace would be written" in str(e.value) and "metis-agent " in str(e.value) and e.value.code
+    assert not (tmp_path / "t").exists() and not list(tmp_path.glob("j-*")), "refused before anything ran"
+    tree.run("cruise", 1, tmp_path / "plain", ticks=5)    # no trace asked: nothing to refuse
+
+
+def test_a_live_that_ignores_the_trace_key_is_refused(tmp_path, env, monkeypatch):
+    from metis_agent import service as S
+    tree, init = road_tree(), S.Live.__init__
+
+    def older(self, cfg, llm, emit=None):
+        init(self, dict((k, v) for k, v in cfg.items() if k != "trace"), llm, emit)
+        del self.tracer
+    monkeypatch.setattr(S.Live, "__init__", older)
+    with pytest.raises(SystemExit, match="this Live ignored the config's trace:"):
+        tree.run("cruise", 1, tmp_path, ticks=5, trace=tmp_path / "t")
+
+
+def test_the_page_refuses_an_agent_without_the_reader(tmp_path):
+    spec = importlib.util.spec_from_file_location("road_hier", ROAD / "world" / "road_hier.py")
+    hier = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(hier)
+    with pytest.raises(SystemExit, match="no metis_agent/trace.py"):
+        hier.install(str(tmp_path / "root"), str(tmp_path))
+    assert not (tmp_path / "root").exists()
+
+
 def test_a_run_on_the_exerciser_replays_with_no_world(tmp_path, env):
     road_tree().run("cruise", 1, tmp_path, ticks=250, trace=tmp_path / "t")
     r = replayed(tmp_path / "t" / "cruise-1")

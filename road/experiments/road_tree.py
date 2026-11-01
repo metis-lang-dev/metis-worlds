@@ -15,8 +15,10 @@ world's summary (collisions, violations, restricted, arrived, t), the journal's 
 commands, the planner's, the ping-pong count: a planner command revoked by the responder and the planner's next one
 re-issued within the responder's hold), the latency from the first tick a response is asked to the first brake the
 responder commands (in ticks, against ρ = 2), and the beats per domain."""
+import importlib.util
 import json
 import os
+import subprocess
 import sys
 import tempfile
 import time
@@ -44,6 +46,23 @@ class NoModel:
         raise RuntimeError("the model is not loaded (%s)" % name)
 
 
+def has_reader():
+    return importlib.util.find_spec("metis_agent.trace") is not None
+
+
+def agent_commit():
+    """The metis-agent this runs on: its commit and where, for a refusal's words."""
+    import metis_agent
+    where = Path(metis_agent.__file__).resolve().parent
+    r = subprocess.run(["git", "-C", str(where), "rev-parse", "--short", "HEAD"], capture_output=True, text=True)
+    return "%s at %s" % (r.stdout.strip() or "no git commit", where)
+
+
+def no_reader(why):
+    """A trace was asked and none would be written: never a silent run. The reader came in metis-agent 2f823c0."""
+    return SystemExit("%s: a trace was asked, and %s: no trace would be written. metis-agent %s (the reader came in 2f823c0)." % (Path(sys.argv[0]).name, why, agent_commit()))
+
+
 def world_commands():
     """The world's commands, the composition's `world.in`: what a trace's `out` names beside the members' out ports."""
     import yaml
@@ -63,6 +82,8 @@ def config(journal, seed):
 
 
 def run(scenario, seed, out_dir, ticks=1500, world_kind=None, vehicles=None, trace=None):
+    if trace and not has_reader():
+        raise no_reader("this metis-agent has no metis_agent.trace")
     from metis_agent import service as S
     import road_host
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -85,6 +106,12 @@ def run(scenario, seed, out_dir, ticks=1500, world_kind=None, vehicles=None, tra
         ag.watch.blind = True                       # a world that moves by itself: no surprise from its motion
     key = json.loads(spec.read_text())["key"]
     world = road_host.SHARED[key]["world"]
+    if trace and getattr(lv, "tracer", None) is None:
+        close = getattr(world, "close", None)
+        if close:
+            close()
+        road_host.SHARED.pop(key, None)
+        raise no_reader("this Live ignored the config's trace:")
     t0 = time.perf_counter()
     for _ in range(ticks):
         lv.tick()

@@ -35,6 +35,8 @@ def intent_files(task_dir):
 
 
 def install(root, agent_py, port=8400, scenario="Town03", seed=1):
+    if not os.path.isfile(os.path.join(agent_py, "metis_agent", "trace.py")):     # the page's config asks a trace below: an older Live would ignore it, in silence
+        raise SystemExit("road_hier: the page's config asks a trace, and the metis-agent at %s has no metis_agent/trace.py: no trace would be written (the reader came in 2f823c0)" % agent_py)
     road_host.set_family_home()          # the road family through METIS_HOME (road-family s-f62c0ed8)
     intent_files(os.path.join(os.path.dirname(HERE), "domains", "task"))
     if os.path.exists(root):
