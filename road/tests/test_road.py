@@ -278,3 +278,13 @@ def test_the_restrictor_on_a_standing_pair():
     assert restrict.restrict(("drive_away", None), away, d, restrict.AWAY_MS)[0] == 0.0
     stay = {"resp_lon": "none", "lon_range": [-8.0, 0.0]}
     assert restrict.restrict(("accel", None), stay, d, 0.0)[0] == 0.0
+
+
+def test_the_light_on_a_link():
+    from types import SimpleNamespace as Link
+    link = Link(tl="C", tl_link=1)
+    assert [road_facts.signal_of(link, {"C": "r%sr" % s}) for s in "GgyurO"] == ["green", "green_yield", "amber", "red", "red", "off"]
+    assert road_facts.signal_of(None, {"C": "rrr"}) == "off" and road_facts.signal_of(link, None) == "off"
+    assert road_facts.signal_of(Link(tl=None, tl_link=None), {"C": "rrr"}) == "off"
+    assert road_facts.signal_of(Link(tl="D", tl_link=0), {"C": "rrr"}) == "off"
+

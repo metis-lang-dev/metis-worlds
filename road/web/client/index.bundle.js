@@ -118134,6 +118134,20 @@
 	    return mesh;
 	}
 	exports.extrudedMeshFromVertices = extrudedMeshFromVertices;
+	/** The height of a polyline of SUMO points at its closest place to a SUMO [x, y]: drawn roads are thinned, so between its points, not at one. */
+	function heightOnLine(position, points) {
+	    var best = Infinity, height = (points[0] && points[0][2]) || 0;
+	    for (var i = 0; i + 1 < points.length; i++) {
+	        var a = points[i], b = points[i + 1], dx = b[0] - a[0], dy = b[1] - a[1], len2 = dx * dx + dy * dy;
+	        var f = len2 ? Math.max(0, Math.min(1, ((position[0] - a[0]) * dx + (position[1] - a[1]) * dy) / len2)) : 0;
+	        var ex = a[0] + f * dx - position[0], ey = a[1] + f * dy - position[1], d = ex * ex + ey * ey;
+	        if (d < best) {
+	            best = d;
+	            height = (a[2] || 0) + f * ((b[2] || 0) - (a[2] || 0));
+	        }
+	    }
+	    return height;
+	}
 	/** Create an object from an array of 2D or 3D points in SUMO coordinates. */
 	function lineString(points, transform, params) {
 	    var simplicialComplex = extrudePolyline({
@@ -118146,8 +118160,7 @@
 	    // Translate from SUMO coordinates to three.js coordinates.
 	    simplicialComplex.positions = simplicialComplex.positions.map(function (position) {
 	        var xyz = transform.xyToXyz(position);
-	        var closestPoint = geometry_1.findClosestPoint(xyz, points);
-	        return [xyz[0], closestPoint && closestPoint[2] ? closestPoint[2] : 0, xyz[2]];
+	        return [xyz[0], heightOnLine(position, points), xyz[2]];
 	    });
 	    var geometry = Complex(simplicialComplex);
 	    // Some of the faces that come out of the triangulation process have face normals that

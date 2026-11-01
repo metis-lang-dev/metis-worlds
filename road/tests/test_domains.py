@@ -39,10 +39,10 @@ def family_packages():
 
 
 def test_the_road_packages_load():
-    assert {d.name for d in packages()} == {"responder", "planner", "road_director", "task"}
+    assert {d.name for d in packages()} == {"responder", "signals", "planner", "road_director", "task"}
 
 
-@pytest.mark.parametrize("name", ["responder", "planner"])
+@pytest.mark.parametrize("name", ["responder", "signals", "planner"])
 def test_the_family_members_own_cases_pass_through_the_interface_stub(name):
     # the family's cases live with the family (metis-catalog domains/road/<member>/cases); the car's packages here hold
     # the host and the manifest
@@ -53,7 +53,7 @@ def test_the_family_members_own_cases_pass_through_the_interface_stub(name):
     assert all(r.passed for r in rs), stub.render(rs)
 
 
-@pytest.mark.parametrize("member", ["responder", "planner"])
+@pytest.mark.parametrize("member", ["responder", "signals", "planner"])
 def test_the_road_members_cancels_are_as_their_generator_writes_them(member):
     # each member base's stop stub, from metispy's protocol_stub
     from metis.catalog import protocol_stub

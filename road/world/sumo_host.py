@@ -4,7 +4,7 @@ clock, `now`, commands and restrictor; only the world differs, SUMO's truth seen
 road_host picks it by the run spec (`"world": "sumo"`, with scenario, seed, sensor, vehicles, work).
 
 The interface (RoadWorld's): observe() → (facts, roles, fold, states) once a tick · command(cmd, life) · step() ·
-tick, t, log (a row a step: t, s, v, a, lane, cmd, resp, zone, danger, truth) · arrived() · summary().
+tick, t, log (a row a step: t, s, v, a, lane, cmd, resp, zone, signal, danger, truth) · arrived() · summary().
 
 The episode begins with the ego on the road: SUMO is stepped until the ego is inserted (its depart; not ticks), then
 perceived and projected once. One tick (dt 0.1 s, the SUMO step; road_host's responder steps it):
@@ -147,7 +147,10 @@ class Loop:
         return a, lane, cmd
 
     def yield_gap(self, ego):
-        """The ego's front to the next zone's line on its way (LaneMap.nearest_zone's d_enter; restrict keeps min_dist)."""
+        """The ego's front to the next junction's stop line on its way, inside one to the next zone's (d_enter; restrict keeps min_dist)."""
+        link = None if self.lanemap.lanes[ego.lane].internal else self.lanemap.next_link(ego.route or [ego.lane], ego.s)
+        if link is not None:                          # the stop line, before a junction
+            return link[1]
         z = self.lanemap.nearest_zone(ego.route or [ego.lane], ego.s, length=ego.length)
         return z[2] if z else None
 
@@ -182,6 +185,7 @@ class Loop:
                          "cmd": None if applied is None else list(applied[2]), "resp": fold["resp_lon"],
                          "seen": len(self.perc.last["seen"]), "tracks": len(movers), "binding": binding,
                          "zone": next((a[len("zone_at(nextzone,"):-1] for a in self.proj["facts"] if a.startswith("zone_at(nextzone")), None),
+                         "signal": next((a[len("signal(nextzone,"):-1] for a in self.proj["facts"] if a.startswith("signal(nextzone")), None),
                          "danger": danger_rows(self.proj["states"], {m.id: (m.lane, m.s, m.dyn.vmax) for m in movers}),
                          "truth": danger_rows(self._truth_states, {k: (p["lane"], p["s"], p["speed"]) for k, p in truth.items()}, self._truth_pairs)})
         return True

@@ -36,7 +36,7 @@ import { keywordStop } from './vendor/dialog.js';
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 const q = new URLSearchParams(location.search);
-const ORDER = ['responder', 'planner', 'task'];   // the road:    // the hierarchy's rows, the planner first; others as they appear
+const ORDER = ['responder', 'signals', 'planner', 'task'];   // the road:    // the hierarchy's rows, the planner first; others as they appear
 
 const world = window.world = { log: [], frames: [], at: 0 };
 const rec = (dir, f) => world.log.push({ t: Math.round(performance.now()), dir, ...f });
@@ -50,7 +50,7 @@ function resetHierarchy() {                          // a new task: the last tas
 }
 // the road: the members beat on their clocks, none sleeps; what the tree director says is who holds the controls (free(controls) or holder(D, controls)), on hello from its
 // atoms and after that from its grants and revokes in the journal
-const DOING = { responder: 'watches the road', planner: 'plans', task: 'listens to you' };
+const DOING = { responder: 'watches the road', signals: 'watches the lights', planner: 'plans', task: 'listens to you' };
 function hierarchy(f) {
   for (const d of ORDER) if (!hier.rows.has(d)) hier.rows.set(d, { name: d, goals: [] });
   const held = (f.state || []).find(a => /^holder\(.*,controls\)$/.test(a));
@@ -102,7 +102,7 @@ function journalRow(row) {
 const COMMANDS = /^(brake|change|accel|keep|yield|drive_away|stop_lat|pace|lane|pass|follow|resume|around)/;
 let lastCmd = null;
 function commands(rec) {
-  if (rec.kind !== 'dlg-trace' || !['responder', 'planner', 'task'].includes(rec.domain)) return;
+  if (rec.kind !== 'dlg-trace' || !['responder', 'signals', 'planner', 'task'].includes(rec.domain)) return;
   for (const row of rec.fired || []) {
     if (row.kind !== 'clause' || !COMMANDS.test(row.event) || row.event === lastCmd) continue;
     lastCmd = row.event;

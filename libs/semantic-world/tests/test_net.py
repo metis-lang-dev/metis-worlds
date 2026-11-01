@@ -125,7 +125,11 @@ def test_the_traffic_light_decides_the_priority(tls):
     assert m.pairs(ego, [x], lights={"C": t.state_at(0)})[0].type == "xing_ego_prio"   # W-E green
     assert m.pairs(ego, [x], lights={"C": t.state_at(50)})[0].type == "xing_obj_prio"  # S-N green
     z = next(z for z in m.zones if set(z.lanes) == {":C_8_0", ":C_11_0"})
-    assert m.priority(z, {"C": "rrrrrrrrrrrrrr"}) == z.priority                   # equal ranks: the junction's rows
+    assert m.priority(z, {"C": "OOOOOOOOOOOOOO"}) == z.priority                   # equal ranks: the junction's rows
+    assert m.priority(z, {"C": "rrrrrrrrrrrrrr"}) is None                         # both red: neither has the way, a light before a row
+    link, line = m.next_link(route, 70.0)
+    assert link.via == ":C_11_0" and link.tl == "C" and line == m.lanes["WC_0"].length - 70.0
+    assert m.next_link(route[1:], 1.0) is None or m.next_link(route[1:], 1.0)[0].via != ":C_11_0"   # inside: no line of this junction ahead
 
 
 def test_the_vclass_dynamics_and_the_lanes_vcap(cross):

@@ -74,7 +74,7 @@ def check(ticks, net):
         c = net["entry"].get(b["lane"])
         if a["lane"] != b["lane"] and c is not None:
             if c.get("tl"):
-                state = light_at(net, c, b["sumo_t"])
+                state = {"red": "r", "amber": "y"}.get(a.get("signal"), "G") if "signal" in a else light_at(net, c, b["sumo_t"])    # the log's light where it has one
                 out["signal_entries"] += 1
                 out["red_entries"] += state in "rR"
                 out["amber_entries"] += state in "yY"

@@ -26,7 +26,7 @@ def road_tree():
 def replayed(d):
     from metis import trace
     head = trace.read(d)[0].header
-    assert set(head["members"]) == {"responder", "planner", "road_director"}
+    assert set(head["members"]) == {"responder", "signals", "planner", "road_director"}
     assert "brake_lon" in head["commands"]
     out = {}
     for m in head["members"]:

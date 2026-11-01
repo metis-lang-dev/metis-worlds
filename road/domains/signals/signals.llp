@@ -1,0 +1,10 @@
+% signals — the road's lights over the role vocabulary (road-agent s-357becc7): the base, the capacity, the protocol.
+catalog signals 1.
+provenance text "the road's lights over the roles: the host binds the world each tick" "2026-11-01".
+include "signals_domain.llp".        % the road family, by name: METIS_HOME = metis-catalog domains/road (catalog.pin)
+include "capacity.llp".
+include "tick_types.llp".
+#init idle 1
+#init tick__gen(signals, controls, g0) 1
+#steps 6
+#seeds 1

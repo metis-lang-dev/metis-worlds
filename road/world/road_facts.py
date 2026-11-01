@@ -25,7 +25,9 @@ a1..a3, vru1). The facts (every number stays here; the rules read classes):
   by more than SLOW_MARGIN: nothing to gain behind it), else lead_ok (accel_ok then brings the ego up to it); accel_ok when
   two plans (2 PLAN_T) of full acceleration keep the lead at a safe distance (gap_room), else accel_no; keep_ok when
   two plans at the speed it has do, else keep_no; at_dest;
-- the next zone on the ego's route (role nextzone): zone_at(nextzone, C) with C far | near | at | in (the ego's
+- signal(nextzone, L): the light on the next junction link of the way (signal_of), off with none or inside a junction; can_halt(nextzone):
+  its line is within the hardest braking;
+- the next zone on the ego's route (role nextzone), or the next junction itself when its link has none (class by the line): zone_at(nextzone, C) with C far | near | at | in (the ego's
   front at d_enter: beyond its reach far — its stated braking distance + NEAR_MARGIN, at least NEAR_RANGE — within it
   near, ≤ AT_RANGE at, inside in), and zone_at(nextzone, none) when no zone is ahead; zprio(nextzone, P) ego | obj |
   same (the zone's priority lane: the ego's, another's, none); can_stop(nextzone) (the ego's stated braking
@@ -103,6 +105,18 @@ def gap_room(pairs, ego, v, cap, accel, t=2 * PLAN_T):
 SETTLE_S = 10.0                 # s: the side the ego left is not settled again before this
 
 
+LIGHTS = {"G": "green", "g": "green_yield", "y": "amber", "Y": "amber", "r": "red", "u": "red", "s": "red"}
+
+
+def signal_of(link, lights):
+    """The light on LINK (a Connection) by the world's phase states LIGHTS: green, green_yield, amber, red, or off with none. Truth, not
+    sensed: the lights have no occlusion and no range here. Red and amber together, and red with a turn allowed, count as red."""
+    if link is None or link.tl is None or link.tl_link is None or not lights or link.tl not in lights:
+        return "off"
+    st = lights[link.tl]
+    return LIGHTS.get(st[link.tl_link], "off") if link.tl_link < len(st) else "off"
+
+
 def fold_of(states, movers, ego):
     """The fold: a dangerous pair whose other has settled into a lane not the ego's is released from it; a crossing never is: only geometry
     releases that one, or both standing (situation.respond_standing)."""
@@ -175,16 +189,26 @@ def facts(lm, ego, v, movers, sit, changing=None, dest=None, turn=None, lights=N
         out["at_dest"] = 1
     zr = lm.zone_roles(ego, movers, roles)                      # the zone binding: the library's, never by hand
     near = lm.nearest_zone(ego.route, ego.s, length=ego.length) if zr["nextzone"] else None
-    if near is not None and near[0].id == zr["nextzone"]:
+    link = None if lm.lanes[ego.lane].internal else lm.next_link(ego.route, ego.s)   # inside a junction no line is ahead
+    out["signal(nextzone,%s)" % signal_of(link[0] if link else None, lights)] = 1
+    d = ego.dyn
+    reach = max(NEAR_RANGE, stated(v, 0.0, d.rho, d.brake_min) + NEAR_MARGIN)       # near: within its stopping reach
+    if link is not None and stop(v, d.brake_max) + d.min_dist <= link[1]:
+        out["can_halt(nextzone)"] = 1                                               # a red's test: only the brakes excuse it
+    if link is not None and (near is None or near[0].id != zr["nextzone"] or near[1] not in link[0].chain):
+        # the next junction's link has no zone: nextzone is the junction itself, its class by the line; nothing to yield to there
+        out["zone_at(nextzone,%s)" % ("at" if link[1] <= AT_RANGE else "near" if link[1] <= reach else "far")] = 1
+        out["can_stop(nextzone)" if stated(v, 0.0, d.rho, d.brake_min) <= max(0.0, link[1]) else "late(nextzone)"] = 1
+        out["cross_settled(nextzone)"] = 1
+    elif near is not None and near[0].id == zr["nextzone"]:
         z, rl, d_in, d_out = near
         front = d_in
-        d = ego.dyn
-        reach = max(NEAR_RANGE, stated(v, 0.0, d.rho, d.brake_min) + NEAR_MARGIN)   # near: within its stopping reach
-        cls = "in" if front <= 0 < d_out else "at" if front <= AT_RANGE else "near" if front <= reach else "far"
+        line = min(front, link[1]) if link is not None else front                   # the class and the stop by the line, where there is one
+        cls = "in" if line <= 0 < d_out else "at" if line <= AT_RANGE else "near" if line <= reach else "far"
         out["zone_at(nextzone,%s)" % cls] = 1
         prio = lm.priority(z, lights)
         out["zprio(nextzone,%s)" % ("same" if prio is None else "ego" if prio == rl else "obj")] = 1
-        out["can_stop(nextzone)" if stated(v, 0.0, d.rho, d.brake_min) <= max(0.0, front) else "late(nextzone)"] = 1
+        out["can_stop(nextzone)" if stated(v, 0.0, d.rho, d.brake_min) <= max(0.0, line) else "late(nextzone)"] = 1
         occupants = [m for m in movers if inside(z, m)]
         if not occupants:
             out["zfree(nextzone)"] = 1

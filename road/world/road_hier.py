@@ -14,7 +14,7 @@ import yaml
 HERE = os.path.dirname(os.path.abspath(__file__))
 import road_host  # noqa: E402
 WEB = os.path.join(os.path.dirname(HERE), "web")
-NAMES = ["responder", "planner", "road_director", "task"]
+NAMES = ["responder", "signals", "planner", "road_director", "task"]
 CARD = {"title": "The road, on SUMO", "about": ["An RSS road world: the responder answers every 0.1 s, the planner plans every second, the restrictor is the shield.",
                                                 "The stack drives. You may ask; it decides, and it may say not now. The ego starts alone: the Traffic dock adds cars."],
         "asks": [{"say": "go right", "what": "left, right or straight on at the next junction"}, {"say": "change to the left lane", "what": "the left or the right lane, when it is safe"},

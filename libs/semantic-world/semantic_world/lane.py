@@ -230,8 +230,8 @@ class LaneMap:
             st = lights[cn.tl]
             ranks[lane] = LIGHT_RANK.get(st[cn.tl_link], 0) if cn.tl_link is not None and cn.tl_link < len(st) else 0
         (la, ra), (lb, rb) = sorted(ranks.items())
-        if ra == rb:
-            return zone.priority
+        if ra == rb:                                 # both red: neither has the way, and a light goes before the row (StVO §37(1))
+            return None if ra == LIGHT_RANK["r"] else zone.priority
         return la if ra > rb else lb
 
     def crossing(self, route, s0, ways, o_s, lights=None, ego_len=0.0, o_len=0.0):
@@ -275,6 +275,19 @@ class LaneMap:
         kind = "xing_obj_prio" if "xing_obj_prio" in kinds else "xing_same_prio" if "xing_same_prio" in kinds \
             else "xing_ego_prio"
         return key, kind, d_in, d_out, o_in, o_out
+
+    def next_link(self, route, s0):
+        """The first junction entry ahead on ROUTE → (Connection, the distance to its line), or None (no net; no entry). A leading internal
+        lane is skipped: a junction already entered has no line ahead."""
+        if self.net is None:
+            return None
+        if getattr(self, "_links", None) is None:
+            self._links = {(c.from_lane, c.via): c for c in self.net.connections if c.via}
+        for prev, cur in zip(route, route[1:]):
+            if self.lanes[cur].internal and not self.lanes[prev].internal:
+                cn = self._links.get((prev, cur))
+                return (cn, self.ahead(route, s0, cur, 0.0)) if cn else None
+        return None
 
     def nearest_zone(self, route, s0, lane=None, ways=None, length=0.0):
         """The zone along ROUTE (from s0 on route[0]) nearest ahead and not yet left (by the rear of a mover of LENGTH

@@ -1,0 +1,11 @@
+# signals — the road family's lights member (road-agent s-357becc7): it beats at the world's step, in parallel with the plan and the
+# proper response, and holds the controls between them. The host is the road world's.
+display: the lights
+line: "the road's lights: it stops before the line at a red, and at an amber if it can, then hands the controls back"
+voice: third
+program: signals.llp
+host: road_host.py:make
+clock: {beats: 1, period: 1}
+shared: {signal: world-private, zone_at: world-private, can_stop: world-private, can_halt: world-private, now: world-private, tick__want: out, tick__released: out, tick__gen: in, tick__active: out, tick__done: out, tick__grant: in, tick__cancel: in, controls: resource}
+status: {success: [tick__done], failure: []}
+gating: program
