@@ -62,6 +62,15 @@ def ego_route(lanemap, lane, edges):
     return out
 
 
+def occupied_cells(dets):
+    """The cells a detected car's body lies on, its s the front: the body hides their centres, and a car seen there is the end of the sight."""
+    out = set()
+    for x in dets:
+        k = int(max(0.0, x["s"] - x["length"]) // road.BIN)
+        out.update("%s|%d" % (x["lane"], i) for i in range(k, int(max(0.0, x["s"]) // road.BIN) + 1))
+    return out
+
+
 class Perception:
     def __init__(self, lanemap, sensor, dt=0.1, occluders=(), path=None, priors=None):
         self.lanemap, self.sensor, self.dt, self.occluders = lanemap, sensor, float(dt), list(occluders)
@@ -91,12 +100,14 @@ class Perception:
         pts = {c: xy for c, xy in self.points.items() if abs(xy[0] - e["x"]) <= self.sensor.range and abs(xy[1] - e["y"]) <= self.sensor.range}
         visible = set(self.sensor.visible(ego_b, pts, bodies, self.occluders, ego_id=ego_id))
         seen_cells = {road.cell(x["lane"], x["s"]) for x in dets}
+        cells = set(visible)                          # what could be seen: the sight classes' (road_facts.seen_ahead, road_in_view)
         visible -= seen_cells                         # a cell with a detection in it is no negative evidence
         route = ego_route(self.lanemap, e["lane"], e.get("route") or []) if e["lane"] in self.lanemap.lanes else [e["lane"]]
         ego = {"lane": e["lane"], "s": e["s"], "speed": e["speed"], "route": route, "class": belief_class(e["vclass"])}
         self.map.cycle(dets, sorted(visible), ego)
         self.observed(dets)
-        self.last = {"seen": seen, "detections": dets, "visible": len(visible), "truth_ids": sorted(others)}
+        self.last = {"seen": seen, "detections": dets, "visible": len(visible), "truth_ids": sorted(others),
+                     "sight": {"cells": cells, "seen": occupied_cells(dets)}}
         lane_ = self.lanemap.lanes.get(e["lane"])
         ego_m = Mover(ego_id, e["lane"], e["s"], dynamics_for(e["vclass"], v=e["speed"], lane=lane_, ego=True),
                       route=route, length=e["length"], width=e["width"], vclass=e["vclass"])

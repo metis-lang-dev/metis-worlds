@@ -116,7 +116,7 @@ class Loop:
         f, binding, fold, states = road_facts.facts(self.lanemap, ego, ego.dyn.vmax, movers, self.sit,
                                                     changing=self.changing[0] if self.changing else None,
                                                     dest=self.level_dest, lights=lights,
-                                                    speeds={m.id: m.dyn.vmax for m in movers}, pace=self.pace,
+                                                    speeds={m.id: m.dyn.vmax for m in movers}, pace=self.pace, sight=self.perc.last.get("sight"),
                                                     left_from=(self.left_from[0], self.t - self.left_from[1])
                                                     if getattr(self, "left_from", None) else None)
         self.proj = {"binding": binding, "facts": f, "fold": fold, "states": states, "ego": ego}
@@ -183,7 +183,7 @@ class Loop:
         self.log.append({"tick": self.tick, "t": self.t, "sumo_t": self.world.t, "s": round(ego.s, 2), "v": round(ego.dyn.vmax, 2),
                          "lane": ego.lane, "a": None if applied is None else round(applied[0], 2),
                          "cmd": None if applied is None else list(applied[2]), "resp": fold["resp_lon"],
-                         "seen": len(self.perc.last["seen"]), "tracks": len(movers), "binding": binding,
+                         "seen": len(self.perc.last["seen"]), "sight": [a for a in self.proj["facts"] if a.startswith(("unseen_ahead", "road_hidden"))], "tracks": len(movers), "binding": binding,
                          "zone": next((a[len("zone_at(nextzone,"):-1] for a in self.proj["facts"] if a.startswith("zone_at(nextzone")), None),
                          "signal": next((a[len("signal(nextzone,"):-1] for a in self.proj["facts"] if a.startswith("signal(nextzone")), None),
                          "danger": danger_rows(self.proj["states"], {m.id: (m.lane, m.s, m.dyn.vmax) for m in movers}),

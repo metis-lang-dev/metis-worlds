@@ -193,6 +193,37 @@ def test_inside_a_junction_the_limit_is_the_lane_it_came_in_on():
     assert road_facts.law_limit(lm, ":k_0") == 8.0                                                 # nothing leads in on this map: where it comes out
 
 
+def test_sight_along_its_own_way():
+    # the holder's duty: its own lanes to its stopping reach, up to the first car seen; another lane's cells never enter it
+    from types import SimpleNamespace as L
+    lm = L(lanes={"a": L(length=20.0), "b": L(length=30.0), "side": L(length=50.0)})
+    cells = {"%s|%d" % (l, k) for l, n in (("a", 4), ("b", 6)) for k in range(n)}
+    S = lambda cells=cells, seen=(): {"cells": set(cells), "seen": set(seen)}
+    assert road_facts.seen_ahead(lm, ["a", "b"], 2.0, S(), 40.0)                        # no side road's cell here at all: it asks none
+    assert not road_facts.seen_ahead(lm, ["a", "b"], 2.0, S(cells - {"b|2"}), 40.0)     # behind a body, or out of range: one law
+    assert road_facts.seen_ahead(lm, ["a", "b"], 2.0, S(cells - {"b|2"}), 20.0)         # further than it needs to stop: no matter
+    assert road_facts.seen_ahead(lm, ["a", "b"], 2.0, S(cells - {"b|2"}, {"b|1"}), 40.0)  # a car seen before it: that car is the sight's end
+
+
+def test_the_yielders_view_of_the_road_that_has_the_way():
+    from types import SimpleNamespace as L
+    lm = L(lanes={"up": L(id="up", length=30.0, succ=["x"]), "x": L(id="x", length=20.0, succ=[]), "own": L(id="own", length=30.0, succ=[])})
+    z = L(lanes={"x": (15.0, 20.0), "own": (10.0, 15.0)})
+    every = {"x|%d" % k for k in range(4)} | {"up|%d" % k for k in range(7)}
+    S = lambda cells=every, seen=(): {"cells": set(cells), "seen": set(seen)}
+    assert road_facts.road_in_view(lm, z, "own", S(), 40.0)                             # back through its way in; the ego's own lane asks nothing
+    assert not road_facts.road_in_view(lm, z, "own", S(every - {"up|5"}), 40.0)
+    assert road_facts.road_in_view(lm, z, "own", S(every - {"up|5"}), 10.0)             # no further back than a car could still reach it
+    assert road_facts.road_in_view(lm, z, "own", S(every - {"up|5"}, {"x|1"}), 40.0)    # a car seen on it: what it hides is behind that car
+
+
+def test_a_step_forward_is_at_a_walk():
+    from restrict import INCH_MS, command, wanted
+    assert command("inch_hidden[P=obj]") == ("inch", None)
+    d = type("D", (), {"accel": 3.5})
+    assert wanted(("inch", None), d, 0.0) == 3.5 and wanted(("inch", None), d, INCH_MS) == 0.0
+
+
 def test_a_lead_slower_than_the_limit_but_faster_than_the_ego_is_no_slow_lead():
     # nina's SUMO run: the ego at 3.6 behind a lead at 6.7 (the limit 16.67) read lead_slow, so it never accelerated
     w = road_world.RoadWorld("cruise", 1)

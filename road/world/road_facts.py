@@ -26,6 +26,9 @@ a1..a3, vru1). The facts (every number stays here; the rules read classes):
   by more than SLOW_MARGIN: nothing to gain behind it), else lead_ok (accel_ok then brings the ego up to it); accel_ok when
   two plans (2 PLAN_T) of full acceleration keep the lead at a safe distance (gap_room), else accel_no; keep_ok when
   two plans at the speed it has do, else keep_no; at_dest;
+- sight, by duty (SIGHT: the sensor's, a host with no sensor says seen_ahead and no road class): seen_ahead (its own way, to its stopping reach) else unseen_ahead;
+  road_in_view(nextzone) else road_hidden(nextzone), where the zone's priority is not the ego's (the crossing lanes back APPROACH);
+  with road_hidden, inch_room(nextzone) (at the line or past it, at a walk, short of the crossing lane by more than min_dist + INCH_MARGIN) else inch_no(nextzone);
 - signal(nextzone, L): the light on the next junction link of the way (signal_of), off with none or inside a junction; can_halt(nextzone):
   its line is within the hardest braking;
 - the next zone on the ego's route (role nextzone), or the next junction itself when its link has none (class by the line): zone_at(nextzone, C) with C far | near | at | in (the ego's
@@ -49,9 +52,11 @@ a1..a3, vru1). The facts (every number stays here; the rules read classes):
 from dataclasses import replace
 
 from semantic_world.situation import Situation, safe_same_dir, stated, stop
+from restrict import INCH_MS
 
 OBJ_ROLES = ("lead", "follower", "leadleft", "followleft", "leadright", "followright", "a1", "a2", "a3", "vru1")
 NEAR_RANGE, AT_RANGE, APPROACH, NEAR_MARGIN = 30.0, 3.0, 40.0, 10.0
+INCH_MARGIN = 1.5   # m kept to the crossing lane beyond min_dist: a planner second's step at INCH_MS stays inside it
 SLOW_RANGE, SLOW_MARGIN, NEAR_WALK = 60.0, 2.0, 1.0
 PACE_BAND = 3.5     # over a pace's target before the planner brakes: one planner period's accel or soft brake stays inside it, m/s
 STILL = 0.1                       # m/s: a car at or under this stands
@@ -133,6 +138,53 @@ def law_limit(lm, lane):
     return lm.vcap(lane)
 
 
+def seen_ahead(lm, route, s0, sight, reach, bin_m=5.0):
+    """Sight along the ego's OWN way: from s0 on ROUTE's lanes to REACH, every cell could be seen, up to the first one a car is seen on. SIGHT {cells, seen}. Beyond the sensor's
+    range a cell cannot be seen, so range and occlusion are one test. Never another lane's: the side road's visibility is not the holder's duty."""
+    left, s = reach, s0
+    for lane in route:
+        length = lm.lanes[lane].length
+        k = int(max(0.0, s) // bin_m)
+        while k * bin_m < length and left > 0:
+            c = "%s|%d" % (lane, k)
+            if c in sight["seen"]:
+                return True
+            if c not in sight["cells"] and (k + 1) * bin_m <= length:     # a stub at a lane's end has no cell of its own
+                return False
+            left -= (k + 1) * bin_m - max(s, k * bin_m)
+            k += 1
+        if left <= 0:
+            return True
+        s = 0.0
+    return True
+
+
+def road_in_view(lm, z, own, sight, reach, bin_m=5.0):
+    """The yielder's view (StVO 8(2)): the zone Z's crossing lanes but OWN, from the zone back along each way in to REACH: every cell could be seen, up to the first one a car is seen on."""
+    for lane, (a, _) in z.lanes.items():
+        if lane == own:
+            continue
+        cur, s, left = lane, a, reach
+        while left > 0:
+            k = int(max(0.0, s) // bin_m)
+            while k >= 0 and left > 0:
+                c = "%s|%d" % (cur, k)
+                if c in sight["seen"]:
+                    left = 0
+                    break
+                if c not in sight["cells"]:
+                    return False
+                left -= bin_m
+                k -= 1
+            if left <= 0:
+                break
+            came = [o.id for o in lm.lanes.values() if cur in o.succ]
+            if not came:
+                break
+            cur, s = came[0], lm.lanes[came[0]].length
+    return True
+
+
 def fold_of(states, movers, ego):
     """The fold: a dangerous pair whose other has settled into a lane not the ego's is released from it; a crossing never is: only geometry
     releases that one, or both standing (situation.respond_standing)."""
@@ -140,7 +192,7 @@ def fold_of(states, movers, ego):
     return Situation.fold([s for s in states if s.type.startswith("xing") or s.id.split(":")[0] not in released], ego.dyn)
 
 
-def facts(lm, ego, v, movers, sit, changing=None, dest=None, turn=None, lights=None, speeds=None, left_from=None, pace=None):
+def facts(lm, ego, v, movers, sit, changing=None, dest=None, turn=None, lights=None, speeds=None, left_from=None, pace=None, sight=None):
     """SPEEDS {mover id: v}: the movers' speeds (the lead's for lead_slow). LEFT_FROM (side, age s): the side the
     ego's last lane change left, and how long ago. PACE: a target speed under the limit; above it by PACE_BAND the ego is above_target (the
     planner's soft brake)."""
@@ -210,6 +262,7 @@ def facts(lm, ego, v, movers, sit, changing=None, dest=None, turn=None, lights=N
     link = None if lm.lanes[ego.lane].internal else lm.next_link(ego.route, ego.s)   # inside a junction no line is ahead
     out["signal(nextzone,%s)" % signal_of(link[0] if link else None, lights)] = 1
     d = ego.dyn
+    out["seen_ahead" if sight is None or seen_ahead(lm, ego.route, ego.s, sight, stated(v, 0.0, d.rho, d.brake_min)) else "unseen_ahead"] = 1
     reach = max(NEAR_RANGE, stated(v, 0.0, d.rho, d.brake_min) + NEAR_MARGIN)       # near: within its stopping reach
     if link is not None and stop(v, d.brake_max) + d.min_dist <= link[1]:
         out["can_halt(nextzone)"] = 1                                               # a red's test: only the brakes excuse it
@@ -226,6 +279,12 @@ def facts(lm, ego, v, movers, sit, changing=None, dest=None, turn=None, lights=N
         out["zone_at(nextzone,%s)" % cls] = 1
         prio = lm.priority(z, lights)
         out["zprio(nextzone,%s)" % ("same" if prio is None else "ego" if prio == rl else "obj")] = 1
+        if sight is not None and prio is not None and prio != rl:
+            hidden = not road_in_view(lm, z, rl, sight, APPROACH)
+            out["road_hidden(nextzone)" if hidden else "road_in_view(nextzone)"] = 1
+            if hidden:                  # a step forward: from the line or past it, slowly, and never up to the crossing lane
+                room = (line <= AT_RANGE or lm.lanes[ego.lane].internal) and v <= INCH_MS + 0.2 and front > d.min_dist + INCH_MARGIN
+                out["inch_room(nextzone)" if room else "inch_no(nextzone)"] = 1
         out["can_stop(nextzone)" if stated(v, 0.0, d.rho, d.brake_min) <= max(0.0, line) else "late(nextzone)"] = 1
         occupants = [m for m in movers if inside(z, m)]
         if not occupants:

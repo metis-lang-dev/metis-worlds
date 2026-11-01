@@ -15,8 +15,9 @@ ego may do. Truth-free: it reads the fold of the situation layer, the ego's Dyna
         has a lateral response on that side.
     capped(cmd, ...) -> True when the restrictor cut the command (the domain asked more than RSS allows)."""
 
-KINDS = ("accel", "keep", "brake", "change", "yield", "stop")
+KINDS = ("accel", "keep", "brake", "change", "yield", "stop", "inch")
 CHANGE_S = 1.0                    # a lane change's duration (s)
+INCH_MS = 1.0                     # a yielder's step forward to see (StVO 8(2)) is at no more than this
 AWAY_MS = 3.0                     # a drive away past a standing car (situation.respond_standing) is at no more than this
 
 
@@ -61,6 +62,8 @@ def wanted(cmd, dyn, v, yield_gap=None):
         return dyn.accel
     if kind == "drive_away":
         return dyn.accel if v < AWAY_MS else 0.0
+    if kind == "inch":
+        return dyn.accel if v < INCH_MS else 0.0
     if kind == "brake":
         return -(getattr(dyn, arg, None) or dyn.brake_min)
     if kind == "yield" and yield_gap is not None:
