@@ -6,7 +6,7 @@ over TraCI, headless, at the responder's step (0.1 s), the ego under the stack's
   brake or change lanes; each CARLA town in road/maps by its name, every car on its own way; more scenarios join as the cases need them). Every vehicle in depart order (SUMO drops an
   out-of-order one silently).
 - The ego: speed mode 0 and lane-change mode 0 (no SUMO safety, no strategic changes: the RSS stack is what is under
-  test, and a TraCI change is done as asked); its acceleration set each step (setAcceleration for one step), a lane
+  test, and a TraCI change is done as asked); its acceleration set each step (as the speed it gives, setSpeed), a lane
   change through changeLane with SUMO's continuous change of `LC_DURATION` s.
 - The truth per step: every vehicle and person as a pose (the centre: SUMO's position is the front bumper), its
   lane and s, speed, vClass, length and width; the collisions the step had (SUMO's own check, junctions included,
@@ -387,6 +387,7 @@ class SumoWorld:
             return
         v = self.conn.vehicle
         if accel is not None:
-            v.setAcceleration(EGO, float(accel), self.dt)
+            # the speed this step's acceleration gives. Not setAcceleration(a, dt): SUMO ramps it over the step after, and the car gets half of what was asked (asked -3 m/s² for 1 s: -1.5 m/s)
+            v.setSpeed(EGO, max(0.0, v.getSpeed(EGO) + float(accel) * self.dt))
         if lane is not None and lane != v.getLaneIndex(EGO):
             v.changeLane(EGO, int(lane), LC_DURATION)

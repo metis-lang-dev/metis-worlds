@@ -92,7 +92,8 @@ def test_world_steps_poses_collisions_and_control(tmp_path):
     assert math.isclose(t["ego"]["x"], 7.5) and math.isclose(t["ego"]["heading"], 0.0, abs_tol=1e-9)   # front → centre
     assert t["ego"]["route"] == ["E"] and t["calm_0"]["vclass"] == "passenger"
     w.control(accel=-3.0, lane=1)
-    assert ("setAcceleration", "ego", -3.0, 0.1) in tr.conn.calls
+    speeds = [c for c in tr.conn.calls if c[0] == "setSpeed" and c[1] == "ego"]
+    assert speeds and math.isclose(speeds[-1][2], max(0.0, t["ego"]["speed"] - 0.3))      # the speed -3 m/s² gives in one step
     assert ("changeLane", "ego", 1, sumo_world.LC_DURATION) in tr.conn.calls
     assert w.step() is False and w.ego_done
     w.close()
@@ -180,8 +181,8 @@ def test_loop_projects_the_belief_and_restricts(straight, tmp_path):
     assert roles["lead"] != "stop" and fold["resp_lon"] == "brake_min"             # a track's name, never the world's id
     loop.command(("accel", None), life=10)
     assert loop.step() is True
-    acc = [c for c in tr.conn.calls if c[0] == "setAcceleration"]
-    assert acc and acc[0][2] == -4.0                                             # accel capped at −brake_min
+    assert loop.log[-1]["a"] == -4.0                                             # accel capped at −brake_min
+    assert [c for c in tr.conn.calls if c[0] == "setSpeed"]                      # and given as the speed it makes
     assert loop.restricted == 1 and loop.latency == [1] and loop.violations == [] and loop.life == 9
     assert loop.log[-1]["resp"] == "brake_min" and loop.log[-1]["cmd"] == ["accel", None]
     assert loop.level_dest == 950.0 and not loop.arrived()
