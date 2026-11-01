@@ -28,6 +28,7 @@ a1..a3, vru1). The facts (every number stays here; the rules read classes):
   two plans at the speed it has do, else keep_no; at_dest;
 - sight, by duty (SIGHT: the sensor's, a host with no sensor says seen_ahead and no road class): seen_ahead (its own way, to its stopping reach) else unseen_ahead;
   road_in_view(nextzone) else road_hidden(nextzone), where the zone's priority is not the ego's and no red or amber governs (the crossing lanes back APPROACH);
+  stop_sign(nextzone): the next link's state is SUMO's 's'; there inch_room waits for one standing tick at the line (STOOD: the host's);
   with road_hidden, inch_room(nextzone) (at a walk, room behind any lead, short of the crossing lane by more than min_dist + INCH_MARGIN) else inch_no(nextzone);
 - signal(nextzone, L): the light on the next junction link of the way (signal_of), off with none or inside a junction; can_halt(nextzone):
   its line is within the hardest braking;
@@ -185,6 +186,16 @@ def road_in_view(lm, z, own, sight, reach, bin_m=5.0):
     return True
 
 
+def stood_at_sign(stood, zone, sign, line, v):
+    """A stop sign asks one standing tick at its line before a step forward; up to the line a walk is free, and on any other link there is nothing to wait for. STOOD: the host's set of
+    the zones stood at (None: nothing can stand, so nothing goes on)."""
+    if not sign or line > AT_RANGE or (stood is not None and zone in stood):
+        return True
+    if stood is not None and v <= STILL:
+        stood.add(zone)
+    return False
+
+
 def fold_of(states, movers, ego):
     """The fold: a dangerous pair whose other has settled into a lane not the ego's is released from it; a crossing never is: only geometry
     releases that one, or both standing (situation.respond_standing)."""
@@ -192,7 +203,7 @@ def fold_of(states, movers, ego):
     return Situation.fold([s for s in states if s.type.startswith("xing") or s.id.split(":")[0] not in released], ego.dyn)
 
 
-def facts(lm, ego, v, movers, sit, changing=None, dest=None, turn=None, lights=None, speeds=None, left_from=None, pace=None, sight=None):
+def facts(lm, ego, v, movers, sit, changing=None, dest=None, turn=None, lights=None, speeds=None, left_from=None, pace=None, sight=None, stood=None):
     """SPEEDS {mover id: v}: the movers' speeds (the lead's for lead_slow). LEFT_FROM (side, age s): the side the
     ego's last lane change left, and how long ago. PACE: a target speed under the limit; above it by PACE_BAND the ego is above_target (the
     planner's soft brake)."""
@@ -260,6 +271,11 @@ def facts(lm, ego, v, movers, sit, changing=None, dest=None, turn=None, lights=N
     zr = lm.zone_roles(ego, movers, roles)                      # the zone binding: the library's, never by hand
     near = lm.nearest_zone(ego.route, ego.s, length=ego.length) if zr["nextzone"] else None
     link = None if lm.lanes[ego.lane].internal else lm.next_link(ego.route, ego.s)   # inside a junction no line is ahead
+    sign = link is not None and link[0].state == "s"
+    if sign:
+        out["stop_sign(nextzone)"] = 1
+    elif stood and link is not None:
+        stood.clear()                   # a junction with no sign behind it: the next sign asks again
     light = signal_of(link[0] if link else None, lights)
     out["signal(nextzone,%s)" % light] = 1
     d = ego.dyn
@@ -284,7 +300,7 @@ def facts(lm, ego, v, movers, sit, changing=None, dest=None, turn=None, lights=N
             hidden = not road_in_view(lm, z, rl, sight, APPROACH)
             out["road_hidden(nextzone)" if hidden else "road_in_view(nextzone)"] = 1
             if hidden:                  # on at a walk to where it can see: room behind any lead, and never up to the crossing lane
-                room = "accel_ok" in out and v <= INCH_MS + 0.2 and front > d.min_dist + INCH_MARGIN
+                room = "accel_ok" in out and v <= INCH_MS + 0.2 and front > d.min_dist + INCH_MARGIN and stood_at_sign(stood, z.id, sign, line, v)
                 out["inch_room(nextzone)" if room else "inch_no(nextzone)"] = 1
         out["can_stop(nextzone)" if stated(v, 0.0, d.rho, d.brake_min) <= max(0.0, line) else "late(nextzone)"] = 1
         occupants = [m for m in movers if inside(z, m)]

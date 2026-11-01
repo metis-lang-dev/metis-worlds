@@ -89,6 +89,7 @@ class Loop:
         self.tick, self.t, self.warmup = 0, 0.0, 0
         self.level_dest = level.get("dest", DESTS.get(level.get("scenario", "straight")))
         self.violations, self.optimistic, self.restricted, self.latency, self.ms = [], [], 0, [], []
+        self.stood = set()                            # the stop signs' zones the ego has stood at (road_facts.stood_at_sign)
         self.unseen_duty = []                         # the accounting's own class: a pair the ego has the way over, the other hidden (others_duty)
         self.pace = None                              # the person's target speed, under the lanes' limits (road_wishes)
         self.undue = []                               # a responder brake with no dangerous pair in its fold (road-2: none)
@@ -126,7 +127,7 @@ class Loop:
         f, binding, fold, states = road_facts.facts(self.lanemap, ego, ego.dyn.vmax, movers, self.sit,
                                                     changing=self.changing[0] if self.changing else None,
                                                     dest=self.level_dest, lights=lights,
-                                                    speeds={m.id: m.dyn.vmax for m in movers}, pace=self.pace, sight=self.perc.last.get("sight"),
+                                                    speeds={m.id: m.dyn.vmax for m in movers}, pace=self.pace, sight=self.perc.last.get("sight"), stood=self.stood,
                                                     left_from=(self.left_from[0], self.t - self.left_from[1])
                                                     if getattr(self, "left_from", None) else None)
         self.proj = {"binding": binding, "facts": f, "fold": fold, "states": states, "ego": ego}

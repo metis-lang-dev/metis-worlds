@@ -228,6 +228,18 @@ def test_the_others_duty_is_every_pair_one_the_ego_has_the_way_over_unseen():
     assert not others_duty([], st, ())
 
 
+def test_a_stop_sign_asks_one_standing_tick_at_its_line():
+    stood = set()
+    f = road_facts.stood_at_sign
+    assert f(stood, "z", False, 1.0, 0.8) and not stood                               # a plain minor link: from a walk, no stand
+    assert f(stood, "z", True, 20.0, 0.8) and not stood                               # up to the line: a walk is free
+    assert not f(stood, "z", True, 1.0, 0.8) and not stood                            # at the line, rolling: not yet
+    assert not f(stood, "z", True, 1.0, 0.0) and stood == {"z"}                       # the standing tick itself: the step comes after it
+    assert f(stood, "z", True, 1.0, 0.0) and f(stood, "z", True, 1.0, 0.8)            # it stood: on at a walk
+    assert not f(stood, "y", True, 1.0, 0.8)                                          # another sign asks again
+    assert not f(None, "z", True, 1.0, 0.0)
+
+
 def test_a_step_forward_is_at_a_walk():
     from restrict import INCH_MS, command, wanted
     assert command("inch_hidden[P=obj]") == ("inch", None)
