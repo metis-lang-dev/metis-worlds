@@ -92,7 +92,7 @@ def scene_frame(loop):
     return {"ev": "world/scene", "tick": loop.tick, "t": loop.t, "ego": loop.ego_id, "movers": movers, "roles": loop.proj.get("binding") or {},
             "fold": {"resp_lon": fold.get("resp_lon", "none"), "resp_lat": fold.get("resp_lat", "none")},
             "cmd": last.get("cmd"), "a": last.get("a"), "restricted": loop.restricted, "seen": last.get("seen"), "tracks": last.get("tracks"),
-            "arrived": loop.arrived(), "collisions": loop.world.ego_collisions, "violations": len(loop.violations), "optimistic": len(loop.optimistic),
+            "arrived": loop.arrived(), "collisions": loop.world.ego_collisions, "violations": len(loop.violations), "unseen_other_duty": len(loop.unseen_duty), "optimistic": len(loop.optimistic),
             "ms": round(sum(loop.ms[-1][k] for k in STAGES) * 1000, 1) if loop.ms else None,
             "lights": loop.world.light_states() if loop.tick % LIGHTS_EVERY == 0 and hasattr(loop.world, "light_states") else None}
 

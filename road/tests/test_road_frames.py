@@ -24,7 +24,7 @@ def loop(path):
     return SimpleNamespace(world=SimpleNamespace(net=str(path), ego_collisions=0), prev_truth={"ego": EGO, "lead": dict(EGO, x=60.0, s=60.0, type="calm")}, ego_id="ego", level_dest=950.0,
                            scenario="straight", seed=3, tick=7, t=0.7, restricted=2, log=[{"cmd": ["accel", None], "a": 1.5, "seen": 1, "tracks": 1}],
                            proj={"binding": {"lead": "lead"}, "fold": {"resp_lon": "brake_min", "resp_lat": "none", "dangerous": True}}, arrived=lambda: False,
-                           violations=[], optimistic=[1], ms=[{"restrict": 0.001, "sumo": 0.002, "perceive": 0.01, "project": 0.001, "account": 0.001, "vehicles": 3}],
+                           violations=[], unseen_duty=[1, 2], optimistic=[1], ms=[{"restrict": 0.001, "sumo": 0.002, "perceive": 0.01, "project": 0.001, "account": 0.001, "vehicles": 3}],
                            summary=lambda: {"ticks": 7, "arrived": True, "ms": {"sumo": 1.0}, "first": [], "violations": 0})
 
 
@@ -54,7 +54,7 @@ def test_the_scene_has_the_truths_movers_and_the_beliefs_roles(net):
     assert f["ev"] == "world/scene" and f["ego"] == "ego" and [m["id"] for m in f["movers"]] == ["ego", "lead"]
     assert f["movers"][1]["class"] == "passenger" and f["movers"][1]["type"] == "calm" and f["movers"][1]["x"] == 60.0
     assert f["roles"] == {"lead": "lead"} and f["fold"] == {"resp_lon": "brake_min", "resp_lat": "none"} and f["cmd"] == ["accel", None] and f["a"] == 1.5
-    assert f["violations"] == 0 and f["optimistic"] == 1 and f["ms"] == 15.0
+    assert f["violations"] == 0 and f["unseen_other_duty"] == 2 and f["optimistic"] == 1 and f["ms"] == 15.0
 
 
 def test_the_summary_is_said_once_at_the_end(net):
@@ -486,6 +486,13 @@ def test_rulecheck_sorts_a_violation_by_why_it_is_one():
     assert not rulecheck.violations([row(v=0.0), row(v=0.0)])                     # at rest: a standing car meets any brake
     assert rulecheck.sort_row(row(), row(), ["resp_lon(none)"])[0] == 2           # the belief has no such pair
     assert rulecheck.sort_row(row(), row(), ["resp_lon(brake_min)"])[0] == 3
+    side = {"id": "c:xing_ego_prio:z", "resp": "brake_min", "lane": "x", "s": 1.0}
+    hidden = dict(row(truth=(side,)), seen_ids=[])
+    assert rulecheck.sort_row(hidden, row(), ["resp_lon(none)"])[0] == 6                                     # the other's duty, as account counts it
+    assert rulecheck.sort_row(dict(hidden, seen_ids=["c"]), row(), ["resp_lon(none)"])[0] == 2               # seen: the ego's
+    obj = dict(side, id="c:xing_obj_prio:z")
+    assert rulecheck.sort_row(dict(row(truth=(obj,)), seen_ids=[]), row(), ["resp_lon(none)"])[0] == 2       # the way is not the ego's: the ego's
+    assert rulecheck.sort_row(row(truth=(side,)), row(), ["resp_lon(none)"])[0] == 2                         # a log without the field: as it was
     seen = row(danger=(car,))
     assert rulecheck.sort_row(seen, row(), ["resp_lon(none)"])[0] == 5            # dangerous, no response, no release
     settled = ["resp_lon(none)", "settled_to(a1,right)"]

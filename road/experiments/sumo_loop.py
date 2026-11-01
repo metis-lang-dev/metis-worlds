@@ -45,7 +45,7 @@ def run(out, seed, driver="plain", scenario="straight", ticks=1500, vehicles=10)
     sm = loop.summary()
     sm["driver"], sm["scenario"], sm["vehicles"] = driver, scenario, vehicles
     with open(os.path.join(out, "seed%d.json" % seed), "w") as f:
-        json.dump(dict(sm, violations_all=loop.violations, optimistic_all=loop.optimistic), f, indent=1)
+        json.dump(dict(sm, violations_all=loop.violations, unseen_duty_all=loop.unseen_duty, optimistic_all=loop.optimistic), f, indent=1)
     with open(os.path.join(out, "log_%d.jsonl" % seed), "w") as f:
         for r in loop.log:
             f.write(json.dumps(r) + "\n")

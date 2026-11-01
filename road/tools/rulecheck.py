@@ -96,7 +96,7 @@ def main(log, netfile):
 # into why it is one, from the log's row and the responder's facts on the trace (the architect's five, s-357becc7):
 BOUND = {"brake_min": -4.0, "brake_min_correct": -3.0}     # the passenger ego's (semantic_world.lane VCLASS), the bound each response gives
 RECENT_TICKS = 60                                          # how far back a release's lane change is looked for: settled_to holds 2 s
-CLASSES = {1: "checker", 2: "projection", 3: "competing", 4: "responder", 5: "gap"}
+CLASSES = {1: "checker", 2: "projection", 3: "competing", 4: "responder", 5: "gap", 6: "unseen, the other's duty"}
 
 
 def bound(pairs):
@@ -126,6 +126,10 @@ def sort_row(before, row, facts, recent=()):
     cmd = row["cmd"][0] if row["cmd"] else None
     braking = [a for a in facts if a.startswith("resp_lon(brake")]
     believed = [p for p in before["danger"] if p["resp"] in BOUND]
+    seen = before.get("seen_ids")        # a log before the field: not sorted here
+    bound_pairs = [p for p in before["truth"] if p["resp"] in BOUND]
+    if seen is not None and bound_pairs and all(":xing_ego_prio" in p["id"] and p["id"].split(":")[0] not in seen for p in bound_pairs):
+        return 6, "the truth has %s dangerous, the ego has the way over it and the sensor does not see it: the yielder's violation, listed, as sumo_host.account does" % bound_ids(before)
     if cmd == "brake" and row["cmd"][1] in BOUND:
         return 4, "the command is the shield's, and the acceleration is above the bound only by rounding or the car's limit"
     if braking:

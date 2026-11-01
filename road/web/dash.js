@@ -47,7 +47,7 @@ export class Dash {
     this.dirty = false;
     const f = this.last, r = this.rows;
     if (f) {
-      const pairs = [['time', `${f.t.toFixed(1)} s`], ['restricted', f.restricted], ['optimistic', f.optimistic], ['violations', f.violations], ['collisions', f.collisions], ['tick', f.ms == null ? '-' : `${f.ms} ms`]];
+      const pairs = [['time', `${f.t.toFixed(1)} s`], ['restricted', f.restricted], ['optimistic', f.optimistic], ['violations', f.violations], ['unseen, the other\'s duty', f.unseen_other_duty], ['collisions', f.collisions], ['tick', f.ms == null ? '-' : `${f.ms} ms`]];
       if (this.sum) pairs.push(['the run', `${this.sum.arrived ? 'arrived' : 'did not arrive'}, ${this.sum.ticks} ticks`]);
       this.stats.innerHTML = pairs.map(([k, v]) => `<span>${k}<b>${v}</b></span>`).join('');
     }

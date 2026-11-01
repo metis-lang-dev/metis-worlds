@@ -217,6 +217,17 @@ def test_the_yielders_view_of_the_road_that_has_the_way():
     assert road_facts.road_in_view(lm, z, "own", S(every - {"up|5"}, {"x|1"}), 40.0)    # a car seen on it: what it hides is behind that car
 
 
+def test_the_others_duty_is_every_pair_one_the_ego_has_the_way_over_unseen():
+    from types import SimpleNamespace as L
+    from sumo_host import others_duty
+    st = {"c:xing_ego_prio:z": L(type="xing_ego_prio"), "d:xing_obj_prio:z": L(type="xing_obj_prio"), "e:same_dir": L(type="same_dir")}
+    assert others_duty(["c:xing_ego_prio:z"], st, ())
+    assert not others_duty(["c:xing_ego_prio:z"], st, {"c"})                          # seen: the ego's own
+    assert not others_duty(["d:xing_obj_prio:z"], st, ())                             # the way is the other's: the ego's own
+    assert not others_duty(["c:xing_ego_prio:z", "e:same_dir"], st, ())               # one pair the ego owes makes it a violation
+    assert not others_duty([], st, ())
+
+
 def test_a_step_forward_is_at_a_walk():
     from restrict import INCH_MS, command, wanted
     assert command("inch_hidden[P=obj]") == ("inch", None)

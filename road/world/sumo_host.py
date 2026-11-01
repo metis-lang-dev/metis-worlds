@@ -58,6 +58,15 @@ def lanemap_of(path):
     return lanemap
 
 
+UNSEEN_DUTY = "unseen, the other's duty"
+
+
+def others_duty(dangerous, states, seen):
+    """A response the truth asked and the ego could not know: every dangerous pair one the ego has the way over (xing_ego_prio), its other not seen. The yielder's violation by the
+    ruling (the holder has no duty to a hidden side road): its own class, listed, never dropped. STATES {pair id: State} and SEEN are as the command was decided."""
+    return bool(dangerous) and all(d in states and states[d].type == "xing_ego_prio" and d.split(":")[0] not in seen for d in dangerous)
+
+
 class Loop:
     """The world one hierarchy shares: the SUMO process, the perception, the situation memory, the held command, the
     last projection and the accounting."""
@@ -80,6 +89,7 @@ class Loop:
         self.tick, self.t, self.warmup = 0, 0.0, 0
         self.level_dest = level.get("dest", DESTS.get(level.get("scenario", "straight")))
         self.violations, self.optimistic, self.restricted, self.latency, self.ms = [], [], 0, [], []
+        self.unseen_duty = []                         # the accounting's own class: a pair the ego has the way over, the other hidden (others_duty)
         self.pace = None                              # the person's target speed, under the lanes' limits (road_wishes)
         self.undue = []                               # a responder brake with no dangerous pair in its fold (road-2: none)
         self.danger_since = None                      # the tick a truth pair first turned dangerous (latency)
@@ -183,7 +193,7 @@ class Loop:
         self.log.append({"tick": self.tick, "t": self.t, "sumo_t": self.world.t, "s": round(ego.s, 2), "v": round(ego.dyn.vmax, 2),
                          "lane": ego.lane, "a": None if applied is None else round(applied[0], 2),
                          "cmd": None if applied is None else list(applied[2]), "resp": fold["resp_lon"],
-                         "seen": len(self.perc.last["seen"]), "sight": [a for a in self.proj["facts"] if a.startswith(("unseen_ahead", "road_hidden"))], "tracks": len(movers), "binding": binding,
+                         "seen": len(self.perc.last["seen"]), "seen_ids": sorted(self.perc.last["seen"]), "sight": [a for a in self.proj["facts"] if a.startswith(("unseen_ahead", "road_hidden"))], "tracks": len(movers), "binding": binding,
                          "zone": next((a[len("zone_at(nextzone,"):-1] for a in self.proj["facts"] if a.startswith("zone_at(nextzone")), None),
                          "signal": next((a[len("signal(nextzone,"):-1] for a in self.proj["facts"] if a.startswith("signal(nextzone")), None),
                          "danger": danger_rows(self.proj["states"], {m.id: (m.lane, m.s, m.dyn.vmax) for m in movers}),
@@ -211,8 +221,11 @@ class Loop:
             a, lane, _ = applied
             hi = restrict.bound(before, ego.dyn)
             if a > hi + 1e-9 and ego.dyn.vmax > 0:           # standing still meets any braking response (road_world's)
-                self.violations.append({"tick": self.tick, "what": "accel above the truth response", "a": a, "max": hi,
-                                        "dangerous": before["dangerous"]})
+                row = {"tick": self.tick, "what": "accel above the truth response", "a": a, "max": hi, "dangerous": before["dangerous"]}
+                if others_duty(before["dangerous"], getattr(self, "_prev_states", {}), getattr(self, "_seen_then", ())):
+                    self.unseen_duty.append(dict(row, what=UNSEEN_DUTY))
+                else:
+                    self.violations.append(row)
         self._truth_fold = fold
         prev = getattr(self, "_prev_states", {})
         for s in states:
@@ -229,6 +242,7 @@ class Loop:
                 # the architect's ruling (2026-10-26): an OPTIMISTIC accel, its own column beside the violations
                 self.optimistic.append({"tick": self.tick, "what": "accelerated as the rear one", "pair": s.id})
         self._prev_states = {s.id: s for s in states}
+        self._seen_then = set(self.perc.last["seen"])     # what the next tick's command is decided on
         bad = [s for s in states if s.dangerous and s.resp_lon != "none"]
         if bad and self.danger_since is None:
             self.danger_since = self.tick
@@ -249,7 +263,7 @@ class Loop:
         ego = self.proj.get("ego")
         return {"seed": w.seed, "ticks": self.tick, "t": self.t, "sumo_t": w.t, "arrived": self.arrived(),
                 "s": round(ego.s, 1) if ego is not None else None, "dest": self.level_dest, "ego_done": w.ego_done, "collisions": w.ego_collisions,
-                "all_collisions": len(w.collisions), "violations": len(self.violations), "optimistic": len(self.optimistic), "restricted": self.restricted,
+                "all_collisions": len(w.collisions), "violations": len(self.violations), "unseen_other_duty": len(self.unseen_duty), "optimistic": len(self.optimistic), "restricted": self.restricted,
                 "latency_truth": self.latency, "first": self.violations[:3],
                 "ms": {k: mean(k) for k in ("restrict", "sumo", "perceive", "project", "account")},
                 "vehicles_max": max((m["vehicles"] for m in self.ms), default=0),
