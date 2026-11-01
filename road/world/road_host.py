@@ -32,6 +32,35 @@ import road_world  # noqa: E402
 from semantic_world.ports import sync_diff  # noqa: E402
 
 SHARED = {}                       # run key -> {"world": RoadWorld}
+
+ROAD = os.path.dirname(HERE)      # road/
+
+
+def family_home(root=None):
+    """The road FAMILY's directory, the METIS_HOME every road program resolves its units through (road-family
+    s-f62c0ed8; metis-catalog domains/road at road/domains/catalog.pin): $METIS_HOME if set, else the sibling
+    metis-catalog checkout, else the installed catalog's package (metis.catalog.find_package). Set it in the environment
+    before a REPL or metisc runs a road program; a miss names the three places."""
+    env = os.environ.get("METIS_HOME")
+    if env and os.path.isfile(os.path.join(env, "responder_domain.llp")):
+        return env
+    sib = os.path.join(os.path.dirname(os.path.dirname(ROAD)), "metis-catalog", "domains", "road")
+    if os.path.isfile(os.path.join(sib, "responder_domain.llp")):
+        return sib
+    try:
+        from metis.catalog import find_package
+        p = str(find_package("road", root))
+        if os.path.isfile(os.path.join(p, "responder_domain.llp")):
+            return p
+    except Exception:  # noqa: BLE001
+        pass
+    raise FileNotFoundError("the road family (responder_domain.llp) is in none of: $METIS_HOME=%r, %s, the installed catalog's "
+                            "domains/road; check out metis-catalog beside (road/domains/catalog.pin)" % (env, sib))
+
+
+def set_family_home():
+    os.environ["METIS_HOME"] = family_home()
+    return os.environ["METIS_HOME"]
 DT = 0.1                          # the world's step, s
 WATCHED_S = 5.0                   # a page said `watching` this recently: a scene every step, else every second
 UNWATCHED_EVERY = 10

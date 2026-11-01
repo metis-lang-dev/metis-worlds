@@ -38,6 +38,14 @@ jobs:
         with:
           repository: metis-lang-dev/metis-agent
           path: metis-agent
+      - name: the road family's pin
+        id: fam
+        run: echo "catalog=$(tr -d '[:space:]' < metis-worlds/road/domains/catalog.pin)" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v4
+        with:
+          repository: metis-lang-dev/metis-catalog
+          ref: ${{ steps.fam.outputs.catalog }}
+          path: metis-catalog
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -45,11 +53,11 @@ jobs:
         run: |
           sudo apt-get update -qq && sudo apt-get install -y -qq ocaml-nox
           make -C metis-lang metisc
-      - name: the road tests
+      - name: the road tests (the family through METIS_HOME, road-family s-f62c0ed8)
         run: |
           python -m pip install -q pyyaml pytest -e ./metispy -e metis-worlds/libs/semantic-world
           python -m pip install -q --no-deps -e metis-agent/py
-          cd metis-worlds && python -m pytest -q road/tests
+          cd metis-worlds && METIS_HOME="$GITHUB_WORKSPACE/metis-catalog/domains/road" python -m pytest -q road/tests
   # spec 17 §4 (linker s-5908724a step 2): road's composition links to one image (metisc --link: every L-check over
   # the I-checks, the derived director compared with road_director), its hash == road/domains/image.golden.
   # alfworld's and minihack's trees are generated from the game data (world/gen_hier.py, world/mh_hier.py), which
@@ -72,14 +80,22 @@ jobs:
         with:
           repository: metis-lang-dev/metispy
           path: metispy
+      - name: the road family's pin
+        id: fam
+        run: echo "catalog=$(tr -d '[:space:]' < metis-worlds/road/domains/catalog.pin)" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v4
+        with:
+          repository: metis-lang-dev/metis-catalog
+          ref: ${{ steps.fam.outputs.catalog }}
+          path: metis-catalog
       - name: metisc
         run: |
           sudo apt-get update -qq && sudo apt-get install -y -qq ocaml-nox
           make -C metis-lang metisc
-      - name: the link (road's image hash)
+      - name: the link (road's image hash; the family through METIS_HOME, road-family s-f62c0ed8)
         run: |
           cd metis-worlds/road/domains
-          env -u METIS_HOME "$GITHUB_WORKSPACE/metis-lang/src/metisc" --link composition.yaml --check | tee "$RUNNER_TEMP/link.txt"
+          METIS_HOME="$GITHUB_WORKSPACE/metis-catalog/domains/road" "$GITHUB_WORKSPACE/metis-lang/src/metisc" --link composition.yaml --check | tee "$RUNNER_TEMP/link.txt"
           grep -qx "image road v-$(cat image.golden)" "$RUNNER_TEMP/link.txt"
       - name: the room tree's interface (alfworld, kitchen 13 as a room)
         run: |

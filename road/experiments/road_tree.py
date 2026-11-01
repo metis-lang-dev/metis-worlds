@@ -26,6 +26,8 @@ WORLD = HERE.parent / "world"
 sys.path.insert(0, str(WORLD))
 os.environ.setdefault("METIS_ROAD_WORLD", str(WORLD))
 os.environ["METIS_CATALOG"] = str(HERE.parent)              # the road's catalog root: road/domains (road-move)
+import road_host  # noqa: E402
+road_host.set_family_home()                                  # the family: metis-catalog domains/road (road-family)
 NAMES = ["responder", "planner", "road_director"]
 
 
