@@ -128,6 +128,7 @@ class RoadHost:
                 road_wishes.turn_lanes(w, (me["lane"].rsplit("_", 1)[0], me["index"]))
             if hasattr(self.road, "world"):
                 self.road.world.keep_going()
+            self.road.pace = road_wishes.pace_limit(w)
             ego = self.road.proj.get("ego")
             facts = road_wishes.planner_facts(w, facts, ego.dyn.vmax if ego is not None else 0.0)
         if self.observed:

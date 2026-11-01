@@ -188,6 +188,9 @@ def test_a_lead_slower_than_the_limit_but_faster_than_the_ego_is_no_slow_lead():
     assert "lead_ok" in facts(3.6, 6.7) and "lead_slow" not in facts(3.6, 6.7)    # gaining on it: speed up
     assert "lead_slow" in facts(6.7, 6.7)                                         # at its speed: follow or change
     assert "lead_slow" in facts(5.0, 6.7)                                         # within the margin
+    paced = lambda v: road_facts.facts(w.map, w.ego.m, v, [], Situation(), pace=6.0)[0]
+    assert "at_limit" in paced(6.0) and "keep_ok" in paced(8.0)                   # a pace's target reads as the limit
+    assert "below_limit" in paced(3.0) and "keep_no" in paced(14.0)               # far above it: the planner's soft brake
 
 
 def test_the_merge_waits_when_the_other_lane_arrives_first():

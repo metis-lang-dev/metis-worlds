@@ -188,9 +188,7 @@ def test_a_wish_only_gates_what_the_planner_already_reads():
     w = W.new()
     assert W.planner_facts(w, FACTS, 10.0) == FACTS
     W.take(w, "pace[P=easy]")
-    easy = W.planner_facts(w, FACTS, 10.0)
-    assert "below_limit" not in easy and easy["at_limit"] == 1
-    assert "below_limit" in W.planner_facts(w, FACTS, 3.0)              # under the easy speed it may speed up
+    assert W.pace_limit(w) == W.EASY_MS and W.pace_limit(W.new()) is None and W.planner_facts(w, FACTS, 10.0) == FACTS
     W.take(w, "resume")
     W.take(w, "lane[D=left]")
     f = W.planner_facts(w, FACTS, 10.0)

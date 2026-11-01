@@ -50,6 +50,7 @@ from semantic_world.situation import Situation, safe_same_dir, stated, stop
 OBJ_ROLES = ("lead", "follower", "leadleft", "followleft", "leadright", "followright", "a1", "a2", "a3", "vru1")
 NEAR_RANGE, AT_RANGE, APPROACH, NEAR_MARGIN = 30.0, 3.0, 40.0, 10.0
 SLOW_RANGE, SLOW_MARGIN, NEAR_WALK = 60.0, 2.0, 1.0
+PACE_BAND = 3.5     # over a pace's target before the planner brakes: one planner period's accel or soft brake stays inside it, m/s
 STILL = 0.1                       # m/s: a car at or under this stands
 PLAN_T = 1.0                      # the planner's period (s): accel_ok looks one plan ahead
 
@@ -102,9 +103,10 @@ def gap_room(pairs, ego, v, cap, accel, t=2 * PLAN_T):
 SETTLE_S = 10.0                 # s: the side the ego left is not settled again before this
 
 
-def facts(lm, ego, v, movers, sit, changing=None, dest=None, turn=None, lights=None, speeds=None, left_from=None):
+def facts(lm, ego, v, movers, sit, changing=None, dest=None, turn=None, lights=None, speeds=None, left_from=None, pace=None):
     """SPEEDS {mover id: v}: the movers' speeds (the lead's for lead_slow). LEFT_FROM (side, age s): the side the
-    ego's last lane change left, and how long ago."""
+    ego's last lane change left, and how long ago. PACE: a target speed under the lane's limit, the limit its classes read; above it by PACE_BAND
+    the ego may not keep its speed (keep_no: the planner's soft brake)."""
     ego.route = ego.route or [ego.lane]
     roles = lm.roles(ego, movers, lights=lights)
     role_of = {m: r for r, m in roles.items()}
@@ -148,7 +150,7 @@ def facts(lm, ego, v, movers, sit, changing=None, dest=None, turn=None, lights=N
         for side in ("left", "right"):
             if not (left_from and left_from[0] == side and left_from[1] < SETTLE_S):
                 out["settled(%s)" % side] = 1
-    cap = lm.vcap(ego.lane)
+    cap = lm.vcap(ego.lane) if pace is None else min(pace, lm.vcap(ego.lane))
     out["below_limit" if v < cap - 0.5 else "at_limit"] = 1
     by_id = {m.id: m for m in movers}
     if "lead" in roles:
@@ -160,7 +162,7 @@ def facts(lm, ego, v, movers, sit, changing=None, dest=None, turn=None, lights=N
     if "lead_slow" not in out:
         out["lead_ok"] = 1
     out["accel_ok" if gap_room(pairs, ego, v, cap, ego.dyn.accel) else "accel_no"] = 1
-    out["keep_ok" if gap_room(pairs, ego, v, cap, 0.0) else "keep_no"] = 1
+    out["keep_ok" if gap_room(pairs, ego, v, cap, 0.0) and (pace is None or v <= cap + PACE_BAND) else "keep_no"] = 1
     if dest is not None and ego.s >= dest:
         out["at_dest"] = 1
     zr = lm.zone_roles(ego, movers, roles)                      # the zone binding: the library's, never by hand

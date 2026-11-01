@@ -80,6 +80,7 @@ class Loop:
         self.tick, self.t, self.warmup = 0, 0.0, 0
         self.level_dest = level.get("dest", DESTS.get(level.get("scenario", "straight")))
         self.violations, self.optimistic, self.restricted, self.latency, self.ms = [], [], 0, [], []
+        self.pace = None                              # the person's target speed, under the lanes' limits (road_wishes)
         self.undue = []                               # a responder brake with no dangerous pair in its fold (road-2: none)
         self.danger_since = None                      # the tick a truth pair first turned dangerous (latency)
         self.prev_truth = {}
@@ -115,7 +116,7 @@ class Loop:
         f, binding, fold, states = road_facts.facts(self.lanemap, ego, ego.dyn.vmax, movers, self.sit,
                                                     changing=self.changing[0] if self.changing else None,
                                                     dest=self.level_dest, lights=lights,
-                                                    speeds={m.id: m.dyn.vmax for m in movers},
+                                                    speeds={m.id: m.dyn.vmax for m in movers}, pace=self.pace,
                                                     left_from=(self.left_from[0], self.t - self.left_from[1])
                                                     if getattr(self, "left_from", None) else None)
         self.proj = {"binding": binding, "facts": f, "fold": fold, "states": states, "ego": ego}

@@ -2,7 +2,7 @@
 planner's facts change, and only as far as they already gate its own rules: no new predicate, no change to the planner or the responder, road's image as it was. The planner
 still decides by its keep-table, the restrictor and the responder see the world as it is, so a wish can never make the drive less safe than the planner alone.
 
-    easy      above EASY_MS the planner reads at_limit: it stops speeding up (it does not brake)
+    easy      a target speed, EASY_MS (pace_limit): the host's classes read it as the lane's limit (road_facts.facts, pace), so the planner brakes down to it with its own soft brake
     brisk     a lead ahead reads as slow: the planner looks for a way past sooner
     lane D    the other side unsettled, the lead slow, no speeding up or keeping the limit: `change` to D is what is left, when it is safe; else it follows
     pass      as lane, either side
@@ -69,6 +69,11 @@ def why_not(facts, want):
     return "it is not safe yet"
 
 
+def pace_limit(w):
+    """The target speed the pace asks of the host's classes, or None."""
+    return EASY_MS if w["pace"] == "easy" else None
+
+
 def planner_facts(w, facts, v):
     """The planner's copy of the world, with the wish in it."""
     out = dict(facts)
@@ -77,9 +82,6 @@ def planner_facts(w, facts, v):
             out.pop(a, None)
         out["keep_no"] = 1
         return out
-    if w["pace"] == "easy" and v >= EASY_MS and "below_limit" in out:
-        del out["below_limit"]
-        out["at_limit"] = 1
     if w["pace"] == "brisk" and "lead_ok" in out and "keep_ok" in out:
         del out["lead_ok"]
         out["lead_slow"] = 1
