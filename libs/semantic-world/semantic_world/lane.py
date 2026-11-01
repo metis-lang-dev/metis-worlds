@@ -163,10 +163,11 @@ def link_neighbours(lanes):
 
 
 class LaneMap:
-    def __init__(self, lanes, zones=(), net=None):
+    def __init__(self, lanes, zones=(), net=None, siblings=None):
         self.lanes = {l.id: l for l in lanes}
         self.zones = list(zones)
         self.net = net
+        self.siblings = dict(siblings or {})    # Net.siblings: the links leaving one approach lane, their bodies overlapping at first
 
     def vcap(self, lane, vclass="passenger", factor=1.0):
         """The lane's speed limit × FACTOR for VCLASS (its top speed where the lane sets none)."""
@@ -302,6 +303,20 @@ class LaneMap:
             d += self.lanes[lid].length
         return None
 
+    def on_way(self, route, s0, length, o):
+        """The distance along ROUTE from the ego (its front at s0, of LENGTH) to O's front: on the way itself, or on a sibling internal lane
+        (Net.siblings) while O's rear is in the stretch the two overlap and the ego has not left it; None when O is neither."""
+        d = self.ahead(route, s0, o.lane, o.s)
+        if d is not None:
+            return d
+        for rl in route:
+            for own_end, chain, other_end in self.siblings.get(rl, ()):
+                if o.lane in chain:
+                    at = sum(self.lanes[l].length for l in chain[:chain.index(o.lane)]) + o.s
+                    if at - o.length <= other_end and self.ahead(route, s0, rl, own_end) + length >= 0:
+                        return self.ahead(route, s0, rl, at)
+        return None
+
     def lateral(self, a, b):
         """(position, offset) of lane B relative to lane A: at_left / at_right of a neighbour with the distance
         between the lanes' centres, overlap on the same lane (0), None when not neighbours."""
@@ -330,7 +345,7 @@ class LaneMap:
         route = ego.route or [ego.lane]
         out = []
         for o in objects:
-            d = self.ahead(route, ego.s, o.lane, o.s)
+            d = self.on_way(route, ego.s, ego.length, o)
             lat, gap = self.lateral(ego.lane, o.lane)
             if d is not None and lat is None and d >= 0:                                   # on a later lane of the way
                 lat = "overlap"
@@ -374,7 +389,7 @@ class LaneMap:
     def roles(self, ego, movers, k=3, j=1, lights=None):
         """The road roles of MOVERS around EGO → {role: mover id}, a role nobody fills left out. In NEAR_ROLES order,
         then a1..aK, then vru1..vruJ, a mover taking the first role that fits and no mover two; ties by mover id.
-        - lead: the nearest ahead (`ahead` ≥ 0) on the ego's way, its lane or a later lane of its route; follower:
+        - lead: the nearest ahead (`on_way` ≥ 0) on the ego's way, its lane, a later lane of its route, or a sibling while they overlap; follower:
           the nearest behind on the ego's lane, and in a junction on the lanes that lead into its internal lane.
         - leadleft / followleft: the nearest ahead / behind (by s relative to the ego's) on the ego lane's left
           neighbour, a same-direction one only; leadright / followright likewise on the right.
@@ -388,7 +403,7 @@ class LaneMap:
         movers = [o for o in movers if o.id != ego.id]
         behind = {l.id: l.length for l in self.lanes.values() if ego.lane in l.succ} if la.internal else {}
         for o in movers:
-            d = self.ahead(route, ego.s, o.lane, o.s)
+            d = self.on_way(route, ego.s, ego.length, o)
             if o.lane in behind:
                 cand["follower"].append((ego.s + behind[o.lane] - o.s, o.id))
             if d is not None and d >= 0:

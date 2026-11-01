@@ -95,7 +95,7 @@ class Net:
         self.lanes, self.connections, self.junctions, self.tls, self.edges = lanes, connections, junctions, tls, edges
 
     def lanemap(self, step=0.25, margin=0.2):
-        return LaneMap(list(self.lanes.values()), self.zones(step, margin), net=self)
+        return LaneMap(list(self.lanes.values()), self.zones(step, margin), net=self, siblings=self.siblings(step, margin))
 
     # -- the conflict zones ------------------------------------------------------------------------------------
 
@@ -125,6 +125,25 @@ class Net:
                     out.append(Zone("%s:%d:%d" % (jid, a, b), {la: sa, lb: sb}, prio,
                                     junction=jid, link_of={la: a, lb: b}))
         return out
+
+    def siblings(self, step=0.25, margin=0.2):
+        """The links that leave one approach lane: no foes, so no zone, but their bodies overlap for the first metres, and a car there is
+        ahead on the other's way. → {a chain's first lane: [(how far along it the overlap runs, the other chain, how far along that)]}."""
+        out = {}
+        for j in self.junctions.values():
+            for ca in j.links:
+                for cb in j.links:
+                    if ca is cb or ca.from_lane != cb.from_lane or not ca.chain or not cb.chain or ca.chain == cb.chain:
+                        continue
+                    ia, ib = self._overlap(ca.chain, cb.chain, step, margin), self._overlap(cb.chain, ca.chain, step, margin)
+                    if ia is not None and ib is not None:
+                        out.setdefault(ca.chain[0], []).append((self._along(ca.chain, ia), list(cb.chain), self._along(cb.chain, ib)))
+        return out
+
+    def _along(self, chain, hit):
+        """An overlap's end (`_overlap`) as a distance along CHAIN."""
+        lane, (_, end) = hit
+        return sum(self.lanes[l].length for l in chain[:chain.index(lane)]) + end
 
     def _overlap(self, chain, other, step, margin=0.0):
         """→ (the chain lane the overlap with OTHER begins on, (s_enter, s_leave) from that lane's start), or None."""

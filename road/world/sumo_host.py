@@ -276,8 +276,8 @@ def danger_rows(states, where, pairs=None):
 
 
 def rss_card():
-    """The run card's RSS parameters: the ego's response time and, per class, ρ, brake_min, brake_max, min_dist
+    """The run card's RSS parameters: the ego's response time, a drive away's speed and, per class, ρ, brake_min, brake_max, min_dist
     (semantic_world.lane VCLASS: the values every pair of the run used)."""
     from semantic_world.lane import EGO_RHO, VCLASS
-    return {"ego_rho": EGO_RHO, "classes": {c: {k: p.get(k) for k in ("rho", "brake_min", "brake_max", "min_dist")}
+    return {"ego_rho": EGO_RHO, "away_ms": restrict.AWAY_MS, "classes": {c: {k: p.get(k) for k in ("rho", "brake_min", "brake_max", "min_dist")}
                                             for c, p in sorted(VCLASS.items())}}

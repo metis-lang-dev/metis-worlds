@@ -168,3 +168,23 @@ def test_a_zone_is_left_by_the_rear(cross):
     ego.lane, ego.s = rl, e_out + 1.0
     ego.route = route[route.index(rl):]
     assert m.nearest_zone(ego.route, ego.s, length=ego.length)[0] is z            # the ego's rear still in it
+
+
+def test_a_car_on_a_sibling_lane_is_ahead_while_they_overlap(cross):
+    """Links leaving one approach lane are no foes and make no zone, but a car turning off it is still on the way at first."""
+    lm = cross.lanemap()
+    d = dynamics_for("passenger", v=14.0)
+    ego = Mover("ego", "WC_1", 80.0, d, route=["WC_1", ":C_11_1", "CE_1"])
+    left = lm.lanes[":C_13_0"]
+    assert ":C_13_0" in [c[0] for _, c, _ in lm.siblings[":C_11_1"]]
+    waiting = Mover("o", ":C_13_0", 2.0, dynamics_for("passenger", v=0.0), length=4.5)
+    p = lm.pairs(ego, [waiting])[0]
+    assert p.type == "same_dir" and p.lon == "in_front" and p.d_lon < 15.0
+    assert lm.roles(ego, [waiting])["lead"] == "o"
+    s = Situation().check([p])[0]
+    assert s.dangerous and s.resp_lon == "brake_min"
+    gone = Mover("o", left.succ[0], 30.0, dynamics_for("passenger", v=0.0), length=4.5)    # past the stretch: not on the way
+    assert lm.pairs(ego, [gone])[0].type != "same_dir"
+    other_lane = Mover("ego", "WC_0", 80.0, d, route=["WC_0", ":C_11_0", "CE_0"])       # another approach lane: no sibling
+    assert lm.on_way(other_lane.route, 80.0, 4.5, waiting) is None
+
