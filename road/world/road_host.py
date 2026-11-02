@@ -205,11 +205,14 @@ class RoadHost:
                 self.shared["watched"] = time.monotonic() + WATCHED_S
             elif line == "hello":                      # a page opened: the road once, it is big
                 self.shared["net_due"] = True
+                self.shared["mark_due"] = True         # … and where the events stand: a reload does not start the count again
             elif line.startswith("drive:"):
                 _, verb, value = (line.split(":") + [""])[:3]
                 self.wish("%s[X=%s]" % (verb, value) if value else verb)
             elif line.split(":")[0] in ("traffic", "car", "lane", "lights"):
                 self.traffic(line)
+            elif line.startswith("mark:"):
+                self.mark(line)
             elif line.startswith("run:"):
                 _, scenario, seed = line.split(":")
                 self.start_run(dict(self.run, scenario=scenario, seed=int(seed)))
@@ -218,7 +221,22 @@ class RoadHost:
             elif line.startswith("speed:"):
                 self.shared["speed"] = max(0.1, float(line[6:]))
             else:
-                raise ValueError("the road's page says run:SCENARIO:SEED, play, pause, speed:X or watching, not %r" % line)
+                raise ValueError("the road's page says run:SCENARIO:SEED, play, pause, speed:X, mark:N:start, mark:N:stop or watching, not %r" % line)
+
+    def mark(self, line):
+        """A person saw a problem: mark:N:start[:TICK], then mark:N:stop[:TICK], the events numbered 1..N over the demo, to be discussed after. The line is in the journal as it came
+        (dlg-world; TICK is the page's, so a saved journal says where), the row with the car's place in the run's log. The row's tick is at_tick: a `tick` makes it a tick row."""
+        _, n, edge = line.split(":")[:3]
+        m = self.shared.setdefault("marks", {"n": 0, "open": False})
+        due = (m["n"], "stop") if m["open"] else (m["n"] + 1, "start")
+        if (int(n), edge) != due:
+            raise ValueError("the road's page says event %s %s, and the next is event %d %s" % (n, edge, *due))
+        m.update(n=int(n), open=edge == "start")
+        at = self.road.log[-1] if self.road.log else {}
+        self._log({"t": round(self.road.t, 2), "mark": int(n), "edge": edge, "at_tick": self.road.tick, "scenario": self.run.get("scenario"), "seed": self.run.get("seed"),
+                   "lane": at.get("lane"), "s": at.get("s"), "v": at.get("v")})
+        self.shared["mark_due"] = True
+        self.shared["mark_said"] = "Event %s %s, tick %d." % (n, "started" if edge == "start" else "ended", self.road.tick)
 
     def wish(self, rule):
         """What the person asks, from the task's rule (the words) or the Drive dock (rule's own form): a preference for the planner, or the ego's way."""
@@ -297,6 +315,9 @@ class RoadHost:
         out = [road_frames.scene_frame(self.road)] if watched or self.beat % UNWATCHED_EVERY == 0 else []
         if self.shared.pop("net_due", False):
             out.insert(0, road_frames.net_frame(self.road))
+        if self.shared.pop("mark_due", False):
+            m = self.shared.get("marks", {"n": 0, "open": False})
+            out.append({"ev": "world/mark", "n": m["n"], "open": m["open"], "said": self.shared.pop("mark_said", None)})
         w = self.shared.get("wish")
         while w and w["said"]:
             out.append({"ev": "world/message", "text": w["said"].pop(0)})

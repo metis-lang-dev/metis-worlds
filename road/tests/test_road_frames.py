@@ -91,7 +91,7 @@ def test_only_the_responders_host_says_the_frames(net):
     assert host("planner", world=loop(net)).frames() == []
     h = host(world=loop(net))
     h.world(["watching", "hello"])
-    assert [f["ev"] for f in h.frames()] == ["world/net", "world/scene"]
+    assert [f["ev"] for f in h.frames()] == ["world/net", "world/scene", "world/mark"]
     assert [f["ev"] for f in h.frames()] == ["world/scene"]        # the road once
 
 
@@ -225,6 +225,26 @@ def test_only_the_planner_reads_the_wish():
         h.shared["wish"] = W.new()
         W.take(h.shared["wish"], "lane[D=left]")
         assert ("settled(right)" in h.fresh()) is seen
+
+
+def test_a_person_marks_events_numbered_over_the_demo(tmp_path):
+    world = SimpleNamespace(log=[{"lane": "E_0", "s": 1.0, "v": 2.0}], t=0.7, tick=7, arrived=lambda: False)
+    h = host("responder", world=world)
+    logged = []
+    h._log = logged.append
+    h.world(["mark:1:start:40"])
+    assert h.shared["marks"] == {"n": 1, "open": True}
+    with pytest.raises(ValueError, match="the next is event 1 stop"):
+        h.world(["mark:2:start"])                                                     # the page's count is not the host's: said, and nothing moves
+    h.world(["mark:1:stop:50", "mark:2:start:"])
+    assert h.shared["marks"] == {"n": 2, "open": True}
+    assert [(r["mark"], r["edge"], r["at_tick"], r["lane"]) for r in logged] == [(1, "start", 7, "E_0"), (1, "stop", 7, "E_0"), (2, "start", 7, "E_0")]
+    assert not any("tick" in r for r in logged), "rulecheck takes a row with a tick for a tick row"
+    h.shared.pop("mark_due")
+    h.world(["hello"])                                                                 # a page reloaded: it hears where the count stands
+    h.shared.pop("net_due")
+    f = [x for x in h.frames() if x["ev"] == "world/mark"][0]
+    assert f["n"] == 2 and f["open"] is True and "started, tick 7" in f["said"]
 
 
 def test_around_says_the_roles():

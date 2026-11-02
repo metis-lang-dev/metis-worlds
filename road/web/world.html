@@ -117,6 +117,7 @@
   #dash figcaption i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 3px; }
   #dash canvas { flex: 1; min-height: 0; width: 100%; }
   #tip { position: absolute; display: none; pointer-events: none; background: var(--bg); border: 1px solid var(--line); padding: 2px 6px; font-size: 11px; white-space: pre; z-index: 2; }
+#mark.open { background: #b3261e; border-color: #b3261e; color: #fff; }
 </style>
 </head>
 <body>
@@ -131,6 +132,7 @@
           <label>seed <input id="seed" type="number" min="1" value="1"></label>
           <button class="btn" id="run" type="button">new run</button>
           <button class="btn" id="hold" type="button">pause</button>
+          <button class="btn" id="mark" type="button" title="You see a problem: mark where it starts and where it ends. Each event goes in the journal, numbered, to talk about after.">mark event 1</button>
           <label>speed <select id="speed"><option>0.25</option><option>0.5</option><option selected>1</option><option>2</option><option>4</option></select></label>
         </span>
         <select id="game" hidden aria-label="the room: the agent goes there"></select>

@@ -14,7 +14,9 @@ export class RoadMap {
     Object.assign(this, { box, line, map: null, frame: null, ready: false, paused: false, following: false, ego: 'ego', picked: null });
     this.dash = new Dash($('#dash'));
     this.view = { fit() {}, keep() {}, center() {} };
-    $('#run').onclick = () => { line(`run:${$('#scenario').value}:${Math.max(1, Number($('#seed').value) || 1)}`); this.hold(false, false); };
+    this.marks = { n: 0, open: false };
+    $('#mark').onclick = () => this.markEdge();
+    $('#run').onclick = () => { if (this.marks.open) this.markEdge(); line(`run:${$('#scenario').value}:${Math.max(1, Number($('#seed').value) || 1)}`); this.hold(false, false); };
     $('#hold').onclick = () => this.hold(!this.paused);
     $('#speed').onchange = e => line(`speed:${e.target.value}`);
     $('#follow').onclick = () => { this.follows(!this.following); this.post(this.following ? { follow: this.ego } : { unfollow: true }); };
@@ -60,6 +62,19 @@ export class RoadMap {
 
   post(o) { if (this.ready) this.frame.contentWindow.postMessage(o, location.origin); }
   follows(on) { this.following = on; $('#follow').setAttribute('aria-pressed', String(on)); }
+  markEdge() {                        // the host numbers them (world/mark): this is the next edge as the page last heard it
+    const m = this.marks, n = m.open ? m.n : m.n + 1;
+    this.line(`mark:${n}:${m.open ? 'stop' : 'start'}:${this.tick ?? ''}`);
+    this.mark({ n, open: !m.open });
+  }
+
+  mark({ n, open }) {
+    this.marks = { n, open };
+    const b = $('#mark');
+    b.textContent = open ? `end event ${n}` : `mark event ${n + 1}`;
+    b.classList.toggle('open', open);
+  }
+
   hold(on, tell = true) {
     this.paused = on;
     $('#hold').textContent = on ? 'play' : 'pause';
@@ -81,6 +96,7 @@ export class RoadMap {
   summary(f) { this.dash.summary(f); }
 
   scene(f) {
+    this.tick = f.tick;
     this.ego = f.ego;
     this.post({ scene: f });
     this.dash.scene(f);
