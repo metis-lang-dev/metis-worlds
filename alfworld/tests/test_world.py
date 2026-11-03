@@ -390,7 +390,7 @@ def test_install_director_for_the_agent(tmp_path):
         assert meta["continues"] and meta["commands_log"].endswith(".commands.jsonl"), d
     assert "#init fetch(" not in open(os.path.join(pk["task"], "task.llp")).read()      # person=True: the FETCH is typed, not seeded (W6)
     for d in ("task", "nav", "access", "grasp", "place"):      # each is its committed instance, byte for byte (semantic-map step 2)
-        assert open(os.path.join(pk[d], d + ".llp")).read() == open(os.path.join(ROOT, "domains", "hier", d, d + ".llp")).read(), d
+        assert open(os.path.join(pk[d], d + ".llp")).read() == open(os.path.join(ROOT, "domains", "hier", d, d + "_plain.llp")).read(), d
     h = DirectorHost(pk["director"])
     h.world(["+seen(goto) 1"])
     assert h.tick({}) == ["+seen(goto) 1"]
@@ -693,13 +693,13 @@ def test_no_room_in_any_specialists_source(tmp_path):
     gen_hier writes (committed(), capacity()); an install writes no specialist source but them."""
     import re
     handles = _kitchen_handles()
-    for f in ["capacity.llp"] + ["%s/%s.llp" % (s, s) for s in gen_hier.SPECS]:
+    for f in ["capacity.llp"] + ["%s/%s_plain.llp" % (s, s) for s in gen_hier.SPECS]:
         text = open(os.path.join(ROLES_HIER, f)).read()
         words = set(re.findall(r"\b[a-z]+\d+\b", re.sub(r"%.*", "", text)))
         assert not words & handles, (f, sorted(words & handles)[:5])
     assert open(os.path.join(ROLES_HIER, "capacity.llp")).read() == gen_hier.capacity()
     for s in gen_hier.SPECS:
-        assert open(os.path.join(ROLES_HIER, s, s + ".llp")).read() == gen_hier.committed(s), s
+        assert open(os.path.join(ROLES_HIER, s, s + "_plain.llp")).read() == gen_hier.committed(s), s
     pk = gen_hier.install(game_dir(), str(tmp_path))
     for s in gen_hier.SPECS:
         llps = [f for f in os.listdir(pk[s]) if f.endswith(".llp")]
@@ -1377,7 +1377,7 @@ def test_the_room_tables_are_the_datasets():
 
 
 def test_the_ci_room_tree_is_what_a_room_installs():
-    """map-queries step 3: tests/room_tree, the room tree metis-worlds CI runs metisc --interface on (it has no game
+    """map-queries step 3: tests/.room_tree, the room tree metis-worlds CI runs metisc --interface on (it has no game
     data), is world/gen_room_tree.py's install of kitchen 13 as a room now (its --check)."""
     r = subprocess.run([sys.executable, os.path.join(ROOT, "world", "gen_room_tree.py"), "--check"], capture_output=True,
                        text=True, env=dict(os.environ, PYTHONPATH=os.pathsep.join(sys.path)))
