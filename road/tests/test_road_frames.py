@@ -1,6 +1,7 @@
 """The road page's frames and the responder host's page faces (road-agent s-357becc7 step 1): road_frames over a Loop's readings, the world lines,
 the pace, the next run. No SUMO runs here."""
 import json
+from pathlib import Path
 import os
 import sys
 from types import SimpleNamespace
@@ -573,3 +574,62 @@ def test_truth_flags_a_lane_change_no_one_made_and_a_contact_with_nobodys_pair(t
         (910, []), (911, [{"id": "calm_9", "type": "not_relevant"}]), (912, [{"id": "x", "type": "same_dir"}]))))
     assert rulecheck.truth_rows(str(log)) == [{"tick": 911, "body": "calm_9", "kind": "no pair", "type": "not_relevant"}]
 
+
+
+def test_a_mark_goes_beside_the_trace_in_the_traces_k(tmp_path):
+    """loop-workspace step 5 (WORKSPACE.md §6.1 item 2): a mark's row also lands in <trace>/marks.jsonl with at_k, the trace's k: the
+    stepping host's beat (k = the log's tick + 1 within a run), going on across a page's runs while the log's tick starts again; the log
+    row keeps what it had, nothing renamed. No trace, or no tick yet: no marks file."""
+    world = SimpleNamespace(log=[{"lane": "E_0", "s": 1.0, "v": 2.0}], t=0.7, tick=7, arrived=lambda: False)
+    h = host("responder", world=world)
+    h._log = lambda r: None
+    h.world(["mark:1:start"])                                                          # no trace in the run: nothing beside it
+    assert not list(tmp_path.iterdir())
+    h.run["trace"] = str(tmp_path / "t")
+    h.shared["k"] = 8                                                                  # the 8th tick: the log's 7, + 1
+    h.world(["mark:1:stop"])
+    world.tick, h.shared["k"] = 2, 412                                                 # a page's next run: the tick starts again, the k goes on
+    h.world(["mark:2:start"])
+    rows = [json.loads(x) for x in (tmp_path / "t" / "marks.jsonl").read_text().splitlines()]
+    assert [(r["mark"], r["edge"], r["at_tick"], r["at_k"]) for r in rows] == [(1, "stop", 7, 8), (2, "start", 2, 412)]
+    assert set(rows[0]) == {"t", "mark", "edge", "at_tick", "scenario", "seed", "lane", "s", "v", "at_k"}
+
+
+def test_the_stepping_host_counts_the_traces_k_and_puts_the_config_beside_it(tmp_path):
+    """The responder's tick is the trace's k (shared k = its beat), and at its first tick the run's config is copied beside the trace."""
+    cfg = tmp_path / "config.yaml"
+    cfg.write_text("trace: {}\n")
+    world = SimpleNamespace(log=[], t=0.0, tick=0, arrived=lambda: True, step=lambda: None)
+    h = host("responder", world=world)
+    h.beat, h.run["trace"], h.run["config"] = 0, str(tmp_path / "t"), str(cfg)
+    h.world_now, h.sync = (lambda: False), (lambda counts: [])
+    h.tick({})
+    assert h.shared["k"] == 1 and (tmp_path / "t" / "config.yaml").read_text() == "trace: {}\n"
+    h.tick({})
+    assert h.shared["k"] == 2
+    p = host("planner", world=world)
+    p.shared, p.beat = h.shared, 0
+    p.world_now, p.sync = (lambda: False), (lambda counts: [])
+    p.tick({})
+    assert h.shared["k"] == 2, "only the stepping host counts"
+
+
+def test_the_page_install_puts_its_trace_under_the_workspace(tmp_path, monkeypatch):
+    """road_hier.install (§6.1 items 1, 3): ROOT under a workspace's .metis/ sends the trace to .metis/traces/<scenario>-<seed>-<started>/,
+    named in run.json with the config; the agent's config asks the trace there."""
+    import yaml
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "world"))
+    import road_hier
+    agent = tmp_path / "agent"
+    (agent / "metis_agent").mkdir(parents=True)
+    (agent / "metis_agent" / "trace.py").write_text("")
+    (agent / "config.live.yaml").write_text("model: m.gguf\nv3: {}\ndomains: {}\n")
+    monkeypatch.setattr(road_hier, "intent_files", lambda d: None)
+    monkeypatch.setattr(road_host, "set_family_home", lambda: None)
+    root = tmp_path / "ws" / ".metis" / "road"
+    path = road_hier.install(str(root), str(agent), scenario="Town01", seed=2)
+    run = json.load(open(root / "run.json"))
+    assert run["config"] == path and os.path.dirname(run["trace"]) == str(tmp_path / "ws" / ".metis" / "traces")
+    assert os.path.basename(run["trace"]).startswith("Town01-2-")
+    assert yaml.safe_load(open(path))["trace"]["dir"] == run["trace"]
+    assert road_hier.traces_dir(str(tmp_path / "scratch")) == str(tmp_path / "scratch" / "traces")

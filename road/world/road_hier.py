@@ -8,6 +8,7 @@ import argparse
 import json
 import os
 import shutil
+import time
 
 import yaml
 
@@ -34,6 +35,14 @@ def intent_files(task_dir):
         (d / fn).write_text(text)
 
 
+def traces_dir(root):
+    """Where the page's traces go (loop-workspace step 5, WORKSPACE.md §6.1 item 1): the workspace's .metis/traces/
+    when ROOT is a run dir under it (road/.metis/road: demo.sh's), so the shared frontend lists them; else ROOT/traces."""
+    root = os.path.abspath(root)
+    up = os.path.dirname(root)
+    return os.path.join(up, "traces") if os.path.basename(up) == ".metis" else os.path.join(root, "traces")
+
+
 def install(root, agent_py, port=8400, scenario="Town03", seed=1):
     if not os.path.isfile(os.path.join(agent_py, "metis_agent", "trace.py")):     # the page's config asks a trace below: an older Live would ignore it, in silence
         raise SystemExit("road_hier: the page's config asks a trace, and the metis-agent at %s has no metis_agent/trace.py: no trace would be written (the reader came in 2f823c0)" % agent_py)
@@ -43,8 +52,12 @@ def install(root, agent_py, port=8400, scenario="Town03", seed=1):
         shutil.rmtree(root)
     os.makedirs(os.path.join(root, ".run"))
     root = os.path.abspath(root)
+    # the demo's trace: one dir per start, never wiped by the next (a page's later runs go on in it: the trace is the
+    # Live's, one per process); its marks and its config beside it (§6.1 items 1-3)
+    trace = os.path.join(traces_dir(root), "%s-%s-%s" % (scenario, int(seed), time.strftime("%Y%m%dT%H%M%S")))
     run = {"scenario": scenario, "seed": int(seed), "world": "sumo", "page": True, "key": "page", "vehicles": 0,
-           "work": os.path.join(root, "work"), "log": os.path.join(root, "log.jsonl")}
+           "work": os.path.join(root, "work"), "log": os.path.join(root, "log.jsonl"),
+           "trace": trace, "config": os.path.join(root, ".run", "config.yaml")}
     os.makedirs(run["work"])
     json.dump(run, open(os.path.join(root, "run.json"), "w"), indent=1)
     doc = os.path.join(root, "world-map.json")
@@ -55,9 +68,10 @@ def install(root, agent_py, port=8400, scenario="Town03", seed=1):
     c["domains"].update(names=NAMES, seed=int(seed), narrate=None, consult=False, records=None, quiet=[], pairs=[], clocks=[{"domain": d, "n": 1} for d in NAMES], tick=True)
     c["stop_words"] = ["(no word stops the hierarchy here)"]   # the service would take "stop" as stopping its hierarchy, the planner with it: here it is the person's word for the car (empty is its default)
     c["ws"] = {"addr": "127.0.0.1:%d" % port, "ui": WEB}
-    # the run's trace under ROOT/.run/trace (metis.trace): at 10 ticks a second and about 220 bytes a tick, the last 10 minutes
-    c["trace"] = {"every": 200, "ring": 6000, "commands": yaml.safe_load(open(os.path.join(os.path.dirname(HERE), "domains", "composition.yaml")))["world"]["in"]}
-    path = os.path.join(root, ".run", "config.yaml")
+    # the run's trace (metis.trace) in its own dir under the workspace's traces/: at 10 ticks a second and about 220 bytes a tick, the last 10 minutes
+    c["trace"] = {"every": 200, "ring": 6000, "dir": trace,
+                  "commands": yaml.safe_load(open(os.path.join(os.path.dirname(HERE), "domains", "composition.yaml")))["world"]["in"]}
+    path = run["config"]
     yaml.safe_dump(c, open(path, "w"), sort_keys=False)
     return path
 

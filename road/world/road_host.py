@@ -19,6 +19,7 @@ page's world lines (run:SCENARIO:SEED starts that run now, play, pause, speed:X,
 Live beat stays one world step, as in road_tree. A new run swaps the world under the running hierarchy and gives the planner a new trip if the last one ended: the service's
 new_game would re-instance the planner without its trip (so it never takes the page's button)."""
 import json
+import shutil
 import os
 import sys
 import time
@@ -161,6 +162,10 @@ class RoadHost:
 
     def tick(self, counts):
         self.beat += 1
+        if self.steps:                                 # the host that steps the world beats every tick: its count is the trace's k
+            self.shared["k"] = self.beat
+            if self.beat == 1:
+                self.run_files()
         self.world_now()
         if self.steps and self.beat > 1 and not self.road.arrived() and not self.shared.get("paused"):
             if self.run.get("page"):
@@ -233,8 +238,10 @@ class RoadHost:
             raise ValueError("the road's page says event %s %s, and the next is event %d %s" % (n, edge, *due))
         m.update(n=int(n), open=edge == "start")
         at = self.road.log[-1] if self.road.log else {}
-        self._log({"t": round(self.road.t, 2), "mark": int(n), "edge": edge, "at_tick": self.road.tick, "scenario": self.run.get("scenario"), "seed": self.run.get("seed"),
-                   "lane": at.get("lane"), "s": at.get("s"), "v": at.get("v")})
+        rows = [{"t": round(self.road.t, 2), "mark": int(n), "edge": edge, "at_tick": self.road.tick, "scenario": self.run.get("scenario"), "seed": self.run.get("seed"),
+                 "lane": at.get("lane"), "s": at.get("s"), "v": at.get("v")}]
+        self._log(rows[-1])
+        self.mark_row(rows[-1])
         self.shared["mark_due"] = True
         self.shared["mark_said"] = "Event %s %s, tick %d." % (n, "started" if edge == "start" else "ended", self.road.tick)
 
@@ -360,6 +367,25 @@ class RoadHost:
 
     def restore(self, snap):
         self.beat = snap.get("beat", 0)
+
+    def mark_row(self, row):
+        """The mark beside the run's trace (loop-workspace step 5, WORKSPACE.md §6.1 item 2): the log's row with at_k, the trace's k at
+        this tick (the stepping host's beat: on the road k = the log's tick + 1 within a run, and it goes on across a page's runs while the
+        tick starts again), in <trace>/marks.jsonl, which the shared frontend's TRACE lists. Nothing when the run has no trace, or no tick yet."""
+        d, k = self.run.get("trace"), self.shared.get("k")
+        if not d or k is None:
+            return
+        os.makedirs(d, exist_ok=True)
+        with open(os.path.join(d, "marks.jsonl"), "a") as f:
+            f.write(json.dumps(dict(row, at_k=int(k))) + "\n")
+
+    def run_files(self):
+        """At the run's first tick (the trace's dir is made by then): the config the run is played with, copied beside its trace, so the judge
+        replays this run's and a later demo's rewrite of ROOT/.run/config.yaml changes nothing (§6.1 item 3)."""
+        d, c = self.run.get("trace"), self.run.get("config")
+        if d and c and os.path.isfile(c) and not os.path.exists(os.path.join(d, "config.yaml")):
+            os.makedirs(d, exist_ok=True)
+            shutil.copyfile(c, os.path.join(d, "config.yaml"))
 
     def _log(self, rec):
         p = self.shared.get("log")
