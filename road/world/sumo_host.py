@@ -4,7 +4,7 @@ clock, `now`, commands and restrictor; only the world differs, SUMO's truth seen
 road_host picks it by the run spec (`"world": "sumo"`, with scenario, seed, sensor, vehicles, work).
 
 The interface (RoadWorld's): observe() → (facts, roles, fold, states) once a tick · command(cmd, life) · step() ·
-tick, t, log (a row a step: t, s, v, a, lane, cmd, resp, zone, signal, danger, truth) · arrived() · summary().
+tick, t, log (a row a step: t, s, v, a, lane, cmd, resp, zone, signal, contact, danger, truth) · arrived() · summary().
 
 The episode begins with the ego on the road: SUMO is stepped until the ego is inserted (its depart; not ticks), then
 perceived and projected once. One tick (dt 0.1 s, the SUMO step; road_host's responder steps it):
@@ -176,7 +176,9 @@ class Loop:
             if tuple(applied[2][:2]) == ("brake", "brake_min") and not fold.get("dangerous"):
                 self.undue.append(self.tick)              # the responder's brake (brake_min) without a dangerous pair
         t1 = time.perf_counter()
+        hits = len(self.world.collisions)
         on = self.world.step()
+        hits = [c for c in self.world.collisions[hits:] if EGO in (c["collider"], c["victim"])]
         t2 = time.perf_counter()
         self.tick = self.tick + 1
         self.t = round(self.tick * self.world.dt, 6)    # the episode's clock (SUMO's own counts the ego's depart)
@@ -197,6 +199,7 @@ class Loop:
                          "seen": len(self.perc.last["seen"]), "seen_ids": sorted(self.perc.last["seen"]), "sight": [a for a in self.proj["facts"] if a.startswith(("unseen_ahead", "road_hidden"))], "tracks": len(movers), "binding": binding,
                          "zone": next((a[len("zone_at(nextzone,"):-1] for a in self.proj["facts"] if a.startswith("zone_at(nextzone")), None),
                          "signal": next((a[len("signal(nextzone,"):-1] for a in self.proj["facts"] if a.startswith("signal(nextzone")), None),
+                         "contact": self.contacts(hits),
                          "danger": danger_rows(self.proj["states"], {m.id: (m.lane, m.s, m.dyn.vmax) for m in movers}),
                          "truth": danger_rows(self._truth_states, {k: (p["lane"], p["s"], p["speed"]) for k, p in truth.items()}, self._truth_pairs)})
         return True
@@ -252,6 +255,16 @@ class Loop:
             self.danger_since = None
         elif not bad:
             self.danger_since = None
+
+    def contacts(self, hits):
+        """SUMO's contacts of this step with the ego, each with the type the truth's pair of that body had (any type, not only the
+        dangerous): a contact on a `not_relevant` pair is nobody's pair (T10)."""
+        types = {k.split(":")[0]: p.type for k, p in (getattr(self, "_truth_pairs", None) or {}).items()}
+        out = []
+        for c in hits:
+            other = c["victim"] if c["collider"] == EGO else c["collider"]
+            out.append({"id": other, "type": types.get(other)})
+        return out
 
     def in_zone(self, ego):
         return any(road_facts.inside(z, ego) for z in self.lanemap.zones)

@@ -266,3 +266,18 @@ def test_no_responder_brake_without_a_dangerous_pair(straight, tmp_path):
     card = sm["rss"]
     assert card["ego_rho"] > 0 and {"rho", "brake_min", "brake_max", "min_dist"} <= set(card["classes"]["passenger"])
     loop.close()
+
+
+def test_the_run_doctor_refuses_a_world_that_is_not_the_one_meant(tmp_path):
+    """T9 (checks-open s-17e557f0; Check the world first): the script acts on a vehicle the routes lack, or the routes lack the ego."""
+    routes = tmp_path / "r.rou.xml"
+    routes.write_text('<routes><vehicle id="ego" route="r" depart="0"/><vehicle id="lead" route="r" depart="0"/></routes>')
+    assert sumo_world.doctor(str(routes), [(1.0, "lead", "lcmode", 0)]) == []
+    assert sumo_world.doctor(str(routes), [(1.0, "car9", "lcmode", 0)]) == ["the script names car9, which the routes lack"]
+    routes.write_text('<routes><vehicle id="lead" route="r" depart="0"/></routes>')
+    assert sumo_world.doctor(str(routes), []) == ["the routes lack the ego (ego)"]
+    for name in ("straight", "cut_out", "cut_in"):                  # every scenario at head is the world it says
+        (tmp_path / name).mkdir()
+        made = sumo_world.SCENARIOS[name](str(tmp_path / name), 1)
+        assert sumo_world.doctor(made[1], made[2] if len(made) > 2 else []) == [], name
+

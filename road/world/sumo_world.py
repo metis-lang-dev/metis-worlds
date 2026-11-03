@@ -192,12 +192,25 @@ def _read(dom, getter, vid, default):
         return default
 
 
+
+def doctor(routes, script):
+    """T9 (checks-open s-17e557f0; Check the world first): the scene's bodies, the routes file's vehicles, against what its start names:
+    the ego and every vehicle the script acts on. → the problems in words, [] when the world is the one meant."""
+    import xml.etree.ElementTree as ET
+    ids = {v.get("id") for v in ET.parse(routes).getroot().iter("vehicle")}
+    out = [] if EGO in ids else ["the routes lack the ego (%s)" % EGO]
+    out += ["the script names %s, which the routes lack" % v for v in sorted({s[1] for s in script} - ids)]
+    return out
+
 class SumoWorld:
     def __init__(self, scenario, work, seed=1, dt=DT, traci=None, label=None, sumo="sumo", **kw):
         os.makedirs(work, exist_ok=True)
         made = SCENARIOS[scenario](work, seed, **kw)
         self.net, self.routes = made[:2]
         self.script = sorted(made[2]) if len(made) > 2 else []     # [(t, vehicle, what, arg)]: the scenario's acts
+        bad = doctor(self.routes, self.script)
+        if bad:                                     # a void run is never read for behaviour (Check the world first)
+            raise RuntimeError("run doctor: %s" % "; ".join(bad))
         self.seed, self.dt, self.sumo = int(seed), float(dt), sumo
         self.traci = traci or load_traci()
         self.label = label or "road-%s-%d" % (scenario, seed)

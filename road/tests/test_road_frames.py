@@ -533,3 +533,40 @@ def test_the_rule_check_counts_a_short_log():
     got = rulecheck.check(runs[0], rulecheck.read_net(os.path.join(os.path.dirname(HERE), "maps", "Town03.net.xml")))
     assert len(runs) == 1 and got["ticks"] == 120 and got["stood"] == 0 and got["change_in_junction"] == 0 and got["abrupt"] == []
     assert got["change_at_line"] == [] and got["signal_entries"] + got["minor_entries"] >= 1
+
+
+def test_the_lifted_sort_reproduces_seed2_class_for_class():
+    """metis.trace sort (checks-open s-17e557f0) on Town01 seed 2's log and trace as committed: sort_seed2.jsonl, row for row."""
+    pytest.importorskip("metis.trace")
+    from metis import trace
+    if not hasattr(trace, "sort"):
+        pytest.skip("metispy before metis.trace sort: this CI's sibling at its head, until it merges")
+    sys.path.insert(0, os.path.join(os.path.dirname(HERE), "tools"))
+    import rulecheck
+    fx = os.path.join(HERE, "fixtures", "sort-town01-2")
+    rows = rulecheck.sort_rows(os.path.join(fx, "log.jsonl"), os.path.join(fx, "trace"))
+    with open(os.path.join(HERE, "sort_seed2.jsonl")) as f:
+        want = [json.loads(line) for line in f]
+    got = trace.sort_summary(rows)                 # the file predates class 6: its five counts, and none in the sixth
+    assert rows == want[:-1] and got["violations"] == want[-1]["violations"]
+    assert {k: got["by_class"][k] for k in want[-1]["by_class"]} == want[-1]["by_class"] and got["by_class"]["unseen, the other's duty"] == 0
+
+
+def test_truth_flags_a_lane_change_no_one_made_and_a_contact_with_nobodys_pair(tmp_path):
+    """T10 (checks-open s-17e557f0): seed 2's settled_to on a car the truth saw keep its lane, standing (calm_12) or driving on
+    (aggr_4); a contact on a not_relevant pair (the crash of Town01 s1 at tick 911); a log before `contact` says it is unchecked."""
+    pytest.importorskip("metis.trace")
+    from metis import trace
+    if not hasattr(trace, "member_atoms"):
+        pytest.skip("metispy before metis.trace sort: this CI's sibling at its head, until it merges")
+    sys.path.insert(0, os.path.join(os.path.dirname(HERE), "tools"))
+    import rulecheck
+    fx = os.path.join(HERE, "fixtures", "sort-town01-2")
+    rows = rulecheck.truth_rows(os.path.join(fx, "log.jsonl"), os.path.join(fx, "trace"))
+    assert [(r.get("body"), r.get("from"), r.get("to"), r["kind"]) for r in rows] == [
+        ("calm_12", 586, 605, "idle"), ("aggr_4", 695, 714, "idle"), (None, None, None, "note")]
+    log = tmp_path / "log.jsonl"
+    log.write_text("".join(json.dumps({"tick": k, "resp": "none", "contact": c, "danger": [], "truth": []}) + "\n" for k, c in (
+        (910, []), (911, [{"id": "calm_9", "type": "not_relevant"}]), (912, [{"id": "x", "type": "same_dir"}]))))
+    assert rulecheck.truth_rows(str(log)) == [{"tick": 911, "body": "calm_9", "kind": "no pair", "type": "not_relevant"}]
+
