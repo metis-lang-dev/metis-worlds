@@ -1,6 +1,6 @@
 """gen_room_tree.py — the room tree metis-worlds CI checks (map-queries s-396939dc step 3): kitchen 13 installed as a room
 (gen_hier.install, a tick tree with the person), its sources only — the composition, every member's program and
-domain.yaml, the family interface, the task's intent card and world model — under tests/room_tree/. CI has no game
+domain.yaml, the family interface, the task's intent card and world model — under tests/.room_tree/ (a dot directory: the catalog walk skips it, so its packages never clash with the bundle's, alf-bundle). CI has no game
 data; it builds metisc from metis-lang master and runs `metisc --interface domains/hier/composition.yaml` there, so a
 type-name clash with the director's routing type (alf-tasks step 2's `kind`: I6, two member sets of one type) fails
 CI, not the person's session.
@@ -14,7 +14,7 @@ import sys
 import tempfile
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-OUT = os.path.join(os.path.dirname(HERE), "tests", "room_tree")
+OUT = os.path.join(os.path.dirname(HERE), "tests", ".room_tree")
 ROOM = "kitchen 13"
 
 
