@@ -2,9 +2,9 @@
 # source (or '#' directives) changed since the last build, reuses the rest, links, and records build/road.build.
 # METISC: metis-lang's metisc (default: the workspace sibling); it finds its own standard units (iface/: the protocol
 # and the tree director; metis-lang spec/17 amendment 5) beside METIS_HOME, which names the road family.
-METISC ?= ../../../metis-lang/src/metisc
+METISC ?= $(abspath ../../../metis-lang/src/metisc)
 # METIS_HOME: the road family (metis-catalog domains/road at catalog.pin; road-family s-f62c0ed8): the units by name
-export METIS_HOME ?= ../../../metis-catalog/domains/road
+export METIS_HOME ?= $(abspath ../../../metis-catalog/domains/road)
 
 build/road.build: composition.yaml $(wildcard *.llp) $(wildcard */*.llp) $(wildcard */domain.yaml)
 	$(METISC) build .

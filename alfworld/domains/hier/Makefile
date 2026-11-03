@@ -6,8 +6,8 @@
 # cannot see it (nina, step 1 review).
 # METISC: metis-lang's metisc (default: the workspace sibling). METIS_HOME: metispy's catalog (iface/: the protocol and
 # the tree director's units). PYTHON: one with metispy (metis.catalog.protocol_stub).
-METISC ?= ../../../../metis-lang/src/metisc
-export METIS_HOME ?= ../../../../metispy/metis/catalog
+METISC ?= $(abspath ../../../../metis-lang/src/metisc)
+export METIS_HOME ?= $(abspath ../../../../metispy/metis/catalog)
 PYTHON ?= python3
 GEN = ../../world/gen_hier.py
 
