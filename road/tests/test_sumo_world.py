@@ -276,7 +276,11 @@ def test_the_run_doctor_refuses_a_world_that_is_not_the_one_meant(tmp_path):
     assert sumo_world.doctor(str(routes), [(1.0, "car9", "lcmode", 0)]) == ["the script names car9, which the routes lack"]
     routes.write_text('<routes><vehicle id="lead" route="r" depart="0"/></routes>')
     assert sumo_world.doctor(str(routes), []) == ["the routes lack the ego (ego)"]
-    for name in ("straight", "cut_out", "cut_in"):                  # every scenario at head is the world it says
+
+
+@needs_netconvert
+def test_every_scenario_at_head_is_the_world_it_says(tmp_path):
+    for name in ("straight", "cut_out", "cut_in"):
         (tmp_path / name).mkdir()
         made = sumo_world.SCENARIOS[name](str(tmp_path / name), 1)
         assert sumo_world.doctor(made[1], made[2] if len(made) > 2 else []) == [], name

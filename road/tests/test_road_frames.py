@@ -497,6 +497,9 @@ def test_a_turn_changes_the_egos_route_or_says_there_is_none(tmp_path):
 
 
 def test_rulecheck_sorts_a_violation_by_why_it_is_one():
+    pytest.importorskip("metis.trace")
+    if not hasattr(__import__("metis.trace", fromlist=["sort_violations"]), "sort_violations"):
+        pytest.skip("metispy before metis.trace sort: this CI's sibling at its head, until it merges")
     sys.path.insert(0, os.path.join(os.path.dirname(HERE), "tools"))
     import rulecheck
     car = {"id": "c:xing_ego_prio:1", "role": "a1", "resp": "brake_min", "lane": "-18_0", "s": 40.98}
