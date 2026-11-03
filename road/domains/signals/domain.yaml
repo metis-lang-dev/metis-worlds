@@ -9,3 +9,8 @@ clock: {beats: 1, period: 1}
 shared: {signal: world-private, zone_at: world-private, can_stop: world-private, can_halt: world-private, now: world-private, tick__want: out, tick__released: out, tick__gen: in, tick__active: out, tick__done: out, tick__grant: in, tick__cancel: in, controls: resource}
 status: {success: [tick__done], failure: []}
 gating: program
+# the lint's lines (checks-open s-17e557f0; patterns CHECKS.md §3 L7, L9): the safety stages; the beliefs (none: the road's classes are
+# what a car shows, never what it intends); the commands the host takes, matched at a `_` boundary (metis-worlds road/world/restrict.py)
+safety: [act]
+belief: []
+commands: [accel, keep, brake, change, yield, inch, stop_lat, drive_away]
