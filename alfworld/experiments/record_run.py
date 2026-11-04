@@ -107,8 +107,7 @@ def record(game_dir, map_path, out_path, words, goal):
     work = tempfile.mkdtemp(prefix="alf-record-")       # the bases beside the packages, as hier.main sets them
     shutil.copy(os.path.join(ROOT, "domains", "alfred_domain.llp"), work)
     os.makedirs(os.path.join(work, "hier"))
-    for s in hier.gen_hier.SPECS:
-        shutil.copy(os.path.join(ROOT, "domains", "hier", s + "_domain.llp"), os.path.join(work, "hier"))
+    hier.gen_hier.write_plain_bases(os.path.join(work, "hier"))      # the plain bases, derived from the committed tree ones
     shutil.copy(os.path.join(ROOT, "domains", "hier", "capacity.llp"), os.path.join(work, "hier"))
     shutil.copytree(os.path.join(ROOT, "domains", "hier", "iface"), os.path.join(work, "hier", "iface"))   # the bases' interface package
     shutil.copy(os.path.join(ROOT, "domains", "director_domain.llp"), work)

@@ -1,7 +1,7 @@
 """The world under test (world-alfworld step 1): the grounding, the host, the generated
 package, the program. Runs under the world's venv with ALFWORLD_DATA set; the program
 checks need METISC (metis-lang's compiler) and are skipped without it."""
-import json, os, subprocess, sys
+import json, os, shutil, subprocess, sys
 import pytest
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -20,6 +20,16 @@ GAME = "pick_and_place_simple-Tomato-None-DiningTable-26/trial_T20190908_010907_
 def game_dir():
     return os.path.join(families.data_root(), "train", GAME)
 
+
+
+def _plain_hier(wd):
+    """WD/hier with the plain bases (derived from the committed tree ones: A3, ruling B), the capacity and the family
+    interface beside them: a plain instance's bases, as the driver's work dir holds them."""
+    d = os.path.join(str(wd), "hier")
+    gen_hier.write_plain_bases(d)
+    shutil.copy(os.path.join(ROOT, "domains", "hier", "capacity.llp"), d)
+    shutil.copytree(os.path.join(ROOT, "domains", "hier", "iface"), os.path.join(d, "iface"), dirs_exist_ok=True)
+    return d
 
 def test_grounding_is_deterministic_across_opens():
     a = Game().open(os.path.join(game_dir(), "game.tw-pddl"))
@@ -147,8 +157,7 @@ def test_hierarchy_wins_by_manual_switch(tmp_path):
     import shutil
     shutil.copy(os.path.join(ROOT, "domains", "alfred_domain.llp"), os.path.join(wd, "alfred_domain.llp"))
     os.makedirs(os.path.join(wd, "hier"))
-    for s in gen_hier.SPECS:
-        shutil.copy(os.path.join(ROOT, "domains", "hier", s + "_domain.llp"), os.path.join(wd, "hier", s + "_domain.llp"))
+    gen_hier.write_plain_bases(os.path.join(wd, "hier"))          # the plain bases, derived from the committed tree ones
     shutil.copy(os.path.join(ROOT, "domains", "hier", "capacity.llp"), os.path.join(wd, "hier", "capacity.llp"))
     shutil.copytree(os.path.join(ROOT, "domains", "hier", "iface"), os.path.join(wd, "hier", "iface"), dirs_exist_ok=True)
     r = hier.run_game(game_dir(), wd)
@@ -237,8 +246,7 @@ def _hier_workdir(tmp_path):
     shutil.copy(os.path.join(ROOT, "domains", "alfred_domain.llp"), os.path.join(wd, "alfred_domain.llp"))
     shutil.copy(os.path.join(ROOT, "domains", "director_domain.llp"), os.path.join(wd, "director_domain.llp"))
     os.makedirs(os.path.join(wd, "hier"))
-    for s in gen_hier.SPECS:
-        shutil.copy(os.path.join(ROOT, "domains", "hier", s + "_domain.llp"), os.path.join(wd, "hier", s + "_domain.llp"))
+    gen_hier.write_plain_bases(os.path.join(wd, "hier"))          # the plain bases, derived from the committed tree ones
     shutil.copy(os.path.join(ROOT, "domains", "hier", "capacity.llp"), os.path.join(wd, "hier", "capacity.llp"))
     shutil.copytree(os.path.join(ROOT, "domains", "hier", "iface"), os.path.join(wd, "hier", "iface"), dirs_exist_ok=True)
     return wd
@@ -360,7 +368,7 @@ def test_hierarchy_continues_after_a_result(tmp_path):
     for continues in (False, True):
         out_dir = os.path.join(wd, "c%d" % continues)
         path = gen_hier.generate(game_dir(), out_dir, "nav", 0, info, smap, reading, ["goto(%s)" % rec], [],
-                                 domain_rel=os.path.join(ROOT, "domains", "hier", "nav_domain.llp"), continues=continues)
+                                 domain_rel=os.path.join(_plain_hier(wd), "nav_domain.llp"), continues=continues)
         h = AlfHost(os.path.dirname(path))
         try:
             counts = {a: 1 for a in h.reading()}
@@ -561,7 +569,7 @@ def _task_instance(wd, name, reading, init):
         smap = gen_hier.build_map(os.path.join(wd, name + ".map.json"), info, m)
     finally:
         m.gym.close()
-    dom = os.path.relpath(os.path.join(ROOT, "domains", "hier", "task_domain.llp"), os.path.join(wd, name, "task-0"))
+    dom = os.path.relpath(os.path.join(_plain_hier(wd), "task_domain.llp"), os.path.join(wd, name, "task-0"))
     start = [smap.intent_atom(a) for a in init(info)]          # the goal in the room's terms, projected onto the roles
     rd = {a: 1 for a in reading(info, world)}
     path = gen_hier.generate(game_dir(), os.path.join(wd, name), "task", 0, info, smap, rd, start, [], domain_rel=dom)
@@ -669,7 +677,7 @@ def test_every_lifted_base_compiles_alone():
     """spec 12 (abstract-types step 3): the director, the flat base and the hierarchy's specialist
     bases declare the types their instances complete (`types (…)`), so metisc compiles each alone
     — its advisory names them — and refuses only to ground it."""
-    hier = os.path.join(ROOT, "domains", "hier")
+    hier = _plain_hier(__import__("tempfile").mkdtemp())          # the specialists' plain bases (the tree ones need the protocol)
     bases = [os.path.join(ROOT, "domains", f) for f in ("director_domain.llp", "alfred_domain.llp")] + \
         sorted(os.path.join(hier, f) for f in os.listdir(hier) if f.endswith("_domain.llp"))
     assert len(bases) == 7
@@ -732,8 +740,8 @@ def test_the_capacity_grounds_small(tmp_path, k):
     (d / "capacity.llp").write_text(gen_hier.capacity(k))
     bound = {8: 3000, 16: 15000}[k]
     for s in gen_hier.SPECS:
-        if k != 8:
-            (d / s / (s + ".llp")).write_text(gen_hier.instance_text(s, "../%s_domain.llp" % s, "../capacity.llp", k=k))
+        if k != 8:                                                 # the member's program (the tree's) at capacity k
+            (d / s / (s + ".llp")).write_text(gen_hier.tree_program(s, k=k))
         t0 = time.perf_counter()
         prog = load_llp(d / s / (s + ".llp")).catalog.ground({})
         dt = time.perf_counter() - t0

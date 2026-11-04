@@ -59,9 +59,12 @@ def measure(game, wd):
     rec = next(a for a in reading if a.startswith("inrecep(%s," % o))[8:-1].split(",")[1]
     goals = {"task": gen_hier.seed(info), "nav": ["goto(%s)" % rec], "access": ["open(%s)" % rec], "grasp": ["take(%s)" % o],
              "place": ["put(%s,%s)" % (o, d)]}
+    bases = os.path.join(wd, "hier")                               # the plain bases (derived from the committed tree ones)
+    gen_hier.write_plain_bases(bases)
+    shutil.copy(os.path.join(ROOT, "domains", "hier", "capacity.llp"), bases)
     for spec in gen_hier.SPECS:
         p = gen_hier.generate(game, os.path.join(wd, "pk"), spec, 0, info, smap, reading, [smap.intent_atom(g) for g in goals[spec]], [])
-        rows[spec] = stats(p, os.path.join(ROOT, "domains", "hier", spec + "_domain.llp"))
+        rows[spec] = stats(p, os.path.join(bases, spec + "_domain.llp"))
     return rows
 
 

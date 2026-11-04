@@ -105,8 +105,8 @@ jobs:
               --interface domains/hier/composition.yaml > "$RUNNER_TEMP/iface.txt" 2>&1 || rc=$?
           cat "$RUNNER_TEMP/iface.txt"
           [ "$rc" -eq 0 ] && ! grep -q '^error' "$RUNNER_TEMP/iface.txt"
-      # alfworld's bundle (alf-bundle s-b53cc7ab): domains/hier/ as the workspace's composition; `make` derives the tree
-      # bases from the plain ones (world/gen_hier.py tree: metispy, semantic-world) and links; the hash == image.golden
+      # alfworld's bundle (alf-bundle s-b53cc7ab): domains/hier/ as the workspace's composition; `make` derives the plain
+      # bases from the committed tree ones (world/gen_hier.py plain: metispy, semantic-world) and links; the hash == image.golden
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"

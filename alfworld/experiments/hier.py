@@ -224,8 +224,7 @@ def main(argv=None):
     os.makedirs(wd, exist_ok=True)
     shutil.copy(os.path.join(ROOT, "domains", "alfred_domain.llp"), os.path.join(wd, "alfred_domain.llp"))
     os.makedirs(os.path.join(wd, "hier"), exist_ok=True)
-    for s in gen_hier.SPECS:
-        shutil.copy(os.path.join(ROOT, "domains", "hier", s + "_domain.llp"), os.path.join(wd, "hier", s + "_domain.llp"))
+    gen_hier.write_plain_bases(os.path.join(wd, "hier"))          # the plain bases, derived from the committed tree ones
     shutil.copytree(os.path.join(ROOT, "domains", "hier", "iface"), os.path.join(wd, "hier", "iface"), dirs_exist_ok=True)   # the bases' interface package
     shutil.copy(os.path.join(ROOT, "domains", "hier", "capacity.llp"), os.path.join(wd, "hier", "capacity.llp"))
     shutil.copy(os.path.join(ROOT, "domains", "director_domain.llp"), os.path.join(wd, "director_domain.llp"))

@@ -7,4 +7,4 @@ build/
 dist/
 .metis/
 records/
-domains/hier/tree/
+domains/hier/plain/
