@@ -1,4 +1,4 @@
-# Formal rules on the road: what four papers and a survey give the road family (architect's research note, 2026-11-05)
+# Formal rules on the road: what five papers and a survey give the road family (architect's research note, 2026-11-05)
 
 The user (2026-11-05): "we are quite advanced on road subject last month but from experienced driver pov we not
 nearly there. research other people's attempts to formalize rules in logic, mostly STL, for productive ideas." Four
@@ -7,7 +7,8 @@ deontic logic, ACM TCPS 5(4):38, arXiv 2105.02851), An et al. 2026 (ontology + S
 Sensors 26:5973), Bhuiyan, Governatori et al. 2023 (Queensland overtaking rules in defeasible deontic logic, Rev.
 Socionetwork Strategies 17:233, the user's "ontology but honest attempt"), and the survey Manas, Keser, Knoll 2025,
 Integrating legal and logical specifications in perception, prediction and planning for automated driving (arXiv
-2510.25386, the user's "more diverse overview"). The road family as it stands: metis-catalog `domains/road` at the pin (responder, planner with
+2510.25386, the user's "more diverse overview"), and Esterle, Aravantinos, Knoll 2019, From specifications to
+behavior: maneuver verification in a semantic state space (arXiv 1905.00708, IEEE, the user's "formal verification"). The road family as it stands: metis-catalog `domains/road` at the pin (responder, planner with
 `change.llp`, signals; `capacity.llp` roles; the situation layer in `libs/semantic-world`; the restrictor and the
 projection in `road/world`), the patterns in metis-loop `skills/metis-loop/patterns/8-road.md` and CHECKS.md.
 
@@ -71,6 +72,18 @@ What each paper found that bears on us:
   natural driving; switching jurisdictions; "whether an AV should bend a minor rule to signal intent"; a
   "reasonable AV standard" for liability. It cites neither RSS nor CommonRoad, so the four papers and the survey
   do not overlap: the survey is the law side, the four are the safety side, and the family needs both.
+- **Maneuver verification (Esterle 2019).** The planner's candidate maneuver is a path through a SEMANTIC state
+  space (the free space-time partition of Altché and de La Fortelle, with per-obstacle propositions f/b/l/r:
+  the ego in front of, behind, left of, right of each other car, and the road type), and three Vienna Convention
+  articles (11.1/11.6 overtaking on the right, 11.9 no overtaking before a pedestrian crossing, 21.3 stop for a
+  pedestrian on the crossing) are LTL formulas over those propositions; each candidate trace is checked by NuSMV
+  before trajectory planning, "runtime verification instead of model checking", 22 ms per trace and obstacle;
+  on the pedestrian-crossing scene about 40% of the candidate maneuvers are rejected (139 → 83 at a 1 s step).
+  Stated limits: one other road user per rule, duplicate traces of one homotopy class blow up the count (75,441
+  at 0.5 s), finite-trace semantics by repeating the last state, congestion is a scene signal not in the state
+  space, no "should" against "must", no receding horizon (a maneuver illegal now may be legal after a later
+  change). Their semantic propositions are our ROLES by another name, and their one-obstacle-per-rule limit is
+  our one-pair-per-fold form: the paper is the family's planner with a look-ahead the family lacks.
 
 ## 2. Where the road family already is (confirmed, no action)
 
@@ -161,6 +174,21 @@ The paper's superiority relation is worth one lint: two rules of one stage with 
 commands with no family member between them is a conflict the sampler would settle by weight, which the law
 never allows (an extension of L3 `rules-twin-body`).
 
+**9. The maneuver as a trace to verify before it runs (Esterle 2019).** Every rule of the family reads the
+classes of THIS tick; a lane change or an overtaking is committed on the present and found out on the way (the
+responder stops it: `stop_lat_*`). An experienced driver runs the maneuver forward in the head first. The family
+has the pieces: `eval/` holds the instrument's world model of a lane change (spec/16 §10.1, `tick: ego`, the target
+lane's follower and lead with their intent belief by tick), the library has `predict_table`, and spec/10's `whatif`
+runs the rules on a prefix without a world (CHECKS.md: "a counterfactual on a recorded prefix is a control without
+a world"). The shape: a host class `maneuver_clear(D)` for the change (later the overtaking of item 8): the
+projection rolls the semantic trace of the maneuver K ticks ahead under constant acceleration (the paper's
+prediction, the library's `dynamics_for`) and checks the family's own safety rules on it (would `yield_*`,
+`brake_cross` or the responder's `guard*` fire at any tick of the predicted trace? then not clear); `change` reads
+it beside `settled(D)`. This is the paper's 22 ms check done with OUR rules as the specification, no second
+logic, no model checker: the rules are run, not translated. The receding-horizon case the paper leaves open is the
+loop's: a refusal now with a clear trace two beats later is a NOTE row, never a violation. Measure: the count of
+changes begun and stopped by the responder (today's `stop_lat_*` firings) before and after.
+
 **7. Intent shown before the move (the survey's open problem 5: bending a minor rule to signal intent).** The responder reads `signalled(obj, side)`; the ego shows nothing. Right of way
 is given on a signal: an experienced driver indicates, waits a beat, then moves. The shape: `change_reason(D)` →
 `indicate(D)` as a planner command one beat before `change`, and the host's `settled(D)` extended with "indicated for
@@ -246,6 +274,13 @@ is the method the loop already runs one surprise at a time, made systematic.
   benchmark beside CommonRoad; Mehdipour et al. 2023, Formal methods to comply with rules of the road in
   autonomous driving: state of the art and grand challenges (Automatica): the field's own list of what is open;
   Manas, Zwicklbauer, Paschke 2024, TR2MTL (IV): LLM translation of rule text into MTL, the pi loop's cousin.
+- From the maneuver paper: Altché, de La Fortelle 2017, Partitioning of the free space-time for on-road
+  navigation (CDC): the semantic state space; Rizaldi, Immler, Schürmann, Althoff 2018, A formally verified motion
+  planner for autonomous vehicles (ATVA): the verified side of the same idea; Vasile et al. 2017, Minimum-violation
+  scLTL motion planning (ICRA) and Reyes Castro et al. 2013, Incremental sampling-based algorithm for
+  minimum-violation motion planning (CDC): "should" against "must" as a cost, the rulebook line again; Koschi,
+  Althoff 2017, SPOT: set-based prediction of traffic participants (IV): the prediction a maneuver check needs when
+  constant acceleration is too thin.
 - Pek, Zahn, Althoff 2017, Verifying the safety of lane change maneuvers of self-driving vehicles based on
   formalized traffic rules (IV); Rizaldi, Immler, Althoff 2016, A formally verified checker of the safe distance
   traffic rules (NFM): the two thresholds the defeasible paper borrowed for its vague atoms.
@@ -265,9 +300,11 @@ is the method the loop already runs one surprise at a time, made systematic.
    planner rules, the port for τ; the chair takes the band as its own comfort margin by pin.
 4. **road-excuse s-?: item 4**: the obligation lifecycle atoms and rulecheck reading them; a spec/15 or spec/18
    paragraph first (the architect's), since it touches the protocol's accounting.
-5. **road-overtake s-?: item 8**: the overtaking unit of the car from the defeasible paper's atom list and StVO 5,
+5. **road-lookahead s-?: item 9**: `maneuver_clear(D)` in the projection over the predicted semantic trace with
+   the family's own rules as the check; the stopped-change count before and after.
+6. **road-overtake s-?: item 8**: the overtaking unit of the car from the defeasible paper's atom list and StVO 5,
    through the loop; the conflict lint as its check.
-6. **road-evade**: item 5 last, after the monitor world shows how often a human swerved where we would only brake.
+7. **road-evade**: item 5 last, after the monitor world shows how often a human swerved where we would only brake.
 
 Order by the user's complaint: 1 measures it, 2 and 3 are what the experienced driver does differently, 4 is
 how the car explains itself, 5 is the one new response.
