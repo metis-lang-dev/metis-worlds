@@ -106,7 +106,7 @@ class DirectorHost:
             return None
         # in the world's own interpreter: reading a game needs what the agent's venv does not have (textworld)
         cmd = [os.environ.get("METIS_ALF_PY") or sys.executable, os.path.join(os.path.dirname(HERE), "experiments", "demo.py"),
-               "room", room, self.meta["root"]] + ["--" + f for f in ("view", "tree", "room") if self.meta.get(f)]
+               "room", room, self.meta["root"]] + ["--" + f for f in ("view", "tree", "room", "bundle") if self.meta.get(f)]
         r = subprocess.run(cmd, capture_output=True, text=True, env=dict(os.environ))
         if r.returncode:
             raise RuntimeError(((r.stderr or r.stdout).strip().splitlines() or ["the room's install failed"])[-1])

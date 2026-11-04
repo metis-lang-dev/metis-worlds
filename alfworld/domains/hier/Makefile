@@ -20,8 +20,14 @@ PYCHECK = @$(PYTHON) -c 'import semantic_world, metis.catalog.protocol_stub' 2>/
 	echo "make: $(PYTHON) cannot import semantic_world and metispy (metis.catalog.protocol_stub): run alfworld/setup.sh," >&2; \
 	echo "      or give one that can: make PYTHON=/path/to/python (with metispy and libs/semantic-world on its path)" >&2; exit 2; }
 
-build/alfworld.build: plain composition.yaml ../director_domain.llp $(wildcard *.llp) $(wildcard */*.llp) $(wildcard */domain.yaml)
+build/alfworld.build: plain composition.yaml ../director_domain.llp $(wildcard *.llp) $(wildcard */*.llp) $(wildcard */domain.yaml) | task/intent/card.yaml
 	$(METISC) build .
+
+# the task's card (its manifest's intent/card.yaml): a run fills it from the template (gen_hier.install_run); unfilled here
+# when absent, so the package always has the spec it names
+task/intent/card.yaml:
+	@mkdir -p task/intent
+	cp task/intent.yaml $@
 
 plain: $(foreach s,$(SPECS),$(s)_domain.llp) iface/alfworld.llp $(GEN)
 	$(PYCHECK)

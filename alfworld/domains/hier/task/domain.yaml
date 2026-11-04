@@ -14,4 +14,4 @@ evaluate: {fetch: {reach: done, within: 17, model: eval/world.llp}}
 levels: {fetch_risk: {from: {evaluate: fetch}, at: [0.5, 0.9], names: [high, mid, low]}}
 safety: []
 belief: []
-intent: {spec: intent.yaml}
+intent: {spec: intent/card.yaml}

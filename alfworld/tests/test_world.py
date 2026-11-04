@@ -21,7 +21,6 @@ def game_dir():
     return os.path.join(families.data_root(), "train", GAME)
 
 
-
 def _plain_hier(wd):
     """WD/hier with the plain bases (derived from the committed tree ones: A3, ruling B), the capacity and the family
     interface beside them: a plain instance's bases, as the driver's work dir holds them."""
@@ -30,6 +29,7 @@ def _plain_hier(wd):
     shutil.copy(os.path.join(ROOT, "domains", "hier", "capacity.llp"), d)
     shutil.copytree(os.path.join(ROOT, "domains", "hier", "iface"), os.path.join(d, "iface"), dirs_exist_ok=True)
     return d
+
 
 def test_grounding_is_deterministic_across_opens():
     a = Game().open(os.path.join(game_dir(), "game.tw-pddl"))
@@ -1423,3 +1423,63 @@ def test_a_room_tree_passes_the_interface_check(tmp_path):
                        capture_output=True, text=True)
     errors = [l for l in (r.stdout + r.stderr).splitlines() if l.startswith("error")]
     assert r.returncode == 0 and not errors, errors
+
+
+# ── alf-bundle s-b53cc7ab step 2: the demo runs the bundle in place (the user's 'move demo to the bundle') ──
+def test_a_bundle_run_writes_the_run_state_only(tmp_path, monkeypatch):
+    """install_run: under RUN only the run's state (the flat mirror, the map, the log, a game.json per member, the
+    task's filled card); no member program, no manifest a catalog walk would take; the bundle's host shims find the
+    run's game.json through METIS_ALF_RUN, and stay PassHost without it."""
+    import importlib.util
+    run, cards = tmp_path / "demo", tmp_path / "cards"
+    out = gen_hier.install_run(game_dir(), str(run), cards=str(cards))
+    assert set(out) == {"_flat", "director", *gen_hier.SPECS}
+    for m in ["director", *gen_hier.SPECS]:
+        assert sorted(os.listdir(out[m])) == (["game.json", "intent.yaml"] if m == "task" else ["game.json"]), m
+    walked = [os.path.relpath(os.path.join(d, f), run) for d, _, fs in os.walk(run) for f in fs if f.endswith((".llp", "domain.yaml"))]
+    assert walked and all(w.startswith(os.path.join("domains", "hier", "_flat")) for w in walked), walked
+    meta = json.load(open(os.path.join(out["director"], "game.json")))
+    assert meta["bundle"] and meta["tree"] and meta["root"] == str(run)
+    task = json.load(open(os.path.join(out["task"], "game.json")))
+    assert task["intent_dir"] == str(cards) and task["continues"] and task["commands_log"].endswith(".commands.jsonl")
+    assert sorted(os.listdir(cards)) == ["card.yaml", "task-prompt.txt", "task-spoken.txt", "task.gbnf"]
+    assert open(os.path.join(cards, "card.yaml")).read() == open(os.path.join(out["task"], "intent.yaml")).read()
+    assert "TOMATO" in open(os.path.join(cards, "card.yaml")).read()          # the room's things: the mapper's values
+    with pytest.raises(ValueError):
+        gen_hier.install_run(game_dir(), ROOT)
+
+    def shim():
+        spec = importlib.util.spec_from_file_location("nav_shim", os.path.join(ROOT, "domains", "hier", "nav", "alf_host.py"))
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        return mod.make()
+    monkeypatch.delenv("METIS_ALF_RUN", raising=False)
+    assert type(shim()).__name__ == "PassHost"
+    monkeypatch.setenv("METIS_ALF_RUN", str(run))
+    h = shim()
+    try:
+        assert os.path.abspath(h.package_dir) == os.path.abspath(out["nav"]) and h.commands_log == task["commands_log"]
+    finally:
+        h.gym.close()
+
+
+def test_the_demo_setup_traces_the_bundle_where_the_workspace_looks(tmp_path):
+    """demo.py setup (demo.sh's default): the tick on, the run's trace under the workspace's .metis/traces/<game>-<started>/
+    with the config it ran with and run.json naming the game beside it (the judge's config, TRACE's listing)."""
+    import yaml
+    sys.path.insert(0, os.path.join(ROOT, "experiments"))
+    import demo
+    root = tmp_path / ".metis" / "demo"
+    cfg, m, fetch, out = demo.setup(game_dir(), root, port=8412, bundle=True, cards=str(tmp_path / "cards"))
+    c = yaml.safe_load(open(cfg))
+    assert c["domains"]["tick"] is True and c["domains"]["names"] == ["director", "task", "nav", "access", "grasp", "place"]
+    trace = c["trace"]["dir"]
+    assert os.path.dirname(trace) == str(tmp_path / ".metis" / "traces") and os.path.basename(trace).startswith(demo.room_name(game_dir()) + "-")
+    assert c["trace"]["commands"] == ["goto", "open", "take", "put"]
+    assert yaml.safe_load(open(os.path.join(trace, "config.yaml"))) == c
+    rj = json.load(open(os.path.join(trace, "run.json")))
+    assert rj["bundle"] == "alfworld" and rj["game"] == demo.id_of(game_dir()) and rj["run"] == str(root.resolve())
+    assert not any(f.endswith(".llp") for f in os.listdir(os.path.join(root, "domains", "hier", "nav")))
+    from metis import trace as T                                  # the Live's writer starts: they stay beside it (metispy intent-spec)
+    T.Segments(trace, every=200).close()
+    assert sorted(os.listdir(trace)) == ["checkpoints", "config.yaml", "run.json"]

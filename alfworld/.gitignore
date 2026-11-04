@@ -8,3 +8,4 @@ dist/
 .metis/
 records/
 domains/hier/plain/
+domains/hier/task/intent/

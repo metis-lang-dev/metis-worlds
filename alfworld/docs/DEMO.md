@@ -33,6 +33,19 @@ another, through the intent interface.
     ./demo.sh --tw "bathroom 401"       # another room by its label (./demo.sh --list names the 107)
     ./demo.sh --tw --view "kitchen 13"  # the robot sees only what stands before it: unseen things are searched for
     ./demo.sh --tw --episode Bowl-None-Fridge-6   # the old way: the game as one task, its own goal wins and ends it
+    ./demo.sh --tw --plain              # the plain hierarchy (no tick tree), installed into ROOT: a comparison run only
+
+**The bundle, in place** (alf-bundle s-b53cc7ab step 2). The demo runs the workspace's bundle, `domains/hier/`, the
+tick tree that the loop console's BUNDLE shows and the pi loop rules on:
+- the members' programs are loaded from `domains/hier/<spec>/` (METIS_CATALOG = alfworld), never copied. `make`
+  rebuilds the image first when it is stale, so an apply by the loop plus `make` changes what the next start, or
+  a member's reload, runs;
+- ROOT (`.metis/demo`) holds the run's state only: the semantic map, the commands log, a `game.json` per member
+  (the bundle's host shims find it through METIS_ALF_RUN), the flat mirror and the records;
+- the task's card is filled from the map into `domains/hier/task/intent/card.yaml`, the spec its manifest names
+  (git-ignored). The committed `task/intent.yaml` is its template;
+- the run's trace goes to `.metis/traces/<game>-<started>/`, with the config it ran with and `run.json` beside it.
+  TRACE lists it, and a surprise dropped on it is judged with that config.
 
 **The room.**
 - **Why the episode no longer ends anything.** TextWorld's gym env freezes once the episode's own goal holds: every

@@ -132,16 +132,20 @@ def room_name(game):
     return re.sub(r"[^A-Za-z0-9_]+", "-", id_of(game))
 
 
-def install_room(game, root, view=False, tree=False, room=False, world=False):
+def install_room(game, root, view=False, tree=False, room=False, world=False, bundle=False, cards=None):
     """GAME's data in ROOT's tree: the hierarchy's packages (their programs the same whatever the game), the card, the
-    page's map. world (rooms s-b51a2e80): one room of a World, so its map and commands log stand as it left them. → (the
-    page's map, the packages)."""
+    page's map. world (rooms s-b51a2e80): one room of a World, so its map and commands log stand as it left them.
+    bundle (alf-bundle s-b53cc7ab step 2): the workspace's bundle runs in place, ROOT holds the run's state only
+    (gen_hier.install_run). → (the page's map, the packages: a bundle run's member dirs)."""
     root = Path(root)
     name = room_name(game) if world else None
-    out = gen_hier.install(str(game), str(root), person=True, view=view, tree=tree, room=room, name=name)
-    for spec in hda.NAMES[1:]:                 # metis-agent loads a host from <name>_host.py, or the manifest's host: file
-        shutil.copy(Path(out[spec]) / "alf_host.py", Path(out[spec]) / ("%s_host.py" % spec))
-    hda.card_files(root, out["task"])
+    if bundle:
+        out = gen_hier.install_run(str(game), str(root), view=view, room=room, name=name, cards=cards)
+    else:
+        out = gen_hier.install(str(game), str(root), person=True, view=view, tree=tree, room=room, name=name)
+        for spec in hda.NAMES[1:]:             # metis-agent loads a host from <name>_host.py, or the manifest's host: file
+            shutil.copy(Path(out[spec]) / "alf_host.py", Path(out[spec]) / ("%s_host.py" % spec))
+        hda.card_files(root, out["task"])
     from semantic_map import room_as_left, text_map
     hier = root / "domains" / "hier"
     page = hier / (".page.%s.json" % name) if name else None        # the room as the game begins it: read once
@@ -158,15 +162,26 @@ def install_room(game, root, view=False, tree=False, room=False, world=False):
     return m, out
 
 
-def setup(game, root, port=8398, view=False, tree=False, room=False, world=False):
+def traces_dir(root):
+    """Where a run's trace goes (as the road's, WORKSPACE.md §6.1): the workspace's .metis/traces/ when ROOT is a run dir
+    under it (alfworld/.metis/demo: demo.sh's), so TRACE and ws.traces() list it; else ROOT/traces."""
+    root = Path(root).resolve()
+    return root.parent / "traces" if root.parent.name == ".metis" else root / "traces"
+
+
+def setup(game, root, port=8398, view=False, tree=False, room=False, world=False, bundle=False, cards=None):
     """ROOT as the demo's catalog; → (config path, the map, the task's fetch). view: the semantic map sees
     only what the robot sees (semantic-map step 3). room (alf-tasks step 1): the game is the room's state only,
     the person gives the tasks (no task of the game's own, no episode end); the picker lists rooms. world (rooms
-    s-b51a2e80): the picker's choice is entered with the agent running (metis-agent's enter_room)."""
+    s-b51a2e80): the picker's choice is entered with the agent running (metis-agent's enter_room).
+    bundle (alf-bundle s-b53cc7ab step 2, demo.sh's default): the workspace's bundle runs IN PLACE — its members'
+    programs from domains/hier/<spec>/ (METIS_CATALOG the workspace, METIS_ALF_RUN = ROOT), the tree's protocol on,
+    ROOT the run's state only; the run's trace under the workspace's .metis/traces/<game>-<started>/ with its
+    config.yaml and run.json beside (the judge replays a surprise of it with that config)."""
     root = Path(root)
     if root.exists():
         shutil.rmtree(root)
-    m, out = install_room(game, root, view=view, tree=tree, room=room, world=world)
+    m, out = install_room(game, root, view=view, tree=tree, room=room, world=world, bundle=bundle, cards=cards)
     # the world page's picker: the games this demo can load, this one current
     rooms = room_list(id_of(game)) if room else None
     (root / "games.json").write_text(json.dumps({"current": id_of(game), "rooms": room, "games": rooms or game_list(),
@@ -182,9 +197,21 @@ def setup(game, root, port=8398, view=False, tree=False, room=False, world=False
     c["domains"]["names"] = names
     c["domains"]["clocks"] = [{"domain": n, "n": 1} for n in names]
     c["ws"]["ui"] = str(WEB)
-    if tree:                                   # the tick (specialist-tree s-404d001f step 2): the tree director, domains.tick
+    if tree or bundle:                         # the tick (specialist-tree s-404d001f step 2): the tree director, domains.tick
         c["domains"]["tick"] = True
     import yaml
+    if bundle:                                 # the run's trace (metis.trace): one dir per start, never wiped by the next
+        comp = yaml.safe_load((WORLD / "domains" / "hier" / "composition.yaml").read_text())
+        started = time.strftime("%Y%m%dT%H%M%S")
+        trace = traces_dir(root) / ("%s-%s" % (room_name(game), started))
+        trace.mkdir(parents=True)
+        c["trace"] = {"every": 200, "ring": 6000, "dir": str(trace), "commands": comp["world"]["in"]}
+        # beside the trace (the face's run_config, the judge's; the Live's writer removes only its own files at start)
+        (trace / "config.yaml").write_text(yaml.safe_dump(c, sort_keys=False))
+        (trace / "run.json").write_text(json.dumps({"game": id_of(game), "game_dir": str(game), "started": started,
+                                                    "bundle": comp["name"], "run": str(root.resolve()),
+                                                    "config": str(run / "config.yaml"), "room": bool(room),
+                                                    "view": bool(view)}, indent=1))
     (run / "config.yaml").write_text(yaml.safe_dump(c, sort_keys=False))
     return run / "config.yaml", m, hda.fetch_of(out["_flat"]), out
 
@@ -192,8 +219,10 @@ def setup(game, root, port=8398, view=False, tree=False, room=False, world=False
 class Session:
     """metis-agent's service over ROOT, its frames collected."""
 
-    def __init__(self, root, cfg, port):
-        env = dict(os.environ, METIS_CATALOG=str(root), METIS_ALF_PY=os.environ.get("METIS_ALF_PY", sys.executable))
+    def __init__(self, root, cfg, port, bundle=False):
+        # the bundle in place: the workspace is the catalog, ROOT the run's state (the host shims' METIS_ALF_RUN)
+        env = dict(os.environ, METIS_ALF_PY=os.environ.get("METIS_ALF_PY", sys.executable),
+                   **({"METIS_CATALOG": str(WORLD), "METIS_ALF_RUN": str(Path(root).resolve())} if bundle else {"METIS_CATALOG": str(root)}))
         self.svc = subprocess.Popen(["systemd-run", "--user", "--scope", "-q", "-p", "MemoryMax=6G", "nice",
                                      str(hda.AGENT_HOME / "py" / ".venv" / "bin" / "python"), "-m", "metis_agent.service",
                                      "--config", str(cfg), "--no-wait-viewer", "--ui-dir", str(WEB), "--lib-dir", str(WEB / "vendor")],
@@ -277,17 +306,18 @@ def as_replay(fs, path, map_url):
     return out
 
 
-def check(game, out_dir, port, tree=False):
-    """The five-turn script (DEMO.md §5), twice: the win, and the disengagement. → the report."""
+def check(game, out_dir, port, tree=False, bundle=False):
+    """The five-turn script (DEMO.md §5), twice: the win, and the disengagement. bundle: the workspace's bundle in
+    place (demo.sh's default), ROOT the run's state. → the report."""
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     report, problems = {}, []
     o, r = None, None
     for name, words_of_fetch in (("win", None), ("fridge", ("tomato 1", "fridge 1"))):
         root = out_dir / ("root-" + name)
-        cfg, m, (o, r), inst = setup(game, root, port=port, tree=tree)
+        cfg, m, (o, r), inst = setup(game, root, port=port, tree=tree, bundle=bundle)
         words = "put the %s in the %s" % (words_of_fetch or (hda.words_of(o), hda.words_of(r)))
-        s = Session(root, cfg, port)
+        s = Session(root, cfg, port, bundle=bundle)
         try:
             got = s.wait(lambda f: f.get("ev") == "world/map", timeout=60)
             time.sleep(1.0)
@@ -518,17 +548,21 @@ def main(argv=None):
     s.add_argument("--port", type=int, default=8398)
     s.add_argument("--view", action="store_true", help="the semantic map sees only what the robot sees (semantic-map step 3)")
     s.add_argument("--room", action="store_true", help="the game as a room: the person gives the tasks (alf-tasks step 1)")
+    s.add_argument("--plain", action="store_true", help="the plain hierarchy, installed into ROOT (a comparison run only); "
+                   "default: the workspace's bundle in place, ROOT the run's state (alf-bundle step 2)")
     ro = sub.add_parser("room")                # the agent's enter_room, in this interpreter (rooms s-b51a2e80)
     ro.add_argument("game")
     ro.add_argument("root")
     ro.add_argument("--view", action="store_true")
     ro.add_argument("--tree", action="store_true")
     ro.add_argument("--room", action="store_true")
+    ro.add_argument("--bundle", action="store_true")
     c = sub.add_parser("check")
     c.add_argument("--game", default=None)
     c.add_argument("--out", default=str(HERE / "records" / "demo-check"))
     c.add_argument("--port", type=int, default=8398)
     c.add_argument("--tree", action="store_true", help="the tick: the tree director, domains.tick (specialist-tree step 2)")
+    c.add_argument("--bundle", action="store_true", help="the workspace's bundle in place, as demo.sh runs it (alf-bundle step 2)")
     ls = sub.add_parser("list")
     ls.add_argument("--rooms", action="store_true", help="one per scene: the rooms the demo loads")
     r = sub.add_parser("resolve")
@@ -540,10 +574,10 @@ def main(argv=None):
     g.add_argument("--port", type=int, default=8398)
     a = ap.parse_args(argv)
     if a.cmd == "room":
-        install_room(resolve(a.game), a.root, view=a.view, tree=a.tree, room=a.room, world=True)
+        install_room(resolve(a.game), a.root, view=a.view, tree=a.tree, room=a.room, world=True, bundle=a.bundle)
         return 0
     if a.cmd == "setup":
-        cfg, m, fetch, _ = setup(a.game, a.root, a.port, view=a.view, room=a.room, world=True)
+        cfg, m, fetch, _ = setup(a.game, a.root, a.port, view=a.view, room=a.room, world=True, bundle=not a.plain)
         print(json.dumps({"config": str(cfg), "task": m["task"]["text"], "fetch": fetch}))
         return 0
     if a.cmd == "list":
@@ -555,7 +589,7 @@ def main(argv=None):
         return 0
     if a.cmd == "check":
         game = a.game or str(Path(families.data_root()) / GAME / sorted(os.listdir(Path(families.data_root()) / GAME))[0])
-        rep = check(game, a.out, a.port, tree=a.tree)
+        rep = check(game, a.out, a.port, tree=a.tree, bundle=a.bundle)
         for name in ("win", "fridge"):
             r = rep[name]
             print("%s: %r → %s; %s; %d world/delta, %d beats; said %d; cornered %s" % (
