@@ -1,4 +1,4 @@
-# Formal rules on the road: what five papers and a survey give the road family (architect's research note, 2026-11-05)
+# Formal rules on the road: what seven papers and a survey give the road family (architect's research note, 2026-11-05)
 
 The user (2026-11-05): "we are quite advanced on road subject last month but from experienced driver pov we not
 nearly there. research other people's attempts to formalize rules in logic, mostly STL, for productive ideas." Four
@@ -8,7 +8,11 @@ Sensors 26:5973), Bhuiyan, Governatori et al. 2023 (Queensland overtaking rules 
 Socionetwork Strategies 17:233, the user's "ontology but honest attempt"), and the survey Manas, Keser, Knoll 2025,
 Integrating legal and logical specifications in perception, prediction and planning for automated driving (arXiv
 2510.25386, the user's "more diverse overview"), and Esterle, Aravantinos, Knoll 2019, From specifications to
-behavior: maneuver verification in a semantic state space (arXiv 1905.00708, IEEE, the user's "formal verification"). The road family as it stands: metis-catalog `domains/road` at the pin (responder, planner with
+behavior: maneuver verification in a semantic state space (arXiv 1905.00708, IEEE, the user's "formal verification"),
+and the two Verimag papers of Bozga and Sifakis the user named for the modal-logic line ("french stuff because
+modal logics come from there"): Specification and validation of autonomous driving systems: a multilevel semantic
+framework (hal-04103905, arXiv 2109.06478, 2022) and Correct by design coordination of autonomous driving systems
+(hal-04578203, STTT 2023, arXiv 2205.10037). The road family as it stands: metis-catalog `domains/road` at the pin (responder, planner with
 `change.llp`, signals; `capacity.llp` roles; the situation layer in `libs/semantic-world`; the restrictor and the
 projection in `road/world`), the patterns in metis-loop `skills/metis-loop/patterns/8-road.md` and CHECKS.md.
 
@@ -84,6 +88,42 @@ What each paper found that bears on us:
   space, no "should" against "must", no receding horizon (a maneuver illegal now may be legal after a later
   change). Their semantic propositions are our ROLES by another name, and their one-obstacle-per-rule limit is
   our one-pair-per-fold form: the paper is the family's planner with a look-ahead the family lacks.
+- **Bozga and Sifakis, the framework (2022).** Maps are directed metric graphs (vertices = positions, edges =
+  segments: intervals, curves, regions) with refinement and abstraction relations; Configuration Logics are
+  first-order logics over maps with a coalescing operator `+` (a graph satisfies φ1 + φ2 when its edges split
+  into a part satisfying φ1 and a part satisfying φ2) and a closure `∼φ` ("contains a subgraph satisfying φ");
+  M2CL adds object variables with attributes (y.pos, y.sp, y.it, y.wt, y.ln) and the primitives `right-of`,
+  `opposite`, `meets(d)`, `go-straight`, `turn-right`, `turn-left`, `o@X,l`; a SCENE is a triple (map formula,
+  addressing formula, dynamics formula) and a scenario a sequence of scenes or a list of guarded commands
+  `scene → c.move(speed constraint at d | to p)`; TM2CL adds Next and Until. The two sentences that matter for
+  us, verbatim in spirit: specifications related to junctions are written `∼ζ(j) ⇒ Φ(j)`, the junction's SHAPE
+  (an MCL formula) implies the temporal rule, so a rule is contextual by construction; and "the difference
+  between system properties and traffic rules is not clear-cut": properties relate speeds and distances
+  (safe distance, acceleration bounds), rules are the higher-level, context-dependent obligations (yield, lights,
+  sensible driving in congestion). Validation: a finite model against an MCL/M2CL formula is quantifier
+  elimination by instantiation; general MCL satisfiability is undecidable, a fragment reduces to real arithmetic;
+  runtime verification by monitors + SMT; CARLA, OpenDRIVE and OpenSCENARIO judged semantically poor, and
+  "accident-free simulation is not conclusive".
+- **Bozga and Sifakis, correct by design (2023).** An ADS = vehicles + a Runtime that, from positions and kinetic
+  attributes on the map, gives every vehicle a FREE SPACE (the length of its itinerary ahead that is free), and
+  vehicles move only inside it. Two assume-guarantee contracts: the vehicle's (given a free space f and speed v with
+  braking distance B(v) ≤ f, it chooses v' and moves δ' with δ' + B(v') ≤ f) and the Runtime's (given non-crossing
+  "ahead" regions, it gives each vehicle at least f − δ, still non-crossing); their composition is an INDUCTIVE
+  INVARIANT (every vehicle can brake within its free space, free spaces never cross), so safety is by design
+  (Thm 3.1); a minimum free space makes the system non-blocking (Thm 3.2: some vehicle always moves). Traffic rules
+  are a restricted linear-time class, `□ ∀c1 ∀o2… φ(c1,o2,…) ⇒ N ψ(c1)`, ψ a bound on the ego's speed or on its
+  stopping distance B(v) against a map position: Table 2 writes safe following (B(v1) ≤ d(c1,c2)), the all-way
+  stop (brake before the sign; stay stopped while another crosses; the longer waiter goes first; equal waits,
+  the static priority), the red light (keep B(v) ≤ the distance to it), the merger vertex u ("if c2 cannot stop
+  at u then c1 must give way"; both at braking distance, the lower priority gives way), speed limits (on the
+  edge; into the next edge's limit). Each rule's postcondition becomes a bound on the vehicle's LIMIT POSITION
+  π = p ⊕ f, the Runtime takes the nearest bound over all applicable rules and the end of the current edge,
+  and the free space is the distance to it: rules → free spaces → safe by design, proved for all of Table 2 but
+  the light (it needs assumptions on the light and the crossing cars). The authors' own framing of what a traffic
+  rule is: "based on topological considerations rather than quantitative information", "implications where the
+  implicant is a condition that is easy to check by a driver and the conclusion is a constraint on controllable
+  variables". Open by their own account: fairness, jams (rules alone do not prevent a roundabout deadlock, the
+  Runtime must watch globally), no Eventually/Until, two-dimensional maps costly, a distributed Runtime.
 
 ## 2. Where the road family already is (confirmed, no action)
 
@@ -99,6 +139,12 @@ What each paper found that bears on us:
   gave up on RSS4 and RSS5 as too vague. Keep; §3 item 4 generalizes them.
 - Blame at the onset (Def 18) and rulecheck's five classes ARE the robustness attribution, in classes rather than
   a number. Keep.
+- The family's rule FORM is Bozga and Sifakis's definition of a traffic rule to the letter: a premise a driver can
+  check (classes), a conclusion on what the ego controls (one command), topological not quantitative. Their
+  `∼ζ(j) ⇒ Φ(j)` (the junction's shape implies the rule) is the family's composition: a unit per kind of place,
+  the host saying which kind the next zone is. Their merger-vertex rule (i) "if the other cannot stop at u, give
+  way" IS rule 5 form B (escalate once the other is past its last stopping point). Keep, and cite them in
+  `8-road.md` as the independent statement of rule 2.
 
 ## 3. The experienced driver's gaps, ranked, each with the borrowed idea and its LLP shape
 
@@ -173,6 +219,26 @@ complementary reading the rule reads, the Complementary readings pattern), the s
 The paper's superiority relation is worth one lint: two rules of one stage with a shared premise and opposite
 commands with no family member between them is a conflict the sampler would settle by weight, which the law
 never allows (an extension of L3 `rules-twin-body`).
+
+**10. One limit position from all the rules (Bozga and Sifakis 2023), and the invariant that goes with it.** The
+family computes its stopping-reach classes one law at a time: `zone_at near` (the stopping reach to the zone),
+`can_stop`, `can_halt`, `late`, `inch_room`, `accel_ok`/`keep_ok` (the lead's RSS distance), the light's line. Each
+is a bound on how far the ego may still go; the planner reads them as separate booleans and the rules combine them
+by stage order. The correct-by-design paper takes the NEAREST bound of every applicable rule once per tick, the
+limit position, and lets the vehicle choose any speed whose braking distance fits inside it. The shape for us is
+the restrictor's, not a rule's (rule 2): the projection publishes `reach(R)` = the nearest bound over the pairs,
+the zone, the light, the limit ahead, as a class band (`room`, `tight`, `none`) plus the responder's own bound
+unchanged, and the planner's speed rules read the band where today they read `accel_ok`/`keep_ok` and the
+zone's `late`; the single-law classes stay for the yields' WHY (the excuse of item 4 needs the law that bound
+it). What the paper adds beyond the simplification is the INVARIANT: "the ego can always brake inside its free
+space, and free spaces never cross" is an inductive invariant over host facts, which T4 `holds` and a new trace
+check (`reach` never below the braking distance at the published speed, on every tick) can verify on every
+trace and every scene, the road world's and the chair's: the shield's certificate as a theorem on the log, the
+same form as the chair's stand-in recorder. The all-way stop's tie-break by WAITING TIME is item 2's law for the
+American case, beside right-before-left: `waited_longer(obj)` as a class, the longest waiter goes, equal →
+static priority, which the zipper's `turn` already does for the merge. The paper's own open problem is ours
+too: rules alone do not prevent the roundabout deadlock; a global watcher (their Runtime, our director)
+breaks it, which the both-standing branch does today in the library, where it does not belong.
 
 **9. The maneuver as a trace to verify before it runs (Esterle 2019).** Every rule of the family reads the
 classes of THIS tick; a lane change or an overtaking is committed on the present and found out on the way (the
@@ -274,6 +340,12 @@ is the method the loop already runs one surprise at a time, made systematic.
   benchmark beside CommonRoad; Mehdipour et al. 2023, Formal methods to comply with rules of the road in
   autonomous driving: state of the art and grand challenges (Automatica): the field's own list of what is open;
   Manas, Zwicklbauer, Paschke 2024, TR2MTL (IV): LLM translation of rule text into MTL, the pi loop's cousin.
+- From the Verimag papers: Bozga, Sifakis 2022 (the framework, LNCS 13660, arXiv 2109.06478) and 2023 (correct by
+  design coordination, STTT 25, arXiv 2205.10037); Karimi, Duggirala 2020, Formalizing traffic rules for
+  uncontrolled intersections (ICCPS): the all-way stop in answer set programming (clingo), the junction unit's
+  other reference; Benveniste et al. 2018, Contracts for system design (Found. Trends EDA): the assume-guarantee
+  frame if the responder's shield is ever stated as a contract; Esterle, Gressenbuch, Knoll 2020 again (their
+  [10]); Rizaldi et al. 2017 and 2018 again (their [17], [19], [18]).
 - From the maneuver paper: Altché, de La Fortelle 2017, Partitioning of the free space-time for on-road
   navigation (CDC): the semantic state space; Rizaldi, Immler, Schürmann, Althoff 2018, A formally verified motion
   planner for autonomous vehicles (ATVA): the verified side of the same idea; Vasile et al. 2017, Minimum-violation
@@ -300,11 +372,14 @@ is the method the loop already runs one surprise at a time, made systematic.
    planner rules, the port for τ; the chair takes the band as its own comfort margin by pin.
 4. **road-excuse s-?: item 4**: the obligation lifecycle atoms and rulecheck reading them; a spec/15 or spec/18
    paragraph first (the architect's), since it touches the protocol's accounting.
-5. **road-lookahead s-?: item 9**: `maneuver_clear(D)` in the projection over the predicted semantic trace with
+5. **road-reach s-?: item 10**: `reach` as the one limit position in the projection, the planner's speed rules on
+   its band, the invariant check as a trace verb over road and chair logs; the waiting-time tie-break with
+   item 2.
+6. **road-lookahead s-?: item 9**: `maneuver_clear(D)` in the projection over the predicted semantic trace with
    the family's own rules as the check; the stopped-change count before and after.
-6. **road-overtake s-?: item 8**: the overtaking unit of the car from the defeasible paper's atom list and StVO 5,
+7. **road-overtake s-?: item 8**: the overtaking unit of the car from the defeasible paper's atom list and StVO 5,
    through the loop; the conflict lint as its check.
-7. **road-evade**: item 5 last, after the monitor world shows how often a human swerved where we would only brake.
+8. **road-evade**: item 5 last, after the monitor world shows how often a human swerved where we would only brake.
 
 Order by the user's complaint: 1 measures it, 2 and 3 are what the experienced driver does differently, 4 is
 how the car explains itself, 5 is the one new response.
