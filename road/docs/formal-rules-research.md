@@ -1,11 +1,13 @@
-# Formal rules on the road: what four papers give the road family (architect's research note, 2026-11-05)
+# Formal rules on the road: what four papers and a survey give the road family (architect's research note, 2026-11-05)
 
 The user (2026-11-05): "we are quite advanced on road subject last month but from experienced driver pov we not
 nearly there. research other people's attempts to formalize rules in logic, mostly STL, for productive ideas." Four
 sources were read in full: Hekmatnejad et al. 2019 (RSS in STL, MEMOCODE), Shea-Blymyer and Abbas 2021 (RSS in
 deontic logic, ACM TCPS 5(4):38, arXiv 2105.02851), An et al. 2026 (ontology + SWRL rules + PDDL + factor graph,
 Sensors 26:5973), Bhuiyan, Governatori et al. 2023 (Queensland overtaking rules in defeasible deontic logic, Rev.
-Socionetwork Strategies 17:233, the user's "ontology but honest attempt"). The road family as it stands: metis-catalog `domains/road` at the pin (responder, planner with
+Socionetwork Strategies 17:233, the user's "ontology but honest attempt"), and the survey Manas, Keser, Knoll 2025,
+Integrating legal and logical specifications in perception, prediction and planning for automated driving (arXiv
+2510.25386, the user's "more diverse overview"). The road family as it stands: metis-catalog `domains/road` at the pin (responder, planner with
 `change.llp`, signals; `capacity.llp` roles; the situation layer in `libs/semantic-world`; the restrictor and the
 projection in `road/world`), the patterns in metis-loop `skills/metis-loop/patterns/8-road.md` and CHECKS.md.
 
@@ -53,6 +55,22 @@ What each paper found that bears on us:
   method agreeing 84–86% on the clear ones and 59% on the borderline ones, where 50% means "truly ambiguous";
   stated limits: not real time, one scenario family (overtaking), participants' own readings of the rules differ,
   video judging is hard.
+- **The survey (Manas, Keser, Knoll 2025).** Organized by the stack (perception, formalizing the law, planning,
+  ambiguity and exceptions), not by logic; what it adds to the four: the Munich line that wrote the German
+  interstate and intersection rules in MTL WITH legal experts and court readings (Maierhofer 2021, 2022; Esterle
+  2020: right of way and lights as temporal formulas, "half the speedometer in metres" as the distance norm);
+  exceptions as LAYERS over base rules in temporal logic, so a justified violation (crossing a solid line past a
+  stalled car, with caution) is recognized and logged as justified (Manas, Paschke 2023), which is §3 item 4 in
+  another logic; priorities as a total order over equivalence classes of rules (TORQ, Xiao 2021) and
+  least-violating control that relaxes the lowest rule in a conflict (Tumova 2013), the rulebook line; vagueness
+  settled by statistics over hundreds of human lane changes (Yu et al. 2024, Nature Communications: an online
+  legal monitor whose thresholds are calibrated on human driving), by a 5% speed tolerance matching enforcement
+  (McLachlan 2022), by STL robustness as graded satisfaction; LLM translation of rule text into MTL (TR2MTL,
+  Manas 2024) and retrieval-augmented LLM advice to a planner (Cai 2024), the line our pi loop is on. Its open
+  problems are ours by name: the whole code and its upkeep; rare rule interactions; strict compliance against
+  natural driving; switching jurisdictions; "whether an AV should bend a minor rule to signal intent"; a
+  "reasonable AV standard" for liability. It cites neither RSS nor CommonRoad, so the four papers and the survey
+  do not overlap: the survey is the law side, the four are the safety side, and the family needs both.
 
 ## 2. Where the road family already is (confirmed, no action)
 
@@ -143,7 +161,7 @@ The paper's superiority relation is worth one lint: two rules of one stage with 
 commands with no family member between them is a conflict the sampler would settle by weight, which the law
 never allows (an extension of L3 `rules-twin-body`).
 
-**7. Intent shown before the move.** The responder reads `signalled(obj, side)`; the ego shows nothing. Right of way
+**7. Intent shown before the move (the survey's open problem 5: bending a minor rule to signal intent).** The responder reads `signalled(obj, side)`; the ego shows nothing. Right of way
 is given on a signal: an experienced driver indicates, waits a beat, then moves. The shape: `change_reason(D)` →
 `indicate(D)` as a planner command one beat before `change`, and the host's `settled(D)` extended with "indicated for
 one beat". The deontic reading: the grant is elicited, not assumed; the follower's `follower_can_yield(D)` (item 1)
@@ -215,6 +233,19 @@ is the method the loop already runs one surprise at a time, made systematic.
   defeasible logic" (Springer) adds the temporal side the 2023 paper lacks.
 - Prakken 2017, On the problem of making autonomous vehicles conform to traffic law (AI and Law): the legal
   reasoning view of exceptions and vagueness, the frame for §3 item 4.
+- From the survey: Maierhofer, Rettinger, Mayer, Althoff 2021, Formalization of interstate traffic rules in
+  temporal logic (ITSC) and Maierhofer, Moosbrugger, Althoff 2022, Formalization of intersection traffic rules in
+  temporal logic (IV): the German code's right of way and lights as MTL, written with legal experts, the nearest
+  thing to a law corpus for the family's junction and signals units; Esterle, Gressenbuch, Knoll 2020,
+  Formalizing traffic rules for machine interpretability (CAVS); Manas, Paschke 2023, Legal compliance checking of
+  autonomous driving with formalized traffic rule exceptions (ICLP workshop): exceptions as layers, justified
+  violations logged; Xiao et al. 2021, Rule-based optimal control for autonomous driving (ICCPS, TORQ) and
+  Tumova et al. 2013, Least-violating control strategy synthesis with safety rules (HSCC): priorities as a total
+  order and relaxation of the lowest rule; Yu et al. 2024, Online legal driving behavior monitoring for
+  self-driving vehicles (Nature Communications): thresholds from human lane-change statistics, a second human
+  benchmark beside CommonRoad; Mehdipour et al. 2023, Formal methods to comply with rules of the road in
+  autonomous driving: state of the art and grand challenges (Automatica): the field's own list of what is open;
+  Manas, Zwicklbauer, Paschke 2024, TR2MTL (IV): LLM translation of rule text into MTL, the pi loop's cousin.
 - Pek, Zahn, Althoff 2017, Verifying the safety of lane change maneuvers of self-driving vehicles based on
   formalized traffic rules (IV); Rizaldi, Immler, Althoff 2016, A formally verified checker of the safe distance
   traffic rules (NFM): the two thresholds the defeasible paper borrowed for its vague atoms.
