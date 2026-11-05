@@ -122,3 +122,12 @@ def test_the_pass_time_accelerates_to_the_limit():
     assert abs(road_facts.pass_time(100.0, 13.89, 13.89, 2.0) - 100.0 / 13.89) < 1e-9
     t = road_facts.pass_time(100.0, 0.0, 13.89, 2.0)
     assert 10.0 < t < 11.0                                       # 6.9 s to the limit over 48 m, then 52 m at 13.89
+
+
+def test_sumo_perception_keeps_an_emergency_vehicles_class():
+    """The belief map's classes are a walker's or a car's; an emergency vehicle with its lights on keeps its class, so the
+    projection can state emergency(R) on SUMO (its intent priors fall back to a car's)."""
+    import sumo_perceive
+    from semantic_world.road import prior
+    assert sumo_perceive.belief_class("emergency") == "emergency" and sumo_perceive.belief_class("passenger") == "passenger"
+    assert prior("emergency") == prior("passenger")

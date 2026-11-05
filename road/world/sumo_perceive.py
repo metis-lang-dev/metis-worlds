@@ -26,7 +26,8 @@ from semantic_world.lane import Mover, dynamics_for
 SETTLED_TICKS = 20                              # settled_to(T, D) holds 2 s after the change is seen complete
 SETTLED_LAT = 0.3                               # m: the lane offset a change is complete within
 SIGNAL_TICKS = 10                               # an indicator blinks: signalled holds 1 s after it was last lit
-CLASS = {"pedestrian": "pedestrian"}            # the belief's classes: a walker, else a car (the priors' table)
+CLASS = {"pedestrian": "pedestrian",           # the belief's classes: a walker, else a car (the priors' table);
+         "emergency": "emergency"}             # an emergency vehicle, its lights on, is seen as one (13b2f9; the priors: a car's)
 
 
 def belief_class(vclass):
