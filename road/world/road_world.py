@@ -339,10 +339,22 @@ class RoadWorld:
     def arrived(self):
         return self.ego.m.s >= self.dest
 
+    def collision_events(self, gap_s=5.0):
+        """The collisions as events, the Leaderboard's way (CARLA's CollisionTest, atomic_criteria.py: MAX_ID_TIME 5 s): a
+        contact with the same other within GAP_S of its last contact is the same collision; `collisions` stays a count
+        of contact ticks (road-scenarios, nina's review)."""
+        n, last = 0, {}
+        for c in self.collisions:
+            if c["with"] not in last or c["t"] - last[c["with"]] > gap_s:
+                n += 1
+            last[c["with"]] = c["t"]
+        return n
+
     def summary(self):
         return {"scenario": self.name, "seed": self.seed, "t": round(self.t, 1), "arrived": self.arrived(),
-                "s": round(self.ego.m.s, 1), "collisions": len(self.collisions), "violations": len(self.violations),
-                "restricted": self.restricted, "first": (self.collisions + self.violations)[:3]}
+                "s": round(self.ego.m.s, 1), "collisions": len(self.collisions), "collision_events": self.collision_events(),
+                "violations": len(self.violations), "restricted": self.restricted,
+                "first": (self.collisions + self.violations)[:3]}
 
 
 # ── the scenarios ─────────────────────────────────────────────────────────────────────────────────────────────

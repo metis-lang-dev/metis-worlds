@@ -141,3 +141,19 @@ def test_the_family_plays_every_card_on_the_exerciser(name, tmp_path, monkeypatc
         pytest.xfail("a known surprise: %s" % KNOWN[name])
     out = road_tree().run("card:" + name, 1, tmp_path, ticks=int(card["ticks"]))
     assert C.check(card, out, arrived=out["arrived"]) == [], (name, out)
+
+
+def test_collisions_are_events_the_leaderboards_way():
+    """nina's review: CARLA's CollisionTest merges contact with the same other within 5 s into one collision, so a
+    rear-end held over ticks is one collisions_vehicle (×0.60), not one per tick."""
+    import road_world as R
+    w = R.RoadWorld("cruise", 1)
+    w.collisions = [{"t": 6.4, "with": "a"}, {"t": 6.5, "with": "a"}, {"t": 9.0, "with": "a"}, {"t": 14.5, "with": "a"},
+                    {"t": 6.6, "with": "b"}]
+    assert w.collision_events() == 3 and w.summary()["collisions"] == 5 and w.summary()["collision_events"] == 3
+    spec = importlib.util.spec_from_file_location("scenarios_x", ROAD / "experiments" / "scenarios.py")
+    sx = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(sx)
+    card = C.load("StaticCutIn")
+    r = sx.row(card, "StaticCutIn", {"arrived": True, "collisions": 9, "collision_events": 1, "violations": 0})
+    assert r["lb"] == {"collisions_vehicle": 1} and r["ds"] == 60.0
