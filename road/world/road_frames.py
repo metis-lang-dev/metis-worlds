@@ -79,7 +79,11 @@ def net_frame(loop):
     doc = net_json(loop.world.net)
     lanes = [{"id": la["id"], "index": int(la["index"]), "speed": float(la["speed"]), "length": float(la["length"])} for e in doc["net"]["edge"] for la in e["lane"]]
     route = (loop.prev_truth.get(loop.ego_id) or {}).get("route", [])
-    return {"ev": "world/net", "lanes": lanes, "route": route, "dest": loop.level_dest, "scenario": loop.scenario, "seed": loop.seed, "net": doc, "scenarios": list(SCENARIOS)}
+    out = {"ev": "world/net", "lanes": lanes, "route": route, "dest": loop.level_dest, "scenario": loop.scenario, "seed": loop.seed, "net": doc, "scenarios": list(SCENARIOS)}
+    d = getattr(loop.world, "director", None)
+    if d is not None and hasattr(d, "goal_polys"):                     # a CommonRoad run (cr_world): its goal regions, drawn in the view
+        out["goal"] = d.goal_polys
+    return out
 
 
 def scene_frame(loop):
@@ -94,9 +98,15 @@ def scene_frame(loop):
             "cmd": last.get("cmd"), "a": last.get("a"), "restricted": loop.restricted, "seen": last.get("seen"), "tracks": last.get("tracks"),
             "arrived": loop.arrived(), "collisions": loop.world.ego_collisions, "violations": len(loop.violations), "unseen_other_duty": len(loop.unseen_duty), "optimistic": len(loop.optimistic),
             "ms": round(sum(loop.ms[-1][k] for k in STAGES) * 1000, 1) if loop.ms else None,
-            "lights": loop.world.light_states() if loop.tick % LIGHTS_EVERY == 0 and hasattr(loop.world, "light_states") else None}
+            "lights": loop.world.light_states() if loop.tick % LIGHTS_EVERY == 0 and hasattr(loop.world, "light_states") else None,
+            "cr": loop.world.director.live() if hasattr(getattr(loop.world, "director", None), "live") else None}
 
 
 def summary_frame(loop):
     """The run at its end, for the dashboard: the summary's plain numbers."""
-    return {"ev": "world/summary", **{k: v for k, v in loop.summary().items() if isinstance(v, (int, float, bool))}}
+    s = loop.summary()
+    out = {"ev": "world/summary", **{k: v for k, v in s.items() if isinstance(v, (int, float, bool))}}
+    cr = (s.get("director") or {}).get("cr") if isinstance(s.get("director"), dict) else None
+    if cr:                                                              # a CommonRoad run's measures (cr_world.Director.report)
+        out["cr"] = {k: cr.get(k) for k in ("goal_reached", "goal_t", "goal_position_t", "goal_window_s", "contact", "off_lanelet_m")}
+    return out

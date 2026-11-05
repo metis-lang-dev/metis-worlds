@@ -55,3 +55,4 @@ for part in ("scenarios", "interactive"):
     by = collections.Counter(p.stem.split("_")[0] for p in files)
     print("%s: %d scenario files; by country: %s" % (part, len(files), ", ".join("%s %d" % kv for kv in by.most_common())))
 EOF
+"$VENV/bin/python" "$HERE/tools/cr_convert.py" --index --root "$ROOT"     # the page's picker reads road/maps/cr/index.json

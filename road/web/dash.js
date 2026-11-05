@@ -48,7 +48,13 @@ export class Dash {
     const f = this.last, r = this.rows;
     if (f) {
       const pairs = [['time', `${f.t.toFixed(1)} s`], ['restricted', f.restricted], ['optimistic', f.optimistic], ['violations', f.violations], ['unseen, the other\'s duty', f.unseen_other_duty], ['collisions', f.collisions], ['tick', f.ms == null ? '-' : `${f.ms} ms`]];
+      if (f.cr) {                                       // a CommonRoad run's measures (cr_world): the goal by its region and its window apart
+        const w = (f.cr.window_s || []).map(([a, b]) => a === b ? `${a} s` : `${a}–${b} s`).join(', ');
+        pairs.push(['goal', f.cr.goal_t != null ? `reached at ${f.cr.goal_t} s` : f.cr.goal_position_t != null ? `region at ${f.cr.goal_position_t} s, out of its window` : 'not yet'],
+          ['goal window', w || 'none'], ['contacts', f.cr.contacts], ['off the lanelets', `${f.cr.off_lanelet_m} m`]);
+      }
       if (this.sum) pairs.push(['the run', `${this.sum.arrived ? 'arrived' : 'did not arrive'}, ${this.sum.ticks} ticks`]);
+      if (this.sum?.cr) pairs.push(['CommonRoad', this.sum.cr.goal_reached ? 'goal reached in its window' : 'goal not reached in its window']);
       this.stats.innerHTML = pairs.map(([k, v]) => `<span>${k}<b>${v}</b></span>`).join('');
     }
     const span = Math.max(10, r.length ? r[r.length - 1].t : 10);

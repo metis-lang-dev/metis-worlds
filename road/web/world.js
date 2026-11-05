@@ -314,6 +314,7 @@ async function frame(f) {
   if (f.ev === 'world/net') { world.map.net(f); return; }
   if (f.ev === 'world/mark') { world.map.mark(f); if (f.said) journalRow({ who: 'note', text: f.said }); return; }
   if (f.ev === 'world/summary') { world.map.summary(f); return; }
+  if (f.ev === 'world/cr_list') { world.map.crList?.(f); return; }     // the road's CommonRoad picker (road_host.cr_find)
   if (f.ev === 'journal' && f.rec?.kind === 'dlg-world') return;       // the road: the page's own lines (watching, play, speed)
   if (f.ev === 'journal' && f.rec?.kind === 'dlg-relay') relay(f.rec);
   if (f.ev === 'journal' && f.rec) commands(f.rec);

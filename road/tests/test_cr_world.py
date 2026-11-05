@@ -191,3 +191,10 @@ def test_the_ego_starts_at_the_planning_problems_state_and_is_routed_to_the_goal
     assert dr.pl["goal_edge"] == "50203" and dr.pl["ego"]["route"][-1] == "50203" and dr.pl["route_note"] is None
     text = Path(routes).read_text()
     assert 'id="ego"' in text and "50203" in text
+
+
+def test_the_goal_regions_for_the_view_and_the_live_measures():
+    dr, c = director()
+    assert dr.goal_polys == [[[180, -2], [200, -2], [200, 2], [180, 2]]]
+    drive(dr, c, [(0.1 * k, 140.0 + 1.0 * k, 0.0, 0.0, 10.0) for k in range(0, 45)])
+    assert dr.live() == {"goal_t": 4.0, "goal_position_t": 4.0, "window_s": [[4.0, 6.0]], "contacts": 0, "off_lanelet_m": 0.0}

@@ -1,8 +1,9 @@
 // client-shim.js — sumo-web3d's built client on the road's frames, loaded before its bundle in client.html (road-agent s-357becc7, steps/step0-report.md):
 // its websocket and its fetches are answered here, from what world.js posts (world/net, world/scene); its backend and its SUMO are never started.
 const json = o => new Response(JSON.stringify(o), { status: 200, headers: { 'Content-Type': 'application/json' } });
-let gotNet;
+let gotNet, gotAdd;
 const net = new Promise(r => { gotNet = r; });
+const add = new Promise(r => { gotAdd = r; });          // the additional shapes: a CommonRoad run's goal regions (world.js posts them with the net)
 const realFetch = window.fetch.bind(window);
 window.fetch = (u, opt) => {
   const p = String(u);
@@ -10,7 +11,8 @@ window.fetch = (u, opt) => {
   if (p.endsWith('/scenarios')) return Promise.resolve(json([{ displayName: 'the road', kebabCase: 'road' }]));
   if (p.endsWith('network')) return net.then(json);
   if (p.endsWith('water')) return Promise.resolve(json({ type: 'FeatureCollection', features: [] }));
-  if (p.endsWith('additional') || p.endsWith('settings')) return Promise.resolve(new Response('', { status: 404 }));
+  if (p.endsWith('additional')) return add.then(a => a ? json(a) : new Response('', { status: 404 }));
+  if (p.endsWith('settings')) return Promise.resolve(new Response('', { status: 404 }));
   if (p.includes('/vehicle_route')) return Promise.resolve(json([]));
   return realFetch(u, opt);
 };
@@ -51,7 +53,12 @@ function snapshot(scene) {
 
 addEventListener('message', e => {
   if (e.origin !== location.origin) return;
-  if (e.data.net) gotNet(e.data.net);
+  if (e.data.net) {
+    gotNet(e.data.net);
+    // the goal as a flat slab on the road: the client draws an additional polygon as a building, (levels + 0.5) x 3 m tall
+    gotAdd(e.data.goal?.length ? { poly: e.data.goal.map((p, i) => ({ id: `goal-${i}`, type: 'building', shape: p.map(([x, y]) => `${x},${y}`).join(' '),
+      param: [{ key: 'building:levels', value: '-0.45' }] })) } : null);
+  }
   if (e.data.scene && socket && socket.onmessage) socket.deliver(snapshot(e.data.scene));   // none before the client listens: it would miss a car's entry
   if (e.data.follow) wanted = e.data.follow;
   if (e.data.center && window.sumoCenter) window.sumoCenter(e.data.center);

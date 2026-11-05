@@ -63,6 +63,7 @@ def set_family_home():
     os.environ["METIS_HOME"] = family_home()
     return os.environ["METIS_HOME"]
 DT = 0.1                          # the world's step, s
+CR_LIST = 60                    # the CommonRoad picker's rows at most (the index has thousands)
 WATCHED_S = 5.0                   # a page said `watching` this recently: a scene every step, else every second
 UNWATCHED_EVERY = 10
 
@@ -219,6 +220,8 @@ class RoadHost:
                 self.traffic(line)
             elif line.startswith("mark:"):
                 self.mark(line)
+            elif line.startswith("crfind:"):
+                self.cr_find(line[len("crfind:"):])
             elif line.startswith("run:"):
                 scenario, seed = line[len("run:"):].rsplit(":", 1)        # a scenario's name may hold a colon (cr:ID, card:NAME@TOWN#SITE)
                 self.start_run(dict(self.run, scenario=scenario, seed=int(seed)))
@@ -227,7 +230,27 @@ class RoadHost:
             elif line.startswith("speed:"):
                 self.shared["speed"] = max(0.1, float(line[6:]))
             else:
-                raise ValueError("the road's page says run:SCENARIO:SEED, play, pause, speed:X, mark:N:start, mark:N:stop or watching, not %r" % line)
+                raise ValueError("the road's page says run:SCENARIO:SEED, crfind:QUERY, play, pause, speed:X, mark:N:start, mark:N:stop or watching, not %r" % line)
+
+    def cr_find(self, query):
+        """The Traffic dock's CommonRoad picker (commonroad-world step 3): the checkout's index (road/maps/cr/index.json, made by
+        road/setup-commonroad.sh) filtered by every word of QUERY (in the id, country, map, set, source or tags), the first CR_LIST
+        rows as a world/cr_list frame, each with whether its conversion is cached (a cached one starts at once)."""
+        import cr_world
+        idx = cr_world.CACHE / "index.json"
+        if not idx.is_file():
+            self.shared["cr_list"] = {"ev": "world/cr_list", "q": query, "n": 0, "rows": [],
+                                      "error": "no index of the checkout here: road/setup-commonroad.sh makes it"}
+            return
+        st = idx.stat().st_mtime
+        if self.shared.get("cr_index_at") != st:
+            self.shared.update(cr_index=json.loads(idx.read_text())["rows"], cr_index_at=st)
+        words = query.lower().split()
+        hits = [r for r in self.shared["cr_index"]
+                if all(w in " ".join([r["id"], r.get("country", ""), r.get("map", ""), r.get("set", ""), r.get("source", ""), *r.get("tags", [])]).lower()
+                       for w in words)]
+        rows = [dict(r, cached=(cr_world.CACHE / r["id"] / "cr.json").is_file()) for r in hits[:CR_LIST]]
+        self.shared["cr_list"] = {"ev": "world/cr_list", "q": query, "n": len(hits), "rows": rows}
 
     def mark(self, line):
         """A person saw a problem: mark:N:start[:TICK], then mark:N:stop[:TICK], the events numbered 1..N over the demo, to be discussed after. The line is in the journal as it came
@@ -326,6 +349,8 @@ class RoadHost:
         if self.shared.pop("mark_due", False):
             m = self.shared.get("marks", {"n": 0, "open": False})
             out.append({"ev": "world/mark", "n": m["n"], "open": m["open"], "said": self.shared.pop("mark_said", None)})
+        if "cr_list" in self.shared:
+            out.append(self.shared.pop("cr_list"))
         w = self.shared.get("wish")
         while w and w["said"]:
             out.append({"ev": "world/message", "text": w["said"].pop(0)})

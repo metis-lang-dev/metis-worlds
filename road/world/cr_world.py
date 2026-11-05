@@ -246,6 +246,18 @@ class Director:
         self.contacts, self.off_ticks, self.off_m, self.driven = [], 0, 0.0, 0.0
         self.last_xy, self.removed, self.errors = None, [], []
 
+    @property
+    def goal_polys(self):
+        """The goal regions in the net's frame (cr.json's frame + netconvert's netOffset), for the page's view."""
+        ox, oy = (self.doc.get("net_offset") or [0.0, 0.0])[:2]
+        return [[[round(x + ox, 2), round(y + oy, 2)] for x, y in p] for g in self.goals for p in g["polys"]]
+
+    def live(self):
+        """The measures so far, small, for the page's scene frame (ten a second)."""
+        return {"goal_t": self.goal_t, "goal_position_t": self.goal_pos_t,
+                "window_s": [[round((w[0] - self.k0) * self.dt, 1), round((w[1] - self.k0) * self.dt, 1)] for w in (g.get("time") for g in self.goals) if w],
+                "contacts": len(self.contacts), "off_lanelet_m": round(self.off_m, 1)}
+
     def k(self, t):
         return self.k0 + t / self.dt
 

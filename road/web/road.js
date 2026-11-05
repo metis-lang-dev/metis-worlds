@@ -47,6 +47,10 @@ export class RoadMap {
       this.hold(false, false);
     };
     $('#t-cr-run').onclick = crRun;
+    this.crRun = crRun;
+    let q = null;                                           // the picker: the host filters the checkout's index (crfind:QUERY), a frame comes back
+    $('#t-crq').oninput = e => { clearTimeout(q); q = setTimeout(() => line(`crfind:${e.target.value}`), 250); };
+    $('#t-crq').onfocus = () => { if (!$('#t-crlist').children.length) line(`crfind:${$('#t-crq').value}`); };
     $('#t-cr').onkeydown = e => { if (e.key === 'Enter') crRun(); };
     addEventListener('message', e => {
       if (e.origin !== location.origin) return;
@@ -98,15 +102,31 @@ export class RoadMap {
     if (names && $('#scenario').options.length !== names.length) $('#scenario').replaceChildren(...names.map(s => Object.assign(document.createElement('option'), { textContent: s })));
     if (f.scenario && f.scenario === this.crWant) { $('#t-cr-msg').textContent = `running ${f.scenario}`; this.crWant = null; }
     if (document.activeElement !== $('#scenario') && document.activeElement !== $('#seed')) { $('#scenario').value = f.scenario; $('#seed').value = f.seed; }   // what runs, also when a page opens on it
-    const key = f.lanes.map(l => l.id).join();          // the client reads its road once: another road, another frame
+    const key = f.lanes.map(l => l.id).join() + JSON.stringify(f.goal || '');   // the client reads its road once: another road (or goal), another frame
     if (this.frame && key === this.netKey) return;
     this.netKey = key; this.ready = false;
     this.frame = Object.assign(document.createElement('iframe'), { id: 'view', src: 'client.html' });
-    this.frame.addEventListener('load', () => { this.ready = true; this.post({ net: f.net }); if (this.following) this.post({ follow: this.ego }); });
+    this.frame.addEventListener('load', () => { this.ready = true; this.post({ net: f.net, goal: f.goal }); if (this.following) this.post({ follow: this.ego }); });
     this.box.replaceChildren(this.frame);
   }
 
   summary(f) { this.dash.summary(f); }
+
+  crList(f) {                                               // world/cr_list: the scenarios found, a row each; a click runs one
+    if (f.error) { $('#t-crn').textContent = f.error; $('#t-crlist').replaceChildren(); return; }
+    $('#t-crn').textContent = f.n > f.rows.length ? `${f.n} found, the first ${f.rows.length} shown` : `${f.n} found`;
+    $('#t-crlist').replaceChildren(...f.rows.map(r => {
+      const li = document.createElement('li'), b = document.createElement('button'), sm = document.createElement('small');
+      b.type = 'button';
+      b.textContent = r.id + (r.cached ? '' : ' ·');
+      b.title = r.cached ? 'converted: starts at once' : 'not yet converted: the first run takes a few seconds';
+      sm.textContent = ` ${r.set} · ${r.source}${r.tags?.length ? ' · ' + r.tags.join(', ') : ''}`;
+      b.append(document.createElement('br'), sm);
+      b.onclick = () => { $('#t-cr').value = r.id; this.crRun(); };
+      li.append(b);
+      return li;
+    }));
+  }
 
   scene(f) {
     this.tick = f.tick;

@@ -27,6 +27,9 @@ is metis-agent's; METIS_HOME the road family at road/domains/catalog.pin):
 
 The run's summary is the last line (`director.cr`: the measures below). On the page (road/demo.sh), the Traffic dock's COMMONROAD SCENARIO
 field takes an id and runs it on SUMO (`run:cr:ID:SEED`); a first run of an id converts it (a few seconds), an id that cannot be had is said.
+Below it a search (`crfind:WORDS`: every word in the id, country, map, set, source or tags of index.json, the first 60 rows; a row marked `·` is
+not converted yet) runs a scenario by a click. The goal regions show in the 3D view as flat slabs on the road; the dashboard shows the goal
+(reached in its window, or the region's time out of it), the window, the contacts and the metres off the lanelets, live and at the end.
 
 ## The terms, as they read for this use
 

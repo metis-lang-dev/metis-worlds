@@ -189,6 +189,48 @@ def test_a_commonroad_id_that_cannot_be_had_is_said_and_the_run_goes_on(monkeypa
     assert any("I cannot run cr:NOPE" in x and "no scenario NOPE" in x for x in a.shared["wish"]["said"])
 
 
+def test_the_commonroad_picker_finds_by_every_word_and_says_a_missing_index(monkeypatch, tmp_path):
+    """crfind:QUERY (commonroad-world step 3): the checkout's index filtered by all the words, a world/cr_list frame; the rows
+    say whether the conversion is cached; no index: said."""
+    import cr_world
+    monkeypatch.setattr(cr_world, "CACHE", tmp_path)
+    a = host()
+    a.world(["crfind:t-junction"])
+    assert a.shared["cr_list"]["error"].startswith("no index") and a.shared["cr_list"]["rows"] == []
+    rows = [{"id": "ZAM_Tjunction-1_100_T-1", "set": "recorded", "source": "hand-crafted", "country": "ZAM", "map": "Tjunction", "tags": ["intersection", "urban"]},
+            {"id": "ZAM_Zip-1_10_T-1", "set": "recorded", "source": "hand-crafted", "country": "ZAM", "map": "Zip", "tags": ["highway", "merging_lanes"]},
+            {"id": "USA_Peach-4_5_T-1", "set": "recorded", "source": "Peachtree", "country": "USA", "map": "Peach", "tags": ["intersection", "urban"]}]
+    (tmp_path / "index.json").write_text(json.dumps({"version": 2, "rows": rows}))
+    (tmp_path / "USA_Peach-4_5_T-1").mkdir()
+    (tmp_path / "USA_Peach-4_5_T-1" / "cr.json").write_text("{}")
+    a.world(["crfind:intersection"])
+    f = a.shared["cr_list"]
+    assert f["ev"] == "world/cr_list" and f["n"] == 2 and [r["id"] for r in f["rows"]] == ["ZAM_Tjunction-1_100_T-1", "USA_Peach-4_5_T-1"]
+    assert [r["cached"] for r in f["rows"]] == [False, True]
+    a.world(["crfind:zam HIGHWAY"])
+    assert [r["id"] for r in a.shared["cr_list"]["rows"]] == ["ZAM_Zip-1_10_T-1"]
+    a.world(["crfind:"])
+    assert a.shared["cr_list"]["n"] == 3
+
+
+def test_a_commonroad_run_sends_its_goal_with_the_net_and_its_measures_with_the_scene_and_the_summary(net):
+    """commonroad-world step 3: the goal regions drawn in the view (the net frame's `goal`), the cr measures live (the scene
+    frame's `cr`) and at the end (the summary frame's `cr`); a run with no director sends none of them."""
+    goal = [[[10.0, -6.0], [30.0, -6.0], [30.0, 0.0], [10.0, 0.0]]]
+    director = SimpleNamespace(goal_polys=goal, live=lambda: {"goal_t": None, "goal_position_t": 4.2, "window_s": [[7.0, 7.0]], "contacts": 0, "off_lanelet_m": 0.0},
+                               report=lambda: {"rc": 50.0, "cr": {"goal_reached": False, "goal_t": None, "goal_position_t": 4.2, "goal_window_s": [[7.0, 7.0]],
+                                                                  "contact": False, "off_lanelet_m": 0.0, "contacts": []}})
+    lp = loop(net)
+    lp.world.director = director
+    lp.summary = lambda: {"ticks": 70, "arrived": True, "director": director.report()}
+    assert road_frames.net_frame(lp)["goal"] == goal
+    assert road_frames.scene_frame(lp)["cr"]["goal_position_t"] == 4.2
+    sf = road_frames.summary_frame(lp)
+    assert sf["cr"] == {"goal_reached": False, "goal_t": None, "goal_position_t": 4.2, "goal_window_s": [[7.0, 7.0]], "contact": False, "off_lanelet_m": 0.0}
+    plain = loop(net)
+    assert "goal" not in road_frames.net_frame(plain) and road_frames.scene_frame(plain)["cr"] is None and "cr" not in road_frames.summary_frame(plain)
+
+
 def test_a_trip_still_held_is_not_doubled(monkeypatch):
     old = SimpleNamespace(close=lambda: None, arrived=lambda: False, tick=0, observe=lambda: ({}, {}, {}, []), log=[{}], proj={"ego": None})
     h = host("planner", world=old)

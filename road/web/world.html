@@ -106,6 +106,11 @@
   #runbar input { width: 3.5em; }
   #dock-traffic select, #dock-traffic input[type=number] { background: var(--bg); color: var(--fg); border: 1px solid var(--line); font: inherit; padding: 1px 4px; }
   #dock-traffic input[type=number] { width: 4em; }
+  #t-crq { background: var(--bg); color: var(--fg); border: 1px solid var(--line); font: inherit; padding: 1px 4px; width: 100%; }
+  #t-crlist { list-style: none; margin: 2px 0; padding: 0; max-height: 16em; overflow-y: auto; }
+  #t-crlist li button { display: block; width: 100%; text-align: left; background: none; color: var(--fg); border: 0; border-bottom: 1px solid var(--line); font: inherit; padding: 2px 4px; cursor: pointer; }
+  #t-crlist li button:hover, #t-crlist li button:focus { background: var(--line); }
+  #t-crlist li small { opacity: 0.7; }
   #dock-traffic input[type=text] { background: var(--bg); color: var(--fg); border: 1px solid var(--line); font: inherit; padding: 1px 4px; width: 16em; }
   .kv { display: grid; grid-template-columns: auto 1fr; gap: 1px 12px; margin: 0 0 10px; }
   .kv dt { color: var(--dim); } .kv dd { margin: 0; overflow-wrap: anywhere; }
@@ -213,6 +218,9 @@
           <div class="ph">COMMONROAD SCENARIO</div>
           <div class="wrow"><input id="t-cr" type="text" placeholder="ZAM_Tjunction-1_100_T-1" aria-label="a CommonRoad scenario id" spellcheck="false"><button class="chip" id="t-cr-run" type="button">run it</button></div>
           <div class="wrow"><span id="t-cr-msg" class="empty">an id from the checkout; the first run converts it (a few seconds)</span></div>
+          <div class="wrow"><input id="t-crq" type="search" placeholder="find: words of the id, country, map, tag (intersection, highway…)" aria-label="find a CommonRoad scenario" spellcheck="false"></div>
+          <div class="wrow"><span id="t-crn" class="empty"></span></div>
+          <ol id="t-crlist" aria-label="the CommonRoad scenarios found"></ol>
         </div>
       </section>
       <section class="dock" id="dock-world" data-dock="world" tabindex="-1" aria-label="the world card">
