@@ -255,7 +255,8 @@ class RoadWorld:
         """road-scenarios: a card's trigger, the source's own condition, fires its steps once: `gap` (the ego's front
         within D m of this one's rear, it ahead on the ego's lane or a next one), `tta` (the ego's time to arrival at
         `at` (an s on the main road), or `beside` (the point of its lane beside this one: a cut-in's collision point),
-        at most T s, or `dist` m from it), `traveled` (this one has gone D m), `t`."""
+        at most T s, or `dist` m from it), `traveled` (this one has gone D m), `junction_ahead` (this one within D m of the
+        next junction), `t`."""
         keep = []
         for when, steps in ag.armed:
             e = self.ego.m
@@ -271,6 +272,9 @@ class RoadWorld:
                 hit = hit or (0.0 <= d <= when.get("dist", 0.0)) or (d >= 0.0 and d / max(self.ego.v, 0.1) <= when.get("tta", 0.0))
             if "traveled" in when:
                 hit = hit or ag.m.s - ag.s0 >= when["traveled"]
+            if "junction_ahead" in when:                      # this one within D m of the next junction (the side road at s 400)
+                d = JUNCTION_S - ag.m.s
+                hit = hit or (ag.m.lane.startswith("e_") and 0.0 <= d <= when["junction_ahead"])
             if hit:                                       # a step (what, arg[, after]): `after` s past the trigger
                 ag.script = sorted(ag.script + [(self.t + (st[2] if len(st) > 2 else 0.0), st[0], st[1]) for st in steps],
                                    key=lambda x: x[0])

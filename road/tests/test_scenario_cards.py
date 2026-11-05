@@ -102,6 +102,11 @@ def test_the_driving_score_is_the_leaderboards():
     assert C.driving_score({"outside_route_lanes": 10, "min_speed_infractions": 50}) == 76.5   # 100 × 0.9 × 0.85
 
 
+def test_a_sumo_only_card_refuses_the_exerciser():
+    with pytest.raises(ValueError, match="does not play on the exerciser"):
+        C.exerciser("card:ParkedObstacleTwoWays")
+
+
 def test_a_card_plays_on_the_exerciser_with_its_trigger_armed():
     import random
     spec = C.exerciser("card:StaticCutIn")(random.Random(1))
@@ -137,6 +142,8 @@ def test_the_family_plays_every_card_on_the_exerciser(name, tmp_path, monkeypatc
     for k in ("METIS_CATALOG", "METIS_ROAD_RUN", "METIS_ROAD_WORLD"):
         monkeypatch.delenv(k, raising=False)
     card = C.load(name)
+    if (card.get("exerciser") or {}).get("skip"):
+        pytest.skip("SUMO only: %s" % card["exerciser"]["skip"])
     if name in KNOWN:
         pytest.xfail("a known surprise: %s" % KNOWN[name])
     out = road_tree().run("card:" + name, 1, tmp_path, ticks=int(card["ticks"]))
@@ -157,3 +164,62 @@ def test_collisions_are_events_the_leaderboards_way():
     card = C.load("StaticCutIn")
     r = sx.row(card, "StaticCutIn", {"arrived": True, "collisions": 9, "collision_events": 1, "violations": 0})
     assert r["lb"] == {"collisions_vehicle": 1} and r["ds"] == 60.0
+
+
+# ── SUMO (step 2b): the cards placed at their sites; sumolib only (no SUMO run: CI has none) ──
+def _sumolib_or_skip():
+    sys.path.append(os.path.join(os.environ.get("SUMO_HOME", "/usr/share/sumo"), "tools"))
+    return pytest.importorskip("sumolib")
+
+
+def test_every_card_places_at_every_site_on_sumo():
+    """The ego AT the site (CARLA places a scenario's actors relative to its trigger point, the exerciser relative to the
+    ego's start: the same), on the site's lane; each actor at its distance along the ego's route; the obstacles'
+    distance clipped to the free run minus 66 m (nina's review); traffic on a lane the road lacks queued on this one."""
+    _sumolib_or_skip()
+    import scenario_director as D
+    for n in CARDS:
+        card = C.load(n)
+        for town in card["sites"]["towns"]:
+            for s in C.sites(card, town):
+                pl = D.place(card, town, s["i"])
+                edge, lane, pos = pl["site"]
+                assert pl["ego"]["route"][0] == edge and pl["ego"]["lane"] == lane and pl["ego"]["pos"] == pos, (n, town, s)
+                assert pl["actors"], (n, town, s)
+                for a in pl["actors"]:
+                    assert a["place"]["route"] and a["place"]["pos"] > 0, (n, town, s, a["id"])
+
+
+def test_a_sumo_card_name_and_the_cards_distances_from_the_ego():
+    _sumolib_or_skip()
+    import scenario_director as D
+    assert D.parse("card:ParkedObstacle:distance-clear1@Town03#42") == ("ParkedObstacle:distance-clear1", "Town03", 42)
+    with pytest.raises(ValueError, match="card:NAME"):
+        D.parse("card:ParkedObstacle")
+    pl = D.place(C.load("FollowLeadingVehicle"), "Town03", 0)
+    lead = pl["actors"][0]["place"]
+    assert lead["route"][0] == pl["site"][0] and lead["pos"] - pl["ego"]["pos"] == 25.0      # the source's 25 m ahead
+    amb = D.place(C.load("YieldToEmergencyVehicle"), "Town03", 42)["actors"][0]["place"]
+    assert amb["route"][-1] == "-67" or "-67" in amb["route"]                                   # behind, on the way to the site
+    flow = [a["id"] for a in D.place(C.load("ParkedObstacleTwoWays"), "Town01", 0)["actors"]]
+    assert flow[0] == "parked" and flow[1:] == ["oncoming_0", "oncoming_1", "oncoming_2", "oncoming_3"]   # the cars that fit
+    with pytest.raises(ValueError, match="not one of its sites"):
+        D.place(C.load("ParkedObstacle"), "Town03", 7)
+
+
+def test_a_cards_sumo_budget_and_way():
+    """A card's `sumo` keys: its tick budget on a town (OVTP #30 waited 30 s at a red light past the exerciser's 900 ticks)
+    and its onward way (the emergency vehicle needs ~19 s to close 130 m and 5 s more held: the 200 m way ends first)."""
+    spec = importlib.util.spec_from_file_location("scenarios_t", ROAD / "experiments" / "scenarios.py")
+    sx = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(sx)
+    ovtp = C.load("OppositeVehicleTakingPriority")
+    assert sx.ticks_of(ovtp, "sumo") == 1800 and sx.ticks_of(ovtp, "exerciser") == 900
+    assert sx.ticks_of(C.load("Accident"), "sumo") == 1200
+    _sumolib_or_skip()
+    import scenario_director as D
+    net = D.net_of("Town03")
+    way = lambda card: sum(net.getEdge(e).getLength() for e in D.place(card, "Town03", 42)["ego"]["route"])
+    yev = C.load("YieldToEmergencyVehicle")
+    assert way(yev) > 450.0 and yev["actors"][0]["v_rel"] == 6.9
+    assert way(dict(yev, sumo={})) < way(yev)

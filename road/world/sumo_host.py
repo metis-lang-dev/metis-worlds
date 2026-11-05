@@ -277,6 +277,8 @@ class Loop:
         ego = self.proj.get("ego")
         return {"seed": w.seed, "ticks": self.tick, "t": self.t, "sumo_t": w.t, "arrived": self.arrived(),
                 "s": round(ego.s, 1) if ego is not None else None, "dest": self.level_dest, "ego_done": w.ego_done, "collisions": w.ego_collisions,
+                "collision_events": collision_events(w.collisions),
+                "director": w.director.report() if getattr(w, "director", None) is not None else None,
                 "all_collisions": len(w.collisions), "violations": len(self.violations), "unseen_other_duty": len(self.unseen_duty), "optimistic": len(self.optimistic), "restricted": self.restricted,
                 "latency_truth": self.latency, "first": self.violations[:3],
                 "ms": {k: mean(k) for k in ("restrict", "sumo", "perceive", "project", "account")},
@@ -286,6 +288,20 @@ class Loop:
 
     def close(self):
         self.world.close()
+
+
+def collision_events(collisions, gap_s=5.0):
+    """The ego's collisions as events, the Leaderboard's way (CARLA's CollisionTest: the same other within 5 s is one;
+    road-scenarios, as road_world.collision_events): SUMO reports a collision per step while two overlap."""
+    n, last = 0, {}
+    for c in collisions:
+        if EGO not in (c["collider"], c["victim"]):
+            continue
+        other = c["victim"] if c["collider"] == EGO else c["collider"]
+        if other not in last or c["t"] - last[other] > gap_s:
+            n += 1
+        last[other] = c["t"]
+    return n
 
 
 def danger_rows(states, where, pairs=None):

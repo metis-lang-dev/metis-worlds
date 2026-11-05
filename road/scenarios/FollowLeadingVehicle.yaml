@@ -16,6 +16,6 @@ actors:   # brake 1.0 in CARLA: a hard stop (8 m/s² here), when the lead is 20 
     kind: car
     at: {ahead: 25, lane: 0}
     v: 10.0
-    script: [{t: 0.0, v: 10.0}, {when: {traveled: 155.0}, brake: 8.0}]
+    script: [{t: 0.0, v: 10.0}, {when: {junction_ahead: 20.0}, brake: 8.0}]   # the source: 20 m before the next intersection
 infractions: {scenario: []}
 expect: {arrived: false, collisions: 0, violations: 0}   # the ego stops behind the stopped lead: no arrival by design

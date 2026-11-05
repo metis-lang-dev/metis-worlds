@@ -4,7 +4,10 @@ one row per run: arrived, collisions, violations, the planner's commands, the ca
 (road_tree's Live), METIS_HOME at the road family when the checkout is not beside metis-catalog.
 
     python road/experiments/scenarios.py OUT [--cards NAME,…] [--no-variants] [--seed N] [--world exerciser|sumo] [--trace DIR]
+                                             [--towns Town01,…] [--sites N]
     → OUT/scenarios.jsonl (a row per run) and OUT/scenarios.md (the table)
+With --world sumo every card plays at each of its sites (card:NAME@TOWN#SITE, scenario_director: one SUMO at a time),
+its variants at its first site; --sites N keeps the first N sites of each town.
 """
 import argparse
 import importlib.util
@@ -37,18 +40,31 @@ def infractions(card, out):
     timeouts = [x for x in (card.get("infractions") or {}).get("scenario") or [] if isinstance(x, dict) and "scenario_timeout" in x]
     if timeouts and (card.get("expect") or {}).get("arrived") and not out.get("arrived"):
         inf["scenario_timeouts"] = 1
+    held = sum(((out.get("director") or {}).get("emergency_held_s") or {}).values())
+    if "yield_emergency_vehicle" in ((card.get("infractions") or {}).get("scenario") or []) and \
+            held > (card.get("expect") or {}).get("emergency_held_s", 5.0):
+        inf["yield_emergency_vehicle_infractions"] = 1
     return inf
+
+
+def ticks_of(card, world):
+    """The run's tick budget: the card's, or its SUMO one (a town's signal cycles and longer ways)."""
+    if world == "sumo" and "ticks" in (card.get("sumo") or {}):
+        return int(card["sumo"]["ticks"])
+    return int(card.get("ticks", 1500))
 
 
 def row(card, name, out):
     fails = C.check(card, out, arrived=out.get("arrived"))
     inf = infractions(card, out)
     done = 100.0 if out.get("arrived") or not (card.get("expect") or {}).get("arrived") else 0.0
-    return {"card": card["scenario"], "variant": card.get("variant") or "", "run": name, "arrived": out.get("arrived"),
+    where = name.partition("@")[2]
+    return {"card": card["scenario"], "variant": card.get("variant") or "", "where": where, "run": name, "arrived": out.get("arrived"),
             "t": out.get("t"), "collisions": out.get("collisions"), "collision_events": out.get("collision_events"),
             "violations": out.get("violations"),
             "planner": out.get("planner_kinds"), "responder": out.get("responder_kinds"), "first": out.get("first"), "fails": fails,
-            "lb": inf, "ds": C.driving_score(inf, done), "exercises": card.get("exercises")}
+            "lb": inf, "ds": C.driving_score(inf, done), "exercises": card.get("exercises"),
+            "director": out.get("director")}
 
 
 def main(argv=None):
@@ -59,6 +75,8 @@ def main(argv=None):
     ap.add_argument("--seed", type=int, default=1)
     ap.add_argument("--world", default=None, help="sumo: the SUMO host (default: the exerciser)")
     ap.add_argument("--trace", help="a directory: each run's trace (metis.trace) under it")
+    ap.add_argument("--towns", help="Town01,… (SUMO: the towns played; default every town of a card's sites)")
+    ap.add_argument("--sites", type=int, default=0, help="SUMO: the first N sites of each town (default all)")
     a = ap.parse_args(argv)
     out_dir = Path(a.out)
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -68,20 +86,29 @@ def main(argv=None):
         card = C.load(n)
         if (card.get("exerciser") or {}).get("skip") and a.world != "sumo":
             continue
-        runs = [n] + ([] if a.no_variants else ["%s:%s" % (n, v) for v in C.variants(card)])
+        if a.world == "sumo":
+            places = ["%s#%d" % (town, p["i"]) for town in card["sites"]["towns"]
+                      if not a.towns or town in a.towns.split(",")
+                      for j, p in enumerate(C.sites(card, town)) if not a.sites or j < a.sites]
+            if not places:
+                continue
+            runs = ["%s@%s" % (n, p) for p in places]
+            runs += [] if a.no_variants else ["%s:%s@%s" % (n, v, places[0]) for v in C.variants(card)]
+        else:
+            runs = [n] + ([] if a.no_variants else ["%s:%s" % (n, v) for v in C.variants(card)])
         for name in runs:
-            c = C.load(name)
-            res = rt.run("card:" + name, a.seed, out_dir / "runs", ticks=int(c.get("ticks", 1500)), world_kind=a.world,
+            c = C.load(name.partition("@")[0])
+            res = rt.run("card:" + name, a.seed, out_dir / "runs", ticks=ticks_of(c, a.world), world_kind=a.world,
                          trace=a.trace)
             r = row(c, name, res)
             rows.append(r)
             print(json.dumps(r), flush=True)
     (out_dir / "scenarios.jsonl").write_text("".join(json.dumps(r) + "\n" for r in rows))
-    lines = ["| card | variant | arrived | t | contact ticks | collisions (events) | violations | planner | card's expect | LB infractions | DS |",
-             "|---|---|---|---|---|---|---|---|---|---|---|"]
+    lines = ["| card | variant | where | arrived | t | contact ticks | collisions (events) | violations | planner | card's expect | LB infractions | DS |",
+             "|---|---|---|---|---|---|---|---|---|---|---|---|"]
     for r in rows:
-        lines.append("| %s | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s |" % (
-            r["card"], r["variant"] or "(as the source)", r["arrived"], r["t"], r["collisions"], r["collision_events"], r["violations"],
+        lines.append("| %s | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s |" % (
+            r["card"], r["variant"] or "(as the source)", r["where"] or "exerciser", r["arrived"], r["t"], r["collisions"], r["collision_events"], r["violations"],
             ",".join(r["planner"] or []), "; ".join(r["fails"]) or "held",
             ", ".join("%s %s" % kv for kv in r["lb"].items()) or "—", r["ds"]))
     (out_dir / "scenarios.md").write_text("\n".join(lines) + "\n")

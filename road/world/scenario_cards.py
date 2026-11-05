@@ -198,6 +198,9 @@ def check(card, summary, arrived=None):
             out.append("%s %s > %s" % (k, summary.get(k), exp[k]))
     if exp.get("arrived") and arrived is False:
         out.append("not arrived")
+    held = sum(((summary.get("director") or {}).get("emergency_held_s") or {}).values())
+    if "emergency_held_s" in exp and held > exp["emergency_held_s"]:
+        out.append("held the emergency vehicle %.1f s > %s" % (held, exp["emergency_held_s"]))
     return out
 
 

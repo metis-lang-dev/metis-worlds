@@ -205,9 +205,14 @@ def doctor(routes, script):
 class SumoWorld:
     def __init__(self, scenario, work, seed=1, dt=DT, traci=None, label=None, sumo="sumo", **kw):
         os.makedirs(work, exist_ok=True)
-        made = SCENARIOS[scenario](work, seed, **kw)
+        if scenario.startswith("card:"):                            # a scene card at a site (road-scenarios step 2b)
+            import scenario_director
+            made = scenario_director.build(scenario, work, seed, **kw)
+        else:
+            made = SCENARIOS[scenario](work, seed, **kw)
         self.net, self.routes = made[:2]
         self.script = sorted(made[2]) if len(made) > 2 else []     # [(t, vehicle, what, arg)]: the scenario's acts
+        self.director = made[3] if len(made) > 3 else None          # a card's director: its triggers, each step
         bad = doctor(self.routes, self.script)
         if bad:                                     # a void run is never read for behaviour (Check the world first)
             raise RuntimeError("run doctor: %s" % "; ".join(bad))
@@ -250,6 +255,8 @@ class SumoWorld:
                 c.vehicle.setSignals(vid, int(arg))
             elif what == "change":
                 c.vehicle.changeLane(vid, int(arg), LC_DURATION)
+        if self.director is not None:
+            self.director.tick(c, self.t)
         c.simulationStep()
         self.steps += 1
         self.t = round(self.steps * self.dt, 6)

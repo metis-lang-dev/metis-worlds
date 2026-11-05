@@ -1,0 +1,17 @@
+scenario: ParkedObstacleTwoWays
+title: a car parked in the ego's only lane; pass it through the oncoming lane against a flow
+source: {suite: lb2, type: ParkedObstacleTwoWays, code: srunner/scenarios/route_obstacles.py:461, pin: scenario_runner v0.9.16 94ff3b8af752, license: "CARLA scenario_runner, MIT License, Copyright (c) 2018 CARLA"}
+exercises: "none: a gap (passing through the oncoming lane; nina's triage row 26): the family should fail here"
+verdict: PORTABLE
+sites: {lb1: Scenario1, towns: {Town01: [0, 1], Town02: [0, 1]}}   # one lane each way, 150-220 m free (nina's review)
+dt: 0.1
+ticks: 2600
+ego: {v: 11.1}
+exerciser: {skip: "the exerciser has no oncoming lane"}
+params:
+  distance: {value: 90, range: [50, 130], default: 90, drives: actors.parked.at.ahead, threshold: 32.0, safe: above}
+actors:   # the oncoming flow: 5 cars 40 m apart (the gap of the routes' frequency 10-75 to 58-200 m), capped at 50 km/h
+  - {id: parked, kind: car, at: {ahead: 90, lane: 0}, v: 0.0, moving: false}
+  - {id: oncoming, kind: car, at: {ahead: 0, opposite: true}, v: 11.1, count: 5, gap: 40.0, script: [{t: 0.0, v: 11.1}]}
+infractions: {scenario: [scenario_timeout: 240]}
+expect: {arrived: true, collisions: 0, violations: 0}

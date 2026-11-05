@@ -6,6 +6,7 @@ verdict: PORTABLE
 sites: {lb1: Scenario10, towns: {Town03: [1, 18, 30]}}   # S10 poses on an all-major lane at a junction with a minor approach (nina's review)
 dt: 0.1
 ticks: 900
+sumo: {ticks: 1800}   # a town's red phase can outlast the exerciser's budget (Town03 #30 waited 30 s at a light)
 ego: {v: 11.1}
 exerciser: {ego_s: 300.0, dest: 460.0, side_prio: false}
 params:
