@@ -227,6 +227,7 @@ class SumoWorld:
     def cmd(self):
         return [self.sumo, "-n", self.net, "-r", self.routes, "--step-length", str(self.dt), "--seed", str(self.seed),
                 "--no-warnings", "--no-step-log", "--collision.action", "warn", "--collision.check-junctions",
+                "--collision.mingap-factor", "0",       # a collision is bodies touching, not a gap under minGap (2.5 m by default)
                 "--lanechange.duration", str(LC_DURATION), "--default.speeddev", "0.2"]
 
     def start(self):

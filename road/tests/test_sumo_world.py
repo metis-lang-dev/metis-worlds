@@ -285,3 +285,12 @@ def test_every_scenario_at_head_is_the_world_it_says(tmp_path):
         made = sumo_world.SCENARIOS[name](str(tmp_path / name), 1)
         assert sumo_world.doctor(made[1], made[2] if len(made) > 2 else []) == [], name
 
+
+
+def test_a_collision_is_bodies_touching():
+    """CARLA's CollisionTest counts physical contact; SUMO by default counts a gap under the follower's minGap (2.5 m when the
+    vType names none) as a collision (--collision.mingap-factor 1): ParkingCutIn #19/#95/#96 read 2.4 m gaps as contacts. The
+    world's command line sets the factor 0 (the architect's ruling, road-scenarios s-e23be780)."""
+    cmd = sumo_world.SumoWorld.cmd(SimpleNamespace(sumo="sumo", net="n", routes="r", dt=0.1, seed=1))
+    i = cmd.index("--collision.mingap-factor")
+    assert cmd[i + 1] == "0" and "--collision.check-junctions" in cmd
