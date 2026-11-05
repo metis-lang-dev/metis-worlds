@@ -1,0 +1,245 @@
+"""cr_convert.py — a CommonRoad scenario into the road world's cache (commonroad-world s-9b7591fb step 1; road/docs/commonroad.md).
+
+Runs in the CONVERSION venv (road/.venv-cr, made by road/setup-commonroad.sh: commonroad-io + commonroad-sumo at their pins),
+never in the Live's: the Live reads only what this writes.
+
+    road/.venv-cr/bin/python road/tools/cr_convert.py ID|PATH [--root COMMONROAD_ROOT] [--cache DIR] [--force]
+    road/.venv-cr/bin/python road/tools/cr_convert.py --index [--root …] [--cache …]
+
+ID: a scenario id (ZAM_Tjunction-1_100_T-1), found under $COMMONROAD_ROOT (default /bigdata/datasets/commonroad): a recorded
+scenario's file (scenarios/scenarios/recorded/**/ID.xml) or an interactive scenario's folder (…/interactive/**/ID/ID.cr.xml).
+Writes CACHE/ID/ (CACHE default road/maps/cr, git-ignored):
+- ID.net.xml, ID.sumo.cfg: commonroad-sumo's cr2sumo map converter over the lanelet network, through the system's netconvert
+  (the speed limits the scenario's own: overwrite_speed_limit None);
+- cr.json (CR_JSON_VERSION): the interface the Live reads, CommonRoad's facts only, in the scenario's frame (the net's
+  netOffset is written too: 0,0 when netconvert kept the frame) — see road/docs/commonroad.md for the fields.
+Kept while the scenario file's sha256 and CR_JSON_VERSION match (--force converts again). Prints the cache dir.
+--index: CACHE/index.json, a row per scenario of the checkout (id, set, path, country, map, tags, obstacles, duration,
+interactive), for the page's picker (step 3) and the counts."""
+import argparse
+import hashlib
+import json
+import math
+import os
+import sys
+from pathlib import Path
+
+CR_JSON_VERSION = 1
+ROAD = Path(__file__).resolve().parents[1]
+ROOT = Path(os.environ.get("COMMONROAD_ROOT", "/bigdata/datasets/commonroad"))
+CACHE = Path(os.environ.get("COMMONROAD_CACHE", str(ROAD / "maps" / "cr")))
+SKIP = (".net.xml", ".rou.xml", ".add.xml", ".cr.xml", ".sumo.cfg", ".nod.xml", ".edg.xml", ".con.xml", ".tll.xml", ".typ.xml")
+
+
+def find(sid, root=ROOT):
+    """ID → its file in the checkout (a recorded scenario's ID.xml, else an interactive one's ID/ID.cr.xml), or a path as given."""
+    p = Path(sid)
+    if p.suffix == ".xml" and p.is_file():
+        return p
+    base = root / "scenarios" / "scenarios"
+    for f in (base / "recorded").rglob(sid + ".xml"):
+        return f
+    for f in root.rglob(sid + ".cr.xml"):
+        return f
+    raise SystemExit("cr_convert: no scenario %s under %s (road/setup-commonroad.sh makes the checkout)" % (sid, root))
+
+
+def sha256(path):
+    h = hashlib.sha256()
+    with open(path, "rb") as f:
+        for b in iter(lambda: f.read(1 << 20), b""):
+            h.update(b)
+    return h.hexdigest()
+
+
+def _f(x):
+    return None if x is None else round(float(x), 4)
+
+
+def _interval(v):
+    """A CommonRoad value or Interval → [lo, hi] (a value: [v, v]); None when absent."""
+    if v is None:
+        return None
+    if hasattr(v, "start") and hasattr(v, "end"):
+        return [_f(v.start), _f(v.end)]
+    return [_f(v), _f(v)]
+
+
+def polygons(shape):
+    """A CommonRoad shape → its polygons' vertices ([[x, y], …] each): a rectangle's corners, a circle as 24 points, a group's
+    every member's."""
+    from commonroad.geometry.shape import Circle, Polygon, Rectangle, ShapeGroup
+    if shape is None:
+        return []
+    if isinstance(shape, ShapeGroup):
+        return [p for s in shape.shapes for p in polygons(s)]
+    if isinstance(shape, Circle):
+        cx, cy = shape.center
+        return [[[_f(cx + shape.radius * math.cos(2 * math.pi * k / 24)), _f(cy + shape.radius * math.sin(2 * math.pi * k / 24))] for k in range(24)]]
+    if isinstance(shape, (Rectangle, Polygon)):
+        return [[[_f(x), _f(y)] for x, y in shape.vertices]]
+    return []
+
+
+def state(s):
+    """A CommonRoad state → {k, x, y, theta, v} (k its time step)."""
+    pos = getattr(s, "position", None)
+    xy = [_f(pos[0]), _f(pos[1])] if pos is not None and hasattr(pos, "__len__") and len(pos) == 2 else [None, None]
+    return {"k": int(s.time_step) if not hasattr(s.time_step, "start") else int(s.time_step.start), "x": xy[0], "y": xy[1],
+            "theta": _f(getattr(s, "orientation", None)), "v": _f(getattr(s, "velocity", None))}
+
+
+def lanelet_rows(net):
+    out = []
+    for la in net.lanelets:
+        out.append({"id": la.lanelet_id, "types": sorted(t.value for t in la.lanelet_type),
+                    "left": [[_f(x), _f(y)] for x, y in la.left_vertices], "right": [[_f(x), _f(y)] for x, y in la.right_vertices],
+                    "successors": list(la.successor), "predecessors": list(la.predecessor),
+                    "adj_left": la.adj_left, "adj_left_same": la.adj_left_same_direction,
+                    "adj_right": la.adj_right, "adj_right_same": la.adj_right_same_direction,
+                    "signs": sorted(la.traffic_signs), "lights": sorted(la.traffic_lights),
+                    "stop_line": ([[_f(x), _f(y)] for x, y in (la.stop_line.start, la.stop_line.end)] if la.stop_line is not None
+                                  and la.stop_line.start is not None else None)})
+    return out
+
+
+def sign_rows(net):
+    return [{"id": ts.traffic_sign_id, "position": [_f(ts.position[0]), _f(ts.position[1])] if ts.position is not None else None,
+             "elements": [{"id": e.traffic_sign_element_id.name, "values": list(e.additional_values)} for e in ts.traffic_sign_elements]}
+            for ts in net.traffic_signs]
+
+
+def light_rows(net):
+    out = []
+    for tl in net.traffic_lights:
+        cyc = getattr(tl, "traffic_light_cycle", None)
+        els = getattr(cyc, "cycle_elements", None) or []
+        out.append({"id": tl.traffic_light_id, "position": [_f(tl.position[0]), _f(tl.position[1])] if tl.position is not None else None,
+                    "offset": int(getattr(cyc, "time_offset", 0) or 0),
+                    "cycle": [{"state": e.state.value, "steps": int(e.duration)} for e in els]})
+    return out
+
+
+def intersection_rows(net):
+    return [{"id": i.intersection_id,
+             "incomings": [{"id": g.incoming_id, "lanelets": sorted(g.incoming_lanelets), "left": sorted(g.successors_left),
+                            "straight": sorted(g.successors_straight), "right": sorted(g.successors_right),
+                            "left_of": getattr(g, "left_of", None)} for g in i.incomings]}
+            for i in net.intersections]
+
+
+def obstacle_rows(sc):
+    rows = []
+    for o in list(sc.dynamic_obstacles) + list(sc.static_obstacles):
+        sh = o.obstacle_shape
+        length, width = (getattr(sh, "length", None), getattr(sh, "width", None))
+        if length is None and hasattr(sh, "radius"):
+            length = width = 2 * sh.radius
+        traj = [state(o.initial_state)]
+        pred = getattr(o, "prediction", None)
+        if pred is not None and hasattr(pred, "trajectory"):
+            traj += [state(s) for s in pred.trajectory.state_list]
+        rows.append({"id": o.obstacle_id, "type": o.obstacle_type.value, "role": o.obstacle_role.value,
+                     "length": _f(length), "width": _f(width), "trajectory": traj})
+    return rows
+
+
+def planning_rows(pps):
+    out = []
+    for pid, pp in sorted(pps.planning_problem_dict.items()):
+        goals = []
+        for k, st in enumerate(pp.goal.state_list):
+            pos = getattr(st, "position", None)
+            goals.append({"polygons": polygons(pos), "lanelets": sorted((pp.goal.lanelets_of_goal_position or {}).get(k, [])),
+                          "time": _interval(getattr(st, "time_step", None)), "velocity": _interval(getattr(st, "velocity", None)),
+                          "orientation": _interval(getattr(st, "orientation", None))})
+        out.append({"id": pid, "initial": state(pp.initial_state), "goals": goals})
+    return out
+
+
+def net_offset(net_xml):
+    import xml.etree.ElementTree as ET
+    for _, el in ET.iterparse(net_xml, events=("start",)):
+        if el.tag == "location":
+            return [float(v) for v in el.get("netOffset", "0,0").split(",")]
+    return [0.0, 0.0]
+
+
+def convert(sid, root=ROOT, cache=CACHE, force=False):
+    from commonroad.common.file_reader import CommonRoadFileReader
+    src = find(sid, root)
+    sid = src.name[:-len(".cr.xml")] if src.name.endswith(".cr.xml") else src.stem
+    out = cache / sid
+    meta, h = out / "cr.json", sha256(src)
+    if not force and meta.is_file():
+        old = json.loads(meta.read_text())
+        if old.get("version") == CR_JSON_VERSION and old.get("sha256") == h and (out / old["net"]).is_file():
+            return out
+    out.mkdir(parents=True, exist_ok=True)
+    sc, pps = CommonRoadFileReader(str(src)).open()
+    from commonroad_sumo.cr2sumo.map_converter.map_converter import CR2SumoMapConverter, CR2SumoMapConverterConfig
+    conf = CR2SumoMapConverterConfig.from_scenario(sc)
+    conf.overwrite_speed_limit = None                  # the scenario's own limits, not the converter's 130 km/h everywhere
+    conv = CR2SumoMapConverter(sc, conf)
+    if conv.create_sumo_files(out.resolve()) is None:
+        raise SystemExit("cr_convert: %s: the map converter made no SUMO net" % sid)
+    net = sid + ".net.xml"
+    doc = {"version": CR_JSON_VERSION, "id": sid, "source": str(src), "sha256": h, "dt": float(sc.dt),
+           "net": net, "net_offset": net_offset(str(out / net)), "converter": {"commonroad-sumo": _ver("commonroad-sumo"),
+           "commonroad-io": _ver("commonroad-io"), "highway_mode": conf.highway_mode, "country": conf.country_id.value},
+           "tags": sorted(t.value for t in (sc.tags or ())), "edges": {str(k): v for k, v in conv.lanes_dict.items()},
+           "lanelets": lanelet_rows(sc.lanelet_network), "signs": sign_rows(sc.lanelet_network),
+           "lights": light_rows(sc.lanelet_network), "intersections": intersection_rows(sc.lanelet_network),
+           "obstacles": obstacle_rows(sc), "planning": planning_rows(pps), "interactive": src.name.endswith(".cr.xml")}
+    meta.write_text(json.dumps(doc))
+    return out
+
+
+def _ver(p):
+    import importlib.metadata as md
+    return md.version(p)
+
+
+def index(root=ROOT, cache=CACHE):
+    """A row per scenario of the checkout, read from the files' headers (no full parse: thousands of files)."""
+    import re
+    rows = []
+    base = root / "scenarios" / "scenarios"
+    for f in sorted(base.rglob("*.xml")):
+        if f.name.endswith(SKIP) and not f.name.endswith(".cr.xml"):
+            continue
+        interactive = f.name.endswith(".cr.xml")
+        if not interactive and "recorded" not in f.parts:
+            continue
+        sid = f.name[:-len(".cr.xml")] if interactive else f.stem
+        head = f.open(errors="ignore").read(4096)
+        tags = re.search(r"<scenarioTags>(.*?)</scenarioTags>", head, re.S) or re.search(r"<tags>(.*?)</tags>", head, re.S)
+        rows.append({"id": sid, "set": "interactive" if interactive else "recorded", "source": f.parent.name if not interactive else f.parent.parent.name,
+                     "path": str(f.relative_to(root)), "country": sid.split("_")[0], "map": sid.split("_")[1].split("-")[0] if "_" in sid else "",
+                     "tags": re.findall(r"<(\w+)\s*/>", tags.group(1)) if tags else [],
+                     "dt": float(re.search(r'timeStepSize="([0-9.]+)"', head).group(1)) if re.search(r'timeStepSize="([0-9.]+)"', head) else None})
+    cache.mkdir(parents=True, exist_ok=True)
+    (cache / "index.json").write_text(json.dumps({"version": CR_JSON_VERSION, "root": str(root), "rows": rows}))
+    return rows
+
+
+def main(argv=None):
+    ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
+    ap.add_argument("scenario", nargs="?")
+    ap.add_argument("--root", default=str(ROOT))
+    ap.add_argument("--cache", default=str(CACHE))
+    ap.add_argument("--force", action="store_true")
+    ap.add_argument("--index", action="store_true")
+    a = ap.parse_args(argv)
+    if a.index:
+        rows = index(Path(a.root), Path(a.cache))
+        print(json.dumps({"scenarios": len(rows), "recorded": sum(r["set"] == "recorded" for r in rows),
+                          "interactive": sum(r["set"] == "interactive" for r in rows)}))
+        return
+    if not a.scenario:
+        ap.error("a scenario id or path, or --index")
+    print(convert(a.scenario, Path(a.root), Path(a.cache), a.force))
+
+
+if __name__ == "__main__":
+    main()

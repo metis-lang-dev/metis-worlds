@@ -208,6 +208,9 @@ class SumoWorld:
         if scenario.startswith("card:"):                            # a scene card at a site (road-scenarios step 2b)
             import scenario_director
             made = scenario_director.build(scenario, work, seed, **kw)
+        elif scenario.startswith("cr:"):                            # a CommonRoad scenario from the checkout (commonroad-world step 1)
+            import cr_world
+            made = cr_world.build(scenario, work, seed, **kw)
         else:
             made = SCENARIOS[scenario](work, seed, **kw)
         self.net, self.routes = made[:2]
