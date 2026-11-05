@@ -1,5 +1,6 @@
 """The TraCI world and its perception (road-world s-e812715d step 4) without a simulator: a fake TraCI connection
 for sumo_world, netconvert's straight for the perception (netconvert builds a net; no SUMO process runs)."""
+import json
 import math
 import os
 import shutil
@@ -337,3 +338,43 @@ def test_along_and_beside():
     x, y, h = sumo_world.beside(shape, 5.0, 2.0)
     assert (x, y) == (5.0, 2.0) and sumo_world.sumo_angle(h) == 90.0
     assert sumo_world.along(shape, 99.0)[:2] == (10.0, 10.0)
+
+
+def test_the_truth_row_holds_the_bodies_in_range_and_the_role_each_is_bound_to():
+    """The truth column (spec 20 §10.2, cr-harvest s-f4e297da): the ego's lane, kind and contacts; the bodies within the sensor
+    range with their world class, `as` obj, the role of the track the projection bound on their lane (null when unbound)."""
+    import sumo_host
+    from semantic_world.lane import Lane, LaneMap, Mover
+    loop = sumo_host.Loop.__new__(sumo_host.Loop)
+    loop.lanemap = LaneMap([Lane("E_0", 300.0, kind="driving"), Lane("W_0", 300.0)])
+    loop.perc = SimpleNamespace(sensor=SimpleNamespace(range=100.0))
+    loop.world = SimpleNamespace(carry=None)
+    loop.log = [{"contact": [{"id": "lead", "type": "same_dir"}]}]
+
+    def body(x, lane, s, v, vclass="passenger"):
+        return {"x": x, "y": 0.0, "lane": lane, "s": s, "speed": v, "vclass": vclass, "length": 4.5}
+    loop.prev_truth = {"ego": body(50.0, "E_0", 50.0, 10.0), "lead": body(70.0, "E_0", 70.0, 5.0),
+                       "bike": body(90.0, "W_0", 210.0, 4.0, "bicycle"), "far": body(400.0, "E_0", 290.0, 9.0)}
+    loop.proj = {"ego": Mover("ego", "E_0", 50.0), "binding": {"lead": "passenger_1"}}
+    loop.last_movers = [Mover("passenger_1", "E_0", 68.0)]                       # the track, 2 m off its body
+    r = loop.truth_row()
+    assert r["ego"] == {"lane": "E_0", "s": 50.0, "v": 10.0, "kind": "driving", "contact": ["lead"]}
+    things = {t["id"]: t for t in r["things"]}
+    assert set(things) == {"lead", "bike"}                                       # "far" is out of range
+    assert things["lead"]["role"] == "lead" and things["lead"]["as"] == "obj" and things["lead"]["class"] == "passenger"
+    assert things["bike"]["role"] is None and things["bike"]["class"] == "bicycle"
+
+
+def test_the_truth_column_is_written_beside_the_trace_with_its_header(tmp_path):
+    import road_host
+    h = road_host.RoadHost.__new__(road_host.RoadHost)
+    h.run, h.shared = {"trace": str(tmp_path / "tr")}, {"k": 7}
+    h.road = SimpleNamespace(truth_row=lambda: {"ego": {"lane": "E_0"}, "things": []})
+    h.truth_out()
+    h.shared["k"] = 8
+    h.truth_out()
+    lines = [json.loads(x) for x in (tmp_path / "tr" / "truth.jsonl").read_text().splitlines()]
+    assert lines[0]["truth"] == 1 and "cannot" in lines[0] and [x["k"] for x in lines[1:]] == [7, 8]
+    h.road = SimpleNamespace()                                                    # the exerciser: no truth kept
+    h.truth_out()
+    assert len((tmp_path / "tr" / "truth.jsonl").read_text().splitlines()) == 3

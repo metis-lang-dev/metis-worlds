@@ -60,6 +60,8 @@ def lanemap_of(path):
 
 
 UNSEEN_DUTY = "unseen, the other's duty"
+MATCH_M = 6.0                     # the truth column: a bound track and its body on one lane at most this far apart (m)
+CANNOT = ["weather", "rain", "snow", "fog", "night", "animal"]   # the truth's `cannot`: what this world does not hold
 LANE_FACTS = ("own_kind", "adjacent", "lane_kind", "side_", "oncoming", "lead_s", "changing", "settled(", "zone_at", "roomy")    # the log's lane facts (the passes')
 
 
@@ -134,7 +136,7 @@ class Loop:
                                                     left_from=(self.left_from[0], self.t - self.left_from[1])
                                                     if getattr(self, "left_from", None) else None)
         self.proj = {"binding": binding, "facts": f, "fold": fold, "states": states, "ego": ego}
-        self.prev_truth = truth
+        self.prev_truth, self.last_movers = truth, movers
         return truth, movers, ego, lights, t3
 
     # ── 1. restrict ──
@@ -279,6 +281,47 @@ class Loop:
             self.danger_since = None
         elif not bad:
             self.danger_since = None
+
+    # ── the truth column (spec 20 §10.2; cr-harvest s-f4e297da): what the world held, beside the trace ──
+    def truth_row(self):
+        """This tick's row of TRACE/truth.jsonl (road_host writes it with the trace's k): the ego's lane, its kind and this step's
+        contacts; every body within the sensor range, its world class (SUMO's vClass), `as` obj, the role the projection bound it to
+        this tick (a perceived track matched to the body on its lane within MATCH_M; null when unbound: unseen, out of range,
+        passive), lane, s, v and its lane's kind. None before the ego is on the road."""
+        truth, ego = getattr(self, "prev_truth", None), self.proj.get("ego")
+        if not truth or ego is None or EGO not in truth:
+            return None
+        e = truth[EGO]
+        carry = getattr(self.world, "carry", None)
+        ego_kind = "oncoming" if carry is not None and self.world.carry_side() == "opp" else \
+            getattr(self.lanemap.lanes.get(e["lane"]), "kind", None)
+        contact = sorted({c["id"] for c in (self.log[-1].get("contact") or [])}) if self.log else []
+        reach = self.perc.sensor.range
+        near = {k: p for k, p in truth.items() if k != EGO and math.hypot(p["x"] - e["x"], p["y"] - e["y"]) <= reach}
+        role_of = self._roles_on(near)
+        things = []
+        for k in sorted(near):
+            p = near[k]
+            lane = self.lanemap.lanes.get(p["lane"])
+            things.append({"id": k, "class": p.get("vclass"), "as": "obj", "role": role_of.get(k), "lane": p["lane"],
+                           "s": round(p["s"], 2), "v": round(p["speed"], 2), "kind": getattr(lane, "kind", None) if lane else None,
+                           "length": p.get("length")})
+        return {"ego": {"lane": e["lane"], "s": round(e["s"], 2), "v": round(e["speed"], 2), "kind": ego_kind, "contact": contact},
+                "things": things}
+
+    def _roles_on(self, near):
+        """{truth id: role} for the projection's binding: each bound track matched to the nearest body on its lane within MATCH_M."""
+        by = {m.id: m for m in getattr(self, "last_movers", None) or ()}
+        out, taken = {}, set()
+        for role, tid in sorted((self.proj.get("binding") or {}).items()):
+            m = by.get(tid)
+            if m is None:
+                continue
+            best = min(((abs(p["s"] - m.s), k) for k, p in near.items() if p["lane"] == m.lane and k not in taken), default=None)
+            if best is not None and best[0] <= MATCH_M:
+                out[best[1]] = role
+                taken.add(best[1])
+        return out
 
     def contacts(self, hits):
         """SUMO's contacts of this step with the ego, each with the type the truth's pair of that body had (any type, not only the

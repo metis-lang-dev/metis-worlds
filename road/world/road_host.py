@@ -174,6 +174,7 @@ class RoadHost:
                 self.pace()
             self.road.step()
             self._log(self.road.log[-1])
+            self.truth_out()
             if self.run.get("page"):
                 self.follow_lane()
         elif self.steps and self.run.get("page"):
@@ -419,6 +420,24 @@ class RoadHost:
         os.makedirs(d, exist_ok=True)
         with open(os.path.join(d, "marks.jsonl"), "a") as f:
             f.write(json.dumps(dict(row, at_k=int(k))) + "\n")
+
+    def truth_out(self):
+        """The world's truth column beside the run's trace (spec 20 §10.2; cr-harvest s-f4e297da): TRACE/truth.jsonl, its header
+        {truth: 1, cannot} first, then the world's row (truth_row: the SUMO host's) at the trace's k. Nothing without a trace, a
+        k, or a world that keeps no truth (the exerciser)."""
+        d, k = self.run.get("trace"), self.shared.get("k")
+        row = getattr(self.road, "truth_row", None)
+        if not d or k is None or row is None:
+            return
+        r = row()
+        if r is None:
+            return
+        os.makedirs(d, exist_ok=True)
+        f = os.path.join(d, "truth.jsonl")
+        with open(f, "a") as out:
+            if out.tell() == 0:
+                out.write(json.dumps({"truth": 1, "cannot": list(getattr(sys.modules.get(type(self.road).__module__), "CANNOT", []))}) + "\n")
+            out.write(json.dumps(dict(r, k=int(k))) + "\n")
 
     def run_files(self):
         """At the run's first tick (the trace's dir is made by then): the config the run is played with, copied beside its trace, so the judge
