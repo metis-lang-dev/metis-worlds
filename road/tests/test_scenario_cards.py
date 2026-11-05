@@ -184,7 +184,10 @@ def test_every_card_places_at_every_site_on_sumo():
             for s in C.sites(card, town):
                 pl = D.place(card, town, s["i"])
                 edge, lane, pos = pl["site"]
-                assert pl["ego"]["route"][0] == edge and pl["ego"]["lane"] == lane and pl["ego"]["pos"] == pos, (n, town, s)
+                if (card.get("sumo") or {}).get("back"):                    # BACK m before the site, on the way to it
+                    assert edge in pl["ego"]["route"] and pl["ego"]["lane"] == lane, (n, town, s)
+                else:
+                    assert pl["ego"]["route"][0] == edge and pl["ego"]["lane"] == lane and pl["ego"]["pos"] == pos, (n, town, s)
                 assert pl["actors"], (n, town, s)
                 for a in pl["actors"]:
                     assert a["place"]["route"] and a["place"]["pos"] > 0, (n, town, s, a["id"])

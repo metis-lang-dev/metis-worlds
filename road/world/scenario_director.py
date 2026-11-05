@@ -138,8 +138,10 @@ def place(card, town, site):
     for a in expanded:
         at = a["at"]
         item = dict(a)
-        if at.get("road") == "side":
-            item["place"] = _side(edge, route)
+        if at.get("road") == "side":                         # timed: at its speed it reaches the junction as the ego
+            tta = float((a.get("trigger") or {}).get("tta", 0.0))      # does from the trigger's TTA (the source's sync)
+            sp = max([float(st.get("speed", 0.0)) for st in a.get("script") or []] + [0.0])
+            item["place"] = _side(edge, route, sp * tta if sp and tta else SIDE_M)
         elif at.get("opposite"):
             try:
                 item["place"] = _opposite(edge, pos + float(at.get("ahead", 0.0)) + shift, a, town, site)
@@ -175,6 +177,16 @@ def place(card, town, site):
                 raise ValueError("%s at %s#%d: lane %d off %s" % (a["id"], town, site, idx, eid.getID()))
             item["place"] = {"route": [x.getID() for x in route_a[ri:]], "lane": idx, "pos": round(max(0.1, s), 2)}
         actors.append(item)
+    back = float((card.get("sumo") or {}).get("back", 0.0))  # a junction card whose site is too near its junction for the
+    ego_li, s = li, depart - back                            # trigger's TTA: the ego starts BACK m before it (the actors stay)
+    while s < 0:
+        prev = _straight_prev(route[0])
+        if prev is None or prev in route or prev.getLaneNumber() <= ego_li:
+            s = 0.1
+            break
+        route.insert(0, prev)
+        s += prev.getLength()
+    depart = max(0.1, s) if back else depart
     return {"site": (edge.getID(), li, round(pos, 2)), "free": round(free, 1), "shift": round(shift, 1),
             "junction": {"edge": edge.getID(), "pos": edge.getLength()},
             "ego": {"route": [x.getID() for x in route], "lane": li, "pos": round(depart, 2), "v": float(card["ego"]["v"])},
@@ -193,9 +205,11 @@ def _opposite(edge, s, a, town, site):
     return {"route": [rev.getID()] + ([nxt.getID()] if nxt is not None else []), "lane": 0, "pos": round(p, 2)}
 
 
-def _side(edge, route):
+def _side(edge, route, before=None):
     """The side actor's way: an incoming edge of the junction at EDGE's end that is not the ego's (nor its reverse),
-    SIDE_M before the junction, and on straight across."""
+    BEFORE m (default SIDE_M) before the junction, back over its straight predecessors when it is shorter, and on
+    straight across."""
+    before = SIDE_M if before is None else before
     node = edge.getToNode()
     mine = {x.getID() for x in route}
     for frm in sorted(node.getIncoming(), key=lambda x: x.getID()):
@@ -208,7 +222,15 @@ def _side(edge, route):
         nxt = _straight_next(frm, 0)
         if nxt is None:
             continue
-        return {"route": [frm.getID(), nxt.getID()], "lane": 0, "pos": round(max(0.1, frm.getLength() - SIDE_M), 2), "spawn": True}
+        way, p = [frm], frm.getLength() - before
+        while p < 0:
+            prev = _straight_prev(way[0])
+            if prev is None or prev in way or prev.getID() in mine:
+                p = 0.1
+                break
+            way.insert(0, prev)
+            p += prev.getLength()
+        return {"route": [x.getID() for x in way] + [nxt.getID()], "lane": 0, "pos": round(max(0.1, p), 2), "spawn": True}
     raise ValueError("no side road at the junction after %s" % edge.getID())
 
 
@@ -257,6 +279,7 @@ class Director:
                 else:
                     self.armed.append((a, dict(a["trigger"] if when == "trigger" else when), steps, after))
         self.fired = []                                                    # [(t, actor id, what)] for the report
+        self.spawn_v = {}                                                  # a trigger-spawned actor: its speed at insertion
         self.held = {}                                                     # an emergency vehicle: s it was held behind the ego
 
     def _dist(self, c, edge, pos):
@@ -309,11 +332,10 @@ class Director:
                 rid = "r_" + vid
                 c.route.add(rid, pa["route"])
                 sp = float(dict(steps).get("speed", a.get("v", 0.0)) or 0.0)
-                c.vehicle.add(vid, rid, typeID="actor_t", departLane=str(pa["lane"]), departPos=str(pa["pos"]), departSpeed=str(sp))
-                if a.get("breaks_rules"):
-                    c.vehicle.setSpeedMode(vid, 0)                         # it takes the ego's priority
-                c.vehicle.setSpeed(vid, sp)
-                c.vehicle.setLaneChangeMode(vid, 0)
+                # inserted standing (SUMO refuses a fast insertion before a minor road's junction: "unpriorised junction
+                # too close"), then at SP from its first step (setPreviousSpeed): the source's car spawned moving
+                c.vehicle.add(vid, rid, typeID="actor_t", departLane=str(pa["lane"]), departPos=str(pa["pos"]), departSpeed="0")
+                self.spawn_v[vid] = sp
             elif pa.get("spawn") and what in ("go", "speed"):
                 return                                                     # spawned already, at that speed
             elif vid not in c.vehicle.getIDList():
@@ -338,7 +360,10 @@ class Director:
             if a["id"] in ids and a["id"] not in self.started:
                 self.started.add(a["id"])
                 c.vehicle.setLaneChangeMode(a["id"], 0)                    # an actor goes where its script says only
-                if a.get("script") or not a.get("moving", True) or float(a.get("v", 0.0)) == 0.0:
+                if a["id"] in self.spawn_v:                                # spawned by its trigger: at its step's speed
+                    c.vehicle.setPreviousSpeed(a["id"], self.spawn_v[a["id"]])
+                    c.vehicle.setSpeed(a["id"], self.spawn_v[a["id"]])
+                elif a.get("script") or not a.get("moving", True) or float(a.get("v", 0.0)) == 0.0:
                     c.vehicle.setSpeed(a["id"], float(a.get("v", 0.0)))
                 if a.get("breaks_rules"):
                     c.vehicle.setSpeedMode(a["id"], 0)
