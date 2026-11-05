@@ -167,6 +167,9 @@ class RoadHost:
             self.shared["k"] = self.beat
             if self.beat == 1:
                 self.run_files()
+                d = self.run.get("trace")
+                if d and os.path.exists(os.path.join(d, "truth.jsonl")):
+                    os.remove(os.path.join(d, "truth.jsonl"))   # this run's truth column, not a rerun's appended to it
         self.world_now()
         if self.steps and self.beat > 1 and not self.road.arrived() and not self.shared.get("paused"):
             if self.run.get("page"):
@@ -177,6 +180,8 @@ class RoadHost:
                 self.follow_lane()
         elif self.steps and self.run.get("page"):
             time.sleep(DT)                             # paused or there: the Live's clock has no pace of its own
+        if self.steps:
+            self.truth_row()
         dos = self.sync(counts)
         if getattr(self, "new_trip", False):           # the last trip ended at its destination: the planner has none to drive
             self.new_trip = False
@@ -379,6 +384,25 @@ class RoadHost:
         os.makedirs(d, exist_ok=True)
         with open(os.path.join(d, "marks.jsonl"), "a") as f:
             f.write(json.dumps(dict(row, at_k=int(k))) + "\n")
+
+    def truth_row(self):
+        """The truth column beside the run's trace (spec 20 §4, §10 item 2; metispy metis.surprise_kind's contract): one row a tick,
+        {k, t, ego: {lane, kind, contact}, things: [...]}, the world's bodies within the run's sensor range (truth_row: both hosts), in
+        <trace>/truth.jsonl. Nothing when the run has no trace or the world has no truth."""
+        d, k = self.run.get("trace"), self.shared.get("k")
+        row = getattr(self.road, "truth_row", None)
+        if not d or k is None or row is None:
+            return
+        r = row()
+        if r is None:
+            return
+        os.makedirs(d, exist_ok=True)
+        p = os.path.join(d, "truth.jsonl")
+        cannot = getattr(self.road, "TRUTH_CANNOT", None)
+        with open(p, "a") as f:
+            if cannot and not os.path.getsize(p):
+                f.write(json.dumps({"truth": 1, "cannot": list(cannot)}) + "\n")     # the header: what this world cannot hold
+            f.write(json.dumps(dict({"k": int(k), "t": round(self.road.t, 2)}, **r)) + "\n")
 
     def run_files(self):
         """At the run's first tick (the trace's dir is made by then): the config the run is played with, copied beside its trace, so the judge

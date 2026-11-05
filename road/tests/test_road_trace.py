@@ -194,3 +194,17 @@ def test_straight_on_sumo_replays_with_no_sumo(tmp_path, env):
     replayed(tmp_path / "t" / "straight-1")
     r = replay_composition(tmp_path / "t" / "straight-1", tree.config(None, 1))
     assert r.ok, r.divergence
+
+
+def test_a_traced_run_writes_the_truth_column(tmp_path, env):
+    """spec 20 §10.2 (surprise-kinds s-7a02c2ac; metispy metis.surprise_kind's contract): beside the trace, truth.jsonl, one row a
+    tick: the ego's lane, its kind and contacts, and every body within the sensor's range, seen or not, with the role it is bound to."""
+    tree = road_tree()
+    tree.run("lead_brake", 1, tmp_path, ticks=60, trace=tmp_path / "t")
+    import json
+    rows = [json.loads(x) for x in (tmp_path / "t" / "lead_brake-1" / "truth.jsonl").read_text().splitlines()]
+    assert [r["k"] for r in rows] == list(range(1, len(rows) + 1)) and len(rows) >= 50
+    r = rows[5]
+    assert set(r) == {"k", "t", "ego", "things"} and set(r["ego"]) == {"lane", "kind", "contact"} and r["ego"]["kind"] == "driving"
+    lead = next(x for x in r["things"] if x["role"] == "lead")
+    assert set(lead) >= {"id", "class", "as", "role", "lane", "s", "v", "kind"} and lead["as"] == "obj"

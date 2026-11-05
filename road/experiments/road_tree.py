@@ -105,6 +105,8 @@ def run(scenario, seed, out_dir, ticks=1500, world_kind=None, vehicles=None, tra
         # a card's scenario "card:NAME[:VARIANT]" → the run card_NAME[_VARIANT]-SEED: no ':' in a run's name (/mark RUN:MEMBER)
         cfg["trace"] = {"dir": str(Path(trace) / ("%s-%d" % (scenario.replace(":", "_"), seed))), "every": 200, "ring": 0,
                         "commands": world_commands()}
+        run_spec["trace"] = cfg["trace"]["dir"]       # the host writes the truth column (and marks) beside the trace
+        spec.write_text(json.dumps(run_spec))
     lv = S.Live(cfg, NoModel())
     for ag in lv.agents.agents.values():
         ag.watch.blind = True                       # a world that moves by itself: no surprise from its motion

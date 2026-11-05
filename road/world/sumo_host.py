@@ -120,6 +120,36 @@ class Loop:
             return True
         return self.world.ego_done
 
+    TRUTH_CANNOT = ["sidewalk", "walker", "crossing"]   # what the Town nets cannot hold (no sidewalks, crossings, walkers): the
+                                                        # truth column's header (spec 20 §4 step 1: a world gap names one)
+
+    def truth_row(self):
+        """The truth column (spec 20 §4 and §10.2; the contract is metispy metis.surprise_kind's): the ego's lane, its kind and the
+        bodies it touched this tick, and every body within the sensor's range of the ego, seen or not: {ego: {lane, kind, contact},
+        things: [{id, class, as, role, lane, s, v, kind}]}. `role` is the role the projection bound a track at this body to (a
+        track names no identity: matched by lane and s within 3 m), null when none; `as` the signature's type: obj."""
+        truth = getattr(self, "prev_truth", None) or {}
+        e = truth.get(EGO)
+        if e is None:
+            return None
+        ego = self.proj.get("ego")
+        lanes = self.lanemap.lanes
+        tracks = {m.id: m for m in getattr(self, "_movers", ())}
+        bound = [(r, tracks[t]) for r, t in (self.proj.get("binding") or {}).items() if t in tracks]
+        r = self.perc.sensor.range
+        things = []
+        for k, p in sorted(truth.items()):
+            if k == EGO or math.hypot(p["x"] - e["x"], p["y"] - e["y"]) > r:
+                continue
+            role = next((rr for rr, m in bound if m.lane == p.get("lane") and abs(m.s - p.get("s", 0.0)) <= 3.0), None)
+            lane = lanes.get(p.get("lane"))
+            things.append({"id": k, "class": p.get("vclass"), "as": None if p.get("vclass") in NO_TYPE else "obj", "role": role, "lane": p.get("lane"),
+                           "s": round(p.get("s", 0.0), 2), "v": round(p.get("speed", 0.0), 2),
+                           "kind": getattr(lane, "kind", None) if lane is not None else None})
+        el = lanes.get(ego.lane) if ego is not None else None
+        return {"ego": {"lane": ego.lane if ego is not None else e.get("lane"), "kind": getattr(el, "kind", None),
+                        "contact": sorted(getattr(self, "_contact_now", ()))}, "things": things}
+
     def perceive_project(self):
         truth = self.world.truth()
         movers, ego = self.perc.step(truth, EGO)
@@ -187,6 +217,8 @@ class Loop:
             self.prev_truth, self.proj["ego"] = {}, None
             return False
         truth, movers, ego, lights, t3 = self.perceive_project()
+        self._movers = movers
+        self._contact_now = {c["victim"] if c["collider"] == EGO else c["collider"] for c in hits}
         fold = self.proj["fold"]
         binding = self.proj["binding"]
         t4 = time.perf_counter()
@@ -334,6 +366,7 @@ def danger_rows(states, where, pairs=None):
     return out
 
 
+NO_TYPE = ("emergency",)  # a body's class the family's signature has no type for: the truth's `as` is null (road_world's too)
 SENSOR_RANGE = 100.0      # the ego's sensor range (m), the run's `sensor.range`; both hosts' default (road-scenarios 2f)
 
 

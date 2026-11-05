@@ -47,6 +47,8 @@ LANE_W = 3.5
 SPEED = 16.67                      # the main road's limit (60 km/h)
 KMH = 1 / 3.6
 CROSSWALK_S, JUNCTION_S, MERGE_S = 250.0, 400.0, 500.0
+NO_TYPE = ("emergency",)           # a body's class the family's signature has no type for: the truth's `as` is null (spec 20 §4:
+                                   # what makes a record about it ontological, the car itself bound to a role or not)
 SENSOR_RANGE = 100.0               # what the ego can see (m), both hosts' default (the architect's ruling, road-scenarios 2f:
                                    # LB2 agents carry 100 m+ sensors; a driver sees a car waiting at a side road that far)
 
@@ -152,6 +154,17 @@ class RoadWorld:
 
     def live(self):
         return [ag for ag in self.agents if not ag.done]
+
+    def truth_row(self):
+        """The truth column (spec 20 §4 and §10.2; the contract is metispy metis.surprise_kind's): the ego's lane, its kind and the
+        bodies it touched this tick, and the live agents within the sensor's range, seen or not: {ego: {lane, kind, contact},
+        things: [{id, class, as, role, lane, s, v, kind}]}; `role` the role the projection bound it to (null: unbound), `as` obj."""
+        roles = {mid: r for r, mid in (self.observe()[1] or {}).items()}
+        kind = lambda lane: getattr(self.map.lanes.get(lane), "kind", None)
+        things = [{"id": ag.m.id, "class": ag.m.vclass, "as": None if ag.m.vclass in NO_TYPE else "obj", "role": roles.get(ag.m.id), "lane": ag.m.lane,
+                   "s": round(ag.m.s, 2), "v": round(ag.v, 2), "kind": kind(ag.m.lane)} for ag in self.seen()]
+        contact = sorted({c["with"] for c in self.collisions if abs(c["t"] - round(self.t, 2)) < 1e-6})
+        return {"ego": {"lane": self.ego.m.lane, "kind": kind(self.ego.m.lane), "contact": contact}, "things": things}
 
     def seen(self):
         """The live agents within the sensor's range of the ego (the facts' world; the RSS accounting keeps every one)."""

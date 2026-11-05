@@ -40,13 +40,19 @@ def test_the_restrictor_never_gives_more_than_the_response():
     assert -d.brake_max <= a < 0 and abs(10.0 ** 2 / (2 * (26.0 - d.min_dist)) + a) < 1e-9
 
 
-def test_a_vacant_role_reads_safe_and_the_zone_ahead_is_said():
+def test_a_vacant_role_reads_empty_and_the_zone_ahead_is_said():
+    """spec 20 §2 (surprise-kinds s-7a02c2ac): a role nobody fills is role_empty and nothing else, no class and no safety
+    fact (the filler said "not relevant, safe" of what the host never saw); side_clear(D) says a side is free to change into."""
     w = road_world.RoadWorld("cruise", 1)
     facts, roles, fold, _ = w.observe()
     for r in road_facts.OBJ_ROLES:
         if r not in roles:
-            assert {"type(%s,not_relevant)" % r, "safe_long(%s)" % r, "safe_lat(%s)" % r} <= set(facts)
+            assert "role_empty(%s)" % r in facts
+            assert not any(a.endswith("(%s)" % r) and a != "role_empty(%s)" % r or a.startswith("type(%s," % r) for a in facts), r
     assert {"adjacent(left)", "adjacent(right)", "now", "resp_lon(none)"} <= set(facts)
+    for side in ("left", "right"):          # cruise: nobody beside, so each side's lead and follower are unfilled: clear
+        if not any(("lead" + side) == r or ("follow" + side) == r for r in roles):
+            assert "side_clear(%s)" % side in facts
     assert any(a.startswith("zone_at(nextzone,") for a in facts) and "zprio(nextzone,obj)" in facts   # the crosswalk
     assert not any(a.startswith("resp_lat(") and a.count(",") == 2 for a in facts)   # the pair's: resp_side
     assert "lead" in roles
