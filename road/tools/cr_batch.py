@@ -214,7 +214,8 @@ def make_row(job, h, seed, started, wall, summ, err, rc, timed_out):
     if summ is None:
         row.update(ticks=None, t=None, arrived=None, goal=None, contact=None, contacts=None, sumo_collisions=None,
                    off_lanelet=None, violations=None, rc=None, fired=[], untriggered=[], failed=[], summary=None,
-                   error={"kind": error_kind(err, timed_out), "line": last_line(err), "rc": rc})
+                   error={"kind": error_kind(err, timed_out), "line": last_line(err), "rc": rc,
+                          "trace": [l.rstrip() for l in err.splitlines() if l.strip()][-5:]})
         return row
     d = summ.get("director") or {}
     cr = d.get("cr") or {}

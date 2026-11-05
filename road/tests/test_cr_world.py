@@ -152,7 +152,26 @@ def test_a_cache_of_another_version_is_refused_in_words(tmp_path):
     (tmp_path / "SYN-1").mkdir()
     (tmp_path / "SYN-1" / "cr.json").write_text(json.dumps(d))
     with pytest.raises(RuntimeError, match="cr_convert.py --force"):
-        W.load("SYN-1", cache=tmp_path)
+        W.load("SYN-1", cache=tmp_path, convert=False)
+
+
+def test_a_cache_of_another_version_is_converted_again(tmp_path, monkeypatch):
+    d = doc()
+    d["version"] = W.CR_JSON_VERSION - 1
+    (tmp_path / "SYN-1").mkdir()
+    (tmp_path / "SYN-1" / "cr.json").write_text(json.dumps(d))
+    ran = []
+
+    class R:
+        returncode, stderr, stdout = 0, "", ""
+
+    def run(cmd, **k):
+        ran.append(cmd)
+        (tmp_path / "SYN-1" / "cr.json").write_text(json.dumps(dict(d, version=W.CR_JSON_VERSION)))
+        return R()
+    monkeypatch.setattr(W.subprocess, "run", run)
+    monkeypatch.setenv("COMMONROAD_CONVERT_PY", sys.executable)
+    assert W.load("SYN-1", cache=tmp_path)["version"] == W.CR_JSON_VERSION and len(ran) == 1
 
 
 def test_a_scenario_not_in_the_cache_without_a_conversion_venv_is_refused_in_words(tmp_path, monkeypatch):

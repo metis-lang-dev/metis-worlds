@@ -63,7 +63,7 @@ slice. A row already in `rows/` is not queued again (resumable). `launch` runs `
 | `untriggered` | [str] | armed triggers that never fired |
 | `failed` | [str] | the measures that failed, in this order: `contact`, `sumo_collision`, `goal`, `off_lanelet`, `violation` |
 | `record_id` | str\|null | the surprise record of this row's failure |
-| `error` | object\|null | the run did not finish: `kind` (`convert`, `world`, `timeout`, `crash`), `line` (the last stderr line), `rc` |
+| `error` | object\|null | the run did not finish: `kind` (`convert`, `world`, `timeout`, `crash`), `line` (the exception's line), `trace` (the last 5 stderr lines), `rc` |
 | `stopped` | str\|null | `window+30`: the run was stopped 30 s after the goal's time window ended, goal not reached (the ruling of 2026-11-05; `CR_STOP_AFTER_WINDOW`); null: it ran to arrival or the tick cap. Rows before the early stop have no `stopped` key: the first hand-crafted round on panzer |
 | `summary` | object | the world's whole summary line, as road_tree prints it |
 

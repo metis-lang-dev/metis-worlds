@@ -24,7 +24,7 @@ import os
 import sys
 from pathlib import Path
 
-CR_JSON_VERSION = 2
+CR_JSON_VERSION = 3
 ROAD = Path(__file__).resolve().parents[1]
 ROOT = Path(os.environ.get("COMMONROAD_ROOT", "/bigdata/datasets/commonroad"))
 CACHE = Path(os.environ.get("COMMONROAD_CACHE", str(ROAD / "maps" / "cr")))
@@ -218,10 +218,66 @@ def net_offset(net_xml):
     return [0.0, 0.0]
 
 
-def convert(sid, root=ROOT, cache=CACHE, force=False):
+def produced_net(out, sid):
+    """The net the map converter wrote: cr2sumo names it after the scenario's benchmark id, which for an interactive scenario
+    lacks the trailing -1 (ZAM_Tjunction-1_374_I-1.net.xml for ZAM_Tjunction-1_374_I-1-1): moved to <sid>.net.xml, the
+    name cr_world reads. → the file name, or None."""
+    want = out / (sid + ".net.xml")
+    if want.is_file():
+        return want.name
+    nets = sorted((p for p in out.glob("*.net.xml") if not p.name.startswith("rbl.")), key=lambda p: p.stat().st_mtime)
+    if not nets:
+        return None
+    os.replace(nets[-1], want)
+    return want.name
+
+
+def read_lenient(src):
+    """The scenario and its planning problems; a file whose objects reuse an id (the interactive set's 'ID 0 is already
+    used': a lanelet and an obstacle both 0) is read again with the uniqueness check off. → (scenario, problems, lenient)."""
     from commonroad.common.file_reader import CommonRoadFileReader
+    from commonroad.scenario import scenario as S
+    try:
+        sc, pps = CommonRoadFileReader(str(src)).open()
+        return sc, pps, False
+    except ValueError as e:
+        if "already used" not in str(e):
+            raise
+    keep = S.Scenario._mark_object_id_as_used
+    S.Scenario._mark_object_id_as_used = lambda self, object_id: self._id_set.add(object_id)
+    try:
+        sc, pps = CommonRoadFileReader(str(src)).open()
+    finally:
+        S.Scenario._mark_object_id_as_used = keep
+    return sc, pps, True
+
+
+class lock:
+    """One conversion of an id at a time (workers in parallel ask for the same id): an flock on CACHE/.locks/<sid>."""
+    def __init__(self, cache, sid):
+        (cache / ".locks").mkdir(parents=True, exist_ok=True)
+        self.path = cache / ".locks" / sid
+
+    def __enter__(self):
+        import fcntl
+        self.f = open(self.path, "w")
+        fcntl.flock(self.f, fcntl.LOCK_EX)
+        return self
+
+    def __exit__(self, *exc):
+        import fcntl
+        fcntl.flock(self.f, fcntl.LOCK_UN)
+        self.f.close()
+
+
+def convert(sid, root=ROOT, cache=CACHE, force=False):
     src = find(sid, root)
     sid = src.name[:-len(".cr.xml")] if src.name.endswith(".cr.xml") else src.stem
+    with lock(cache, sid):
+        return _convert(src, sid, cache, force)
+
+
+def _convert(src, sid, cache, force):
     out = cache / sid
     meta, h = out / "cr.json", sha256(src)
     if not force and meta.is_file():
@@ -229,14 +285,16 @@ def convert(sid, root=ROOT, cache=CACHE, force=False):
         if old.get("version") == CR_JSON_VERSION and old.get("sha256") == h and (out / old["net"]).is_file():
             return out
     out.mkdir(parents=True, exist_ok=True)
-    sc, pps = CommonRoadFileReader(str(src)).open()
+    sc, pps, lenient = read_lenient(src)
     from commonroad_sumo.cr2sumo.map_converter.map_converter import CR2SumoMapConverter, CR2SumoMapConverterConfig
     conf = CR2SumoMapConverterConfig.from_scenario(sc)
     conf.overwrite_speed_limit = None                  # the scenario's own limits, not the converter's 130 km/h everywhere
     conv = CR2SumoMapConverter(sc, conf)
     if conv.create_sumo_files(out.resolve()) is None:
         raise SystemExit("cr_convert: %s: the map converter made no SUMO net" % sid)
-    net = sid + ".net.xml"
+    net = produced_net(out, sid)
+    if net is None:
+        raise SystemExit("cr_convert: %s: the map converter wrote no .net.xml in %s" % (sid, out))
     doc = {"version": CR_JSON_VERSION, "id": sid, "source": str(src), "sha256": h, "dt": float(sc.dt),
            "net": net, "net_offset": net_offset(str(out / net)), "converter": {"commonroad-sumo": _ver("commonroad-sumo"),
            "commonroad-io": _ver("commonroad-io"), "highway_mode": conf.highway_mode, "country": conf.country_id.value},
@@ -244,7 +302,12 @@ def convert(sid, root=ROOT, cache=CACHE, force=False):
            "edges_missing": sorted(str(k) for k in conv.lanes_dict if str(k) not in net_edges(str(out / net))),
            "lanelets": lanelet_rows(sc.lanelet_network), "signs": sign_rows(sc.lanelet_network),
            "lights": light_rows(sc.lanelet_network), "intersections": intersection_rows(sc.lanelet_network),
-           "obstacles": obstacle_rows(sc), "planning": planning_rows(pps), "interactive": src.name.endswith(".cr.xml")}
+           "obstacles": obstacle_rows(sc), "planning": planning_rows(pps), "interactive": src.name.endswith(".cr.xml"),
+           "lenient_ids": lenient,
+           # the converter's own lanelet -> edge and -> lane maps (it merges lanelets into edges with new ids): cr_world resolves
+           # the ego's start and the goal's lanelets through them, geometry the fallback
+           "lanelet_edge": {str(k): str(v) for k, v in conv.lanelet_id2edge_id.items()},
+           "lanelet_lane": {str(k): str(v) for k, v in conv.lanelet_id2lane_id.items()}}
     doc["right_before_left"] = right_before_left(out, net, doc)       # the scenario's priority, not the converter's
     meta.write_text(json.dumps(doc))
     return out

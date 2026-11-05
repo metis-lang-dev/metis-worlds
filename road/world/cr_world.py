@@ -26,7 +26,8 @@ import subprocess
 import sys
 from pathlib import Path
 
-CR_JSON_VERSION = 2
+CR_JSON_VERSION = 3
+MIN_ROUTE_M = 5.0                                      # a route shorter than this is no route to the goal
 ROAD = Path(__file__).resolve().parents[1]
 CACHE = Path(os.environ.get("COMMONROAD_CACHE", str(ROAD / "maps" / "cr")))
 CONVERT = ROAD / "tools" / "cr_convert.py"
@@ -50,7 +51,10 @@ def scenario_id(name):
 def load(sid, cache=CACHE, convert=True):
     """cr.json of SID, converting it once into the cache when it is not there (the conversion venv's tool)."""
     meta = Path(cache) / sid / "cr.json"
-    if not meta.is_file() and convert:
+    stale = meta.is_file() and json.loads(meta.read_text()).get("version") != CR_JSON_VERSION
+    if (not meta.is_file() or stale) and convert:          # a cache of an older version is converted again, once
+        if stale:
+            meta.unlink()
         py = os.environ.get("COMMONROAD_CONVERT_PY", str(ROAD / ".venv-cr" / "bin" / "python"))
         if not os.path.exists(py):
             raise RuntimeError("cr:%s is not in the cache %s and there is no conversion venv at %s: road/setup-commonroad.sh" % (sid, cache, py))
@@ -146,12 +150,76 @@ def ego_lane(net, x, y, theta):
     return best[0], best[1]
 
 
+def lanelet_poly(la):
+    return [tuple(p) for p in la["left"]] + [tuple(p) for p in reversed(la["right"])]
+
+
+def lanelets_at(doc, x, y):
+    """The scenario's lanelets whose polygon holds (x, y)."""
+    return [la for la in doc.get("lanelets") or () if inside((x, y), lanelet_poly(la))]
+
+
+def _net_lane(net, lid):
+    try:
+        return net.getLane(lid) if lid and net.hasEdge(lid.rpartition("_")[0]) else None
+    except Exception:                                                    # noqa: BLE001 — merged away by netconvert
+        return None
+
+
+def nearest_in_net(doc, net, la_id, first="predecessors", depth=3):
+    """A lanelet's SUMO lane through `lanelet_lane`, or, when netconvert folded it into a junction (an intersection's
+    lanelet becomes an internal lane), the nearest lanelet along FIRST then the other way whose lane the net has.
+    → (lane, steps along, which way) or None."""
+    lanes = doc.get("lanelet_lane") or {}
+    by_id = {la["id"]: la for la in doc.get("lanelets") or ()}
+    other = "successors" if first == "predecessors" else "predecessors"
+    lane = _net_lane(net, lanes.get(str(la_id)))
+    if lane is not None:
+        return lane, 0, None
+    for way in (first, other):
+        frontier, seen = [la_id], {la_id}
+        for step in range(1, depth + 1):
+            frontier = [n for f in frontier for n in (by_id.get(f) or {}).get(way, []) if n not in seen]
+            seen.update(frontier)
+            for n in frontier:
+                lane = _net_lane(net, lanes.get(str(n)))
+                if lane is not None:
+                    return lane, step, way
+    return None
+
+
+def start_lane(net, doc, x, y, theta):
+    """The ego's start through the converter's lanelet -> lane map (cr.json `lanelet_lane`): the lanelet holding the start,
+    its SUMO lane; a start inside a junction (its lanelet an internal lane) begins at the END of the lane leading into it,
+    or at the start of the one leaving it. None: ego_lane's geometry then."""
+    for la in lanelets_at(doc, x, y):
+        got = nearest_in_net(doc, net, la["id"], first="predecessors")
+        if got is None:
+            continue
+        lane, step, way = got
+        if step == 0:
+            pos, _ = lane.getClosestLanePosAndDist((x, y))
+        else:
+            pos = max(0.0, lane.getLength() - 1.0) if way == "predecessors" else 0.5
+        return lane, pos
+    return None
+
+
 def goal_edge(net, doc, goal, start=None):
     """The edge the ego's route ends on: of the goal's lanelets' edges (cr.json `edges`), the one farthest along a way from START
     (a goal of several regions down a road: the route passes through them all), else the edge nearest the goal region's centre."""
     of = {la: e for e, las in doc["edges"].items() for la in las}
+    of.update({int(la): e for la, e in (doc.get("lanelet_edge") or {}).items()})     # the converter's own map first
     cands = []
-    for la in goal.get("lanelets") or ():
+    goal_lanelets = list(goal.get("lanelets") or ())
+    for poly in goal.get("polygons") or ():                                         # a region with no lanelets named
+        cx, cy = centroid(poly)
+        goal_lanelets += [la["id"] for la in lanelets_at(doc, cx, cy) if la["id"] not in goal_lanelets]
+    for la in goal_lanelets:                                   # a goal lanelet folded into a junction: the edge leaving it
+        got = nearest_in_net(doc, net, la, first="successors") if doc.get("lanelet_lane") else None
+        if got is not None and got[0].getEdge() not in cands:
+            cands.append(got[0].getEdge())
+            continue
         e = of.get(la)
         if e is not None and net.hasEdge(str(e)):
             cands.append(net.getEdge(str(e)))
@@ -177,14 +245,38 @@ def goal_edge(net, doc, goal, start=None):
     return near[0][0] if near else None
 
 
+def has_position(goal):
+    return bool(goal.get("polygons") or goal.get("lanelets"))
+
+
+def drive_on(net, start, limit=60):
+    """A time-only goal (no region: CommonRoad's goal is the time window, with speed and heading when given): the ego drives
+    on, its route to the edge farthest reachable from START by the net's shortest ways (LIMIT edges searched)."""
+    import heapq
+    best, dist, todo = (start, 0.0), {start.getID(): 0.0}, [(0.0, start.getID(), start)]
+    while todo and len(dist) < limit:
+        d, _, e = heapq.heappop(todo)
+        if d > best[1]:
+            best = (e, d)
+        for nxt in e.getOutgoing():
+            if nxt.getFunction() == "internal" or not nxt.allows("passenger"):
+                continue
+            nd = d + nxt.getLength()
+            if nd < dist.get(nxt.getID(), float("inf")):
+                dist[nxt.getID()] = nd
+                heapq.heappush(todo, (nd, nxt.getID(), nxt))
+    return best[0]
+
+
 def place(doc, net):
     pp = doc["planning"][0]
     s0 = pp["initial"]
-    lane, pos = ego_lane(net, s0["x"], s0["y"], s0["theta"] or 0.0)
+    lane, pos = start_lane(net, doc, s0["x"], s0["y"], s0["theta"] or 0.0) or ego_lane(net, s0["x"], s0["y"], s0["theta"] or 0.0)
     edge = lane.getEdge()
     goal = pp["goals"][0] if pp["goals"] else {}
-    to = goal_edge(net, doc, goal, edge)
-    route, why = [edge.getID()], None
+    timed = bool(goal) and not has_position(goal)
+    to = drive_on(net, edge) if timed else goal_edge(net, doc, goal, edge)
+    route, why = [edge.getID()], ("a time-only goal: the ego drives on" if timed else None)
     if to is not None and to.getID() != edge.getID():
         path, _ = net.getShortestPath(edge, to, vClass="passenger")
         if path:
@@ -193,6 +285,10 @@ def place(doc, net):
             why = "no way from %s to the goal's edge %s" % (edge.getID(), to.getID())
     elif to is None:
         why = "no edge at the goal region"
+    length = sum(net.getEdge(e).getLength() for e in route) - pos
+    if goal and not timed and length < MIN_ROUTE_M:
+        # a route of a few metres "arrives" at once and reads as the family's: the world's fault, said as one (the ruling)
+        raise RuntimeError("cr: no goal edge: the route is %.1f m (%s)" % (length, why or "the goal's edge is the start's"))
     return {"ego": {"lane": lane.getIndex(), "edge": edge.getID(), "pos": pos, "v": s0["v"] or 0.0, "k0": s0["k"], "route": route},
             "goal_edge": to.getID() if to is not None else None, "route_note": why}
 
@@ -331,9 +427,9 @@ class Director:
                 self.off_m += step
         self.last_xy = xy
         for g in self.goals:
-            if not any(inside(xy, p) for p in g["polys"]):
-                continue
-            if self.goal_pos_t is None:
+            if g["polys"] and not any(inside(xy, p) for p in g["polys"]):
+                continue                                          # a goal with no region: its time, speed, heading alone
+            if self.goal_pos_t is None and g["polys"]:
                 self.goal_pos_t = round(t, 2)
             ok = all(_in(val, g.get(key)) for key, val in (("time", k), ("velocity", e["v"]), ("orientation", e["theta"])))
             if ok and self.goal_t is None:

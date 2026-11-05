@@ -20,7 +20,7 @@ SCEN_URL=https://gitlab.lrz.de/tum-cps/commonroad-scenarios.git
 SCEN_PIN=2416dc27faf3ee36b6799f42712da72a34a2c8fd            # 2020a_scenarios, 2021-11-26
 INTER_URL=https://gitlab.lrz.de/tum-cps/commonroad-interactive-scenarios.git
 INTER_PIN=749e342013cc069980039fa91ba587f62993aaaf           # master, 2026-09-03
-PIP_PINS=(${COMMONROAD_PIP_PINS:-commonroad-io==2024.3 commonroad-sumo==2025.1.4})
+PIP_PINS=(${COMMONROAD_PIP_PINS:-commonroad-io==2024.3 commonroad-sumo==2025.1.4 rtree==1.4.1})
 
 checkout() {   # DIR URL PIN: DIR at PIN, fetched alone (depth 1), never a branch's moving head
   local dir="$1" url="$2" pin="$3"
@@ -40,7 +40,7 @@ mkdir -p "$ROOT"
 checkout "$ROOT/scenarios" "$SCEN_URL" "$SCEN_PIN"
 checkout "$ROOT/interactive" "$INTER_URL" "$INTER_PIN"
 
-if ! { [ -x "$VENV/bin/python" ] && "$VENV/bin/python" -c "import commonroad, commonroad_sumo" 2>/dev/null; }; then
+if ! { [ -x "$VENV/bin/python" ] && "$VENV/bin/python" -c "import commonroad, commonroad_sumo, rtree" 2>/dev/null; }; then
   "$PY" -m venv "$VENV"
   "$VENV/bin/pip" install -q --upgrade pip
   "$VENV/bin/pip" install -q "${PIP_PINS[@]}"
