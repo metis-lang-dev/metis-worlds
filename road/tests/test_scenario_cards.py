@@ -283,3 +283,15 @@ def test_town03_lane_types_parking_cut_in_and_outside_lanes():
     assert sx.infractions(C.load("Accident"), out) == {"outside_route_lanes": 10.0}
     assert sx.infractions(C.load("Accident"), dict(out, director=dict(out["director"], town="Town01"))) == {}
     assert C.driving_score({"outside_route_lanes": 10.0}) == 90.0
+
+
+def test_the_sumo_ego_carries_the_familys_bounds(tmp_path):
+    """The architect's ruling: the director's ego vType is the family's passenger bounds (semantic_world.lane.VCLASS), not a
+    second hand-written number: the law commands brake_max, and SUMO must be able to execute it (ParkingCutIn #19/#95)."""
+    _sumolib_or_skip()
+    import scenario_director as D
+    from semantic_world.lane import VCLASS
+    _, routes, _, _ = D.build("card:ParkingCutIn@Town03#19", str(tmp_path))
+    ego = next(line for line in open(routes) if 'id="ego_t"' in line)
+    b = VCLASS["passenger"]
+    assert 'accel="%.1f"' % b["accel"] in ego and 'decel="%.1f"' % b["brake_max"] in ego and "emergencyDecel" in ego

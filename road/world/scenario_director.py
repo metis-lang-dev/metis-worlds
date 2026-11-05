@@ -402,7 +402,11 @@ def build(name, work, seed=1, n=0, **_):
     cname, town, site, direction = parse(name)
     card = C.load(cname)
     pl = place(card, town, site, direction)
-    rows = ['<routes>', '<vType id="ego_t" accel="3.0" decel="6.0" sigma="0" maxSpeed="20" length="4.5" width="1.8"/>',
+    from semantic_world.lane import VCLASS             # the ego's bounds are the family's (the architect's ruling): the law
+    b = VCLASS["passenger"]                             # commands brake_max, so the host must be able to execute it
+    ego_t = '<vType id="ego_t" accel="%.1f" decel="%.1f" emergencyDecel="%.1f" sigma="0" maxSpeed="20" length="4.5" width="1.8"/>' % (
+        b["accel"], b["brake_max"], max(b["brake_max"], 9.0))
+    rows = ['<routes>', ego_t,
             '<vType id="actor_t" accel="3.0" decel="8.0" sigma="0" maxSpeed="25" length="4.5" width="1.8"/>',
             '<vType id="emergency_t" vClass="emergency" accel="3.5" decel="8.0" sigma="0" maxSpeed="30" speedFactor="normc(2.2,0,0.2,2.2)" length="5.0" width="2.0"/>']
     e = pl["ego"]
