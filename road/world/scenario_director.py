@@ -404,7 +404,6 @@ def build(name, work, seed=1, n=0, **_):
     pl = place(card, town, site, direction)
     rows = ['<routes>', '<vType id="ego_t" accel="3.0" decel="6.0" sigma="0" maxSpeed="20" length="4.5" width="1.8"/>',
             '<vType id="actor_t" accel="3.0" decel="8.0" sigma="0" maxSpeed="25" length="4.5" width="1.8"/>',
-            '<vType id="parked_t" accel="3.0" decel="8.0" sigma="0" maxSpeed="25" speedFactor="normc(4.2,0,0.2,4.2)" length="4.5" width="1.8"/>',
             '<vType id="emergency_t" vClass="emergency" accel="3.5" decel="8.0" sigma="0" maxSpeed="30" speedFactor="normc(2.2,0,0.2,2.2)" length="5.0" width="2.0"/>']
     e = pl["ego"]
     rows.append('<vehicle id="%s" type="ego_t" depart="0" departLane="%d" departPos="%.2f" departSpeed="%.2f"><route edges="%s"/></vehicle>'
@@ -414,8 +413,6 @@ def build(name, work, seed=1, n=0, **_):
         if pa.get("spawn"):
             continue
         vt = "emergency_t" if a.get("kind") == "emergency" else "actor_t"
-        if lane_type(net_of(town).getEdge(pa["route"][0]), pa["lane"]) == "parking" and vt == "actor_t":
-            vt = "parked_t"                    # on a 1.39 m/s parking lane: free to pull out at its script's speed
         length = float(a.get("length", C.KIND[a.get("kind", "car")][1]))
         # speedFactor 2.2: SUMO caps a vehicle at the lane's limit x its speedFactor (13.9 x 2.2 = 30.6), so the source's
         # ego + 25 m/s reaches emergency_t's maxSpeed 30. No bluelight device: SUMO's would move the ego aside itself (it changes others' lanes whatever their lane-change
