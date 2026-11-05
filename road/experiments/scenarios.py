@@ -57,7 +57,13 @@ def fired(card, out):
     for f in d.get("triggered") or []:                                  # an armed trigger (an actor's several steps: once)
         if (f["id"], f["t"]) not in seen:
             seen.add((f["id"], f["t"]))
-            parts.append("%s %.1f s%s" % (f["id"], f["t"], " (TTA %.1f)" % f["ego_tta"] if f.get("ego_tta") is not None else ""))
+            if f.get("target_tta") is not None and f.get("target") != "junction":    # the trigger's own target
+                at = " (%s: TTA %.2f, %.1f m)" % (f["target"], f["target_tta"], f["target_m"])
+            elif f.get("target") == "junction" and f.get("ego_tta") is not None:
+                at = " (junction: TTA %.2f)" % f["ego_tta"]
+            else:
+                at = " (%s)" % f.get("target", "")                     # junction_ahead, t, traveled: no ego distance
+            parts.append("%s %.1f s%s" % (f["id"], f["t"], at))
     timed = sorted({(t, i, w) for t, i, w in d.get("fired") or [] if w in ("brake", "lane", "go", "flow") and
                     not any(f["id"] == i for f in d.get("triggered") or [])})
     parts += ["%s %s %.1f s" % (i, w, t) for t, i, w in timed]           # a timed step (HardBreakRoute's brake at 5 s)
@@ -118,6 +124,9 @@ def main(argv=None):
             if not places:
                 continue
             runs = ["%s@%s" % (n, p) for p in places]
+            dirs = (card.get("sumo") or {}).get("directions")         # OVTP: both sides at each site (nina's 2c §1)
+            if dirs:
+                runs = ["%s~%s" % (r, d) for r in runs for d in dirs]
             runs += [] if a.no_variants else ["%s:%s@%s" % (n, v, places[0]) for v in C.variants(card)]
         else:
             runs = [n] + ([] if a.no_variants else ["%s:%s" % (n, v) for v in C.variants(card)])
@@ -131,7 +140,7 @@ def main(argv=None):
     (out_dir / "scenarios.jsonl").write_text("".join(json.dumps(r) + "\n" for r in rows))
     sumo = any(r.get("fired") is not None for r in rows)
     head = ["card", "variant", "where", "arrived", "t", "contact ticks", "collisions (events)", "violations", "planner", "responder",
-            "card's expect", "LB infractions", "RC", "DS"] + (["fired (ego's TTA to the junction)", "removed at contact",
+            "card's expect", "LB infractions", "RC", "DS"] + (["fired (ego's TTA to the trigger's target)", "removed at contact",
                                                                "held s (ours)"] if sumo else [])
     lines = ["| " + " | ".join(head) + " |", "|" + "---|" * len(head)]
     for r in rows:

@@ -197,7 +197,8 @@ def test_every_card_places_at_every_site_on_sumo():
 def test_a_sumo_card_name_and_the_cards_distances_from_the_ego():
     _sumolib_or_skip()
     import scenario_director as D
-    assert D.parse("card:ParkedObstacle:distance-clear1@Town03#42") == ("ParkedObstacle:distance-clear1", "Town03", 42)
+    assert D.parse("card:ParkedObstacle:distance-clear1@Town03#42") == ("ParkedObstacle:distance-clear1", "Town03", 42, None)
+    assert D.parse("card:OppositeVehicleTakingPriority@Town03#1~left")[2:] == (1, "left")
     with pytest.raises(ValueError, match="card:NAME"):
         D.parse("card:ParkedObstacle")
     pl = D.place(C.load("FollowLeadingVehicle"), "Town03", 0)
@@ -239,9 +240,12 @@ def test_ovtp_meets_the_ego_where_the_straight_ways_cross():
     assert a1["conflict"]["frm"] == "-19" and a5["conflict"]["frm"] == "20"           # the two minor arms of 730
     assert (a1["conflict"]["ego_in"], a1["conflict"]["adv_in"]) == (18.4, 9.5)         # nina's table
     assert a1["conflict"]["side"] == a5["conflict"]["side"] == "right"
+    assert a1["spawn"] is False                                            # in the run standing from t 0 (the architect's 2d)
     with pytest.raises(ValueError, match="crossing the ego's way"):
         D.place(dict(card, sites={"lb1": "Scenario10", "towns": {"Town03": [18]}}), "Town03", 18)
     assert D.parse("card:OppositeVehicleTakingPriority@Town03#S1.157")[2] == "S1.157"
+    left = D.place(card, "Town03", 1, "left")["actors"][0]["place"]["conflict"]           # the near half: harder
+    assert left["side"] == "left" and left["frm"] == "20" and (left["ego_in"], left["adv_in"]) == (7.9, 25.1)
 
 
 def test_plain_continuations_and_the_flow_source():

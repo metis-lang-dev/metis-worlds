@@ -10,7 +10,8 @@ sites: {lb1: Scenario10, towns: {Town03: [1, 2, 3, 4, 5, 6, 7, 8]}}
 # ego's 34 is 2.3 m after a merge), so neither can start back on the same straight
 dt: 0.1
 ticks: 900
-sumo: {ticks: 1800, back: 60}   # a red phase can outlast the exerciser's budget (Town03 #30 waited 30 s at a light);
+sumo: {ticks: 1800, back: 60, directions: [right, left]}   # both sides at each site: the source has left 49x, right 25x;
+# left is the near half, the ego's conflict 7.6-7.9 m into 730 against 18.1-18.4 m (nina's 2c review §1)   # a red phase can outlast the exerciser's budget (Town03 #30 waited 30 s at a light);
 # the S10 sites are 14-23 m before the junction, inside the 2.2 s TTA at once: the ego starts 60 m back
 ego: {v: 11.1}
 exerciser: {ego_s: 300.0, dest: 460.0, side_prio: false}

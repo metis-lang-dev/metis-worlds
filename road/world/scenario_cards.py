@@ -178,7 +178,7 @@ def sites(card, town):
     if not s.get("lb1") or town not in (s.get("towns") or {}):
         return []
     data = json.loads(SITES.read_text())["data"][town]
-    poses = data[s["lb1"]]
+    poses = data.get(s["lb1"], [])                    # Town01/02 have no S2 poses: FollowLeadingVehicle's S1.N sites there
     want = s["towns"][town]
     out = []
     for i in (range(len(poses)) if want == "all" else want):

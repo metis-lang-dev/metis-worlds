@@ -99,9 +99,12 @@ def parse(name):
     body = name[5:] if name.startswith("card:") else name
     card, _, rest = body.partition("@")
     town, _, site = rest.partition("#")
+    site, _, direction = site.partition("~")                # OVTP's direction at a site: #1~left (nina's 2c review §1)
+    if direction and direction not in ("left", "right"):
+        raise ValueError("%r: a direction is ~left or ~right" % name)
     if not town or not (site.isdigit() or C.SITE_REF.fullmatch(site)):
         raise ValueError("%r: a SUMO card is card:NAME[:VARIANT]@TOWN#SITE" % name)
-    return card, town, int(site) if site.isdigit() else site
+    return card, town, int(site) if site.isdigit() else site, direction or None
 
 
 def _heading_at(shape, pos):
@@ -170,7 +173,7 @@ def _room_behind(edge, pos):
         room += prev.getLength()
 
 
-def place(card, town, site):
+def place(card, town, site, direction=None):
     """The card at SITE of TOWN: {site: (edge, lane, pos), ego: {route, lane, pos, v}, actors: [...], junction_s}."""
     poses = C.sites(card, town)
     p = next((q for q in poses if q["i"] == site), None)
@@ -218,7 +221,10 @@ def place(card, town, site):
             tta = float((a.get("trigger") or {}).get("tta", 0.0))      # does from the trigger's TTA (the source's sync)
             sp = max([float(st.get("speed", 0.0)) for st in a.get("script") or []] + [0.0])
             item["place"] = _side(edge, route, sp * tta if sp and tta else SIDE_M, town=town, li=li, sp=sp, tta=tta,
-                                  side=at.get("from"))
+                                  side=direction or at.get("from"))
+            if a.get("sync"):                                # CARLA's way and the exerciser's (the architect's 2d): in the
+                item["place"]["spawn"] = False               # run standing at its start from t 0, started at the trigger;
+                                                             # spawned moving at the trigger it was unseen until then
         elif at.get("opposite") and a.get("flow"):          # a continuous flow's source (OppositeActorFlow): AHEAD m
             ref = next((b for b in expanded if b["id"] == at.get("beyond")), None)      # beyond the BEYOND actor
             s_src = pos + shift + float(at.get("ahead", 0.0)) + (float(ref["at"].get("ahead", 0.0)) if ref else 0.0)
@@ -328,14 +334,20 @@ def _side(edge, route, before=None, town=None, li=0, sp=0.0, tta=0.0, side=None)
                 found.append((frm, nxt, conflict))
                 continue
             if sp and tta:
-                before = max(1.0, sp * (tta + hit[0] / max(1.0, edge.getSpeed())) - hit[1])
+                before = max(1.0, sp * (tta + hit[0] / _ego_v(edge)) - hit[1])
         return _side_way(frm, nxt, before, mine, conflict)
     if found:                                      # none from SIDE: the other side's (recorded in `conflict`)
         frm, nxt, conflict = found[0]
         if sp and tta:
-            before = max(1.0, sp * (tta + conflict["ego_in"] / max(1.0, edge.getSpeed())) - conflict["adv_in"])
+            before = max(1.0, sp * (tta + conflict["ego_in"] / _ego_v(edge)) - conflict["adv_in"])
         return _side_way(frm, nxt, before, mine, conflict)
     raise ValueError("no side road at the junction after %s%s" % (edge.getID(), " crossing the ego's way" if ego_way else ""))
+
+
+def _ego_v(edge):
+    """The ego's speed on EDGE for timing: its limit, the town's 50 km/h where the net says less than 5 m/s (Town03's edge
+    3 reads 1.39 m/s, a net artifact; the family drives 14.25 there)."""
+    return edge.getSpeed() if edge.getSpeed() >= 5.0 else 13.89
 
 
 def _side_way(frm, nxt, before, mine, conflict):
@@ -354,9 +366,9 @@ def _side_way(frm, nxt, before, mine, conflict):
 
 def build(name, work, seed=1, n=0, **_):
     """sumo_world.SCENARIOS' contract for a card: (net, routes, script, director)."""
-    cname, town, site = parse(name)
+    cname, town, site, direction = parse(name)
     card = C.load(cname)
-    pl = place(card, town, site)
+    pl = place(card, town, site, direction)
     rows = ['<routes>', '<vType id="ego_t" accel="3.0" decel="6.0" sigma="0" maxSpeed="20" length="4.5" width="1.8"/>',
             '<vType id="actor_t" accel="3.0" decel="8.0" sigma="0" maxSpeed="25" length="4.5" width="1.8"/>',
             '<vType id="emergency_t" vClass="emergency" accel="3.5" decel="8.0" sigma="0" maxSpeed="30" speedFactor="normc(2.2,0,0.2,2.2)" length="5.0" width="2.0"/>']
@@ -408,6 +420,7 @@ class Director:
         self.driven = 0.0
         self.ended, self.stood = None, 0.0                                 # the card's `end` (FollowLeadingVehicle's)
         self.sync = {}                                                     # a `sync` actor: {phase, v, t_hold, closest_m}
+        self.going = set()                                                 # actors whose go/speed step has fired
 
     def _dist(self, c, edge, pos):
         try:
@@ -415,6 +428,23 @@ class Director:
         except Exception:                                                  # noqa: BLE001 — not on its route
             return None
         return None if d is None or d < -1e6 else d
+
+    def _target(self, c, a, when):
+        """The point the trigger WHEN measures to (nina's 2c review §3) and the ego's distance to it at firing:
+        (beside | junction | gap | near | time | traveled | junction_ahead, metres or None)."""
+        ids = c.vehicle.getIDList()
+        if when.get("beside") and a["id"] in ids:
+            return "beside", self._dist(c, c.vehicle.getRoadID(a["id"]), c.vehicle.getLanePosition(a["id"]))
+        if when.get("at") == "junction":
+            j = self.pl["junction"]
+            return "junction", self._dist(c, j["edge"], j["pos"] - 0.1)
+        if "gap" in when and a["id"] in ids:
+            return "gap", self._dist(c, c.vehicle.getRoadID(a["id"]),
+                                     max(0.0, c.vehicle.getLanePosition(a["id"]) - c.vehicle.getLength(a["id"])))
+        if "near" in when and when["near"] in ids:
+            (ex, ey), (ox, oy) = c.vehicle.getPosition(EGO), c.vehicle.getPosition(when["near"])
+            return "near", math.hypot(ex - ox, ey - oy)
+        return next((k for k in ("t", "traveled", "junction_ahead") if k in when), "other"), None
 
     def _hit(self, c, t, a, when):
         if "t" in when and t >= when["t"] - 1e-9:
@@ -465,6 +495,8 @@ class Director:
 
     def _step(self, c, t, a, steps, what, arg):
         vid, pa = a["id"], a["place"]
+        if what in ("go", "speed"):
+            self.going.add(vid)
         if what == "flow":                                                 # start the flow: its first car now
             self.flows[vid] = {"on": True, "n": 0, "last": None, "gap": None, "at": round(t, 2)}
             self._flow_car(c, a)
@@ -543,8 +575,11 @@ class Director:
             if self._hit(c, t, a, when):
                 j = self.pl["junction"]
                 d = self._dist(c, j["edge"], j["pos"] - 0.1)
+                kind, dt = self._target(c, a, when)
                 self.triggered.append({"t": round(t, 2), "id": a["id"],
-                                       "ego_tta": round(d / max(ego_v, 0.1), 2) if d is not None and d >= 0 else None})
+                                       "ego_tta": round(d / max(ego_v, 0.1), 2) if d is not None and d >= 0 else None,
+                                       "target": kind, "target_m": None if dt is None else round(dt, 1),
+                                       "target_tta": None if dt is None else round(dt / max(ego_v, 0.1), 2)})
                 if after > 0:
                     self.queue.append((t + after, a, steps))
                 else:
@@ -595,7 +630,7 @@ class Director:
         (or the actor within 10 m of it) it holds that speed: the ego's braking then is its own."""
         for a in self.pl["actors"]:
             vid, cf = a["id"], a["place"].get("conflict")
-            if not a.get("sync") or not cf or vid not in ids or vid not in self.spawned:
+            if not a.get("sync") or not cf or vid not in ids or vid not in self.going:
                 continue
             st = self.sync.setdefault(vid, {"phase": "sync", "v": None, "t_hold": None, "closest_m": None})
             (ex, ey), (ax, ay) = c.vehicle.getPosition(EGO), c.vehicle.getPosition(vid)

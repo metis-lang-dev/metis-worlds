@@ -3,7 +3,9 @@ title: a lead 25 m ahead at 10 m/s brakes hard to a stop 20 m before the next ju
 source: {suite: lb1, type: Scenario2 FollowLeadingVehicle, code: srunner/scenarios/follow_leading_vehicle.py:61-143, pin: scenario_runner v0.9.13 85109e7ce130, license: "CARLA scenario_runner, MIT License, Copyright (c) 2018 CARLA"}
 exercises: planner brake_follow, keep_lead; responder brake_lon
 verdict: PORTABLE
-sites: {lb1: Scenario2, towns: {Town03: all}}
+sites: {lb1: Scenario2, towns: {Town03: all, Town01: [S1.0, S1.1], Town02: [S1.0, S1.1]}}
+# Town03's S2 sites have a free lane: the ego changes around the stopped lead; the S1 long single-lane runs of Town01/02
+# (152-259 m free) test the stop behind it where no lane is free (nina's 2c review §2)
 dt: 0.1
 ticks: 900
 ego: {v: 10.0}
