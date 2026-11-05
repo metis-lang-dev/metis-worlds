@@ -354,6 +354,15 @@ def past_last_stop(dyn, d_enter):
     return stop(dyn.vmin if dyn.vmin is not None else dyn.vmax, dyn.brake_min) + dyn.min_dist >= d_enter
 
 
+def stops_behind(ego, lead, gap, brake):
+    """The ego, braking at BRAKE from its speed, slows to its lead's speed (the lead going on at its own) before closing GAP (the
+    floor kept): the cut-in's present test (the rule 5 ruling, extended to a car that cut in and is now the lead)."""
+    dv = (ego.vmax or 0.0) - (lead.vmax or 0.0)
+    if dv <= 0:
+        return True
+    return dv * dv / (2.0 * brake) + (ego.min_dist or 0.0) < gap
+
+
 def ego_stops_short_max(dyn, d_enter):
     """The ego can stop short of a zone D_ENTER away only braking its hardest (brake_max): rule 5 escalated."""
     if d_enter is None or d_enter <= 0:
@@ -418,7 +427,8 @@ class Situation:
                 self.away.add(p.id)               # held once it moves, while the other stands
             else:
                 self.away.discard(p.id)
-            if dangerous and p.type == "xing_ego_prio" and r_lon in ("brake_min", "brake_max"):
+            if dangerous and ((p.type == "xing_ego_prio" and r_lon in ("brake_min", "brake_max"))
+                              or (p.type == "same_dir" and r_lon == "brake_max")):
                 self.escalated.add(p.id)          # held at least that while the pair stays dangerous
             else:
                 self.escalated.discard(p.id)      # safe again, or released (the other stopped; the ego past stopping short)
@@ -569,7 +579,11 @@ def respond(p, dangerous, before, xbefore=None, escalated=False):
     the zone (ego_stops_short: inside it, clear it, never hold), and released once the other has stopped (road-2
     item 1); one was in front at a safe
     distance and it was the ego → none (the front one drives on); otherwise (no time overlap held, the ego was the
-    rear one or the non-priority one, or never safe) → brake_min. Lateral: none (a conflict is assumed)."""
+    rear one or the non-priority one, or never safe) → brake_min. Lateral: none (a conflict is assumed).
+    The two cases read apart (the rule 5 ruling): at a CROSSING the priority holder brakes while braking can still stop it short
+    of the zone and clears the zone when neither bound can; BEHIND A LEAD that cut in, it brakes at brake_min while that keeps it
+    behind, at brake_max while only that does, and at brake_max still when neither does: "clear the zone" has no meaning behind
+    a lead, and a rear-end it cannot avoid is met at the hardest braking."""
     if not dangerous or p.type == "not_relevant":
         return "none", "none"
     if p.type == "xing_ego_prio":                              # rule 5 from the PRESENT only (the ruling): the blame facts
@@ -599,6 +613,11 @@ def respond(p, dangerous, before, xbefore=None, escalated=False):
         return lon, lat
     if lat_before:                                              # laterally safe before: brake laterally; and when the other
         if p.type == "same_dir" and p.lon == "in_front" and p.lat == "overlap":   # has become the ego's lead at an unsafe
-            return lon, lat                                     # distance (a cut-in), brake along the way whatever the blame
+            # distance (a cut-in): brake along the way whatever the blame, from the PRESENT as at a crossing (the ruling's (2)
+            # extended, -87279b): brake_min while that keeps the ego behind it, brake_max while only that does (ESCALATED holds
+            # it), and brake_max still when neither does: a rear-end it cannot avoid is met at the hardest braking
+            if escalated or not stops_behind(p.ego, p.obj, p.d_lon, p.ego.brake_min):
+                return "brake_max", lat
+            return lon, lat
         return "none", lat
     return lon, "none"                                          # longitudinally safe before: brake along the way

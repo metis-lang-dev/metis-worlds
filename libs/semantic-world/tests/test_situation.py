@@ -182,3 +182,20 @@ def test_a_cut_in_that_became_the_lead_is_braked_for_whatever_the_blame():
     side = Situation(memory={"c:same_dir": (False, True)})        # still beside (not the lead): lateral only, as before
     [t] = side.check([Pair("c:same_dir", "same_dir", "in_front", "at_left", 8.0, 0.2, ego, obj)])
     assert t.resp_lon == "none"
+
+
+def test_a_cut_in_lead_too_close_for_brake_min_gets_brake_max_held():
+    """The rule 5 ruling (2) extended to the cut-in (-87279b, the architect): brake_min while it keeps the ego behind the new
+    lead, brake_max while only that does, ESCALATED holding it while the pair stays dangerous."""
+    from semantic_world.situation import Dynamics, Pair, Situation
+    ego = Dynamics(vmin=11.1, vmax=11.1, accel=2.0, brake_min=4.0, brake_max=8.0, rho=0.5, min_dist=1.0)
+    obj = Dynamics(vmin=3.2, vmax=3.2, accel=2.0, brake_min=4.0, brake_max=8.0, rho=0.5, min_dist=1.0)
+    cut = lambda gap: Pair("c:same_dir", "same_dir", "in_front", "overlap", gap, 0.0, ego, obj)
+    far = Situation(memory={"c:same_dir": (False, True)})
+    [s] = far.check([cut(12.0)])                                  # 7.8 m + 1 < 12: brake_min keeps it behind
+    assert s.dangerous and s.resp_lon == "brake_min"
+    near = Situation(memory={"c:same_dir": (False, True)})
+    [s] = near.check([cut(6.5)])                                  # ParkingCutIn's cut: 7.8 + 1 > 6.5 > 3.9 + 1: only brake_max
+    assert s.resp_lon == "brake_max" and "c:same_dir" in near.escalated
+    [s] = near.check([cut(9.0)])                                  # still dangerous: held at brake_max
+    assert s.resp_lon == "brake_max"

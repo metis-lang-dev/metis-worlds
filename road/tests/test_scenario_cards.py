@@ -122,11 +122,8 @@ def test_a_card_plays_on_the_exerciser_with_its_trigger_armed():
 needs_agent = pytest.mark.skipif(importlib.util.find_spec("metis_agent") is None, reason="no metis_agent (its venv)")
 # a card the family does not hold: a surprise record of the road workspace (metis-worlds road/.metis/surprises), for the
 # pi loop (step 3); the card stays as the source places it, the family is what changes
-KNOWN = {
-    "OppositeVehicleTakingPriority": "20261105T031542-503be4 (no brake for a car taking priority at TTA 2.2 s)",
-    "StaticCutIn": "20261105T031542-40f229 (no brake for a close cut-in: RSS's duty is the other's)",
-    "ParkingCutIn": "20261105T031542-87279b (no brake for a car pulling out at 20 km/h)",
-}
+KNOWN = {   # the cards a known surprise still fails; the rule 5 ruling (road-scenarios s-e23be780) answered 503be4 (OVTP),
+}           # 40f229 (StaticCutIn) and 87279b (ParkingCutIn): they hold as the source on the exerciser, so they are regressions now
 
 
 def road_tree():
