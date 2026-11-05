@@ -274,9 +274,9 @@ def test_town03_lane_types_parking_cut_in_and_outside_lanes():
     assert D.lane_type(net.getEdge("20"), 0) == "parking" and D._drive_lane(net.getEdge("20")) == 1
     assert D.lane_type(D.net_of("Town01").getEdge("-1"), 0) == "driving"
     pl = D.place(C.load("ParkingCutIn"), "Town03", 19)
-    assert pl["ego"]["pos"] == 20.0 and pl["ego"]["lane"] == 1
+    assert pl["ego"]["pos"] == 0.1 and pl["ego"]["lane"] == 1
     blocker, adversary = (a["place"] for a in pl["actors"])
-    assert (blocker["lane"], blocker["pos"], adversary["pos"]) == (0, 48.0, 55.0)          # the source's 28 / 35 m
+    assert (blocker["lane"], blocker["pos"], adversary["pos"]) == (0, 48.1, 55.1)          # +48 / +55 m from the ego
     spec = importlib.util.spec_from_file_location("scenarios_o", ROAD / "experiments" / "scenarios.py")
     sx = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(sx)

@@ -6,8 +6,9 @@ verdict: PORTABLE
 sites: {lb1: Scenario1, towns: {Town03: [19, 91, 95, 96]}}
 # Town03's real parking lanes (the architect's ruling on nina's 2d review): the four edges with a parking _0 beside the driving
 # _1 long enough for the source's layout, 20 (#19), 76 (#91), -20 (#95), -76 (#96); 20/-20 are junction 730's minor arms
-# (OVTP's): a separate card, not one place. The poses sit 10-22 m before their edge's end: the ego from s 20 on the same edge
-sumo: {start_s: 20, at: {blocker: {ahead: 28}, adversary: {ahead: 35}}}   # the source's 28 / 35 m, on the parking lane
+# (OVTP's): a separate card, not one place. The poses sit 10-22 m before their edge's end: the ego from the edge's start,
+# the cars at +48 / +55 m on the parking lane, so the ego has settled at cruise before the TTA passes 2.35 s (the ruling)
+sumo: {start_s: 0.1, at: {blocker: {ahead: 48}, adversary: {ahead: 55}}}
 dt: 0.1
 ticks: 1200
 ego: {v: 11.1}

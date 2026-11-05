@@ -95,7 +95,7 @@ def row(card, name, out):
             "violations": out.get("violations"),
             "planner": out.get("planner_kinds"), "responder": out.get("responder_kinds"), "first": out.get("first"), "fails": fails,
             "lb": inf, "rc": done, "ds": C.driving_score(inf, done), "exercises": card.get("exercises"),
-            "fired": fired(card, out), "removed": d.get("removed") or [],
+            "fired": fired(card, out), "sensor_range": out.get("sensor_range"), "removed": d.get("removed") or [],
             "held_s": round(sum((d.get("emergency_held_s") or {}).values()), 1) if d.get("emergency_held_s") is not None
             and any(a.get("kind") == "emergency" for a in card.get("actors") or []) else None,
             "director": out.get("director")}
@@ -111,6 +111,7 @@ def main(argv=None):
     ap.add_argument("--trace", help="a directory: each run's trace (metis.trace) under it")
     ap.add_argument("--towns", help="Town01,… (SUMO: the towns played; default every town of a card's sites)")
     ap.add_argument("--sites", type=int, default=0, help="SUMO: the first N sites of each town (default all)")
+    ap.add_argument("--sensor-range", type=float, default=None, help="the ego's sensor range, m (both hosts' default: 100)")
     a = ap.parse_args(argv)
     out_dir = Path(a.out)
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -136,7 +137,7 @@ def main(argv=None):
         for name in runs:
             c = C.load(name.partition("@")[0])
             res = rt.run("card:" + name, a.seed, out_dir / "runs", ticks=ticks_of(c, a.world), world_kind=a.world,
-                         trace=a.trace)
+                         trace=a.trace, sensor_range=a.sensor_range)
             r = row(c, name, res)
             rows.append(r)
             print(json.dumps(r), flush=True)

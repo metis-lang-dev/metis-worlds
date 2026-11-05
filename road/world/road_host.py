@@ -82,7 +82,8 @@ def new_world(run):
     if run.get("world") == "sumo":
         import sumo_host
         return sumo_host.Loop(run)
-    return road_world.RoadWorld(run.get("scenario", "cruise"), int(run.get("seed", 1)))
+    return road_world.RoadWorld(run.get("scenario", "cruise"), int(run.get("seed", 1)),
+                                sensor_range=float((run.get("sensor") or {}).get("range", road_world.SENSOR_RANGE)))
 
 
 def manifest(package_dir):

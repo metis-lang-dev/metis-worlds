@@ -81,7 +81,7 @@ class Loop:
         self.world = SumoWorld(self.scenario, work, seed=self.seed, traci=traci, **args)
         self.lanemap = lanemap_of(self.world.net)
         sen = level.get("sensor", {})
-        self.perc = Perception(self.lanemap, Sensor(range=sen.get("range", 60.0), miss=sen.get("miss", 0.0),
+        self.perc = Perception(self.lanemap, Sensor(range=sen.get("range", SENSOR_RANGE), miss=sen.get("miss", 0.0),
                                                     seed=int(level.get("seed", 1))), dt=self.world.dt)
         self.sit, self.truth_sit = Situation(), Situation()
         self.cmd, self.life = ("keep", None), 0
@@ -285,7 +285,8 @@ class Loop:
                 "latency_truth": self.latency, "first": self.violations[:3],
                 "ms": {k: mean(k) for k in ("restrict", "sumo", "perceive", "project", "account")},
                 "vehicles_max": max((m["vehicles"] for m in self.ms), default=0),
-                "undue_brakes": len(self.undue), "rss": rss_card()}
+                "undue_brakes": len(self.undue), "rss": dict(rss_card(), sensor_range=self.perc.sensor.range),
+                "sensor_range": self.perc.sensor.range}
 
 
     def close(self):
@@ -331,6 +332,9 @@ def danger_rows(states, where, pairs=None):
                 row.update({k: round(getattr(p, k), 2) for k in ("d_enter", "d_leave", "o_enter", "o_leave") if getattr(p, k) is not None})
             out.append(row)
     return out
+
+
+SENSOR_RANGE = 100.0      # the ego's sensor range (m), the run's `sensor.range`; both hosts' default (road-scenarios 2f)
 
 
 def rss_card():

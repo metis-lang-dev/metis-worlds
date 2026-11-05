@@ -47,6 +47,22 @@ LANE_W = 3.5
 SPEED = 16.67                      # the main road's limit (60 km/h)
 KMH = 1 / 3.6
 CROSSWALK_S, JUNCTION_S, MERGE_S = 250.0, 400.0, 500.0
+SENSOR_RANGE = 100.0               # what the ego can see (m), both hosts' default (the architect's ruling, road-scenarios 2f:
+                                   # LB2 agents carry 100 m+ sensors; a driver sees a car waiting at a side road that far)
+
+
+def xy(lane, s):
+    """A place on the exerciser's road in metres (the sensor range's distance): the main lanes along x at y = 3.5 x
+    index, the side road c_0 crossing them at JUNCTION_S from the right (its s 30 + 3.5 k + 1.75 is lane k's centre), the
+    crosswalk w_0 likewise at CROSSWALK_S, the on-ramp r_0 beside e_0."""
+    if lane == "c_0":
+        return JUNCTION_S + 0.5 * LANE_W, s - 30.0 - 0.5 * LANE_W
+    if lane == "w_0":
+        return CROSSWALK_S + 2.0, s - 1.5 - 0.5 * LANE_W
+    if lane == "r_0":
+        return s, -LANE_W
+    tail = str(lane).rsplit("_", 1)[-1]
+    return s, LANE_W * int(tail) if tail.isdigit() else 0.0
 
 
 def road(side_prio=False):
@@ -101,8 +117,9 @@ class Ego:
 
 
 class RoadWorld:
-    def __init__(self, scenario="cruise", seed=1):
+    def __init__(self, scenario="cruise", seed=1, sensor_range=SENSOR_RANGE):
         self.name, self.seed, self.rng = scenario, seed, random.Random(seed)
+        self.sensor_range = float(sensor_range)
         self.t, self.tick = 0.0, 0
         # a scene card (road-scenarios s-e23be780): "card:NAME[:VARIANT]", road/scenarios/NAME.yaml placed on this road
         spec = SCENARIOS[scenario](self.rng) if scenario in SCENARIOS else _card(scenario)(self.rng)
@@ -136,12 +153,18 @@ class RoadWorld:
     def live(self):
         return [ag for ag in self.agents if not ag.done]
 
+    def seen(self):
+        """The live agents within the sensor's range of the ego (the facts' world; the RSS accounting keeps every one)."""
+        ex, ey = xy(self.ego.m.lane, self.ego.m.s)
+        return [ag for ag in self.live() if math.hypot(xy(ag.m.lane, ag.m.s)[0] - ex, xy(ag.m.lane, ag.m.s)[1] - ey)
+                <= self.sensor_range]
+
     def observe(self):
         """This tick's facts over roles (road_facts, every host's projection), once a tick: the situation layer's
         memory moves one cycle per tick, and the restrictor's fold is the domains'. → (facts, roles, fold, states)."""
         if getattr(self, "_obs_tick", None) != self.tick:
             self.ego.m.route = [self.ego.m.lane]
-            live = self.live()
+            live = self.seen()
             self._obs = road_facts.facts(self.map, self.ego.m, self.ego.v, [ag.m for ag in live], self.sit,
                                          changing=self.ego.change_side, dest=self.dest, turn=self.zone_turn,
                                          left_from=(self.ego.left_from[0], self.t - self.ego.left_from[1]) if self.ego.left_from else None,
@@ -369,7 +392,7 @@ class RoadWorld:
     def summary(self):
         return {"scenario": self.name, "seed": self.seed, "t": round(self.t, 1), "arrived": self.arrived(),
                 "s": round(self.ego.m.s, 1), "collisions": len(self.collisions), "collision_events": self.collision_events(),
-                "rc": self.completion(),
+                "rc": self.completion(), "sensor_range": self.sensor_range,
                 "violations": len(self.violations), "restricted": self.restricted,
                 "first": (self.collisions + self.violations)[:3]}
 

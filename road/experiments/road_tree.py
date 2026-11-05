@@ -81,7 +81,7 @@ def config(journal, seed):
     return cfg
 
 
-def run(scenario, seed, out_dir, ticks=1500, world_kind=None, vehicles=None, trace=None):
+def run(scenario, seed, out_dir, ticks=1500, world_kind=None, vehicles=None, trace=None, sensor_range=None):
     if trace and not has_reader():
         raise no_reader("this metis-agent has no metis_agent.trace")
     from metis_agent import service as S
@@ -96,6 +96,8 @@ def run(scenario, seed, out_dir, ticks=1500, world_kind=None, vehicles=None, tra
         run_spec["world"] = world_kind
     if vehicles is not None:
         run_spec["vehicles"] = vehicles
+    if sensor_range is not None:                      # the ego's sensor range (m); both hosts default to 100
+        run_spec["sensor"] = {"range": float(sensor_range)}
     spec.write_text(json.dumps(run_spec))
     os.environ["METIS_ROAD_RUN"] = str(spec)
     cfg = config(str(out_dir / ("j-%s-%d.jsonl" % (scenario, seed))), seed)

@@ -58,11 +58,24 @@ def test_the_facts_are_one_projection_for_every_host():
     for _ in range(150):
         w.step()
     facts = w.observe()[0]
-    live = w.live()
+    live = w.seen()                                   # the movers within the sensor's range (road-scenarios 2f)
     again = road_facts.facts(w.map, w.ego.m, w.ego.v, [a.m for a in live], Situation(), changing=w.ego.change_side,
                              dest=w.dest, turn=w.zone_turn, speeds={a.m.id: a.v for a in live})[0]
     memory_free = {a for a in facts if not a.startswith(("safe_before(", "xing_before("))}
     assert memory_free == {a for a in again if not a.startswith(("safe_before(", "xing_before("))}
+
+
+def test_the_sensor_range_bounds_what_the_ego_sees():
+    """Both hosts' sensor range (default 100 m, the run's `sensor.range`): a mover beyond it is out of the facts, still
+    in the RSS accounting's movers."""
+    w = road_world.RoadWorld("cruise", 1)
+    near = Mover("near", "e_1", w.ego.m.s + 50.0)
+    far = Mover("far", "e_1", w.ego.m.s + 150.0)
+    side = Mover("side", "c_0", 0.0)                          # the side road's start: 80 m before the junction at s 400
+    w.agents = [road_world.Agent(m, 0.0, moving=False) for m in (near, far, side)]
+    assert {a.m.id for a in w.seen()} == {"near"} and len(w.live()) == 3
+    assert w.summary()["sensor_range"] == 100.0
+    assert road_world.RoadWorld("cruise", 1, sensor_range=300.0).sensor_range == 300.0
 
 
 def test_s_is_the_front():
