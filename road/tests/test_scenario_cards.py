@@ -260,6 +260,13 @@ def test_plain_continuations_and_the_flow_source():
     pl = D.place(C.load("ParkedObstacleTwoWays"), "Town01", 1)
     flow = pl["actors"][1]["place"]
     assert flow["flow"] and flow["spawn"] and flow["src_m"] == 195.0                   # 105 m beyond the parked car's 90
+    # Town01 #0: the source lies past the site edge's end, over the junction (the source's waypoint `next` goes on): on the
+    # reverse of the route's next edge, its way back along the ego's road, never clipped to the site edge (in sight: road-gap-sumo)
+    pl = D.place(C.load("ParkedObstacleTwoWays"), "Town01", 0)
+    src, ego = pl["actors"][1]["place"], pl["ego"]
+    assert ego["route"][:2] == ["-1", "-2"] and src["route"][:3] == ["2", "1", "0"]
+    run = D.net_of("Town01").getEdge("-1").getLength() - ego["pos"] + D.net_of("Town01").getEdge("2").getLength() - src["pos"]
+    assert abs(run - src["src_m"]) < 15.0                                  # the junction's internal metres between
 
 
 def test_town03_lane_types_parking_cut_in_and_outside_lanes():

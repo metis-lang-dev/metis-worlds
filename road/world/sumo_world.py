@@ -7,7 +7,15 @@ over TraCI, headless, at the responder's step (0.1 s), the ego under the stack's
   out-of-order one silently).
 - The ego: speed mode 0 and lane-change mode 0 (no SUMO safety, no strategic changes: the RSS stack is what is under
   test, and a TraCI change is done as asked); its acceleration set each step (as the speed it gives, setSpeed), a lane
-  change through changeLane with SUMO's continuous change of `LC_DURATION` s.
+  change through changeLane with SUMO's continuous change of `LC_DURATION` s. A pass through the OPPOSITE direction's lane
+  (668e45; SUMO has no lane change into it) is the CARRY: the host moves the ego's body itself each step (`carry_start`,
+  `carry_back`), along its route lane at the commanded speed, one lane width to its left (moved over in LC_DURATION, as a
+  change), by moveToXY (keepRoute 2: SUMO maps the body onto the lane it is on, so its collisions are SUMO's own). Over the
+  opposite lane SUMO's position is the body's REAR facing that lane's way: its lane body is then the body's footprint (a
+  head-on contact is SUMO's gap below 0). The truth reports the carried body as the host holds it: on the opposite lane its
+  s in that lane's coordinates (road_facts' heading frame), its route the route's. SUMO replaces a moved vehicle's route
+  and its odometer runs with the lane it is mapped on, so the route is restored on the way back and `ego_distance` (the
+  director's RC) counts the carry's metres along the route lane.
 - The truth per step: every vehicle and person as a pose (the centre: SUMO's position is the front bumper), its
   lane and s, speed, vClass, length and width; the collisions the step had (SUMO's own check, junctions included,
   `warn`: nobody is removed) and whether the ego was in one.
@@ -37,6 +45,29 @@ VTYPES = {                     # the old harness's planted styles (metispy sumo_
     "calm": dict(accel=1.0, decel=2.0, sigma=0.2, maxSpeed=8.0, tau=1.4, color="0,0,1"),
     "aggr": dict(accel=3.0, decel=4.5, sigma=0.8, maxSpeed=15.0, tau=0.9, color="1,0,0"),
 }
+
+
+def along(shape, s):
+    """(x, y, heading in radians from +x) at S metres along the polyline SHAPE (clamped to its ends)."""
+    s = max(0.0, s)
+    for (x0, y0), (x1, y1) in zip(shape, shape[1:]):
+        seg = math.hypot(x1 - x0, y1 - y0)
+        if s <= seg or (x1, y1) == shape[-1]:
+            f = min(1.0, s / seg) if seg > 0 else 0.0
+            return x0 + f * (x1 - x0), y0 + f * (y1 - y0), math.atan2(y1 - y0, x1 - x0)
+        s -= seg
+    x, y = shape[-1]
+    return x, y, 0.0
+
+
+def beside(shape, s, lat):
+    """(x, y, heading) S along SHAPE, LAT metres to the left of its direction."""
+    x, y, h = along(shape, s)
+    return x - lat * math.sin(h), y + lat * math.cos(h), h
+
+
+def sumo_angle(h):
+    return (90.0 - math.degrees(h)) % 360.0           # SUMO: degrees from north, clockwise
 
 
 def load_traci():
@@ -226,6 +257,9 @@ class SumoWorld:
         self.ego_seen = self.ego_done = False
         self.added, self.closed = 0, {}
         self.conn = None
+        self.carry, self._restore, self.odo_fix = None, None, 0.0     # the pass through the opposite lane (the module's head)
+        if self.director is not None:
+            self.director.odometer = lambda c: self.ego_distance()
 
     def cmd(self):
         return [self.sumo, "-n", self.net, "-r", self.routes, "--step-length", str(self.dt), "--seed", str(self.seed),
@@ -262,6 +296,14 @@ class SumoWorld:
         if self.director is not None:
             self.director.tick(c, self.t)
         c.simulationStep()
+        if self._restore is not None and EGO in c.vehicle.getIDList():       # back from a carry: its route and odometer
+            route, v, odo = self._restore
+            road = c.vehicle.getRoadID(EGO)
+            if road in route:
+                c.vehicle.setRoute(EGO, route[route.index(road):])
+            c.vehicle.setSpeed(EGO, v)
+            self.odo_fix = odo + v * self.dt - c.vehicle.getDistance(EGO)
+            self._restore = None
         self.steps += 1
         self.t = round(self.steps * self.dt, 6)
         for k in c.simulation.getCollisions():
@@ -308,6 +350,8 @@ class SumoWorld:
             p.update(vclass=c.vehicle.getVehicleClass(vid), index=c.vehicle.getLaneIndex(vid), type=c.vehicle.getTypeID(vid))
             if vid == EGO:
                 p["route"] = list(c.vehicle.getRoute(vid))
+                if self.carry is not None:
+                    self.carried_pose(p)
             out[vid] = p
         for pid in c.person.getIDList():
             p = self._pose(c.person, pid, vehicle=False)
@@ -455,10 +499,74 @@ class SumoWorld:
         c = self.conn
         return {tl: c.trafficlight.getRedYellowGreenState(tl) for tl in c.trafficlight.getIDList()}
 
+    # ── the carry: a pass through the opposite direction's lane (668e45) ──
+    def carry_start(self, opp):
+        """Begin the pass into the opposite lane OPP beside the ego's lane: the body moves over in LC_DURATION."""
+        v, ln = self.conn.vehicle, self.conn.lane
+        home = v.getLaneID(EGO)
+        self.carry = {"home": home, "opp": opp, "shape": [tuple(p) for p in ln.getShape(home)], "len": ln.getLength(home),
+                      "W": 0.5 * (ln.getWidth(home) + ln.getWidth(opp)), "L": v.getLength(EGO), "s": v.getLanePosition(EGO),
+                      "lat": 0.0, "to": None, "v": v.getSpeed(EGO), "route": list(v.getRoute(EGO)), "edge": v.getRoadID(EGO),
+                      "index": v.getLaneIndex(EGO), "odo": self.ego_distance(), "forced": False}
+        self.carry["to"], self.carry["s0"] = self.carry["W"], self.carry["s"]
+
+    def carry_back(self):
+        """Back onto the route lane (change_back, the restrictor's abort): the body moves over in LC_DURATION."""
+        if self.carry is not None:
+            self.carry["to"] = 0.0
+
+    def carry_side(self):
+        """Which lane the carried body is on: `opp` past half the way over, else `home` (None: no carry)."""
+        k = self.carry
+        return None if k is None else "opp" if k["lat"] >= 0.5 * k["W"] else "home"
+
+    def ego_distance(self):
+        """The ego's odometer along its way (the director's RC): SUMO's, but over a carry the metres along the route lane."""
+        k = self.carry
+        if k is not None:
+            return k["odo"] + k["s"] - k["s0"]
+        return self.conn.vehicle.getDistance(EGO) + self.odo_fix
+
+    def _carry(self, accel):
+        k, v = self.carry, self.conn.vehicle
+        k["v"] = max(0.0, k["v"] + float(accel or 0.0) * self.dt)
+        k["s"] += k["v"] * self.dt
+        if k["to"] and k["s"] + k["v"] * LC_DURATION >= k["len"]:      # the route lane ends: back before it (never expected:
+            k["to"], k["forced"] = 0.0, True                           # the pass is cleared only to end on its lane)
+        step = k["W"] * self.dt / LC_DURATION
+        k["lat"] = min(k["to"], k["lat"] + step) if k["lat"] < k["to"] else max(k["to"], k["lat"] - step)
+        if k["to"] == 0.0 and k["lat"] <= 1e-9:                        # home: on its lane again, the route restored next step
+            x, y, h = along(k["shape"], k["s"])
+            v.moveToXY(EGO, k["edge"], k["index"], x, y, angle=sumo_angle(h), keepRoute=2)
+            self._restore = (k["route"], k["v"], k["odo"] + k["s"] - k["s0"])
+            self.carry = None
+            return
+        if self.carry_side() == "opp":                                 # the rear, facing the opposite lane's way: its footprint
+            x, y, h = beside(k["shape"], k["s"] - k["L"], k["lat"])
+            ang = sumo_angle(h + math.pi)
+        else:
+            x, y, h = beside(k["shape"], k["s"], k["lat"])
+            ang = sumo_angle(h)
+        v.moveToXY(EGO, k["edge"], k["index"], x, y, angle=ang, keepRoute=2)
+
+    def carried_pose(self, p):
+        """The truth's pose of the carried ego P (sumo_world's own fields): the body as the host holds it."""
+        k = self.carry
+        x, y, h = beside(k["shape"], k["s"] - 0.5 * k["L"], k["lat"])
+        p.update(x=x, y=y, heading=h, speed=k["v"], route=list(k["route"]), carry=dict(home=k["home"], s=k["s"]))
+        if self.carry_side() == "opp":
+            p.update(lane=k["opp"], s=k["len"] - k["s"], lat=k["lat"] - k["W"])
+        else:
+            p.update(lane=k["home"], s=k["s"], lat=k["lat"], index=k["index"])
+        return p
+
     def control(self, accel=None, lane=None):
         """The restrictor's output for the next step: ACCEL (m/s², held one step) and LANE (the target lane index on
-        the ego's edge: a change of LC_DURATION; None: no change)."""
+        the ego's edge: a change of LC_DURATION; None: no change). Over a carry: its speed, the body moved by the carry."""
         if not self.ego_seen or self.ego_done:
+            return
+        if self.carry is not None:
+            self._carry(accel)
             return
         v = self.conn.vehicle
         if accel is not None:

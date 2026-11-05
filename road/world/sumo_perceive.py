@@ -103,8 +103,10 @@ class Perception:
         seen_cells = {road.cell(x["lane"], x["s"]) for x in dets}
         cells = set(visible)                          # what could be seen: the sight classes' (road_facts.seen_ahead, road_in_view)
         visible -= seen_cells                         # a cell with a detection in it is no negative evidence
-        route = ego_route(self.lanemap, e["lane"], e.get("route") or []) if e["lane"] in self.lanemap.lanes else [e["lane"]]
-        ego = {"lane": e["lane"], "s": e["s"], "speed": e["speed"], "route": route, "class": belief_class(e["vclass"])}
+        k = e.get("carry")                            # carried through the opposite lane (sumo_world's carry): the belief's ego
+        at = (k["home"], k["s"]) if k else (e["lane"], e["s"])            # on its route lane, level with the body
+        route = ego_route(self.lanemap, at[0], e.get("route") or []) if at[0] in self.lanemap.lanes else [at[0]]
+        ego = {"lane": at[0], "s": at[1], "speed": e["speed"], "route": route, "class": belief_class(e["vclass"])}
         self.map.cycle(dets, sorted(visible), ego)
         self.observed(dets)
         self.last = {"seen": seen, "detections": dets, "visible": len(visible), "truth_ids": sorted(others),

@@ -89,6 +89,30 @@ def test_on_the_oncoming_lane_a_car_close_ahead_on_the_route_lane_makes_it_busy(
     assert "side_busy(right)" in out and "side_clear(right)" not in out
 
 
+def test_the_heading_frame_pairs_an_oncoming_car_head_on_and_a_passed_one_not():
+    """On the oncoming lane (road-gap-sumo): the lane run the ego's way, an oncoming car on it ahead is the ego's lead and a
+    head-on pair (opp_dir, in front, its gap the distance between the fronts); one already behind it goes away."""
+    lm = two_way()
+    ego = ego_at("b_0", 300.0 - 120.0, 11.1)                       # level with f_0's s 120
+    onc, gone = car("onc", "b_0", 300.0 - 170.0, 11.1), car("gone", "b_0", 300.0 - 100.0, 11.1)   # f_0's 170 and 100
+    out, binding, fold, states = road_facts.facts(lm, ego, 11.1, [car("parked", "f_0", PARKED_S, 0.0), onc, gone], Situation(),
+                                                  speeds={"onc": 11.1, "gone": 11.1, "parked": 0.0})
+    assert binding["lead"] == "onc" and binding["followright"] == "parked" and "own_kind(oncoming)" in out
+    assert {s.id for s in states} >= {"onc:opp_dir", "gone:not_relevant"}
+    frame, ego2, movers, _ = road_facts.heading_frame(lm, ego, [onc, gone], "f_0")
+    pair = {p.id: p for p in frame.pairs(ego2, movers)}["onc:opp_dir"]
+    assert pair.lon == "in_front" and pair.lat == "overlap" and abs(pair.d_lon - 50.0) < 1e-6
+
+
+def test_the_heading_frame_reads_the_opposite_lanes_sight_the_egos_way():
+    """The sight cells of the opposite lane, run the ego's way: a cell seen there is the frame lane's cell at the same place."""
+    lm = two_way()
+    frame, ego2, movers, sight = road_facts.heading_frame(lm, ego_at("b_0", 180.0, 11.1), [], "f_0",
+                                                          {"cells": {"b_0|30"}, "seen": set()})
+    assert ego2.lane == "~b_0" and ego2.s == 120.0 and ego2.route == ["~b_0"]
+    assert "~b_0|29" in sight["cells"] and frame.lanes["~b_0"].right == "f_0" and "~b_0" not in lm.lanes
+
+
 # ── 13b2f9: an emergency vehicle from behind ──
 def two_lane(length=300.0):
     """Two lanes the ego's way (e_0 right, e_1 left) and the opposite carriageway beyond e_1."""

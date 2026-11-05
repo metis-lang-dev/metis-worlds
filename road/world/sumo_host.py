@@ -60,6 +60,7 @@ def lanemap_of(path):
 
 
 UNSEEN_DUTY = "unseen, the other's duty"
+LANE_FACTS = ("own_kind", "adjacent", "lane_kind", "side_", "oncoming", "lead_s", "changing", "settled(", "zone_at", "roomy")    # the log's lane facts (the passes')
 
 
 def others_duty(dangerous, states, seen):
@@ -86,6 +87,7 @@ class Loop:
         self.sit, self.truth_sit = Situation(), Situation()
         self.cmd, self.life = ("keep", None), 0
         self.changing = None                          # (side, source lane index, ticks left)
+        self.passes = []                              # the carries through the opposite lane: {t, s, into, back: (t, why), end}
         self.proj = {"binding": {}, "facts": {"now": 1}, "fold": None, "states": [], "ego": None}
         self.tick, self.t, self.warmup = 0, 0.0, 0
         self.level_dest = level.get("dest", DESTS.get(level.get("scenario", "straight")))
@@ -145,16 +147,30 @@ class Loop:
         if restrict.capped(cmd, fold, d, v, gap):
             self.restricted += 1
         idx, target = self.world.conn.vehicle.getLaneIndex(EGO), None
-        if lane == "abort" and self.changing:
+        ticks = int(round(restrict.CHANGE_S / self.world.dt))
+        here = self.lanemap.lanes[ego.lane]
+        if self.world.carry is not None:              # passing through the opposite lane: the carry's (sumo_world), its route lane
+            if (lane == "abort" and self.changing or lane == "right") and self.world.carry["to"]:   # the ego's right (heading_frame): home
+                self.world.carry_back()
+                self.changing = None if lane == "abort" else ("right", idx, ticks)
+                if lane == "right":
+                    self.left_from = ("left", self.t)
+                self.passes[-1]["back"] = (self.t, "abort" if lane == "abort" else "change")
+        elif lane == "abort" and self.changing:
             target, self.changing = self.changing[1], None
-        elif lane in ("left", "right") and getattr(self.lanemap.lanes[ego.lane], lane) and \
-                not getattr(self.lanemap.lanes[ego.lane], lane + "_opposite"):   # the oncoming lane is no changeLane target:
-            # the pass through it (change_oncoming, 668e45) is the host carrying the ego's body (the architect's option (b),
-            # road-gap-sumo); until then the command holds the ego in its lane
+        elif lane in ("left", "right") and getattr(here, lane) and getattr(here, lane + "_opposite"):
+            # the oncoming lane (change_oncoming, 668e45): no changeLane target in SUMO; the host carries the ego's body
+            # through it (the architect's option (b), road-gap-sumo: sumo_world.carry_start)
+            self.world.carry_start(getattr(here, lane))
+            self.changing = (lane, idx, ticks)           # no left_from: the lane is lent for the pass, its way back is the plan
+            self.passes.append({"t": self.t, "s": round(ego.s, 1), "into": getattr(here, lane)})
+        elif lane in ("left", "right") and getattr(here, lane):
             target = idx + (1 if lane == "left" else -1)             # SUMO's index 0 is the rightmost
-            self.changing = (lane, idx, int(round(restrict.CHANGE_S / self.world.dt)))
+            self.changing = (lane, idx, ticks)
             self.left_from = ("right" if lane == "left" else "left", self.t)     # settled(D): the side it left
         self.world.control(a, target)
+        if self.passes and "end" not in self.passes[-1] and self.world.carry is None:
+            self.passes[-1]["end"] = self.t                # the body on its route lane again
         if self.life > 0:
             self.life -= 1
         if self.changing:
@@ -200,7 +216,7 @@ class Loop:
         self.log.append({"tick": self.tick, "t": self.t, "sumo_t": self.world.t, "s": round(ego.s, 2), "v": round(ego.dyn.vmax, 2),
                          "lane": ego.lane, "a": None if applied is None else round(applied[0], 2),
                          "cmd": None if applied is None else list(applied[2]), "resp": fold["resp_lon"],
-                         "seen": len(self.perc.last["seen"]), "seen_ids": sorted(self.perc.last["seen"]), "sight": [a for a in self.proj["facts"] if a.startswith(("unseen_ahead", "road_hidden"))], "tracks": len(movers), "binding": binding,
+                         "seen": len(self.perc.last["seen"]), "seen_ids": sorted(self.perc.last["seen"]), "sight": [a for a in self.proj["facts"] if a.startswith(("unseen_ahead", "road_hidden"))], "lanes": [a for a in self.proj["facts"] if a.startswith(LANE_FACTS)], "tracks": len(movers), "binding": binding,
                          "zone": next((a[len("zone_at(nextzone,"):-1] for a in self.proj["facts"] if a.startswith("zone_at(nextzone")), None),
                          "signal": next((a[len("signal(nextzone,"):-1] for a in self.proj["facts"] if a.startswith("signal(nextzone")), None),
                          "contact": self.contacts(hits),
@@ -220,7 +236,11 @@ class Loop:
     def account(self, truth, ego, applied, lights):
         """The RSS accounting on the truth (road_world's definitions; SUMO counts the collisions)."""
         others = self.truth_movers(truth)
-        pairs = {p.id: p for p in self.lanemap.pairs(ego, others, lights=lights)}
+        lm, ego_f = self.lanemap, ego
+        home = road_facts.oncoming_home(lm, ego)
+        if home is not None:                              # on the opposite lane: the truth's pairs in the ego's heading too
+            lm, ego_f, others, _ = road_facts.heading_frame(lm, ego, others, home)
+        pairs = {p.id: p for p in lm.pairs(ego_f, others, lights=lights)}
         states = self.truth_sit.check(list(pairs.values()))
         self._truth_states, self._truth_pairs = states, pairs
         fold = Situation.fold(states, ego.dyn)
@@ -288,7 +308,7 @@ class Loop:
                 "latency_truth": self.latency, "first": self.violations[:3],
                 "ms": {k: mean(k) for k in ("restrict", "sumo", "perceive", "project", "account")},
                 "vehicles_max": max((m["vehicles"] for m in self.ms), default=0),
-                "undue_brakes": len(self.undue), "rss": dict(rss_card(), sensor_range=self.perc.sensor.range),
+                "undue_brakes": len(self.undue), "passes": self.passes, "rss": dict(rss_card(), sensor_range=self.perc.sensor.range),
                 "sensor_range": self.perc.sensor.range}
 
 

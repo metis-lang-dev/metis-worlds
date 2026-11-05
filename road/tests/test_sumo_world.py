@@ -31,8 +31,8 @@ class Dom:
         if name.startswith("get"):
             key = name[3].lower() + name[4:]
             return lambda vid: self.rows[vid][key]
-        if name.startswith(("set", "change")):
-            return lambda *a: self.calls.append((name,) + a)
+        if name.startswith(("set", "change", "moveTo")):
+            return lambda *a, **kw: self.calls.append((name,) + a + ((kw,) if kw else ()))
         raise AttributeError(name)
 
 
@@ -294,3 +294,46 @@ def test_a_collision_is_bodies_touching():
     cmd = sumo_world.SumoWorld.cmd(SimpleNamespace(sumo="sumo", net="n", routes="r", dt=0.1, seed=1))
     i = cmd.index("--collision.mingap-factor")
     assert cmd[i + 1] == "0" and "--collision.check-junctions" in cmd
+
+
+def test_the_carry_moves_the_body_through_the_opposite_lane_and_back():
+    """The pass through the opposite lane (668e45, road-gap-sumo): the body moved over in LC_DURATION, carried along its route
+    lane at the commanded speed, SUMO's position its front on the route lane's side and its rear (facing the opposite lane's
+    way) past half the way; the truth on the opposite lane in that lane's s; the odometer the route lane's metres; back home
+    the body is set on its lane and the route SUMO replaced restored at the next step."""
+    w = sumo_world.SumoWorld.__new__(sumo_world.SumoWorld)
+    w.dt, w.carry, w._restore, w.odo_fix, w.ego_seen, w.ego_done = 0.1, None, None, 0.0, True, False
+    calls = []
+    ego = dict(car(50.0, 0.0, speed=10.0, lane="E_0", s=50.0, route=("E", "F")), roadID="E", distance=50.0)
+    w.conn = SimpleNamespace(vehicle=Dom({"ego": ego}, calls), lane=SimpleNamespace(
+        getShape=lambda l: [(0.0, 0.0), (200.0, 0.0)], getLength=lambda l: 200.0, getWidth=lambda l: 3.2))
+    w.carry_start("W_0")
+    assert w.carry_side() == "home" and w.ego_distance() == 50.0
+    for _ in range(10):                                            # one LC_DURATION: over, at 10 m/s
+        w.control(accel=0.0)
+    k = w.carry
+    assert w.carry_side() == "opp" and math.isclose(k["lat"], 3.2) and math.isclose(k["s"], 60.0)
+    mv = [c for c in calls if c[0] == "moveToXY"]
+    assert len(mv) == 10
+    first, last = mv[0], mv[-1]
+    assert math.isclose(first[4], 51.0) and math.isclose(first[5], 0.32) and math.isclose(first[-1]["angle"], 90.0)
+    assert math.isclose(last[4], 55.0) and math.isclose(last[5], 3.2)      # the rear (60 - 5), a lane width over,
+    assert math.isclose(last[-1]["angle"], 270.0) and last[-1]["keepRoute"] == 2   # facing the opposite lane's way
+    p = w.carried_pose(dict(ego))
+    assert p["lane"] == "W_0" and math.isclose(p["s"], 140.0) and math.isclose(p["x"], 57.5) and math.isclose(p["speed"], 10.0)
+    assert p["route"] == ["E", "F"] and p["carry"] == {"home": "E_0", "s": k["s"]}
+    assert math.isclose(w.ego_distance(), 60.0)
+    w.carry_back()
+    for _ in range(10):
+        w.control(accel=0.0)
+    assert w.carry is None and w._restore[0] == ["E", "F"] and math.isclose(w._restore[2], 70.0)
+    back = [c for c in calls if c[0] == "moveToXY"][-1]
+    assert math.isclose(back[4], 70.0) and math.isclose(back[5], 0.0) and math.isclose(back[-1]["angle"], 90.0)
+
+
+def test_along_and_beside():
+    shape = [(0.0, 0.0), (10.0, 0.0), (10.0, 10.0)]
+    assert sumo_world.along(shape, 15.0) == (10.0, 5.0, math.pi / 2)
+    x, y, h = sumo_world.beside(shape, 5.0, 2.0)
+    assert (x, y) == (5.0, 2.0) and sumo_world.sumo_angle(h) == 90.0
+    assert sumo_world.along(shape, 99.0)[:2] == (10.0, 10.0)

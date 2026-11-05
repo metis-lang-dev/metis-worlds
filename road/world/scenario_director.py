@@ -232,7 +232,7 @@ def place(card, town, site, direction=None):
         elif at.get("opposite") and a.get("flow"):          # a continuous flow's source (OppositeActorFlow): AHEAD m
             ref = next((b for b in expanded if b["id"] == at.get("beyond")), None)      # beyond the BEYOND actor
             s_src = pos + shift + float(at.get("ahead", 0.0)) + (float(ref["at"].get("ahead", 0.0)) if ref else 0.0)
-            item["place"] = _opposite(edge, min(s_src, edge.getLength() - 0.2), a, town, site)
+            item["place"] = _opposite_along(route, s_src, a, town, site)
             item["place"].update(spawn=True, flow=True, src_m=round(s_src - pos, 1))
         elif at.get("opposite"):
             try:
@@ -298,6 +298,35 @@ def _opposite(edge, s, a, town, site):
     rl = _drive_lane(rev)
     nxt = _straight_next(rev, rl)
     return {"route": [rev.getID()] + ([nxt.getID()] if nxt is not None else []), "lane": rl, "pos": round(p, 2)}
+
+
+def _reverse(edge):
+    return next((e for e in edge.getToNode().getOutgoing() if e.getToNode() == edge.getFromNode()), None)
+
+
+def _opposite_along(route, s, a, town, site):
+    """The oncoming lane at S m along the ego's ROUTE (from its first edge's start), past junctions as the source's waypoint
+    `next` goes (OppositeActorFlow's source 105 m beyond the car may lie over the junction): the reverse of the route edge S
+    falls on, its way back along the route's reverse edges. Where a reverse is missing the source stays on the last edge
+    that has one, at its end (the old clip)."""
+    k, rest = 0, s
+    while k + 1 < len(route) and rest > route[k].getLength() - 0.2 and _reverse(route[k + 1]) is not None:
+        rest -= route[k].getLength()
+        k += 1
+    if k == 0:
+        return _opposite(route[0], min(rest, route[0].getLength() - 0.2), a, town, site)
+    rest = min(rest, route[k].getLength() - 0.2)
+    rev = _reverse(route[k])
+    way = [rev]
+    for e in reversed(route[:k]):                    # back along the route, as far as the reverse edges connect
+        r = _reverse(e)
+        if r is None or r not in way[-1].getOutgoing():
+            break
+        way.append(r)
+    rl = _drive_lane(rev)
+    nxt = _straight_next(way[-1], _drive_lane(way[-1]))
+    return {"route": [e.getID() for e in way] + ([nxt.getID()] if nxt is not None else []), "lane": rl,
+            "pos": round(max(0.1, rev.getLength() - rest), 2)}
 
 
 def _side(edge, route, before=None, town=None, li=0, sp=0.0, tta=0.0, side=None):
@@ -455,6 +484,7 @@ class Director:
         self.triggered = []                                                # [{t, id, ego_tta}]: an armed trigger that fired
         self.removed = []                                                  # [(t, id)]: an other removed at its contact with the ego
         self.driven = 0.0
+        self.odometer = lambda c: c.vehicle.getDistance(EGO)                # the ego's metres (SumoWorld sets its own: the carry)
         self.outside_m = 0.0                                               # the ego's metres off Driving/Parking lanes
         self.ended, self.stood = None, 0.0                                 # the card's `end` (FollowLeadingVehicle's)
         self.sync = {}                                                     # a `sync` actor: {phase, v, t_hold, closest_m}
@@ -591,7 +621,7 @@ class Director:
         if EGO not in ids:
             return
         ego_v = c.vehicle.getSpeed(EGO)
-        d = c.vehicle.getDistance(EGO)
+        d = self.odometer(c)                         # sumo_world's: a carry's metres along the route lane
         lane = c.vehicle.getLaneID(EGO)
         if not lane.startswith(":") and self.pl.get("town"):       # LB's outside_route_lanes: off Driving and Parking lanes
             e = net_of(self.pl["town"]).getEdge(c.vehicle.getRoadID(EGO))   # (Town03's bidirectional centre lanes)

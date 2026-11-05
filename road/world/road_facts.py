@@ -254,31 +254,43 @@ def oncoming_home(lm, ego):
     return None
 
 
-def _on_home(lm, ego, home):
-    """The ego's place on its route lane HOME while it drives the opposite lane: the opposite lane's s runs the other way."""
-    return lm.lanes[home].length - ego.s
+HEADED = "~"                                   # the frame lane's id: the opposite lane, run the ego's way
 
 
-def home_side_facts(lm, ego, v, movers, home, out):
-    """On the oncoming lane, in the EGO's heading frame: its route lane HOME is its right side (adjacent(right),
-    lane_kind(right, K)), clear when the nearest mover ahead on it and the nearest behind keep RSS's safe distance from the
-    ego (a standing car behind is safe: the obstacle once passed); the left side has no lane of the ego's."""
-    from semantic_world.situation import safe_same_dir
-    out["adjacent(right)"] = 1
-    out["lane_kind(right,%s)" % getattr(lm.lanes[home], "kind", "driving")] = 1
-    out["lane_kind(left,none)"] = 1
-    s = _on_home(lm, ego, home)
-    ahead = sorted((m.s - s, m) for m in movers if m.id != ego.id and m.lane == home and m.s >= s)
-    behind = sorted((s - m.s, m) for m in movers if m.id != ego.id and m.lane == home and m.s < s)
-    ok = True
-    if ahead:
-        gap, m = ahead[0]
-        ok &= gap - m.length >= safe_same_dir(ego.dyn, m.dyn)
-    if behind:
-        gap, m = behind[0]
-        standing = (m.dyn.vmax or 0.0) <= STAND_V
-        ok &= standing and gap - ego.length >= (m.dyn.min_dist or 0.0) or gap - ego.length >= safe_same_dir(m.dyn, ego.dyn)
-    out["side_clear(right)" if ok else "side_busy(right)"] = 1
+def heading_frame(lm, ego, movers, home, sight=None):
+    """The ego passing on the opposite lane beside its route lane HOME, in its own heading: (lane map, ego, movers, sight) where the
+    opposite lane is a lane HEADED+id of the ego's direction, of kind `oncoming`, with HOME its same-direction right neighbour, so
+    the projection's own machinery reads the pass: own_kind(oncoming), adjacent(right) and lane_kind(right, K) of the route lane,
+    side_clear(right) by its lead and follower (the parked car behind, standing: safe once passed), lane_kind(left, none), and an
+    oncoming car on that lane a head-on pair (opp_dir, `against`) on the ego's way. A place on the opposite lane runs the other
+    way: s on the frame is HOME's length minus it (the front of an oncoming car is its near end)."""
+    import copy
+    opp, hl = lm.lanes[ego.lane], lm.lanes[home]
+    vid = HEADED + opp.id
+    frame = copy.copy(lm)
+    frame.lanes = dict(lm.lanes)
+    frame.lanes[vid] = replace(opp, id=vid, length=hl.length, succ=list(hl.succ), left=None, left_opposite=False, right=home,
+                               right_opposite=False, speed=opp.speed or hl.speed, shape=None, kind="oncoming")
+    if lm.net is not None:                         # the junction ahead: its link from HOME is the frame lane's
+        if getattr(lm, "_links", None) is None:
+            lm.next_link([], 0.0)
+        links = getattr(lm, "_links", None) or {}
+        frame._links = {**links, **{(vid, via): c for (f, via), c in links.items() if f == home}}
+    route = list(ego.route or [])
+    after = route[route.index(home) + 1:] if home in route else []
+    flip = lambda s: hl.length - s
+    ego2 = replace(ego, lane=vid, s=flip(ego.s), route=[vid] + after)
+    movers2 = [replace(m, lane=vid, s=flip(m.s), against=not m.against) if m.lane == opp.id else m for m in movers]
+    if sight is not None:
+        def cells(cs):
+            out = set(cs)
+            for c in cs:
+                lane, _, k = c.rpartition("|")
+                if lane == opp.id:
+                    out.add("%s|%d" % (vid, max(0, int(flip((int(k) + 0.5) * 5.0) // 5.0))))
+            return out
+        sight = dict(sight, cells=cells(sight.get("cells", ())), seen=cells(sight.get("seen", ())))
+    return frame, ego2, movers2, sight
 
 
 def lead_standing(lm, lead, movers, speeds=None):
@@ -339,6 +351,9 @@ def facts(lm, ego, v, movers, sit, changing=None, dest=None, turn=None, lights=N
     ego's last lane change left, and how long ago. PACE: a target speed under the limit; above it by PACE_BAND the ego is above_target (the
     planner's soft brake)."""
     ego.route = ego.route or [ego.lane]
+    home = oncoming_home(lm, ego)
+    if home is not None:                       # passing on the oncoming lane: the projection in the ego's heading (heading_frame)
+        lm, ego, movers, sight = heading_frame(lm, ego, movers, home, sight)
     roles = lm.roles(ego, movers, lights=lights)
     role_of = {m: r for r, m in roles.items()}
     pairs = lm.pairs(ego, movers, role_of=lambda o: role_of.get(o.id), lights=lights)
@@ -376,13 +391,8 @@ def facts(lm, ego, v, movers, sit, changing=None, dest=None, turn=None, lights=N
         m = by_id.get(mid)
         if m is not None and getattr(m, "vclass", None) in EMERGENCY:
             out["emergency(%s)" % r] = 1
-    home = oncoming_home(lm, ego)
-    if home is not None:                                             # the ego passes on the oncoming lane: the EGO's heading frame,
-        out["own_kind(oncoming)"] = 1                                # its route lane is its right side (the architect's contract)
-        home_side_facts(lm, ego, v, movers, home, out)
-    else:
-        out["own_kind(%s)" % getattr(lane, "kind", "driving")] = 1      # the lanes' kinds, vocabulary (change.llp decides)
-    for side in (() if home is not None else ("left", "right")):
+    out["own_kind(%s)" % getattr(lane, "kind", "driving")] = 1          # the lanes' kinds, vocabulary (change.llp decides); on
+    for side in ("left", "right"):                                      # the oncoming lane in its heading frame: oncoming
         if getattr(lane, side) and not getattr(lane, side + "_opposite"):
             out["adjacent(%s)" % side] = 1
             out["lane_kind(%s,%s)" % (side, getattr(lm.lanes[getattr(lane, side)], "kind", "driving"))] = 1
