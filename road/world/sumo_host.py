@@ -147,7 +147,10 @@ class Loop:
         idx, target = self.world.conn.vehicle.getLaneIndex(EGO), None
         if lane == "abort" and self.changing:
             target, self.changing = self.changing[1], None
-        elif lane in ("left", "right") and getattr(self.lanemap.lanes[ego.lane], lane):
+        elif lane in ("left", "right") and getattr(self.lanemap.lanes[ego.lane], lane) and \
+                not getattr(self.lanemap.lanes[ego.lane], lane + "_opposite"):   # the oncoming lane is no changeLane target:
+            # the pass through it (change_oncoming, 668e45) is the host carrying the ego's body (the architect's option (b),
+            # road-gap-sumo); until then the command holds the ego in its lane
             target = idx + (1 if lane == "left" else -1)             # SUMO's index 0 is the rightmost
             self.changing = (lane, idx, int(round(restrict.CHANGE_S / self.world.dt)))
             self.left_from = ("right" if lane == "left" else "left", self.t)     # settled(D): the side it left
