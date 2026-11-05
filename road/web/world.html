@@ -106,6 +106,7 @@
   #runbar input { width: 3.5em; }
   #dock-traffic select, #dock-traffic input[type=number] { background: var(--bg); color: var(--fg); border: 1px solid var(--line); font: inherit; padding: 1px 4px; }
   #dock-traffic input[type=number] { width: 4em; }
+  #dock-traffic input[type=text] { background: var(--bg); color: var(--fg); border: 1px solid var(--line); font: inherit; padding: 1px 4px; width: 16em; }
   .kv { display: grid; grid-template-columns: auto 1fr; gap: 1px 12px; margin: 0 0 10px; }
   .kv dt { color: var(--dim); } .kv dd { margin: 0; overflow-wrap: anywhere; }
   #dash { flex: 0 0 34%; min-height: 220px; border-top: 1px solid var(--line); background: var(--panel); padding: 6px 10px; display: flex; flex-direction: column; gap: 4px; overflow: hidden; position: relative; }
@@ -209,6 +210,9 @@
           <div class="wrow"><button class="chip" id="t-close" type="button" disabled>close this lane</button><button class="chip" id="t-open" type="button">reopen all</button></div>
           <div class="ph">TRAFFIC LIGHTS</div>
           <div class="wrow"><button class="chip" id="t-lights-off" type="button">all off</button><button class="chip" id="t-lights-on" type="button">all on</button></div>
+          <div class="ph">COMMONROAD SCENARIO</div>
+          <div class="wrow"><input id="t-cr" type="text" placeholder="ZAM_Tjunction-1_100_T-1" aria-label="a CommonRoad scenario id" spellcheck="false"><button class="chip" id="t-cr-run" type="button">run it</button></div>
+          <div class="wrow"><span id="t-cr-msg" class="empty">an id from the checkout; the first run converts it (a few seconds)</span></div>
         </div>
       </section>
       <section class="dock" id="dock-world" data-dock="world" tabindex="-1" aria-label="the world card">

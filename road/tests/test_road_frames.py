@@ -160,6 +160,35 @@ def test_a_new_run_opens_one_world_and_the_planner_gets_a_trip(monkeypatch):
     assert "+trip 1" not in (b.tick({}) or [])                # once
 
 
+def test_a_commonroad_id_runs_on_sumo_after_its_cache_is_had(monkeypatch):
+    """run:cr:ID:SEED (commonroad-world step 3): the colon inside the name kept, the run on SUMO, the cache loaded before the
+    current world closes (cr_world.load converts on demand)."""
+    import cr_world
+    closed, made, loaded = [], [], []
+    old = SimpleNamespace(close=lambda: closed.append(1), scenario="straight", seed=1, arrived=lambda: False, tick=0, observe=lambda: ({}, {}, {}, []), log=[{}], proj={"ego": None})
+    monkeypatch.setattr(road_host, "new_world", lambda run: made.append(run) or SimpleNamespace(close=lambda: None, arrived=lambda: False))
+    monkeypatch.setattr(cr_world, "load", lambda sid, **kw: loaded.append(sid) or {})
+    a = host(world=old)
+    a.world(["run:cr:ZAM_Tjunction-1_100_T-1:2"])
+    assert loaded == ["ZAM_Tjunction-1_100_T-1"] and closed == [1]
+    assert made[0]["scenario"] == "cr:ZAM_Tjunction-1_100_T-1" and made[0]["seed"] == 2 and made[0]["world"] == "sumo"
+
+
+def test_a_commonroad_id_that_cannot_be_had_is_said_and_the_run_goes_on(monkeypatch):
+    import cr_world
+    closed, made = [], []
+    old = SimpleNamespace(close=lambda: closed.append(1), scenario="straight", seed=1, arrived=lambda: False, tick=0, observe=lambda: ({}, {}, {}, []), log=[{}], proj={"ego": None})
+    monkeypatch.setattr(road_host, "new_world", lambda run: made.append(run))
+
+    def fail(sid, **kw):
+        raise RuntimeError("cr_convert: no scenario NOPE under /bigdata/datasets/commonroad")
+    monkeypatch.setattr(cr_world, "load", fail)
+    a = host(world=old)
+    a.world(["run:cr:NOPE:1"])
+    assert not closed and not made and a.shared["world"] is old
+    assert any("I cannot run cr:NOPE" in x and "no scenario NOPE" in x for x in a.shared["wish"]["said"])
+
+
 def test_a_trip_still_held_is_not_doubled(monkeypatch):
     old = SimpleNamespace(close=lambda: None, arrived=lambda: False, tick=0, observe=lambda: ({}, {}, {}, []), log=[{}], proj={"ego": None})
     h = host("planner", world=old)

@@ -220,7 +220,7 @@ class RoadHost:
             elif line.startswith("mark:"):
                 self.mark(line)
             elif line.startswith("run:"):
-                _, scenario, seed = line.split(":")
+                scenario, seed = line[len("run:"):].rsplit(":", 1)        # a scenario's name may hold a colon (cr:ID, card:NAME@TOWN#SITE)
                 self.start_run(dict(self.run, scenario=scenario, seed=int(seed)))
             elif line in ("play", "pause"):
                 self.shared["paused"] = line == "pause"
@@ -335,13 +335,28 @@ class RoadHost:
         return out
 
     def start_run(self, spec):
-        """The next run, now: one SUMO at a time. Every host finds the new world at its next reading (world_now)."""
+        """The next run, now: one SUMO at a time. Every host finds the new world at its next reading (world_now). A CommonRoad
+        scenario (cr:ID, commonroad-world s-9b7591fb step 3) runs on SUMO, converted into the cache first when it is not there
+        (cr_world.load: the conversion venv, a few seconds); one that cannot be had is said, and the run on the page goes on."""
+        said = self.shared.setdefault("wish", road_wishes.new())["said"]
+        if str(spec.get("scenario", "")).startswith("cr:"):
+            import cr_world
+            spec = dict(spec, world="sumo")
+            t0 = time.monotonic()
+            try:
+                cr_world.load(cr_world.scenario_id(spec["scenario"]))
+            except Exception as e:                                   # noqa: BLE001 — a bad id or a failed conversion: the person is told
+                said.append("I cannot run %s: %s" % (spec["scenario"], str(e)[:300]))
+                return
+            took = time.monotonic() - t0
         close = getattr(self.shared["world"], "close", None)
         if close:
             close()
         self.run = spec
         self.shared["world"] = new_world(spec)
         self.shared.update(paused=False, said_arrived=False, wish=road_wishes.new(), net_due=True)
+        if str(spec.get("scenario", "")).startswith("cr:") and took > 1.0:
+            self.shared["wish"]["said"].append("%s converted into the cache in %.0f s; it runs now." % (spec["scenario"], took))
 
     def world_now(self):
         """The shared world, if a new run replaced it: the copies start over. → True when it did."""

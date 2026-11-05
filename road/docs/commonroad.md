@@ -17,6 +17,17 @@ hand-crafted (mostly based on real road networks)", and it asks a user of Common
 and S. Manzinger, "CommonRoad: Composable Benchmarks for Motion Planning on Roads", IEEE Intelligent Vehicles
 Symposium 2017, pp. 719-726.
 
+## Run one
+
+Once: `road/setup-commonroad.sh` (the checkouts at their pins, the conversion venv). Then, headless, from metis-worlds (the Live's venv
+is metis-agent's; METIS_HOME the road family at road/domains/catalog.pin):
+
+    road/.venv-cr/bin/python road/tools/cr_convert.py ZAM_Tjunction-1_100_T-1      # into road/maps/cr/ (optional: a run converts on demand)
+    METIS_HOME=<metis-catalog>/domains/road ../metis-agent/py/.venv/bin/python road/experiments/road_tree.py cr:ZAM_Tjunction-1_100_T-1 1 --world sumo --ticks 1200 --out /tmp/cr --trace /tmp/cr/t
+
+The run's summary is the last line (`director.cr`: the measures below). On the page (road/demo.sh), the Traffic dock's COMMONROAD SCENARIO
+field takes an id and runs it on SUMO (`run:cr:ID:SEED`); a first run of an id converts it (a few seconds), an id that cannot be had is said.
+
 ## The terms, as they read for this use
 
 `commonroad-scenarios/LICENSE.txt` (read 2026-11-05 at the pin): Copyright 2019 Technical University of Munich,

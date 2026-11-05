@@ -37,6 +37,17 @@ export class RoadMap {
     $('#t-open').onclick = () => line('lane:open');
     $('#t-lights-off').onclick = () => line('lights:off');
     $('#t-lights-on').onclick = () => line('lights:on');
+    const crRun = () => {                                   // a CommonRoad scenario by its id (commonroad-world step 3): run:cr:ID:SEED
+      const id = $('#t-cr').value.trim().replace(/^cr:/, '');
+      if (!id) return;
+      if (this.marks.open) this.markEdge();
+      this.crWant = `cr:${id}`;
+      $('#t-cr-msg').textContent = `starting cr:${id}: a first run converts it into the cache, a few seconds…`;
+      line(`run:cr:${id}:${Math.max(1, Number($('#seed').value) || 1)}`);
+      this.hold(false, false);
+    };
+    $('#t-cr-run').onclick = crRun;
+    $('#t-cr').onkeydown = e => { if (e.key === 'Enter') crRun(); };
     addEventListener('message', e => {
       if (e.origin !== location.origin) return;
       if ('clicked' in e.data) { this.picked = e.data.clicked; this.lane = e.data.lane; this.selection(); }
@@ -83,7 +94,9 @@ export class RoadMap {
 
   net(f) {
     this.dash.net(f);
-    if (f.scenarios && $('#scenario').options.length !== f.scenarios.length) $('#scenario').replaceChildren(...f.scenarios.map(s => Object.assign(document.createElement('option'), { textContent: s })));
+    const names = f.scenarios && f.scenario && !f.scenarios.includes(f.scenario) ? [...f.scenarios, f.scenario] : f.scenarios;   // a cr: run is not in the list: its own option
+    if (names && $('#scenario').options.length !== names.length) $('#scenario').replaceChildren(...names.map(s => Object.assign(document.createElement('option'), { textContent: s })));
+    if (f.scenario && f.scenario === this.crWant) { $('#t-cr-msg').textContent = `running ${f.scenario}`; this.crWant = null; }
     if (document.activeElement !== $('#scenario') && document.activeElement !== $('#seed')) { $('#scenario').value = f.scenario; $('#seed').value = f.seed; }   // what runs, also when a page opens on it
     const key = f.lanes.map(l => l.id).join();          // the client reads its road once: another road, another frame
     if (this.frame && key === this.netKey) return;
