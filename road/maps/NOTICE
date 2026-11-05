@@ -1,2 +1,5 @@
-CARLA's towns as SUMO nets: netconvert (build.sh) over the OpenDRIVE files of CARLA 0.9.15 (https://github.com/carla-simulator/carla). CARLA's code is under the MIT License, its assets
-under CC-BY; attribution to the CARLA project. Not the Apache License of metis-worlds. Licensing is per world.
+CARLA's towns as SUMO nets: netconvert (build.sh) over the OpenDRIVE files of CARLA (https://github.com/carla-simulator/carla). Town01, 02 and 03 are built from
+CARLA 0.9.16 (2026-11-05; their nets equal the earlier 0.9.15 build apart from netconvert's header); the other tracked towns are as built from CARLA 0.9.15.
+build.sh's post-pass lane_speeds.py gives each parking and bidirectional lane its edge's driving speed (the OpenDRIVE states none for them; netconvert's
+default 1.39 m/s is no limit of CARLA's). Nothing else of netconvert's output is changed. CARLA's code is under the MIT License, its assets under CC-BY;
+attribution to the CARLA project. Not the Apache License of metis-worlds. Licensing is per world.

@@ -1,19 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<!-- generated on 2026-11-01 12:24:56 by Eclipse SUMO netconvert Version 1.18.0
+<!-- generated on 2026-11-05 09:48:21 by Eclipse SUMO netconvert Version 1.18.0
 <configuration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/netconvertConfiguration.xsd">
 
     <input>
-        <opendrive-files value="/bigdata/simulators/carla/CARLA_0.9.15/CarlaUE4/Content/Carla/Maps/OpenDrive/Town01.xodr"/>
+        <opendrive-files value="/bigdata/simulators/carla/CarlaUE4/Content/Carla/Maps/OpenDrive/Town01.xodr"/>
     </input>
 
     <output>
-        <output-file value="/tmp/claude-1000/-home-axadmin-repo-perotheia-packages/0f0e0540-c247-4c5d-8d60-8bf9c39b4d5a/scratchpad/nets/Town01.net.xml"/>
+        <output-file value="/home/axadmin/repo/perotheia-packages/.wt/worlds-lane-speeds/road/maps/Town01.net.xml"/>
     </output>
-
-    <processing>
-        <offset.disable-normalization value="false"/>
-    </processing>
 
     <junctions>
         <no-turnarounds.except-deadend value="true"/>

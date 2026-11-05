@@ -250,7 +250,9 @@ def test_ovtp_meets_the_ego_where_the_straight_ways_cross():
     left = D.place(card, "Town03", 1, "left")["actors"][0]["place"]["conflict"]           # the near half: harder
     assert left["side"] == "left" and left["frm"] == "20" and (left["ego_in"], left["adv_in"]) == (11.4, 25.0)
     net = D.net_of("Town03")
-    assert net.getEdge("3").getSpeed() == 1.39 and D._ego_v(net.getEdge("3"), 0) == 13.89   # the lane's, not the edge's
+    assert D._ego_v(net.getEdge("3"), 0) == 13.89                         # the lane's, not the edge's (sumolib's Edge.getSpeed() is the
+    # LAST lane's: edge 3's bidirectional 3_2 read 1.39 until maps/lane_speeds.py gave the non-driving lanes their edge's driving speed)
+    assert [ln.getSpeed() for ln in net.getEdge("3").getLanes()] == [13.89, 13.89, 13.89]
 
 
 def test_plain_continuations_and_the_flow_source():
