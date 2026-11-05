@@ -175,6 +175,7 @@ def _room_behind(edge, pos):
 
 def place(card, town, site, direction=None):
     """The card at SITE of TOWN: {site: (edge, lane, pos), ego: {route, lane, pos, v}, actors: [...], junction_s}."""
+    card = _sumo_card(card)
     poses = C.sites(card, town)
     p = next((q for q in poses if q["i"] == site), None)
     if p is None:
@@ -182,6 +183,9 @@ def place(card, town, site, direction=None):
     lane, pos = locate(town, p["sumo"]["x"], p["sumo"]["y"], p["sumo"]["angle"])
     edge, li = lane.getEdge(), lane.getIndex()
     site_pos = pos
+    start_s = (card.get("sumo") or {}).get("start_s")         # the ego from START_S on the site's edge (the same straight):
+    if start_s is not None and pos > float(start_s):          # ParkingCutIn's poses sit 10-22 m before their edge's end
+        pos = float(start_s)
     # an actor BEHIND on the same straight, no junction between (the architect's ruling on nina's §2): when the straight
     # behind the site is shorter, the ego starts that much further into the run (`fit`, recorded)
     behinds = [float(a["at"]["behind"]) for a in card.get("actors") or [] if "behind" in a.get("at", {})]
@@ -291,8 +295,9 @@ def _opposite(edge, s, a, town, site):
     p = rev.getLength() - s
     if p < 0.1:
         raise ValueError("%s at %s#%d: %.0f m along %s is past its oncoming lane" % (a["id"], town, site, s, edge.getID()))
-    nxt = _straight_next(rev, 0)
-    return {"route": [rev.getID()] + ([nxt.getID()] if nxt is not None else []), "lane": 0, "pos": round(p, 2)}
+    rl = _drive_lane(rev)
+    nxt = _straight_next(rev, rl)
+    return {"route": [rev.getID()] + ([nxt.getID()] if nxt is not None else []), "lane": rl, "pos": round(p, 2)}
 
 
 def _side(edge, route, before=None, town=None, li=0, sp=0.0, tta=0.0, side=None):
@@ -314,40 +319,68 @@ def _side(edge, route, before=None, town=None, li=0, sp=0.0, tta=0.0, side=None)
             continue                               # the ego's reverse
         if not any(ln.allows("passenger") for ln in frm.getLanes()):
             continue
-        nxt = _straight_next(frm, 0)
+        fl = _drive_lane(frm)
+        nxt = _straight_next(frm, fl)
         if nxt is None:
             continue
         conflict = None
         if ego_way is not None:
             if not any(c.getDirection() == "s" for c in frm.getConnections(nxt)):
                 continue                           # a turn onto the ego's road (1135, 82): the source's adversary goes straight
-            adv_way = _via_shape(town, frm, nxt, 0)
+            adv_way = _via_shape(town, frm, nxt, fl)
             hit = _cross(ego_way, adv_way) if adv_way else None
             if hit is None:
                 continue                           # it turns onto the ego's road: no straight-across conflict
             (hx, hy), (px, py) = (ego_way[1][0] - ego_way[0][0], ego_way[1][1] - ego_way[0][1]), frm.getFromNode().getCoord()
             cx, cy = ego_way[0]
             right = hx * (py - cy) - hy * (px - cx) < 0.0
-            conflict = {"ego_in": round(hit[0], 1), "adv_in": round(hit[1], 1), "frm": frm.getID(),
+            conflict = {"ego_in": round(hit[0], 1), "adv_in": round(hit[1], 1), "frm": frm.getID(), "lane": fl,
                         "frm_len": round(frm.getLength(), 2), "side": "right" if right else "left"}
             if side and conflict["side"] != side:
                 found.append((frm, nxt, conflict))
                 continue
             if sp and tta:
-                before = max(1.0, sp * (tta + hit[0] / _ego_v(edge)) - hit[1])
+                before = max(1.0, sp * (tta + hit[0] / _ego_v(edge, li)) - hit[1])
         return _side_way(frm, nxt, before, mine, conflict)
     if found:                                      # none from SIDE: the other side's (recorded in `conflict`)
         frm, nxt, conflict = found[0]
         if sp and tta:
-            before = max(1.0, sp * (tta + conflict["ego_in"] / _ego_v(edge)) - conflict["adv_in"])
+            before = max(1.0, sp * (tta + conflict["ego_in"] / _ego_v(edge, li)) - conflict["adv_in"])
         return _side_way(frm, nxt, before, mine, conflict)
     raise ValueError("no side road at the junction after %s%s" % (edge.getID(), " crossing the ego's way" if ego_way else ""))
 
 
-def _ego_v(edge):
-    """The ego's speed on EDGE for timing: its limit, the town's 50 km/h where the net says less than 5 m/s (Town03's edge
-    3 reads 1.39 m/s, a net artifact; the family drives 14.25 there)."""
-    return edge.getSpeed() if edge.getSpeed() >= 5.0 else 13.89
+def _ego_v(edge, li):
+    """The ego's speed on lane LI of EDGE for timing: that lane's limit. (sumolib's Edge.getSpeed() is the edge's LAST
+    lane's: Town03's 3 reads 1.39 m/s from its bidirectional centre lane 3_2; nina's 2d review.)"""
+    return edge.getLane(li).getSpeed()
+
+
+def lane_type(edge, i):
+    """OpenDRIVE's type of lane I of EDGE, as netconvert keeps it in the edge's type ("parking|driving",
+    "driving|driving|bidirectional", lane 0 first); "driving" when the net says nothing (Town01/02)."""
+    parts = (edge.getType() or "").split("|")
+    if len(parts) == edge.getLaneNumber():
+        return parts[i]
+    return parts[0] if len(parts) == 1 and parts[0] in ("parking", "bidirectional") else "driving"
+
+
+def _drive_lane(edge):
+    """EDGE's rightmost DRIVING lane: Town03's net carries parking and bidirectional lanes, open to cars at 1.39 m/s
+    (nina's 2d review: 20_0, -19_0 are parking; the minor arms' driving lane is _1)."""
+    for ln in edge.getLanes():
+        if ln.allows("passenger") and lane_type(edge, ln.getIndex()) == "driving":
+            return ln.getIndex()
+    return 0
+
+
+def _sumo_card(card):
+    """The card with its `sumo.at` overrides merged into its actors' `at` (ParkingCutIn on Town03's parking lanes: the
+    source's 28 / 35 m from the ego started at `start_s`)."""
+    over = (card.get("sumo") or {}).get("at") or {}
+    if not over:
+        return card
+    return dict(card, actors=[dict(a, at=dict(a.get("at") or {}, **over.get(a["id"], {}))) for a in card.get("actors") or []])
 
 
 def _side_way(frm, nxt, before, mine, conflict):
@@ -360,7 +393,7 @@ def _side_way(frm, nxt, before, mine, conflict):
                 break
             way.insert(0, prev)
             p += prev.getLength()
-        return {"route": [x.getID() for x in way] + [nxt.getID()], "lane": 0, "pos": round(max(0.1, p), 2), "spawn": True,
+        return {"route": [x.getID() for x in way] + [nxt.getID()], "lane": _drive_lane(frm), "pos": round(max(0.1, p), 2), "spawn": True,
                 "conflict": conflict}
 
 
@@ -371,6 +404,7 @@ def build(name, work, seed=1, n=0, **_):
     pl = place(card, town, site, direction)
     rows = ['<routes>', '<vType id="ego_t" accel="3.0" decel="6.0" sigma="0" maxSpeed="20" length="4.5" width="1.8"/>',
             '<vType id="actor_t" accel="3.0" decel="8.0" sigma="0" maxSpeed="25" length="4.5" width="1.8"/>',
+            '<vType id="parked_t" accel="3.0" decel="8.0" sigma="0" maxSpeed="25" speedFactor="normc(4.2,0,0.2,4.2)" length="4.5" width="1.8"/>',
             '<vType id="emergency_t" vClass="emergency" accel="3.5" decel="8.0" sigma="0" maxSpeed="30" speedFactor="normc(2.2,0,0.2,2.2)" length="5.0" width="2.0"/>']
     e = pl["ego"]
     rows.append('<vehicle id="%s" type="ego_t" depart="0" departLane="%d" departPos="%.2f" departSpeed="%.2f"><route edges="%s"/></vehicle>'
@@ -380,6 +414,8 @@ def build(name, work, seed=1, n=0, **_):
         if pa.get("spawn"):
             continue
         vt = "emergency_t" if a.get("kind") == "emergency" else "actor_t"
+        if lane_type(net_of(town).getEdge(pa["route"][0]), pa["lane"]) == "parking" and vt == "actor_t":
+            vt = "parked_t"                    # on a 1.39 m/s parking lane: free to pull out at its script's speed
         length = float(a.get("length", C.KIND[a.get("kind", "car")][1]))
         # speedFactor 2.2: SUMO caps a vehicle at the lane's limit x its speedFactor (13.9 x 2.2 = 30.6), so the source's
         # ego + 25 m/s reaches emergency_t's maxSpeed 30. No bluelight device: SUMO's would move the ego aside itself (it changes others' lanes whatever their lane-change
@@ -418,6 +454,7 @@ class Director:
         self.triggered = []                                                # [{t, id, ego_tta}]: an armed trigger that fired
         self.removed = []                                                  # [(t, id)]: an other removed at its contact with the ego
         self.driven = 0.0
+        self.outside_m = 0.0                                               # the ego's metres off Driving/Parking lanes
         self.ended, self.stood = None, 0.0                                 # the card's `end` (FollowLeadingVehicle's)
         self.sync = {}                                                     # a `sync` actor: {phase, v, t_hold, closest_m}
         self.going = set()                                                 # actors whose go/speed step has fired
@@ -553,7 +590,13 @@ class Director:
         if EGO not in ids:
             return
         ego_v = c.vehicle.getSpeed(EGO)
-        self.driven = c.vehicle.getDistance(EGO)
+        d = c.vehicle.getDistance(EGO)
+        lane = c.vehicle.getLaneID(EGO)
+        if not lane.startswith(":") and self.pl.get("town"):       # LB's outside_route_lanes: off Driving and Parking lanes
+            e = net_of(self.pl["town"]).getEdge(c.vehicle.getRoadID(EGO))   # (Town03's bidirectional centre lanes)
+            if lane_type(e, c.vehicle.getLaneIndex(EGO)) not in ("driving", "parking"):
+                self.outside_m += max(0.0, d - self.driven)
+        self.driven = d
         self._yield_test(c, t, ids)
         self._end(c, t, ids, ego_v)
         self._sync(c, t, ids, ego_v)
@@ -700,8 +743,9 @@ class Director:
         length = max(1.0, self.pl["ego"].get("len", 1.0))
         return {"fired": self.fired, "triggered": self.triggered,
                 "unfired": sorted({a["id"] for a, *_ in self.armed} | {a["id"] for _, a, _ in self.queue}),
-                "rc": round(min(100.0, 100.0 * self.driven / length), 1), "driven_m": round(self.driven, 1), "route_m": length,
+                "rc": round(min(100.0, 100.0 * self.driven / length), 1), "outside_m": round(self.outside_m, 1),
+                "outside_pct": round(100.0 * self.outside_m / self.driven, 2) if self.driven > 0 else 0.0, "driven_m": round(self.driven, 1), "route_m": length,
                 "emergency_lb": lb, "emergency_held_s": self.held, "removed": self.removed, "ended": self.ended,
                 "sync": self.sync, "flows": {k: {"cars": f["n"], "at": f["at"]} for k, f in self.flows.items()}, "conflict": {a["id"]: a["place"]["conflict"] for a in self.pl["actors"]
                                                 if a["place"].get("conflict")},
-                "site": self.pl["site"], "free": self.pl["free"], "shift": self.pl["shift"]}
+                "site": self.pl["site"], "free": self.pl["free"], "shift": self.pl["shift"], "town": self.pl.get("town")}

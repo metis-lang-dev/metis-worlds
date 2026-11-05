@@ -184,7 +184,9 @@ def test_every_card_places_at_every_site_on_sumo():
             for s in C.sites(card, town):
                 pl = D.place(card, town, s["i"])
                 edge, lane, pos = pl["site"]
-                if (card.get("sumo") or {}).get("back"):                    # BACK m before the site, on the way to it
+                if (card.get("sumo") or {}).get("start_s") is not None:       # from START_S on the site's edge
+                    assert pl["ego"]["route"][0] == edge and pl["ego"]["pos"] == float(card["sumo"]["start_s"]), (n, town, s)
+                elif (card.get("sumo") or {}).get("back"):                  # BACK m before the site, on the way to it
                     assert edge in pl["ego"]["route"] and pl["ego"]["lane"] == lane, (n, town, s)
                 else:
                     assert pl["ego"]["route"][0] == edge and pl["ego"]["lane"] == lane, (n, town, s)
@@ -238,14 +240,17 @@ def test_ovtp_meets_the_ego_where_the_straight_ways_cross():
     a1 = D.place(card, "Town03", 1)["actors"][0]["place"]
     a5 = D.place(card, "Town03", 5)["actors"][0]["place"]
     assert a1["conflict"]["frm"] == "-19" and a5["conflict"]["frm"] == "20"           # the two minor arms of 730
-    assert (a1["conflict"]["ego_in"], a1["conflict"]["adv_in"]) == (18.4, 9.5)         # nina's table
+    assert (a1["conflict"]["ego_in"], a1["conflict"]["adv_in"]) == (14.9, 9.5)         # from the driving lane -19_1
+    assert a1["lane"] == a5["lane"] == 1                                    # _0 is a 1.39 m/s parking lane (nina's 2d)
     assert a1["conflict"]["side"] == a5["conflict"]["side"] == "right"
     assert a1["spawn"] is False                                            # in the run standing from t 0 (the architect's 2d)
     with pytest.raises(ValueError, match="crossing the ego's way"):
         D.place(dict(card, sites={"lb1": "Scenario10", "towns": {"Town03": [18]}}), "Town03", 18)
     assert D.parse("card:OppositeVehicleTakingPriority@Town03#S1.157")[2] == "S1.157"
     left = D.place(card, "Town03", 1, "left")["actors"][0]["place"]["conflict"]           # the near half: harder
-    assert left["side"] == "left" and left["frm"] == "20" and (left["ego_in"], left["adv_in"]) == (7.9, 25.1)
+    assert left["side"] == "left" and left["frm"] == "20" and (left["ego_in"], left["adv_in"]) == (11.4, 25.0)
+    net = D.net_of("Town03")
+    assert net.getEdge("3").getSpeed() == 1.39 and D._ego_v(net.getEdge("3"), 0) == 13.89   # the lane's, not the edge's
 
 
 def test_plain_continuations_and_the_flow_source():
@@ -256,3 +261,26 @@ def test_plain_continuations_and_the_flow_source():
     pl = D.place(C.load("ParkedObstacleTwoWays"), "Town01", 1)
     flow = pl["actors"][1]["place"]
     assert flow["flow"] and flow["spawn"] and flow["src_m"] == 195.0                   # 105 m beyond the parked car's 90
+
+
+def test_town03_lane_types_parking_cut_in_and_outside_lanes():
+    """Town03's net keeps OpenDRIVE's lane types (nina's 2d review): parking and bidirectional lanes, open to cars at
+    1.39 m/s. Actors drive the driving lane; ParkingCutIn's cars stand on a real parking lane; CARLA counts the ego off
+    Driving and Parking lanes as outside_route_lanes (atomic_criteria.py:1109-1129), a percentage of the DS."""
+    _sumolib_or_skip()
+    import scenario_director as D
+    net = D.net_of("Town03")
+    assert [D.lane_type(net.getEdge("3"), i) for i in range(3)] == ["driving", "driving", "bidirectional"]
+    assert D.lane_type(net.getEdge("20"), 0) == "parking" and D._drive_lane(net.getEdge("20")) == 1
+    assert D.lane_type(D.net_of("Town01").getEdge("-1"), 0) == "driving"
+    pl = D.place(C.load("ParkingCutIn"), "Town03", 19)
+    assert pl["ego"]["pos"] == 20.0 and pl["ego"]["lane"] == 1
+    blocker, adversary = (a["place"] for a in pl["actors"])
+    assert (blocker["lane"], blocker["pos"], adversary["pos"]) == (0, 48.0, 55.0)          # the source's 28 / 35 m
+    spec = importlib.util.spec_from_file_location("scenarios_o", ROAD / "experiments" / "scenarios.py")
+    sx = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(sx)
+    out = {"arrived": True, "collisions": 0, "director": {"site": ("3", 1, 1.0), "town": "Town03", "outside_pct": 10.0}}
+    assert sx.infractions(C.load("Accident"), out) == {"outside_route_lanes": 10.0}
+    assert sx.infractions(C.load("Accident"), dict(out, director=dict(out["director"], town="Town01"))) == {}
+    assert C.driving_score({"outside_route_lanes": 10.0}) == 90.0

@@ -40,6 +40,9 @@ def infractions(card, out):
     timeouts = [x for x in (card.get("infractions") or {}).get("scenario") or [] if isinstance(x, dict) and "scenario_timeout" in x]
     if timeouts and (card.get("expect") or {}).get("arrived") and not out.get("arrived"):
         inf["scenario_timeouts"] = 1
+    d = out.get("director") or {}
+    if d and d.get("site") and d.get("outside_pct") and (d.get("town") or "") == "Town03":
+        inf["outside_route_lanes"] = d["outside_pct"]       # off Driving/Parking lanes (CARLA :1109-1129); n/a on Town01/02
     lb = (out.get("director") or {}).get("emergency_lb") or {}          # LB 2.0's own test (the architect's ruling on
     n = sum(1 for st in lb.values() if st.get("failure"))               # nina's 2b review); the held seconds are ours
     if "yield_emergency_vehicle" in ((card.get("infractions") or {}).get("scenario") or []) and n:
@@ -141,7 +144,7 @@ def main(argv=None):
     sumo = any(r.get("fired") is not None for r in rows)
     head = ["card", "variant", "where", "arrived", "t", "contact ticks", "collisions (events)", "violations", "planner", "responder",
             "card's expect", "LB infractions", "RC", "DS"] + (["fired (ego's TTA to the trigger's target)", "removed at contact",
-                                                               "held s (ours)"] if sumo else [])
+                                                               "held s (ours)", "outside lanes %"] if sumo else [])
     lines = ["| " + " | ".join(head) + " |", "|" + "---|" * len(head)]
     for r in rows:
         cells = [r["card"], r["variant"] or "(as the source)", r["where"] or "exerciser", r["arrived"], r["t"], r["collisions"],
@@ -149,7 +152,8 @@ def main(argv=None):
                  ", ".join("%s %s" % kv for kv in r["lb"].items()) or "—", r["rc"], r["ds"]]
         if sumo:
             cells += [r.get("fired") or "—", ", ".join("%s %.1f s" % (i, t) for t, i in r.get("removed") or []) or "—",
-                      "—" if r.get("held_s") is None else r["held_s"]]
+                      "—" if r.get("held_s") is None else r["held_s"],
+                      (r.get("director") or {}).get("outside_pct", "—") if r["where"].startswith("Town03") else "n/a"]
         lines.append("| " + " | ".join(str(x) for x in cells) + " |")
     (out_dir / "scenarios.md").write_text("\n".join(lines) + "\n")
     return 0
