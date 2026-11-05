@@ -149,15 +149,19 @@ def test_a_rule_breaker_leaves_a_response_times_margin_at_any_plan_phase(seed, p
 
 
 def test_an_accel_held_at_a_rule_breaker_is_why_the_rule_is_there():
-    # the world alone, accel held whatever the crossing car does: the restrictor has no reason to stop it (the ego has the
-    # priority, and is past stopping short by the time the car takes it), and they meet
+    # the world alone, accel held whatever the crossing car does. Before the rule 5 ruling (road-scenarios s-e23be780) the
+    # restrictor had no reason to stop it (the fold waited for the car to pass its hardest stop, by then the ego was past
+    # stopping short) and they met; now the fold escalates once the car is past its PROPER stop, while the ego can still
+    # stop short (brake_min, else brake_max), and the restrictor's bound holds the accel off: they do not meet
     w = road_world.RoadWorld("junction_rb", 1)
+    resp = set()
     for _ in range(140):
         if w.arrived():
             break
         w.command(("accel", None), life=1)
         w.step()
-    assert w.summary()["collisions"] > 0
+        resp.add(w.observe()[2]["resp_lon"])
+    assert w.summary()["collisions"] == 0 and resp & {"brake_min", "brake_max"}, (w.summary(), resp)
 
 
 def test_a_crossing_car_settles_when_it_stands_or_has_left():
@@ -321,7 +325,8 @@ def test_what_the_other_cars_show_are_facts_and_a_settled_pair_is_released():
     road_facts.facts(w.map, ego, 11.0, [cut], sit, speeds={"c": 6.0})                  # beside: laterally safe
     cut.lane = "e_1"
     _, _, fold, _ = road_facts.facts(w.map, ego, 11.0, [cut], sit, speeds={"c": 6.0})
-    assert fold["resp_lon"] == "none"                                                   # the memory: lateral only
+    assert fold["resp_lon"] == "brake_min"     # it cut in and is now the lead at an unsafe distance: brake along the way
+    # whatever the blame (the rule 5 ruling (3), road-scenarios s-e23be780; before it: the memory, lateral only)
     cut.settled = "right"
     _, _, fold, _ = road_facts.facts(w.map, ego, 11.0, [cut], sit, speeds={"c": 6.0})
     assert fold["resp_lon"] != "none"                                                   # settled in: along the way

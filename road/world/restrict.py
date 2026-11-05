@@ -49,6 +49,8 @@ def bound(fold, dyn):
     r = fold.get("resp_lon", "none")
     if r == "none" and fold.get("lon_range", (0, 1))[1] == 0.0:
         return 0.0
+    if r == "brake_max":                     # rule 5 escalated: only the hardest stops the ego short
+        return -(dyn.brake_max or dyn.brake_min)
     if r == "brake_min":
         return -dyn.brake_min
     if r == "brake_min_correct":

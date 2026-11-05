@@ -43,7 +43,8 @@ RESP_UNST = ("none", "continue", "drive_away", "brake")                      # t
 SECTORS = 8                                                                  # the drive-away heading's quantisation
 LON = ("in_front", "overlap_front", "overlap", "overlap_back", "at_back")     # the OBJECT relative to the ego
 LAT = ("at_left", "overlap_left", "overlap", "overlap_right", "at_right")
-RESP_LON = ("none", "brake_min_correct", "brake_min")                        # the enum order: the most severe last
+RESP_LON = ("none", "brake_min_correct", "brake_min", "brake_max")          # the enum order: the most severe last (brake_max: rule 5
+                                                                            # escalated, only the hardest stops the ego short)
 RESP_LAT = ("none", "brake_min")
 
 
@@ -345,11 +346,19 @@ def able_to_stop(dyn, d_enter):
 
 
 def past_last_stop(dyn, d_enter):
-    """X past its last point to stop before a zone D_ENTER away: even braking its hardest (brake_max) from the speed
-    it has, with no response time, it would not stop short of the line + its floor. The evidence that it does not
-    yield (RSS rule 5's trigger; the stated distance, worst-case accelerating through its response time, is past the
-    line for every car that comes on, a yielding one too)."""
-    return stop(dyn.vmin if dyn.vmin is not None else dyn.vmax, dyn.brake_max) + dyn.min_dist >= d_enter
+    """X past its last point to stop before a zone D_ENTER away at its PROPER response (brake_min) from the speed it has,
+    with no response time: it would not stop short of the line + its floor. The evidence that it has not shown it yields
+    (RSS rule 5's trigger; the rule 5 ruling, road-scenarios s-e23be780: a yielder brakes at its proper response, not at
+    its hardest, so brake_max left the window empty: 35.9 m at 16.7 m/s, not 18.4 m). A standing crosser is past it only
+    within its floor of the line."""
+    return stop(dyn.vmin if dyn.vmin is not None else dyn.vmax, dyn.brake_min) + dyn.min_dist >= d_enter
+
+
+def ego_stops_short_max(dyn, d_enter):
+    """The ego can stop short of a zone D_ENTER away only braking its hardest (brake_max): rule 5 escalated."""
+    if d_enter is None or d_enter <= 0:
+        return False
+    return stop(dyn.vmax, dyn.brake_max or dyn.brake_min) + dyn.min_dist < d_enter
 
 
 def ego_stops_short(dyn, d_enter):
@@ -409,7 +418,7 @@ class Situation:
                 self.away.add(p.id)               # held once it moves, while the other stands
             else:
                 self.away.discard(p.id)
-            if dangerous and p.type == "xing_ego_prio" and r_lon == "brake_min":
+            if dangerous and p.type == "xing_ego_prio" and r_lon in ("brake_min", "brake_max"):
                 self.escalated.add(p.id)          # held at least that while the pair stays dangerous
             else:
                 self.escalated.discard(p.id)      # safe again, or released (the other stopped; the ego past stopping short)
@@ -447,7 +456,9 @@ class Situation:
             bad.append(s.role or s.id)
             r_lon = max(r_lon, s.resp_lon, key=RESP_LON.index)
             r_lat = max(r_lat, s.resp_lat, key=RESP_LAT.index)
-            if s.resp_lon == "brake_min":
+            if s.resp_lon == "brake_max":
+                hi = min(hi, -(ego.brake_max or ego.brake_min or 0.0))
+            elif s.resp_lon == "brake_min":
                 hi = min(hi, -(ego.brake_min or 0.0))
             elif s.resp_lon == "brake_min_correct":
                 hi = min(hi, -(ego.brake_min_correct or ego.brake_min or 0.0))
@@ -561,14 +572,17 @@ def respond(p, dangerous, before, xbefore=None, escalated=False):
     rear one or the non-priority one, or never safe) → brake_min. Lateral: none (a conflict is assumed)."""
     if not dangerous or p.type == "not_relevant":
         return "none", "none"
+    if p.type == "xing_ego_prio":                              # rule 5 from the PRESENT only (the ruling): the blame facts
+        stopped = (p.obj.vmax or 0.0) <= 0.0                   # (safe_before / xing_before) stay recorded and never gate it,
+        if stopped or not (escalated or (p.o_enter is not None and past_last_stop(p.obj, p.o_enter))):
+            return "none", "none"                              # it may still yield (or has stopped): the other brakes
+        if ego_stops_short(p.ego, p.d_enter):                  # it has not shown it yields: the ego avoids it if it can,
+            return "brake_min", "none"                         # at its proper response while that stops it short,
+        if ego_stops_short_max(p.ego, p.d_enter):
+            return "brake_max", "none"                         # at its hardest while only that does,
+        return "none", "none"                                  # else inside, or past stopping short: clear it, never hold
     if p.type.startswith("xing"):
         case, front = xbefore or (None, None)
-        if case == "able_to_stop" and p.type == "xing_ego_prio":
-            stopped = (p.obj.vmax or 0.0) <= 0.0               # the other has stopped: it yields after all
-            if not stopped and ego_stops_short(p.ego, p.d_enter) and (
-                    escalated or (p.o_enter is not None and past_last_stop(p.obj, p.o_enter))):
-                return "brake_min", "none"                     # it does not yield: the ego avoids it if it can
-            return "none", "none"                              # inside, or past stopping short: clear it, never hold
         if case == "safe_long" and front is True:
             return "none", "none"
         return "brake_min", "none"
@@ -583,6 +597,8 @@ def respond(p, dangerous, before, xbefore=None, escalated=False):
     long_before, lat_before = before
     if long_before and lat_before:
         return lon, lat
-    if lat_before:                                              # laterally safe before: brake laterally
+    if lat_before:                                              # laterally safe before: brake laterally; and when the other
+        if p.type == "same_dir" and p.lon == "in_front" and p.lat == "overlap":   # has become the ego's lead at an unsafe
+            return lon, lat                                     # distance (a cut-in), brake along the way whatever the blame
         return "none", lat
     return lon, "none"                                          # longitudinally safe before: brake along the way

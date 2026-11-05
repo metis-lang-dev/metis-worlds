@@ -111,9 +111,10 @@ def test_cases_4_and_5_on_the_exerciser(tmp_path):
 def test_a_priority_holder_responds_once_the_other_cannot_stop():
     """road-2 item 1 (RSS rule 5: right of way is given, not taken; the junction_rb timeline): at a crossing the ego
     has priority over, the onset decision (Def 18: the other was able to stop) keeps the blame the other's and the
-    response none while the other can still stop braking its hardest from its speed; once it is past that last point
-    the ego brakes (brake_min) and holds it while dangerous — only while it can itself still stop short of the zone
-    (inside, or past that, it clears the zone: never a hold in the conflict), and released once the other stops."""
+    response none while the other can still stop at its PROPER response (brake_min) from its speed; once it is past that
+    last point the ego brakes (brake_min) and holds it while dangerous — brake_max while only that stops it short (the rule 5
+    ruling, road-scenarios s-e23be780), none once neither does or inside (it clears the zone: never a hold in the
+    conflict), and released once the other stops."""
     from semantic_world.situation import Dynamics, Pair, Situation
     ego = Dynamics(vmin=16.67, vmax=16.67, accel=2.0, brake_min=4.0, brake_max=8.0, rho=0.5, min_dist=1.0)
     def pair(o_v, o_enter, d_enter):        # the ego stops short in 16.67²/8 + 1 = 35.7 m
@@ -123,9 +124,9 @@ def test_a_priority_holder_responds_once_the_other_cannot_stop():
     sit = Situation()
     [s] = sit.check([pair(2.0, 20.0, 90.0)])                   # it can stop: safe (Def 17 case 1)
     assert not s.dangerous and s.xing == "able_to_stop" and s.resp_lon == "none"
-    [s] = sit.check([pair(6.0, 6.0, 60.0)])                    # dangerous, but braking hard from 6 m/s it stops in
-    assert s.dangerous and s.xing_before[0] == "able_to_stop" and s.resp_lon == "none"   # 3.25 m < 6: the other's turn
-    [s] = sit.check([pair(10.0, 5.0, 50.0)])                   # 10 m/s, 5 m off: past its last stop (7.25 m)
+    [s] = sit.check([pair(6.0, 6.0, 60.0)])                    # dangerous, but at brake_min from 6 m/s it stops in
+    assert s.dangerous and s.xing_before[0] == "able_to_stop" and s.resp_lon == "none"   # 5.5 m < 6: the other's turn
+    [s] = sit.check([pair(10.0, 5.0, 50.0)])                   # 10 m/s, 5 m off: past its last stop (13.5 m)
     assert s.dangerous and s.resp_lon == "brake_min" and s.xing_before[0] == "able_to_stop"   # blame unchanged
     [s] = sit.check([pair(3.0, 4.0, 45.0)])                    # it brakes late, still coming: held
     assert s.dangerous and s.resp_lon == "brake_min"
@@ -136,7 +137,48 @@ def test_a_priority_holder_responds_once_the_other_cannot_stop():
     sit.check([pair(2.0, 20.0, 90.0)])
     [s] = sit.check([pair(10.0, 5.0, 50.0)])
     assert s.resp_lon == "brake_min"
-    [s] = sit.check([pair(10.0, 3.0, 20.0)])                   # 20 m < 35.7: past stopping short
+    [s] = sit.check([pair(10.0, 3.0, 20.0)])                   # 20 m < 35.7, but > 18.4 at brake_max: only that stops it
+    assert s.dangerous and s.resp_lon == "brake_max" and sit.escalated     # short (the ruling: escalated, held)
+    [s] = sit.check([pair(10.0, 2.0, 15.0)])                   # 15 m < 18.4: neither stops it short: it clears the zone
     assert s.dangerous and s.resp_lon == "none" and not sit.escalated
     [s] = sit.check([pair(10.0, 1.0, 0.0)])                    # inside the zone
     assert s.resp_lon == "none"
+
+
+def test_rule_5_answers_from_the_present_whatever_the_memory():
+    """The rule 5 ruling (road-scenarios s-e23be780, record 503be4): the priority holder's response depends on the PRESENT
+    only; the blame facts (xing_before) stay recorded and never gate it, so a crosser first seen dangerous ('before none')
+    and one seen safe first ('able_to_stop before') get the same answer on the same geometry. A standing crosser at its
+    line has not run it: none."""
+    from semantic_world.situation import Dynamics, Pair, Situation
+    ego = Dynamics(vmin=13.9, vmax=13.9, accel=2.0, brake_min=4.0, brake_max=8.0, rho=0.5, min_dist=1.0)
+    def pair(o_v, o_enter, d_enter):
+        obj = Dynamics(vmin=o_v, vmax=o_v, accel=2.0, brake_min=4.0, brake_max=8.0, rho=0.5, min_dist=1.0)
+        return Pair("x:xing_ego_prio:j", "xing_ego_prio", ego=ego, obj=obj,
+                    d_enter=d_enter, d_leave=d_enter + 8.0, o_enter=o_enter, o_leave=o_enter + 8.0)
+    seen_safe = Situation()
+    seen_safe.check([pair(2.0, 40.0, 90.0)])
+    for geometry, want in [((16.7, 40.0, 60.0), "none"),          # OVTP: 16.7 m/s 40 m off stops in 35.9 m: may still yield
+                           ((16.7, 30.0, 40.0), "brake_min"),     # 30 m off: past its proper stop; the ego stops in 25.2 m
+                           ((16.7, 30.0, 20.0), "brake_max")]:    # the ego 20 m off: only brake_max (13.1 m) stops it short
+        first_seen = Situation()
+        [a] = first_seen.check([pair(*geometry)])
+        [b] = Situation(xmemory=dict(seen_safe.xmemory)).check([pair(*geometry)])
+        assert a.dangerous and b.dangerous and a.resp_lon == b.resp_lon == want, (geometry, a.resp_lon, b.resp_lon)
+    [s] = Situation().check([pair(0.0, 0.5, 30.0)])               # standing at its line: it yields
+    assert s.resp_lon == "none"
+
+
+def test_a_cut_in_that_became_the_lead_is_braked_for_whatever_the_blame():
+    """The rule 5 ruling (3), records 40f229 / 87279b: a same-direction car that was laterally safe and then cut in
+    (the lateral distance unsafe last: the blame its), now the ego's lead at an unsafe distance: the ego brakes along
+    the way (brake_min), the lateral response as before."""
+    from semantic_world.situation import Dynamics, Pair, Situation
+    ego = Dynamics(vmin=11.1, vmax=11.1, accel=2.0, brake_min=4.0, brake_max=8.0, rho=0.5, min_dist=1.0)
+    obj = Dynamics(vmin=5.6, vmax=5.6, accel=2.0, brake_min=4.0, brake_max=8.0, rho=0.5, min_dist=1.0)
+    sit = Situation(memory={"c:same_dir": (False, True)})         # long unsafe, laterally safe: beside, then it cut in
+    [s] = sit.check([Pair("c:same_dir", "same_dir", "in_front", "overlap", 8.0, 0.0, ego, obj)])
+    assert s.dangerous and s.resp_lon == "brake_min"
+    side = Situation(memory={"c:same_dir": (False, True)})        # still beside (not the lead): lateral only, as before
+    [t] = side.check([Pair("c:same_dir", "same_dir", "in_front", "at_left", 8.0, 0.2, ego, obj)])
+    assert t.resp_lon == "none"

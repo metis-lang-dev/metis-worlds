@@ -97,7 +97,9 @@ def test_a_crossing_pair_merges_the_objects_ways(cross):
     assert math.isclose(p.o_enter, min(i for i in ins if i is not None))
     assert p.d_enter < p.d_leave and p.o_enter < p.o_leave
     s = Situation().check([p])[0]
-    assert s.dangerous and s.resp_lon == "brake_min"                              # never seen safe: brake
+    from semantic_world.situation import past_last_stop
+    assert s.dangerous and not past_last_stop(p.obj, p.o_enter) and s.resp_lon == "none"   # never seen safe, and it can
+    # still stop at its proper response: the other's turn (the rule 5 ruling: the present, not the memory, decides)
     far = Mover("x", "SC_0", 5.0, dynamics_for("passenger", v=8, lane=m.lanes["SC_0"]))
     s = Situation().check(m.pairs(ego_on(m, route, 5.0), [far]))[0]
     assert not s.dangerous and s.xing == "able_to_stop"                            # 85 m off: it can stop

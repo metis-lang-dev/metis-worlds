@@ -109,9 +109,10 @@ def test_def_18_able_to_stop_with_priority():
     sit.check([xpair("xing_obj_prio", 30.0, 40.0, 10.0, 20.0)])
     s = sit.check([xpair("xing_obj_prio", 6.0, 16.0, 5.0, 15.0, obj_vmin=0)])[0]
     assert s.dangerous and s.resp_lon == "brake_min"
-    # never seen safe: brake
+    # never seen safe: the same answer as with the history above (the rule 5 ruling: the present decides, the memory
+    # is the blame's record only)
     s = Situation().check([xpair("xing_ego_prio", 5.0, 15.0, 6.0, 16.0, obj_vmin=0)])[0]
-    assert s.dangerous and s.xing_before is None and s.resp_lon == "brake_min"
+    assert s.dangerous and s.xing_before is None and s.resp_lon == "none"
 
 
 # -- the lateral left/right split, and the per-pair lateral response ---------------------------------------------

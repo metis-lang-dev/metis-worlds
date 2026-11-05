@@ -149,8 +149,8 @@ def judged_on_road(tmp_path, pack):
 
 LATE = """
 stage safety {
-  %% The zone ahead comes too late to stop for at my pace: I ease off, {R}.
-  brake_late [dyn] : $busy * $tick__grant(planner, controls) * $late(nextzone) * $soft(R) * now -o ().
+  %% The zone ahead comes too late to stop for at my pace and nobody crosses there: I ease off, {R}.
+  brake_late [dyn] : $busy * $tick__grant(planner, controls) * $late(nextzone) * $cross_settled(nextzone) * $soft(R) * now -o ().
 }
 """
 
