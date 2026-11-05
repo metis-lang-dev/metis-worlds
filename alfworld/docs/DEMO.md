@@ -120,8 +120,9 @@ demo world for tester to assess and interrogate"):
   put 3,245 MiB of qwen3:4b's 7,562 MiB (at its 32k context) on the GPU and the rest on the CPU. Its first tool call
   came after 8 min 10 s, against about 20 s with the GPU to itself. Run the loop on a second card (pascal's 16 GB), or
   on OpenRouter with a budget, or take turns: stop the demo while the loop takes.
-- **What a tester cannot do yet (I9):** mark a tick of the demo run from the CHAT. The run has six members and
-  `/mark RUN K WORDS` names none, so it is refused ("has several members").
+- **A tick of the demo run as a surprise:** `/mark RUN:MEMBER K WORDS` in the CHAT, e.g.
+  `/mark train-pick_and_place_simple-Tomato-None-Microwave-13-<started>:grasp 120 it took the apple with full hands`.
+  The run has six members (director, task, nav, access, grasp, place); without the member the refusal names them.
 
 **What to try** (nina's Chrome check):
 1. kitchen 13: "put the apple on the countertop", then "move the bowl to the cabinet", then "put a tomato in the
