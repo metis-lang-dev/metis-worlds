@@ -32,6 +32,9 @@ from functools import lru_cache
 
 import scenario_cards as C
 
+FLOW_MAX = 80                # a flow's cars in one run at most
+SYNC_VMAX = 25.0             # a sync actor's top speed (actor_t's maxSpeed)
+SYNC_HOLD_S = 1.0            # the sync holds its speed from the ego's last second before the conflict
 ONWARD_M = 200.0             # the ego's route past the site (the scenario ends at its junction, as CARLA's WaitEndIntersection: a longer way only adds later junctions)
 FREE_MARGIN_M = 66.0         # nina: the card's distance clipped to the free run minus this
 SIDE_M = 30.0                # the side actor's start before the junction (the source's _source_dist)
@@ -50,14 +53,55 @@ def net_of(town):
     return _sumolib().net.readNet(str(C.MAPS / ("%s.net.xml" % town)))
 
 
+@lru_cache(maxsize=None)
+def inet_of(town):
+    """The net with its internal lanes: the ways across a junction (OVTP's conflict point)."""
+    return _sumolib().net.readNet(str(C.MAPS / ("%s.net.xml" % town)), withInternal=True)
+
+
+def _via_shape(town, frm, to, li):
+    """The shape of the way across the junction from lane LI of FRM onto TO (its internal lanes chained), or None."""
+    inet = inet_of(town)
+    for c in inet.getEdge(frm.getID()).getConnections(inet.getEdge(to.getID())):
+        if c.getFromLane().getIndex() == li and c.getViaLaneID():
+            lane = inet.getLane(c.getViaLaneID())
+            shape = list(lane.getShape())
+            for _ in range(4):
+                outs = [x for x in lane.getOutgoingLanes() if x.getID().startswith(":")]
+                if not outs:
+                    break
+                lane = outs[0]
+                shape += list(lane.getShape())[1:]
+            return shape
+    return None
+
+
+def _cross(P, Q):
+    """Where polylines P and Q first cross: (m along P, m along Q), or None."""
+    dp = 0.0
+    for p0, p1 in zip(P, P[1:]):
+        dq = 0.0
+        for q0, q1 in zip(Q, Q[1:]):
+            rx, ry, sx, sy = p1[0] - p0[0], p1[1] - p0[1], q1[0] - q0[0], q1[1] - q0[1]
+            den = rx * sy - ry * sx
+            if abs(den) > 1e-9:
+                qx, qy = q0[0] - p0[0], q0[1] - p0[1]
+                t, u = (qx * sy - qy * sx) / den, (qx * ry - qy * rx) / den
+                if 0.0 <= t <= 1.0 and 0.0 <= u <= 1.0:
+                    return dp + t * math.hypot(rx, ry), dq + u * math.hypot(sx, sy)
+            dq += math.hypot(sx, sy)
+        dp += math.hypot(rx, ry)
+    return None
+
+
 def parse(name):
     """card:NAME[:VARIANT]@TOWN#SITE → (card name with its variant, town, site index)."""
     body = name[5:] if name.startswith("card:") else name
     card, _, rest = body.partition("@")
     town, _, site = rest.partition("#")
-    if not town or not site.isdigit():
+    if not town or not (site.isdigit() or C.SITE_REF.fullmatch(site)):
         raise ValueError("%r: a SUMO card is card:NAME[:VARIANT]@TOWN#SITE" % name)
-    return card, town, int(site)
+    return card, town, int(site) if site.isdigit() else site
 
 
 def _heading_at(shape, pos):
@@ -98,12 +142,32 @@ def _straight_next(edge, lane_index):
     return sorted(outs, key=lambda o: o[:3])[0][3] if outs else None
 
 
-def _straight_prev(edge):
-    ins = []
-    for frm, conns in edge.getIncoming().items():
-        for c in conns:
-            ins.append((0 if c.getDirection() == "s" else 1, frm.getID(), frm))
-    return sorted(ins)[0][2] if ins else None
+def _plain_prev(edge):
+    """The edge before EDGE when their node is a plain continuation (one way in, one way on, the ways back aside): a
+    walk back over it stays on the same straight (nina's gap-cards review §3, §4); None at a real junction."""
+    node = edge.getFromNode()
+    ins = [e for e in node.getIncoming() if e.getFromNode() != edge.getToNode()]
+    outs = [e for e in node.getOutgoing() if not ins or e.getToNode() != ins[0].getFromNode()]
+    return ins[0] if len(ins) == 1 and len(outs) == 1 else None
+
+
+def _plain_next(edge):
+    """The edge after EDGE when their node is a plain continuation; None at a real junction."""
+    node = edge.getToNode()
+    outs = [e for e in node.getOutgoing() if e.getToNode() != edge.getFromNode()]
+    ins = [e for e in node.getIncoming() if not outs or e.getFromNode() != outs[0].getToNode()]
+    return outs[0] if len(outs) == 1 and len(ins) == 1 else None
+
+
+def _room_behind(edge, pos):
+    """The straight behind POS on EDGE, back over plain continuations only: (metres, [edges, first first])."""
+    room, way = pos, [edge]
+    while True:
+        prev = _plain_prev(way[0])
+        if prev is None or prev in way:
+            return room, way
+        way.insert(0, prev)
+        room += prev.getLength()
 
 
 def place(card, town, site):
@@ -111,9 +175,21 @@ def place(card, town, site):
     poses = C.sites(card, town)
     p = next((q for q in poses if q["i"] == site), None)
     if p is None:
-        raise ValueError("%s: site %d of %s is not one of its sites (%s)" % (card["scenario"], site, town, [q["i"] for q in poses]))
+        raise ValueError("%s: site %s of %s is not one of its sites (%s)" % (card["scenario"], site, town, [q["i"] for q in poses]))
     lane, pos = locate(town, p["sumo"]["x"], p["sumo"]["y"], p["sumo"]["angle"])
     edge, li = lane.getEdge(), lane.getIndex()
+    site_pos = pos
+    # an actor BEHIND on the same straight, no junction between (the architect's ruling on nina's §2): when the straight
+    # behind the site is shorter, the ego starts that much further into the run (`fit`, recorded)
+    behinds = [float(a["at"]["behind"]) for a in card.get("actors") or [] if "behind" in a.get("at", {})]
+    fit = 0.0
+    if behinds:
+        room, _ = _room_behind(edge, pos)
+        fit = max(0.0, max(behinds) - room + 0.5)
+        if pos + fit > edge.getLength() - 10.0:
+            raise ValueError("%s at %s#%s: %.0f m behind does not fit the straight (%.0f m behind, %.0f m on)"
+                             % (card["scenario"], town, site, max(behinds), room, edge.getLength() - pos))
+        pos += fit
     back, depart = [], pos                          # the ego at the site
     route, run, e = [edge], edge.getLength() - pos, edge
     onward = float((card.get("sumo") or {}).get("onward", ONWARD_M))   # a card whose actor needs a longer way (the emergency vehicle)
@@ -141,7 +217,13 @@ def place(card, town, site):
         if at.get("road") == "side":                         # timed: at its speed it reaches the junction as the ego
             tta = float((a.get("trigger") or {}).get("tta", 0.0))      # does from the trigger's TTA (the source's sync)
             sp = max([float(st.get("speed", 0.0)) for st in a.get("script") or []] + [0.0])
-            item["place"] = _side(edge, route, sp * tta if sp and tta else SIDE_M)
+            item["place"] = _side(edge, route, sp * tta if sp and tta else SIDE_M, town=town, li=li, sp=sp, tta=tta,
+                                  side=at.get("from"))
+        elif at.get("opposite") and a.get("flow"):          # a continuous flow's source (OppositeActorFlow): AHEAD m
+            ref = next((b for b in expanded if b["id"] == at.get("beyond")), None)      # beyond the BEYOND actor
+            s_src = pos + shift + float(at.get("ahead", 0.0)) + (float(ref["at"].get("ahead", 0.0)) if ref else 0.0)
+            item["place"] = _opposite(edge, min(s_src, edge.getLength() - 0.2), a, town, site)
+            item["place"].update(spawn=True, flow=True, src_m=round(s_src - pos, 1))
         elif at.get("opposite"):
             try:
                 item["place"] = _opposite(edge, pos + float(at.get("ahead", 0.0)) + shift, a, town, site)
@@ -152,10 +234,10 @@ def place(card, town, site):
         else:
             s = pos + float(at.get("ahead", 0.0)) + shift - float(at.get("behind", 0.0))
             way, ri = list(route), 0
-            while s < 0:                                     # behind the site: back along straight predecessors
-                prev = _straight_prev(way[0])
+            while s < 0:                                     # behind the site: back over plain continuations (fit)
+                prev = _plain_prev(way[0])
                 if prev is None:
-                    raise ValueError("%s at %s#%d: no road %.0f m behind the site" % (a["id"], town, site, -s))
+                    raise ValueError("%s at %s#%s: no road %.0f m behind the site" % (a["id"], town, site, -s))
                 way.insert(0, prev)
                 s += prev.getLength()
             route_a = way
@@ -179,17 +261,19 @@ def place(card, town, site):
         actors.append(item)
     back = float((card.get("sumo") or {}).get("back", 0.0))  # a junction card whose site is too near its junction for the
     ego_li, s = li, depart - back                            # trigger's TTA: the ego starts BACK m before it (the actors stay)
-    while s < 0:
-        prev = _straight_prev(route[0])
+    while s < 0:                                             # on the same straight only (nina's §4)
+        prev = _plain_prev(route[0])
         if prev is None or prev in route or prev.getLaneNumber() <= ego_li:
             s = 0.1
             break
         route.insert(0, prev)
         s += prev.getLength()
     depart = max(0.1, s) if back else depart
-    return {"site": (edge.getID(), li, round(pos, 2)), "free": round(free, 1), "shift": round(shift, 1),
+    return {"site": (edge.getID(), li, round(site_pos, 2)), "free": round(free, 1), "shift": round(shift, 1), "fit": round(fit, 1),
+            "town": town,
             "junction": {"edge": edge.getID(), "pos": edge.getLength()},
-            "ego": {"route": [x.getID() for x in route], "lane": li, "pos": round(depart, 2), "v": float(card["ego"]["v"])},
+            "ego": {"route": [x.getID() for x in route], "lane": li, "pos": round(depart, 2), "v": float(card["ego"]["v"]),
+                    "len": round(sum(x.getLength() for x in route) - depart, 1)},
             "actors": actors}
 
 
@@ -205,13 +289,18 @@ def _opposite(edge, s, a, town, site):
     return {"route": [rev.getID()] + ([nxt.getID()] if nxt is not None else []), "lane": 0, "pos": round(p, 2)}
 
 
-def _side(edge, route, before=None):
+def _side(edge, route, before=None, town=None, li=0, sp=0.0, tta=0.0, side=None):
     """The side actor's way: an incoming edge of the junction at EDGE's end that is not the ego's (nor its reverse),
     BEFORE m (default SIDE_M) before the junction, back over its straight predecessors when it is shorter, and on
-    straight across."""
+    straight across. With TOWN (OVTP's SyncArrival, nina's gap-cards review §5): only an approach whose straight way
+    across CROSSES the ego's straight way (a minor arm that only turns onto the ego's road is no such conflict), from
+    SIDE (right | left of the ego's heading) when given; BEFORE then times it to the conflict point: at SP it gets
+    there as the ego does from the trigger's TTA, at the town's limit; `conflict` is for the director's sync."""
     before = SIDE_M if before is None else before
     node = edge.getToNode()
     mine = {x.getID() for x in route}
+    ego_way = _via_shape(town, edge, route[1], li) if town and len(route) > 1 else None
+    found = []
     for frm in sorted(node.getIncoming(), key=lambda x: x.getID()):
         if frm.getID() in mine or frm.getFromNode() == edge.getToNode() or frm.getToNode() != node:
             continue
@@ -222,16 +311,45 @@ def _side(edge, route, before=None):
         nxt = _straight_next(frm, 0)
         if nxt is None:
             continue
+        conflict = None
+        if ego_way is not None:
+            if not any(c.getDirection() == "s" for c in frm.getConnections(nxt)):
+                continue                           # a turn onto the ego's road (1135, 82): the source's adversary goes straight
+            adv_way = _via_shape(town, frm, nxt, 0)
+            hit = _cross(ego_way, adv_way) if adv_way else None
+            if hit is None:
+                continue                           # it turns onto the ego's road: no straight-across conflict
+            (hx, hy), (px, py) = (ego_way[1][0] - ego_way[0][0], ego_way[1][1] - ego_way[0][1]), frm.getFromNode().getCoord()
+            cx, cy = ego_way[0]
+            right = hx * (py - cy) - hy * (px - cx) < 0.0
+            conflict = {"ego_in": round(hit[0], 1), "adv_in": round(hit[1], 1), "frm": frm.getID(),
+                        "frm_len": round(frm.getLength(), 2), "side": "right" if right else "left"}
+            if side and conflict["side"] != side:
+                found.append((frm, nxt, conflict))
+                continue
+            if sp and tta:
+                before = max(1.0, sp * (tta + hit[0] / max(1.0, edge.getSpeed())) - hit[1])
+        return _side_way(frm, nxt, before, mine, conflict)
+    if found:                                      # none from SIDE: the other side's (recorded in `conflict`)
+        frm, nxt, conflict = found[0]
+        if sp and tta:
+            before = max(1.0, sp * (tta + conflict["ego_in"] / max(1.0, edge.getSpeed())) - conflict["adv_in"])
+        return _side_way(frm, nxt, before, mine, conflict)
+    raise ValueError("no side road at the junction after %s%s" % (edge.getID(), " crossing the ego's way" if ego_way else ""))
+
+
+def _side_way(frm, nxt, before, mine, conflict):
+    if True:
         way, p = [frm], frm.getLength() - before
-        while p < 0:
-            prev = _straight_prev(way[0])
+        while p < 0:                                   # over plain continuations only: never across a junction
+            prev = _plain_prev(way[0])
             if prev is None or prev in way or prev.getID() in mine:
                 p = 0.1
                 break
             way.insert(0, prev)
             p += prev.getLength()
-        return {"route": [x.getID() for x in way] + [nxt.getID()], "lane": 0, "pos": round(max(0.1, p), 2), "spawn": True}
-    raise ValueError("no side road at the junction after %s" % edge.getID())
+        return {"route": [x.getID() for x in way] + [nxt.getID()], "lane": 0, "pos": round(max(0.1, p), 2), "spawn": True,
+                "conflict": conflict}
 
 
 def build(name, work, seed=1, n=0, **_):
@@ -241,7 +359,7 @@ def build(name, work, seed=1, n=0, **_):
     pl = place(card, town, site)
     rows = ['<routes>', '<vType id="ego_t" accel="3.0" decel="6.0" sigma="0" maxSpeed="20" length="4.5" width="1.8"/>',
             '<vType id="actor_t" accel="3.0" decel="8.0" sigma="0" maxSpeed="25" length="4.5" width="1.8"/>',
-            '<vType id="emergency_t" vClass="emergency" accel="3.5" decel="8.0" sigma="0" maxSpeed="30" speedFactor="1.5" length="5.0" width="2.0"/>']
+            '<vType id="emergency_t" vClass="emergency" accel="3.5" decel="8.0" sigma="0" maxSpeed="30" speedFactor="normc(2.2,0,0.2,2.2)" length="5.0" width="2.0"/>']
     e = pl["ego"]
     rows.append('<vehicle id="%s" type="ego_t" depart="0" departLane="%d" departPos="%.2f" departSpeed="%.2f"><route edges="%s"/></vehicle>'
                 % (EGO, e["lane"], e["pos"], e["v"], " ".join(e["route"])))
@@ -251,7 +369,8 @@ def build(name, work, seed=1, n=0, **_):
             continue
         vt = "emergency_t" if a.get("kind") == "emergency" else "actor_t"
         length = float(a.get("length", C.KIND[a.get("kind", "car")][1]))
-        # no bluelight device: SUMO's would move the ego aside itself (it changes others' lanes whatever their lane-change
+        # speedFactor 2.2: SUMO caps a vehicle at the lane's limit x its speedFactor (13.9 x 2.2 = 30.6), so the source's
+        # ego + 25 m/s reaches emergency_t's maxSpeed 30. No bluelight device: SUMO's would move the ego aside itself (it changes others' lanes whatever their lane-change
         # mode), doing the yielding the card asks of the family; the emergency vehicle is its vClass and its speed
         dev = ""
         rows.append('<vehicle id="%s" type="%s" depart="0" departLane="%d" departPos="%.2f" departSpeed="%.2f" length="%.1f"><route edges="%s"/>%s</vehicle>'
@@ -260,19 +379,21 @@ def build(name, work, seed=1, n=0, **_):
     routes = os.path.join(work, "%s.rou.xml" % name.replace(":", "_").replace("@", "_").replace("#", "_"))
     with open(routes, "w") as f:
         f.write("\n".join(rows) + "\n")
-    return str(C.MAPS / ("%s.net.xml" % town)), routes, [], Director(card, pl)
+    return str(C.MAPS / ("%s.net.xml" % town)), routes, [], Director(card, pl, seed)
 
 
 class Director:
     """The card's triggers and steps, applied before each SUMO step (SumoWorld.step)."""
 
-    def __init__(self, card, placed):
+    def __init__(self, card, placed, seed=1):
         self.card, self.pl = card, placed
+        self.rng = random.Random(seed)
+        self.flows = {}                                                    # a flow actor: {on, n, last, gap, at}
         self.armed, self.queue, self.started, self.spawned = [], [], set(), set()
         for a in placed["actors"]:
             for st in a.get("script") or []:
                 when = st.get("when")
-                steps = [(k, st[k]) for k in ("go", "speed", "v", "brake", "lane") if k in st]
+                steps = [(k, st[k]) for k in ("go", "speed", "v", "brake", "lane", "flow") if k in st]
                 after = float(st.get("after", 0.0))
                 if when is None:
                     self.queue.append((float(st.get("t", 0.0)) + after, a, steps))
@@ -280,7 +401,13 @@ class Director:
                     self.armed.append((a, dict(a["trigger"] if when == "trigger" else when), steps, after))
         self.fired = []                                                    # [(t, actor id, what)] for the report
         self.spawn_v = {}                                                  # a trigger-spawned actor: its speed at insertion
-        self.held = {}                                                     # an emergency vehicle: s it was held behind the ego
+        self.held = {}                                                     # an emergency vehicle: s it was held behind the ego (ours)
+        self.lb_ev = {}                                                    # an emergency vehicle: LB 2.0's YieldToEmergencyVehicleTest
+        self.triggered = []                                                # [{t, id, ego_tta}]: an armed trigger that fired
+        self.removed = []                                                  # [(t, id)]: an other removed at its contact with the ego
+        self.driven = 0.0
+        self.ended, self.stood = None, 0.0                                 # the card's `end` (FollowLeadingVehicle's)
+        self.sync = {}                                                     # a `sync` actor: {phase, v, t_hold, closest_m}
 
     def _dist(self, c, edge, pos):
         try:
@@ -292,6 +419,10 @@ class Director:
     def _hit(self, c, t, a, when):
         if "t" in when and t >= when["t"] - 1e-9:
             return True
+        if "near" in when and when["near"] in c.vehicle.getIDList():      # the ego within DIST of that actor
+            (ex, ey), (ox, oy) = c.vehicle.getPosition(EGO), c.vehicle.getPosition(when["near"])
+            if math.hypot(ex - ox, ey - oy) <= float(when.get("dist", 50.0)):
+                return True
         pa = a["place"]
         if "gap" in when and a["id"] in c.vehicle.getIDList():
             d = self._dist(c, c.vehicle.getRoadID(a["id"]), max(0.0, c.vehicle.getLanePosition(a["id"]) - c.vehicle.getLength(a["id"])))
@@ -312,8 +443,16 @@ class Director:
             return True
         if "junction_ahead" in when and a["id"] in c.vehicle.getIDList():          # its lane's end is the next junction
             lane = c.vehicle.getLaneID(a["id"])
-            if not lane.startswith(":") and c.lane.getLength(lane) - c.vehicle.getLanePosition(a["id"]) <= when["junction_ahead"]:
-                return True
+            if not lane.startswith(":"):                                   # to the next REAL junction: on over plain
+                d = c.lane.getLength(lane) - c.vehicle.getLanePosition(a["id"])   # continuations (nina's §3)
+                e = net_of(self.pl["town"]).getEdge(c.vehicle.getRoadID(a["id"]))
+                for _ in range(20):
+                    e = _plain_next(e)
+                    if e is None or d > when["junction_ahead"]:
+                        break
+                    d += e.getLength()
+                if d <= when["junction_ahead"]:
+                    return True
         return False
 
     def _apply(self, c, t, a, steps):
@@ -326,6 +465,11 @@ class Director:
 
     def _step(self, c, t, a, steps, what, arg):
         vid, pa = a["id"], a["place"]
+        if what == "flow":                                                 # start the flow: its first car now
+            self.flows[vid] = {"on": True, "n": 0, "last": None, "gap": None, "at": round(t, 2)}
+            self._flow_car(c, a)
+            self.fired.append((round(t, 2), vid, what))
+            return
         if True:
             if what in ("go", "speed") and pa.get("spawn") and vid not in self.spawned:
                 self.spawned.add(vid)                                      # added once: inserted at the next step
@@ -356,6 +500,10 @@ class Director:
     def tick(self, c, t):
         """Before a SUMO step at time T: hold the actors at their speeds once inserted, fire what is due."""
         ids = set(c.vehicle.getIDList())
+        for vid in [v for v in self.spawn_v if v in ids and v not in self.started and v not in {a["id"] for a in self.pl["actors"]}]:
+            self.started.add(vid)                      # a flow's car: at its speed from its first step
+            c.vehicle.setPreviousSpeed(vid, self.spawn_v[vid])
+            c.vehicle.setSpeed(vid, self.spawn_v[vid])
         for a in self.pl["actors"]:
             if a["id"] in ids and a["id"] not in self.started:
                 self.started.add(a["id"])
@@ -373,9 +521,17 @@ class Director:
         if EGO not in ids:
             return
         ego_v = c.vehicle.getSpeed(EGO)
+        self.driven = c.vehicle.getDistance(EGO)
+        self._yield_test(c, t, ids)
+        self._end(c, t, ids, ego_v)
+        self._sync(c, t, ids, ego_v)
+        for a in self.pl["actors"]:                    # a flow: the next car once the last has driven its drawn gap
+            f = self.flows.get(a["id"])
+            if f and f["on"] and f["n"] < FLOW_MAX and (f["last"] not in ids or c.vehicle.getDistance(f["last"]) >= f["gap"]):
+                self._flow_car(c, a)
         for a in self.pl["actors"]:                    # v_rel: the source's "the ego's speed + N" (the ego takes the town's limit)
             if "v_rel" in a and a["id"] in ids:
-                c.vehicle.setSpeed(a["id"], ego_v + float(a["v_rel"]))
+                c.vehicle.setSpeed(a["id"], min(c.vehicle.getMaxSpeed(a["id"]), ego_v + float(a["v_rel"])))
         for a in self.pl["actors"]:                    # yield_emergency_vehicle (LB 2.0): held behind the ego within 30 m
             if a.get("kind") == "emergency" and a["id"] in ids:
                 lead = c.vehicle.getLeader(a["id"], 30.0)
@@ -385,6 +541,10 @@ class Director:
         keep = []
         for a, when, steps, after in self.armed:
             if self._hit(c, t, a, when):
+                j = self.pl["junction"]
+                d = self._dist(c, j["edge"], j["pos"] - 0.1)
+                self.triggered.append({"t": round(t, 2), "id": a["id"],
+                                       "ego_tta": round(d / max(ego_v, 0.1), 2) if d is not None and d >= 0 else None})
                 if after > 0:
                     self.queue.append((t + after, a, steps))
                 else:
@@ -404,7 +564,109 @@ class Director:
         tls = c.vehicle.getNextTLS(EGO)
         return bool(tls) and tls[0][2] <= 40.0 and tls[0][3] in "rRyYu" and c.vehicle.getSpeed(EGO) < 1.0
 
+    def _yield_test(self, c, t, ids):
+        """LB 2.0's YieldToEmergencyVehicleTest (atomic_criteria.py:2110-2169, nina's 2b review): FAILURE while the ego is
+        ahead of the vehicle along the vehicle's heading; the scenario ends 10 s after the vehicle first comes within
+        50 m of the ego, or once the vehicle is in front and has driven 50 m (yield_to_emergency_vehicle.py:144-155);
+        one infraction if FAILURE at the end (at the run's end when it never ends)."""
+        ex, ey = c.vehicle.getPosition(EGO)
+        for a in self.pl["actors"]:
+            aid = a["id"]
+            if a.get("kind") != "emergency" or aid not in ids:
+                continue
+            ax, ay = c.vehicle.getPosition(aid)
+            h = math.radians(c.vehicle.getAngle(aid))                     # SUMO: degrees clockwise from north
+            ahead = (ex - ax) * math.sin(h) + (ey - ay) * math.cos(h) > 0.0
+            st = self.lb_ev.setdefault(aid, {"near": None, "pass_d": None, "end": None, "status": None})
+            st["status"] = "FAILURE" if ahead else "SUCCESS"
+            if st["end"] is not None:
+                continue
+            if st["near"] is None and math.hypot(ex - ax, ey - ay) <= 50.0:
+                st["near"] = round(t, 2)
+            dist = c.vehicle.getDistance(aid)
+            st["pass_d"] = None if ahead else (dist if st["pass_d"] is None else st["pass_d"])
+            if (st["near"] is not None and t - st["near"] >= 10.0) or (st["pass_d"] is not None and dist - st["pass_d"] >= 50.0):
+                st["end"], st["failure"] = round(t, 2), ahead
+
+    def _sync(self, c, t, ids, ego_v):
+        """SyncArrival (CARLA's older red-light scenario; the architect's step 2c): once its trigger fired, a `sync`
+        actor's speed is set each tick so that it reaches the conflict point (where the two straight ways across the
+        junction cross) when the ego does at its present speed; from the ego's last SYNC_HOLD_S before the conflict
+        (or the actor within 10 m of it) it holds that speed: the ego's braking then is its own."""
+        for a in self.pl["actors"]:
+            vid, cf = a["id"], a["place"].get("conflict")
+            if not a.get("sync") or not cf or vid not in ids or vid not in self.spawned:
+                continue
+            st = self.sync.setdefault(vid, {"phase": "sync", "v": None, "t_hold": None, "closest_m": None})
+            (ex, ey), (ax, ay) = c.vehicle.getPosition(EGO), c.vehicle.getPosition(vid)
+            gap = math.hypot(ex - ax, ey - ay)
+            st["closest_m"] = round(gap, 1) if st["closest_m"] is None else round(min(st["closest_m"], gap), 1)
+            if st["phase"] != "sync":
+                continue
+            j = self.pl["junction"]
+            ego_d = self._dist(c, j["edge"], j["pos"] - 0.1)
+            try:
+                adv_d = c.vehicle.getDrivingDistance(vid, cf["frm"], cf["frm_len"] - 0.1)
+            except Exception:                                              # noqa: BLE001 — past its approach
+                adv_d = None
+            if ego_d is None or adv_d is None or ego_d < -1e6 or adv_d < -1e6:
+                st["phase"], st["t_hold"] = "hold", round(t, 2)
+                continue
+            ego_d, adv_d = ego_d + cf["ego_in"], adv_d + cf["adv_in"]
+            tt = ego_d / max(ego_v, 0.5)
+            st["v"] = round(min(SYNC_VMAX, max(0.0, adv_d / tt)), 2)
+            c.vehicle.setSpeed(vid, st["v"])
+            if tt <= SYNC_HOLD_S or adv_d <= 10.0:
+                st["phase"], st["t_hold"] = "hold", round(t, 2)
+
+    def _flow_car(self, c, a):
+        """One car of A's flow at its source; the gap to the next drawn from its `flow.gap` [from, to] (the source's
+        `frequency`, OppositeActorFlow atomic_behaviors.py:3541-3701: continuous, not a fixed platoon)."""
+        f, pa = self.flows[a["id"]], a["place"]
+        rid = "r_" + a["id"]
+        if f["n"] == 0:
+            c.route.add(rid, pa["route"])
+        vid = "%s_%d" % (a["id"], f["n"])
+        c.vehicle.add(vid, rid, typeID="actor_t", departLane=str(pa["lane"]), departPos=str(pa["pos"]), departSpeed="0")
+        c.vehicle.setLaneChangeMode(vid, 0)
+        self.spawn_v[vid] = float(a.get("v", 0.0))
+        lo, hi = (a["flow"].get("gap") or [20.0, 100.0])
+        f["n"], f["last"], f["gap"] = f["n"] + 1, vid, round(self.rng.uniform(float(lo), float(hi)), 1)
+
+    def _end(self, c, t, ids, ego_v):
+        """The card's `end: {near: ID, within: m, stand_s: s}`: the source's end (FollowLeadingVehicle L137-143: the ego
+        within 20 m of the lead, standing for 1 s), after which CARLA destroys the actor: removed here too."""
+        e = self.card.get("end")
+        if not e or self.ended is not None or e["near"] not in ids:
+            return
+        (ex, ey), (ox, oy) = c.vehicle.getPosition(EGO), c.vehicle.getPosition(e["near"])
+        near = math.hypot(ex - ox, ey - oy) <= float(e.get("within", 20.0))
+        self.stood = self.stood + 0.1 if near and ego_v < 0.1 else 0.0
+        if self.stood >= float(e.get("stand_s", 1.0)) - 1e-9:
+            c.vehicle.remove(e["near"])
+            self.ended = round(t, 2)
+
+    def on_collision(self, c, other, t):
+        """The ego's contact with OTHER: the other removed (CARLA's bodies part; SUMO's `collision.action warn` keeps them
+        overlapped, StaticCutIn #135's 1137 contact ticks). The row says "removed at contact": the road ahead is then
+        freer than CARLA's, so the first event is the score and a later hold on that row is not evidence."""
+        if other != EGO and other in c.vehicle.getIDList():
+            c.vehicle.remove(other)
+            self.removed.append((round(t, 2), other))
+
     def report(self):
-        """What the run's table reads: the steps fired, the emergency vehicles' held seconds, the placement."""
-        return {"fired": self.fired, "emergency_held_s": self.held, "site": self.pl["site"], "free": self.pl["free"],
-                "shift": self.pl["shift"]}
+        """What the run's table reads: the steps fired and the triggers (with the ego's TTA to the junction at firing),
+        the ones never fired, the route completion, LB 2.0's emergency test and our held seconds, the removals."""
+        lb = {aid: dict(st, failure=st.get("failure") if st["end"] is not None else st["status"] == "FAILURE")
+              for aid, st in self.lb_ev.items()}
+        for a in self.pl["actors"]:                                        # never in the run (nor near): FAILURE at the end
+            if a.get("kind") == "emergency" and a["id"] not in lb:
+                lb[a["id"]] = {"near": None, "end": None, "status": None, "failure": True}
+        length = max(1.0, self.pl["ego"].get("len", 1.0))
+        return {"fired": self.fired, "triggered": self.triggered,
+                "unfired": sorted({a["id"] for a, *_ in self.armed} | {a["id"] for _, a, _ in self.queue}),
+                "rc": round(min(100.0, 100.0 * self.driven / length), 1), "driven_m": round(self.driven, 1), "route_m": length,
+                "emergency_lb": lb, "emergency_held_s": self.held, "removed": self.removed, "ended": self.ended,
+                "sync": self.sync, "flows": {k: {"cars": f["n"], "at": f["at"]} for k, f in self.flows.items()}, "conflict": {a["id"]: a["place"]["conflict"] for a in self.pl["actors"]
+                                                if a["place"].get("conflict")},
+                "site": self.pl["site"], "free": self.pl["free"], "shift": self.pl["shift"]}

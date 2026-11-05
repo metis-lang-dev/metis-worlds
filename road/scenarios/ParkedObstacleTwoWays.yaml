@@ -9,9 +9,19 @@ ticks: 2600
 ego: {v: 11.1}
 exerciser: {skip: "the exerciser has no oncoming lane"}
 params:
-  distance: {value: 90, range: [50, 130], default: 90, drives: actors.parked.at.ahead, threshold: 32.0, safe: above}
-actors:   # the oncoming flow: 5 cars 40 m apart (the gap of the routes' frequency 10-75 to 58-200 m), capped at 50 km/h
+  distance: {value: 90, range: [50, 130], default: 120, drives: actors.parked.at.ahead, threshold: 32.0, safe: above}
+  # default 120: ParkedObstacle's, which ParkedObstacleTwoWays inherits (route_obstacles.py:328; nina's gap-cards review §1)
+actors:
   - {id: parked, kind: car, at: {ahead: 90, lane: 0}, v: 0.0, moving: false}
-  - {id: oncoming, kind: car, at: {ahead: 0, opposite: true}, v: 11.1, count: 5, gap: 40.0, script: [{t: 0.0, v: 11.1}]}
+  # the source's OppositeActorFlow (atomic_behaviors.py:3541-3701): started when the ego is within 50 m of the parked car,
+  # then 5 s idle; its source 1.5 x the limit (km/h) + 30 m = 105 m beyond the car, on the oncoming lane; continuous, each
+  # gap drawn from `frequency` [from, to] (the default [20, 100]); 11.1 m/s (the flows' 50 km/h cap)
+  - id: oncoming
+    kind: car
+    at: {ahead: 105, beyond: parked, opposite: true}
+    v: 11.1
+    flow: {gap: [20.0, 100.0]}
+    trigger: {near: parked, dist: 50.0}
+    script: [{when: trigger, after: 5.0, flow: true}]
 infractions: {scenario: [scenario_timeout: 240]}
 expect: {arrived: true, collisions: 0, violations: 0}

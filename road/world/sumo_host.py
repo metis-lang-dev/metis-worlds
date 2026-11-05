@@ -20,6 +20,7 @@ perceived and projected once. One tick (dt 0.1 s, the SUMO step; road_host's res
                 the OPTIMISTIC accels (a same-direction pair made dangerous by the rear ego's accel: the architect's
                 ruling, its own column); the latency from a truth pair's first dangerous tick to the first braking applied;
                 the ms of each stage."""
+import math
 import os
 import pickle
 import tempfile
@@ -278,6 +279,7 @@ class Loop:
         return {"seed": w.seed, "ticks": self.tick, "t": self.t, "sumo_t": w.t, "arrived": self.arrived(),
                 "s": round(ego.s, 1) if ego is not None else None, "dest": self.level_dest, "ego_done": w.ego_done, "collisions": w.ego_collisions,
                 "collision_events": collision_events(w.collisions),
+                "rc": 100.0 if self.arrived() else ((w.director.report()["rc"]) if getattr(w, "director", None) is not None else None),
                 "director": w.director.report() if getattr(w, "director", None) is not None else None,
                 "all_collisions": len(w.collisions), "violations": len(self.violations), "unseen_other_duty": len(self.unseen_duty), "optimistic": len(self.optimistic), "restricted": self.restricted,
                 "latency_truth": self.latency, "first": self.violations[:3],
@@ -290,17 +292,25 @@ class Loop:
         self.world.close()
 
 
-def collision_events(collisions, gap_s=5.0):
-    """The ego's collisions as events, the Leaderboard's way (CARLA's CollisionTest: the same other within 5 s is one;
-    road-scenarios, as road_world.collision_events): SUMO reports a collision per step while two overlap."""
-    n, last = 0, {}
-    for c in collisions:
-        if EGO not in (c["collider"], c["victim"]):
-            continue
-        other = c["victim"] if c["collider"] == EGO else c["collider"]
-        if other not in last or c["t"] - last[other] > gap_s:
+def collision_events(collisions, gap_s=5.0, radius_m=5.0):
+    """The ego's collisions as events, the Leaderboard's way (CARLA's CollisionTest: the same other within 5 s is one,
+    and so is any contact within 5 m of the last event's place, COLLISION_RADIUS; nina's reviews): SUMO reports a
+    collision per step while two overlap."""
+    return merge_events([(c["t"], c["victim"] if c["collider"] == EGO else c["collider"], c.get("xy"))
+                         for c in collisions if EGO in (c["collider"], c["victim"])], gap_s, radius_m)
+
+
+def merge_events(contacts, gap_s=5.0, radius_m=5.0):
+    """[(t, other, (x, y) or None)] → the number of collision events: a new one unless the same other touched within
+    GAP_S, or the place is within RADIUS_M of the last event's."""
+    n, last, at = 0, {}, None
+    for t, other, xy in contacts:
+        same = other in last and t - last[other] <= gap_s
+        near = xy is not None and at is not None and math.hypot(xy[0] - at[0], xy[1] - at[1]) <= radius_m
+        if not (same or near):
             n += 1
-        last[other] = c["t"]
+            at = xy
+        last[other] = t
     return n
 
 

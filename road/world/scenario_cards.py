@@ -31,6 +31,7 @@ ROAD = Path(__file__).resolve().parents[1]
 SCEN = ROAD / "scenarios"
 SITES = SCEN / "sites" / "lb1-triggers-town010203.json"
 MAPS = ROAD / "maps"
+SITE_REF = re.compile(r"S(\d+)\.(\d+)")      # a site from another LB1 scenario's poses: "S1.157" = Scenario1's #157
 
 # the exerciser's road (road_world.road()): the ego's lane and start, the zones a card's `at` names
 EGO_LANE, EGO_S = 1, 20.0
@@ -176,11 +177,13 @@ def sites(card, town):
     s = card.get("sites") or {}
     if not s.get("lb1") or town not in (s.get("towns") or {}):
         return []
-    poses = json.loads(SITES.read_text())["data"][town][s["lb1"]]
+    data = json.loads(SITES.read_text())["data"][town]
+    poses = data[s["lb1"]]
     want = s["towns"][town]
     out = []
     for i in (range(len(poses)) if want == "all" else want):
-        p = poses[i]
+        m = SITE_REF.fullmatch(str(i))                 # OVTP's junction 1082 sits in Scenario1's poses (nina's review §5)
+        p = data["Scenario%s" % m.group(1)][int(m.group(2))] if m else poses[i]
         x, y, yaw = float(p["x"]), float(p["y"]), float(p["yaw"])
         sx, sy, ang = carla_to_sumo(x, y, yaw, town)
         out.append({"i": i, "carla": {"x": x, "y": y, "yaw": yaw}, "sumo": {"x": round(sx, 2), "y": round(sy, 2), "angle": round(ang, 1)}})

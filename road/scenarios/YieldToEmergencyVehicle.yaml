@@ -1,22 +1,28 @@
 scenario: YieldToEmergencyVehicle
-title: an emergency vehicle closes from behind at the ego's speed + 25 km/h; free the lane
+title: an emergency vehicle closes from behind at the ego's speed + 25 m/s; free the lane
 source: {suite: lb2, type: YieldToEmergencyVehicle, code: srunner/scenarios/yield_to_emergency_vehicle.py, pin: scenario_runner v0.9.16 94ff3b8af752, license: "CARLA scenario_runner, MIT License, Copyright (c) 2018 CARLA"}
 exercises: "none: a gap (no rule yields to a vehicle from behind; nina's triage row 38): the family should fail here"
 verdict: PORTABLE
-sites: {lb1: Scenario1, towns: {Town03: [42, 49]}}   # two lanes each way, a long free run
+sites: {lb1: Scenario1, towns: {Town03: [49]}}   # "a highway with at least two lanes and no junctions" (the source :36-37):
+# #49's straight (67) is 314 m junction to junction; #42's (-67) is 1 m short at d 110 (nina's gap-cards review §2, the ruling)
 dt: 0.1
 ticks: 900
-sumo: {ticks: 1500, onward: 600}   # the vehicle closes 130 m at 6.9 m/s: ~19 s, then 5 s held; the 200 m way ends first
+sumo: {ticks: 1500, onward: 1}   # the run is the one straight: no junction in it (the ego starts `fit` m in, the vehicle
+# at the straight's start); it needs d + 13.9 x ((d - 50)/r + 10) = 301 m at d 110, r 16.1 (nina's §2)
 ego: {v: 11.1}
 exerciser: {skip: "the exerciser's movers do not follow a car ahead: a vehicle from behind would drive through the ego"}
 params:
-  distance: {value: 130, range: [110, 150], default: 130, drives: actors.ambulance.at.behind}
+  distance: {value: 110, range: [110, 150], default: 140, drives: actors.ambulance.at.behind}
+  # value 110: what fits #49's straight at the source's speed; default 140: the source's (yield_to_emergency_vehicle.py:56-59)
   # the source's vehicle runs at the ego's speed + 90 km/h; its comment means + 25 km/h (nina's step 1): + 6.9 m/s here
 actors:   # SUMO's bluelight device; the infraction: held behind the ego (within 30 m, below 90 % of its allowed speed) > 5 s
   - id: ambulance
     kind: emergency
-    at: {behind: 130, lane: 0}
-    v: 18.0
-    v_rel: 6.9      # held at the ego's speed + 25 km/h every tick (the ego drives the town's limit, not ego.v)
-infractions: {scenario: [yield_emergency_vehicle]}
+    at: {behind: 110, lane: 0}
+    v: 30.0         # in the run at its speed (the source's vehicle drives it from the start)
+    v_rel: 25.0     # held at the ego's speed + 25 m/s every tick, capped by emergency_t's maxSpeed 30. The CHOICE (the
+    # architect's ruling on nina's §2): the source's code (+25 m/s = +90 km/h), not its comment (+25 km/h), which needs
+    # 430 m and so junctions in the run; the 50 km/h cap is for background flows, the emergency vehicle is exempt
+infractions: {scenario: [yield_emergency_vehicle]}   # LB 2.0's YieldToEmergencyVehicleTest (the director's emergency_lb)
+# expect's emergency_held_s is OURS (held within 30 m below 90 % of its allowed speed, red waits out), not the LB test
 expect: {arrived: true, collisions: 0, violations: 0, emergency_held_s: 5.0}

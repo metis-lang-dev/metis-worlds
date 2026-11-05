@@ -17,5 +17,8 @@ actors:   # brake 1.0 in CARLA: a hard stop (8 m/s² here), when the lead is 20 
     at: {ahead: 25, lane: 0}
     v: 10.0
     script: [{t: 0.0, v: 10.0}, {when: {junction_ahead: 20.0}, brake: 8.0}]   # the source: 20 m before the next intersection
+end: {near: lead, within: 20.0, stand_s: 1.0}   # the source's end (L137-143): the ego within 20 m of the lead, standing 1 s; then
+# CARLA destroys the lead. SUMO's director removes it so (and the ego drives on to arrive); the exerciser does not, so there
+# the ego stays behind the stopped lead and does not arrive: the two expectations are one card, not a disagreement
 infractions: {scenario: []}
-expect: {arrived: false, collisions: 0, violations: 0}   # the ego stops behind the stopped lead: no arrival by design
+expect: {arrived: false, collisions: 0, violations: 0}   # the exerciser: the ego stops behind the stopped lead, no arrival

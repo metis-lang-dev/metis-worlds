@@ -3,7 +3,11 @@ title: at an unsignalled junction a car from the side road takes the ego's prior
 source: {suite: lb2, type: OppositeVehicleTakingPriority, code: srunner/scenarios/opposite_vehicle_taking_priority.py:256, pin: scenario_runner v0.9.16 94ff3b8af752, license: "CARLA scenario_runner, MIT License, Copyright (c) 2018 CARLA"}
 exercises: planner brake_cross; responder brake_lon
 verdict: PORTABLE
-sites: {lb1: Scenario10, towns: {Town03: [1, 18, 30]}}   # S10 poses on an all-major lane at a junction with a minor approach (nina's review)
+sites: {lb1: Scenario10, towns: {Town03: [1, 2, 3, 4, 5, 6, 7, 8]}}
+# the straight-across junctions only (nina's gap-cards review §5, the architect's ruling): 730 (S10 #1-8, from its two major
+# arms 3 and -2); at 1135 and 82 (the old #18, #30) the minor arms only turn onto the ego's road. 1082 (Scenario1's #157-160,
+# "S1.157") is OUT: a cluster of fragment edges (the adversary's approach -35 is 0.1 m after -11's 0.2 m and a split; the
+# ego's 34 is 2.3 m after a merge), so neither can start back on the same straight
 dt: 0.1
 ticks: 900
 sumo: {ticks: 1800, back: 60}   # a red phase can outlast the exerciser's budget (Town03 #30 waited 30 s at a light);
@@ -16,7 +20,8 @@ params:
 actors:   # still at the side road's start; it crosses at 16.7 m/s from when the ego is TTA s from the junction (s 400)
   - id: adversary
     kind: car
-    at: {road: side, s: 0.0}
+    at: {road: side, s: 0.0, from: right}   # the source's `direction` (right): its arm right of the ego's heading
+    sync: true      # SUMO: SyncArrival to the conflict point once triggered, held from the ego's last 1 s
     v: 0.0
     moving: false
     breaks_rules: true

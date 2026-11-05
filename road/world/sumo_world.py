@@ -265,6 +265,10 @@ class SumoWorld:
             self.collisions.append(rec)
             if EGO in (k.collider, k.victim):
                 self.ego_collisions += 1
+                if EGO in c.vehicle.getIDList():
+                    rec["xy"] = tuple(round(v, 2) for v in c.vehicle.getPosition(EGO))     # CARLA's 5 m radius
+                if self.director is not None:
+                    self.director.on_collision(c, k.victim if k.collider == EGO else k.collider, self.t)
         on = EGO in c.vehicle.getIDList()
         if on and not self.ego_seen:
             self.ego_seen = True

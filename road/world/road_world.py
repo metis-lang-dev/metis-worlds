@@ -116,6 +116,7 @@ class RoadWorld:
                              breaks_rules=a.get("breaks_rules", False), armed=list(a.get("armed", [])), s0=a["s"])
                        for a in spec["agents"]]
         self.dest = spec.get("dest", 580.0)
+        self.s0 = float(e["s"])
         self.sit = Situation()
         self.collisions, self.violations, self.restricted, self.log = [], [], 0, []
         self.zone_turn = {"m": None}                # the zipper: the lane the last entrant came from
@@ -322,7 +323,8 @@ class RoadWorld:
             same = o.lane in lanes and o.s > ego.s - ego.length and ego.s > o.s - o.length   # [s − length, s] overlap
             cross = bool(ego_zones & self.zones_of(o))
             if same or cross:
-                self.collisions.append({"t": round(self.t, 2), "with": o.id, "how": "lane" if same else "zone"})
+                self.collisions.append({"t": round(self.t, 2), "with": o.id, "how": "lane" if same else "zone",
+                                        "xy": (round(ego.s, 2), _lane_y(ego.lane))})
         if a > hi + 1e-9 and self.ego.v > 0:                     # standing still meets any braking response
             self.violations.append({"t": round(self.t, 2), "what": "accel above the response", "a": a, "max": hi})
         for s in after:
@@ -343,25 +345,42 @@ class RoadWorld:
     def arrived(self):
         return self.ego.m.s >= self.dest
 
-    def collision_events(self, gap_s=5.0):
-        """The collisions as events, the Leaderboard's way (CARLA's CollisionTest, atomic_criteria.py: MAX_ID_TIME 5 s): a
-        contact with the same other within GAP_S of its last contact is the same collision; `collisions` stays a count
-        of contact ticks (road-scenarios, nina's review)."""
-        n, last = 0, {}
+    def collision_events(self, gap_s=5.0, radius_m=5.0):
+        """The collisions as events, the Leaderboard's way (CARLA's CollisionTest, atomic_criteria.py: MAX_ID_TIME 5 s and
+        COLLISION_RADIUS 5 m): a contact with the same other within GAP_S of its last contact, or within RADIUS_M of the
+        last event's place, is the same collision; `collisions` stays a count of contact ticks (nina's reviews)."""
+        n, last, at = 0, {}, None
         for c in self.collisions:
-            if c["with"] not in last or c["t"] - last[c["with"]] > gap_s:
+            xy = c.get("xy")
+            same = c["with"] in last and c["t"] - last[c["with"]] <= gap_s
+            near = xy is not None and at is not None and math.hypot(xy[0] - at[0], xy[1] - at[1]) <= radius_m
+            if not (same or near):
                 n += 1
+                at = xy
             last[c["with"]] = c["t"]
         return n
+
+    def completion(self):
+        """The Leaderboard's route completion: the share (%) of the way from the ego's start to the destination driven."""
+        if self.arrived():
+            return 100.0
+        return round(max(0.0, min(100.0, 100.0 * (self.ego.m.s - self.s0) / max(1.0, self.dest - self.s0))), 1)
 
     def summary(self):
         return {"scenario": self.name, "seed": self.seed, "t": round(self.t, 1), "arrived": self.arrived(),
                 "s": round(self.ego.m.s, 1), "collisions": len(self.collisions), "collision_events": self.collision_events(),
+                "rc": self.completion(),
                 "violations": len(self.violations), "restricted": self.restricted,
                 "first": (self.collisions + self.violations)[:3]}
 
 
 # ── the scenarios ─────────────────────────────────────────────────────────────────────────────────────────────
+
+def _lane_y(lane):
+    """A lane's lateral place (m) for the 5 m collision radius: its index × 3.5 (e_0, e_1, …; a side road's c_0 at 0)."""
+    tail = str(lane).rsplit("_", 1)[-1]
+    return 3.5 * int(tail) if tail.isdigit() else 0.0
+
 
 def _ego(rng, lane="e_1", s=20.0, v=11.1):
     return {"lane": lane, "s": s, "v": v}

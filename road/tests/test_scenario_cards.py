@@ -187,7 +187,8 @@ def test_every_card_places_at_every_site_on_sumo():
                 if (card.get("sumo") or {}).get("back"):                    # BACK m before the site, on the way to it
                     assert edge in pl["ego"]["route"] and pl["ego"]["lane"] == lane, (n, town, s)
                 else:
-                    assert pl["ego"]["route"][0] == edge and pl["ego"]["lane"] == lane and pl["ego"]["pos"] == pos, (n, town, s)
+                    assert pl["ego"]["route"][0] == edge and pl["ego"]["lane"] == lane, (n, town, s)
+                    assert pl["ego"]["pos"] == round(pos + pl["fit"], 2) or abs(pl["ego"]["pos"] - pos - pl["fit"]) < 0.02, (n, town, s)
                 assert pl["actors"], (n, town, s)
                 for a in pl["actors"]:
                     assert a["place"]["route"] and a["place"]["pos"] > 0, (n, town, s, a["id"])
@@ -202,10 +203,11 @@ def test_a_sumo_card_name_and_the_cards_distances_from_the_ego():
     pl = D.place(C.load("FollowLeadingVehicle"), "Town03", 0)
     lead = pl["actors"][0]["place"]
     assert lead["route"][0] == pl["site"][0] and lead["pos"] - pl["ego"]["pos"] == 25.0      # the source's 25 m ahead
-    amb = D.place(C.load("YieldToEmergencyVehicle"), "Town03", 42)["actors"][0]["place"]
-    assert amb["route"][-1] == "-67" or "-67" in amb["route"]                                   # behind, on the way to the site
+    yev = D.place(C.load("YieldToEmergencyVehicle"), "Town03", 49)       # behind on the same straight: the ego `fit` m in
+    amb = yev["actors"][0]["place"]
+    assert amb["route"] == ["67"] and yev["ego"]["route"] == ["67"] and yev["ego"]["pos"] - amb["pos"] == 110.0 and yev["fit"] > 0
     flow = [a["id"] for a in D.place(C.load("ParkedObstacleTwoWays"), "Town01", 0)["actors"]]
-    assert flow[0] == "parked" and flow[1:] == ["oncoming_0", "oncoming_1", "oncoming_2", "oncoming_3"]   # the cars that fit
+    assert flow == ["parked", "oncoming"]                                 # a continuous flow: its source, not a platoon
     with pytest.raises(ValueError, match="not one of its sites"):
         D.place(C.load("ParkedObstacle"), "Town03", 7)
 
@@ -221,8 +223,32 @@ def test_a_cards_sumo_budget_and_way():
     assert sx.ticks_of(C.load("Accident"), "sumo") == 1200
     _sumolib_or_skip()
     import scenario_director as D
-    net = D.net_of("Town03")
-    way = lambda card: sum(net.getEdge(e).getLength() for e in D.place(card, "Town03", 42)["ego"]["route"])
     yev = C.load("YieldToEmergencyVehicle")
-    assert way(yev) > 450.0 and yev["actors"][0]["v_rel"] == 6.9
-    assert way(dict(yev, sumo={})) < way(yev)
+    assert yev["actors"][0]["v_rel"] == 25.0 and yev["params"]["distance"]["default"] == 140
+    assert yev["sumo"]["onward"] == 1 and D.place(yev, "Town03", 49)["ego"]["route"] == ["67"]   # one straight, no junction
+
+
+def test_ovtp_meets_the_ego_where_the_straight_ways_cross():
+    """OVTP's adversary from the right arm whose straight way crosses the ego's (nina's §5: junction 730), its conflict
+    point from the internal lanes; a junction whose minor arms only turn onto the ego's road has none."""
+    _sumolib_or_skip()
+    import scenario_director as D
+    card = C.load("OppositeVehicleTakingPriority")
+    a1 = D.place(card, "Town03", 1)["actors"][0]["place"]
+    a5 = D.place(card, "Town03", 5)["actors"][0]["place"]
+    assert a1["conflict"]["frm"] == "-19" and a5["conflict"]["frm"] == "20"           # the two minor arms of 730
+    assert (a1["conflict"]["ego_in"], a1["conflict"]["adv_in"]) == (18.4, 9.5)         # nina's table
+    assert a1["conflict"]["side"] == a5["conflict"]["side"] == "right"
+    with pytest.raises(ValueError, match="crossing the ego's way"):
+        D.place(dict(card, sites={"lb1": "Scenario10", "towns": {"Town03": [18]}}), "Town03", 18)
+    assert D.parse("card:OppositeVehicleTakingPriority@Town03#S1.157")[2] == "S1.157"
+
+
+def test_plain_continuations_and_the_flow_source():
+    _sumolib_or_skip()
+    import scenario_director as D
+    net = D.net_of("Town03")
+    assert D._plain_prev(net.getEdge("-35")).getID() == "-11" and D._plain_prev(net.getEdge("-11")) is None
+    pl = D.place(C.load("ParkedObstacleTwoWays"), "Town01", 1)
+    flow = pl["actors"][1]["place"]
+    assert flow["flow"] and flow["spawn"] and flow["src_m"] == 195.0                   # 105 m beyond the parked car's 90

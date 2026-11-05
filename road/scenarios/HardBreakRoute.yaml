@@ -3,7 +3,9 @@ title: every car ahead of the ego is sent to speed 0 for 10 s, then restarts
 source: {suite: lb2, type: HardBreakRoute, code: srunner/scenarios/hard_break.py:24, pin: scenario_runner v0.9.16 94ff3b8af752, license: "CARLA scenario_runner, MIT License, Copyright (c) 2018 CARLA"}
 exercises: planner brake_follow; responder brake_lon
 verdict: PORTABLE
-sites: {lb1: Scenario1, towns: {Town01: [0, 1], Town02: [0, 1], Town03: [9, 10]}}   # anywhere with traffic ahead
+sites: {lb1: Scenario1, towns: {Town01: [0, 1], Town02: [0, 1], Town03: [42, 49]}}   # anywhere with traffic ahead; Town03
+# 42/49, not 9/10: those sit 19 m before junction 730, so the lead at 30 m braked past it and the ego changed lanes around
+# it (nina's 2b review §5)
 dt: 0.1
 ticks: 1500
 ego: {v: 11.1}
