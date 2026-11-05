@@ -12,7 +12,7 @@ failure. The commands, the layout, the row and the record: road/docs/harvest.md.
 Environment: METIS_AGENT_PY (../metis-agent/py/.venv/bin/python), METIS_HOME (../metis-catalog/domains/road),
 SUMO_VENV (../.worlds/road: its bin, sumo and netconvert, first on PATH, and SUMO_HOME from it when unset),
 COMMONROAD_ROOT (/bigdata/datasets/commonroad), COMMONROAD_HARVEST (/bigdata/work/harvest), CR_TICKS (1500),
-CR_TIMEOUT (900 s)."""
+CR_TIMEOUT (900 s), CR_STOP_AFTER_WINDOW (30: a run stops 30 s after its goal window's end, goal not reached)."""
 import argparse
 import hashlib
 import json
@@ -209,7 +209,8 @@ def last_line(err):
 def make_row(job, h, seed, started, wall, summ, err, rc, timed_out):
     row = {"id": job["id"], "set": job.get("set"), "source": job.get("source"), "country": job.get("country"),
            "tags": job.get("tags") or [], "host": HOST, "pin": pin(), "worlds": worlds_commit(), "seed": seed,
-           "started": started, "ended": now(), "wall_s": round(wall, 1), "record_id": None, "error": None}
+           "started": started, "ended": now(), "wall_s": round(wall, 1), "record_id": None, "error": None,
+           "stopped": (summ or {}).get("stopped")}
     if summ is None:
         row.update(ticks=None, t=None, arrived=None, goal=None, contact=None, contacts=None, sumo_collisions=None,
                    off_lanelet=None, violations=None, rc=None, fired=[], untriggered=[], failed=[], summary=None,
@@ -264,6 +265,43 @@ def reading(row):
     return "cr:%s: %s, arrived %s at t %s." % (row["id"], say, row["arrived"], row["t"])
 
 
+def trace_ks(tdir):
+    """The trace's first and last k (seg-*.jsonl: a header line, then a line per tick with its k), or None."""
+    ks = []
+    for seg in sorted(tdir.glob("seg-*.jsonl")):
+        with open(seg) as f:
+            for line in f:
+                if line.startswith('{"k":'):
+                    try:
+                        ks.append(json.loads(line)["k"])
+                    except ValueError:
+                        pass
+    return (min(ks), max(ks)) if ks else None
+
+
+def window(row, ks, dt=0.1):
+    """record.window in trace ticks (nina, cr-harvest 2026-11-05): a contact's [first - 50, first]; the goal's [window
+    end - 300, window end], or the run's end when it ends first or has no window; off-lanelet or a violation alone
+    [first - 50, first] (a violation has no tick in the summary: the run's end). Clamped into the trace's ks."""
+    cr = ((row.get("summary") or {}).get("director") or {}).get("cr") or {}
+    end = int(round((row.get("t") or 0) / dt))
+    f = row["failed"][0]
+    if f in ("contact", "sumo_collision") and cr.get("contacts"):
+        k1 = int(round(cr["contacts"][0][0] / dt)); k0 = k1 - 50
+    elif f == "goal":
+        ends = [w[1] for w in (row["goal"] or {}).get("window_s") or [] if w]
+        k1 = min(end, int(round(max(ends) / dt))) if ends else end
+        k0 = k1 - 300
+    elif f == "off_lanelet" and cr.get("off_lanelet_first_t") is not None:
+        k1 = int(round(cr["off_lanelet_first_t"] / dt)); k0 = k1 - 50
+    else:
+        k1 = end; k0 = k1 - 300 if f == "sumo_collision" else k1 - 50
+    if ks:
+        k0, k1 = max(k0, ks[0]), min(max(k1, ks[0]), ks[1])
+    k0 = min(max(0, k0), k1)
+    return [k0, k1]
+
+
 def make_record(row, h, run_dir):
     rid = new_id()
     while (h / "records" / (rid + ".json")).exists():
@@ -277,6 +315,7 @@ def make_record(row, h, run_dir):
         rec["trace_path"] = "runs/%s/trace/%s" % (row["id"], traces[0].name)
         if (traces[0] / "config.yaml").exists():
             rec["config"] = rec["trace_path"] + "/config.yaml"
+    rec["window"] = window(row, trace_ks(traces[0]) if traces else None)
     write(h / "records" / (rid + ".json"), rec)
     return rid
 
@@ -289,7 +328,8 @@ def run_job(h, path, seed, ticks, timeout):
         shutil.rmtree(run_dir)
     run_dir.mkdir(parents=True)
     cmd = [agent_py(), str(ROAD / "experiments" / "road_tree.py"), "cr:" + sid, str(seed), "--world", "sumo",
-           "--ticks", str(ticks), "--out", str(run_dir), "--trace", str(run_dir / "trace")]
+           "--ticks", str(ticks), "--out", str(run_dir), "--trace", str(run_dir / "trace"),
+           "--stop-after-window", os.environ.get("CR_STOP_AFTER_WINDOW", "30")]
     started, t0 = now(), time.time()
     timed_out, rc = False, None
     try:

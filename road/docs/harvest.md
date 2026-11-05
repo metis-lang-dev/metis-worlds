@@ -30,7 +30,7 @@ slice. A row already in `rows/` is not queued again (resumable). `launch` runs `
         rows/<id>.json                       THE ROW (below)
         records/<record_id>.json             a surprise record per failed scenario (below)
         runs/<id>/                           road_tree's out dir: the run spec, the world log, the journal, the trace
-                                             (trace/), stderr.txt; deleted for a scenario that passed
+                                             (trace/<run>/, run = cr_<id>-<seed>), stderr.txt; deleted for a pass
         logs/worker-<n>.log                  a worker's lines
 
 `COMMONROAD_HARVEST` overrides `/bigdata/work/harvest`.
@@ -64,6 +64,7 @@ slice. A row already in `rows/` is not queued again (resumable). `launch` runs `
 | `failed` | [str] | the measures that failed, in this order: `contact`, `sumo_collision`, `goal`, `off_lanelet`, `violation` |
 | `record_id` | str\|null | the surprise record of this row's failure |
 | `error` | object\|null | the run did not finish: `kind` (`convert`, `world`, `timeout`, `crash`), `line` (the last stderr line), `rc` |
+| `stopped` | str\|null | `window+30`: the run was stopped 30 s after the goal's time window ended, goal not reached (the ruling of 2026-11-05; `CR_STOP_AFTER_WINDOW`); null: it ran to arrival or the tick cap. Rows before the early stop have no `stopped` key: the first hand-crafted round on panzer |
 | `summary` | object | the world's whole summary line, as road_tree prints it |
 
 A row **passes** when `error` is null and `failed` is empty. `goal` fails when `reached` is false.
@@ -75,7 +76,10 @@ The workspace's surprise format (metispy `metis.catalog.workspace.drop_surprise`
 `member` (`responder` for `contact`/`sumo_collision`, `planner` for `goal`/`off_lanelet`, `road_director` for a
 violation alone), `reading` (one sentence: the scenario, the first failed measure and its numbers), `atoms` (the
 failed measures), `trace` (`traces/<run>`: the run's trace dir name, the trace itself in `runs/<id>/trace/`),
-`config` (the trace's config.yaml, relative), `scenario`, `row` (`rows/<id>.json`). A run that did not finish
+`trace_path` (`runs/<id>/trace/<run>`, relative to the host dir), `config` (the trace's config.yaml, relative),
+`window` ([k0, k1] in trace ticks, inside the trace's ks: a contact's [first contact - 50, first contact]; the goal's
+[window end - 300, window end], or the run's end when it ends first or the goal has no window; off-lanelet's [first
+off tick - 50, that tick]; a violation alone [run end - 50, run end]), `scenario` (`cr:<id>`), `row` (`rows/<id>.json`). A run that did not finish
 (`error`) gets no record: it is a world or conversion fault, not the family's, and the triage reads it from the row.
 Importing a representative into `road/.metis/surprises/` (nina's `cr_triage.py import`) copies the record and its
 trace there.

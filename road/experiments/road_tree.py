@@ -5,9 +5,11 @@ exerciser (road/world: road_world through road_host). No model, no person: the p
 destination, the responder answers the situation layer.
 
     cd metis-agent/py && .venv/bin/python <worlds>/road/experiments/road_tree.py SCENARIO SEED [SEED …] [--ticks N] [--out DIR] \\
-        [--world sumo] [--vehicles N] [--trace DIR]
+        [--world sumo] [--vehicles N] [--trace DIR] [--stop-after-window S]
 
 --world sumo runs nina's SUMO loop (road_host.new_world) in place of the exerciser; --vehicles goes into its run spec.
+--stop-after-window S: a cr: run stops S s after its goal's time window ended with the goal not reached (the summary's
+`stopped`: "window+S"; the tick cap stays the outer bound).
 --trace DIR: the run's trace (metis.trace) under DIR/SCENARIO-SEED, all of it, its config.yaml beside it (the judge's --config);
 road/tests/test_road_trace.py replays one.
 
@@ -94,7 +96,14 @@ def trace_config(cfg):
     (d / "config.yaml").write_text(yaml.safe_dump(c, sort_keys=False))
 
 
-def run(scenario, seed, out_dir, ticks=1500, world_kind=None, vehicles=None, trace=None, sensor_range=None):
+def window_over(world, margin):
+    """--stop-after-window S: a cr: run's director says the goal window ended S s ago with the goal not reached."""
+    d = getattr(getattr(world, "world", None), "director", None)
+    f = getattr(d, "window_over", None)
+    return bool(f and f(margin))
+
+
+def run(scenario, seed, out_dir, ticks=1500, world_kind=None, vehicles=None, trace=None, sensor_range=None, stop_after=None):
     if trace and not has_reader():
         raise no_reader("this metis-agent has no metis_agent.trace")
     from metis_agent import service as S
@@ -134,15 +143,20 @@ def run(scenario, seed, out_dir, ticks=1500, world_kind=None, vehicles=None, tra
     if trace:
         trace_config(cfg)
     t0 = time.perf_counter()
+    stopped = None
     for _ in range(ticks):
         lv.tick()
         if world.arrived():
+            break
+        if stop_after is not None and window_over(world, stop_after):
+            stopped = "window+%g" % stop_after
             break
     wall = time.perf_counter() - t0
     if getattr(lv, "tracer", None) is not None:
         lv.tracer.close()
     recs = list(lv.journal.recs)
     out = report(world, recs, log, wall)
+    out["stopped"] = stopped
     close = getattr(world, "close", None)          # one SUMO at a time: the next seed's world opens after this one shuts
     if close:
         close()
@@ -207,7 +221,8 @@ def main(argv):
     out = Path(opts["--out"]) if "--out" in opts else Path(tempfile.mkdtemp(prefix="road-tree-"))
     scenario, seeds = args[0], [int(x) for x in args[1:]] or [1]
     for seed in seeds:
-        print(json.dumps(run(scenario, seed, out, ticks, world_kind, vehicles, trace=opts.get("--trace"))))
+        stop = float(opts["--stop-after-window"]) if "--stop-after-window" in opts else None
+        print(json.dumps(run(scenario, seed, out, ticks, world_kind, vehicles, trace=opts.get("--trace"), stop_after=stop)))
         sys.stdout.flush()
 
 

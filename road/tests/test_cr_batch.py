@@ -63,3 +63,13 @@ def test_claim_and_recover(tmp_path, monkeypatch):
     (h / "running" / "other.json").write_text("{}")
     (h / "running" / "other.pid").write_text("%d hostx\n" % os.getpid())       # a live one stays
     assert B.cmd_recover(A, quiet=True) == 0 and (h / "running" / "other.json").exists()
+
+
+def test_record_window_in_trace_ticks():
+    row = B.make_row(JOB, None, 1, "s", 1.0, summ(goal_reached=False, goal_t=None, goal_window_s=[[4.0, 40.0]]), "", 0, False)
+    row["t"] = 70.0
+    assert B.window(row, (1, 700)) == [100, 400]
+    row["t"] = 20.0                                                     # the run ends before the window does
+    assert B.window(row, (1, 200)) == [1, 200]
+    row = B.make_row(JOB, None, 1, "s", 1.0, summ(contact=True, contacts=[[3.0, 7]]), "", 0, False)
+    assert B.window(row, (1, 500)) == [1, 30]

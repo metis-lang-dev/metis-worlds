@@ -214,7 +214,9 @@ def build(name, work, seed=1, **_):
     rows.append('<vType id="cr_static" vClass="passenger" sigma="0" maxSpeed="1"/>')
     lane_len = net.getEdge(e["edge"]).getLanes()[e["lane"]].getLength()
     front = min(lane_len, e["pos"] + 0.5 * length)                 # SUMO's position is the front bumper; CommonRoad's the centre
-    rows.append('<vehicle id="%s" type="ego_t" depart="0" departLane="%d" departPos="%.2f" departSpeed="%.2f"><route edges="%s"/></vehicle>'
+    # insertionChecks none: the scenario puts the ego there at that speed; SUMO's own checks (a junction too close to
+    # stop for, a leader too near) refused it and the run never began (DEU_Ffb-2_*: "the ego was not inserted")
+    rows.append('<vehicle id="%s" type="ego_t" depart="0" departLane="%d" departPos="%.2f" departSpeed="%.2f" insertionChecks="none"><route edges="%s"/></vehicle>'
                 % (EGO, e["lane"], front, max(0.0, e["v"]), " ".join(e["route"])))
     rows.append("</routes>")
     routes = os.path.join(work, "cr_%s.rou.xml" % sid)
@@ -243,6 +245,8 @@ class Director:
             self.goals.append(dict(g, polys=polys))
         self.route_m = max(1.0, sum(net.getEdge(x).getLength() for x in placed["ego"]["route"]) - placed["ego"]["pos"])   # from the ego's start
         self.goal_pos_t = self.goal_t = None
+        self.t_now = None
+        self.off_first_t = None
         self.contacts, self.off_ticks, self.off_m, self.driven = [], 0, 0.0, 0.0
         self.last_xy, self.removed, self.errors = None, [], []
 
@@ -312,6 +316,7 @@ class Director:
             return self.pl["ego"]["route"][0]
 
     def _measure(self, c, t, k):
+        self.t_now = t
         e = self._ego(c)
         if e is None:
             return
@@ -321,6 +326,8 @@ class Director:
             self.driven += step
             if self.lanelets and not any(inside(xy, p) for p in self.lanelets):
                 self.off_ticks += 1
+                if self.off_first_t is None:
+                    self.off_first_t = round(t, 2)
                 self.off_m += step
         self.last_xy = xy
         for g in self.goals:
@@ -342,6 +349,16 @@ class Director:
                 if not self.contacts or self.contacts[-1][1] != o["id"] or t - self.contacts[-1][0] > 1.0:
                     self.contacts.append((round(t, 2), o["id"]))
 
+    def window_over(self, margin):
+        """The early stop (cr-harvest ruling, 2026-11-05): True when the goal is not reached and the run's time is past the
+        last goal window's end + MARGIN s; never before that end, never for a goal without a time window."""
+        if self.goal_t is not None or self.t_now is None:
+            return False
+        ws = [g.get("time") for g in self.goals]
+        if not ws or any(not w for w in ws):
+            return False
+        return self.t_now > max((w[1] - self.k0) * self.dt for w in ws) + margin
+
     def on_collision(self, c, other, t):
         """SUMO's collision with a recorded obstacle: kept in the report; the obstacle stays (the recording plays on)."""
 
@@ -352,7 +369,7 @@ class Director:
                        "goal_position_t": self.goal_pos_t, "goal_window_s": [[round((w[0] - self.k0) * self.dt, 2), round((w[1] - self.k0) * self.dt, 2)]
                                                                             if w else None for w in windows],
                        "contact": bool(self.contacts), "contacts": self.contacts[:10], "off_lanelet_ticks": self.off_ticks,
-                       "off_lanelet_m": round(self.off_m, 1), "cost": None, "goal_edge": self.pl["goal_edge"], "route_note": self.pl["route_note"],
+                       "off_lanelet_m": round(self.off_m, 1), "off_lanelet_first_t": self.off_first_t, "cost": None, "goal_edge": self.pl["goal_edge"], "route_note": self.pl["route_note"],
                        "obstacles": len(self.obstacles), "played": len(self.added), "errors": self.errors[:5]}}
 
 
