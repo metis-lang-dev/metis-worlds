@@ -1,0 +1,24 @@
+scenario: ParkingCutIn
+title: a car parked at the side pulls out into the ego's lane at 20 km/h just as the ego arrives
+source: {suite: lb2, type: ParkingCutIn, code: srunner/scenarios/parking_cut_in.py:26, pin: scenario_runner v0.9.16 94ff3b8af752, license: "CARLA scenario_runner, MIT License, Copyright (c) 2018 CARLA"}
+exercises: responder brake_lon; planner brake_follow
+verdict: PORTABLE
+sites: {lb1: Scenario1, towns: {Town01: [2, 3], Town02: [2, 3]}}   # from the curb: our nets have no parking lane
+dt: 0.1
+ticks: 1200
+ego: {v: 11.1}
+exerciser: {dest: 400.0}
+params:
+  gap: {value: 26.0, range: [26.0, 26.0], default: 26.0, drives: actors.adversary.trigger.gap, threshold: 10.3, safe: above}
+  # TTA 2.35 s OR 10 m to the collision point at 35 m (parking_cut_in.py:54-55): at 11.1 m/s, 26 m from the car here;
+  # it pulls out for 20 km/h (BasicAgent's default target) and is in the ego's lane after 1.5 s
+actors:   # the blocker at 28 m, the adversary at 35 m on the side (here the right lane)
+  - {id: blocker, kind: car, at: {ahead: 128, lane: -1}, v: 0.0, moving: false}
+  - id: adversary
+    kind: car
+    at: {ahead: 135, lane: -1}
+    v: 0.0
+    trigger: {gap: 26.0}
+    script: [{when: trigger, v: 5.6}, {when: trigger, after: 1.5, lane: 1}]
+infractions: {scenario: []}
+expect: {arrived: true, collisions: 0, violations: 0}

@@ -1,0 +1,24 @@
+scenario: OppositeVehicleTakingPriority
+title: at an unsignalled junction a car from the side road takes the ego's priority at 60 km/h, timed to the ego
+source: {suite: lb2, type: OppositeVehicleTakingPriority, code: srunner/scenarios/opposite_vehicle_taking_priority.py:256, pin: scenario_runner v0.9.16 94ff3b8af752, license: "CARLA scenario_runner, MIT License, Copyright (c) 2018 CARLA"}
+exercises: planner brake_cross; responder brake_lon
+verdict: PORTABLE
+sites: {lb1: Scenario10, towns: {Town03: [0, 1, 2]}}   # unsignalled junctions: S10 sites
+dt: 0.1
+ticks: 900
+ego: {v: 11.1}
+exerciser: {ego_s: 300.0, dest: 460.0, side_prio: false}
+params:
+  tta: {value: 2.2, range: [2.2, 2.2], default: 2.2, drives: actors.adversary.trigger.tta, threshold: 1.85, safe: above}
+  # TTA 2.2 s OR 12 m to the collision point (:277-284); threshold: the ego's stop from 11.1 m/s at 6 m/s² (1.85 s)
+actors:   # still at the side road's start; it crosses at 16.7 m/s from when the ego is TTA s from the junction (s 400)
+  - id: adversary
+    kind: car
+    at: {road: side, s: 0.0}
+    v: 0.0
+    moving: false
+    breaks_rules: true
+    trigger: {at: junction, tta: 2.2, dist: 12.0}
+    script: [{when: trigger, go: true, speed: 16.7}]
+infractions: {scenario: []}
+expect: {arrived: true, collisions: 0, violations: 0}

@@ -1,0 +1,24 @@
+scenario: HardBreakRoute
+title: every car ahead of the ego is sent to speed 0 for 10 s, then restarts
+source: {suite: lb2, type: HardBreakRoute, code: srunner/scenarios/hard_break.py:24, pin: scenario_runner v0.9.16 94ff3b8af752, license: "CARLA scenario_runner, MIT License, Copyright (c) 2018 CARLA"}
+exercises: planner brake_follow; responder brake_lon
+verdict: PORTABLE
+sites: {lb1: Scenario1, towns: {Town01: [0, 1], Town02: [0, 1], Town03: [9, 10]}}   # anywhere with traffic ahead
+dt: 0.1
+ticks: 1500
+ego: {v: 11.1}
+exerciser: {dest: 560.0}
+params: {}
+actors:   # the Traffic Manager's response to a target of 0 (not an instant stop): 4 m/s² here; restart after 10 s
+  - id: lead
+    kind: car
+    at: {ahead: 30, lane: 0}
+    v: 11.0
+    script: [{t: 0.0, v: 11.0}, {t: 5.0, brake: 4.0}, {t: 15.0, v: 11.0}]
+  - id: next
+    kind: car
+    at: {ahead: 45, lane: 1}
+    v: 11.0
+    script: [{t: 0.0, v: 11.0}, {t: 5.0, brake: 4.0}, {t: 15.0, v: 11.0}]
+infractions: {scenario: []}
+expect: {arrived: true, collisions: 0, violations: 0}

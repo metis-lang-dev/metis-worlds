@@ -72,7 +72,8 @@ def road(side_prio=False):
 @dataclass
 class Agent:
     """A mover and its script: [(t, what, arg)] — 'v' a target speed, 'brake' a deceleration until stopped,
-    'lane' a cut to that lane, 'go' start moving (a walker or a crossing car waits until then)."""
+    'lane' a cut to that lane, 'go' start moving (a walker or a crossing car waits until then), 'speed' moving at that
+    speed at once (road-scenarios: a car the source spawns moving)."""
     m: Mover
     v: float
     script: list = field(default_factory=list)
@@ -81,6 +82,8 @@ class Agent:
     moving: bool = True
     done: bool = False                  # left the map
     breaks_rules: bool = False          # junction_rb: never yields to an ego with the priority
+    armed: list = field(default_factory=list)   # road-scenarios: [(when, [(what, arg)])] fired once when `when` holds
+    s0: float = 0.0                     # its start (`traveled`)
 
 
 @dataclass
@@ -101,7 +104,8 @@ class RoadWorld:
     def __init__(self, scenario="cruise", seed=1):
         self.name, self.seed, self.rng = scenario, seed, random.Random(seed)
         self.t, self.tick = 0.0, 0
-        spec = SCENARIOS[scenario](self.rng)
+        # a scene card (road-scenarios s-e23be780): "card:NAME[:VARIANT]", road/scenarios/NAME.yaml placed on this road
+        spec = SCENARIOS[scenario](self.rng) if scenario in SCENARIOS else _card(scenario)(self.rng)
         self.map = road(side_prio=spec.get("side_prio", False))
         e = spec["ego"]
         self.ego = Ego(Mover("ego", e["lane"], e["s"], length=4.5, width=1.8), e["v"])
@@ -109,7 +113,7 @@ class RoadWorld:
                                    length=a.get("length", 0.5 if a.get("vclass") == "pedestrian" else 4.5),
                                    width=a.get("width", 0.5 if a.get("vclass") == "pedestrian" else 1.8)),
                              a["v"], sorted(a.get("script", [])), moving=a.get("moving", True),
-                             breaks_rules=a.get("breaks_rules", False))
+                             breaks_rules=a.get("breaks_rules", False), armed=list(a.get("armed", [])), s0=a["s"])
                        for a in spec["agents"]]
         self.dest = spec.get("dest", 580.0)
         self.sit = Situation()
@@ -198,6 +202,7 @@ class RoadWorld:
             self.ego.cmd_life -= 1
         before = {z.id: {m.id for m in self._all() if road_facts.inside(z, m)} for z in self.map.zones if z.priority is None}
         for ag in self.live():
+            self._arm(ag)
             self._script(ag)
         for z in self.map.zones:
             if z.priority is None:
@@ -222,6 +227,8 @@ class RoadWorld:
                 ag.m.lane = arg
             elif what == "go":
                 ag.moving = True
+            elif what == "speed":                                 # road-scenarios: moving at once (a car the source spawns moving)
+                ag.v, ag.target, ag.a = arg, arg, 0.0
         if not ag.moving:
             return
         line = None if ag.breaks_rules else self._must_yield(ag)
@@ -243,6 +250,32 @@ class RoadWorld:
                 ag.m.lane, ag.m.s = "e_0", ag.m.s
             else:
                 ag.done = True
+
+    def _arm(self, ag):
+        """road-scenarios: a card's trigger, the source's own condition, fires its steps once: `gap` (the ego's front
+        within D m of this one's rear, it ahead on the ego's lane or a next one), `tta` (the ego's time to arrival at
+        `at` (an s on the main road) at most T s, or `dist` m from it), `traveled` (this one has gone D m), `t`."""
+        keep = []
+        for when, steps in ag.armed:
+            e = self.ego.m
+            hit = False
+            if "t" in when:
+                hit = self.t >= when["t"] - 1e-9
+            if "gap" in when and ag.m.lane[:2] == e.lane[:2]:
+                near = abs(int(ag.m.lane[2:] or 0) - int(e.lane[2:] or 0)) <= 1 if ag.m.lane[2:].isdigit() and e.lane[2:].isdigit() else ag.m.lane == e.lane
+                rear = ag.m.s - ag.m.length
+                hit = hit or (near and 0.0 <= rear - e.s <= when["gap"])
+            if "at" in when:
+                d = when["at"] - e.s
+                hit = hit or (0.0 <= d <= when.get("dist", 0.0)) or (d >= 0.0 and d / max(self.ego.v, 0.1) <= when.get("tta", 0.0))
+            if "traveled" in when:
+                hit = hit or ag.m.s - ag.s0 >= when["traveled"]
+            if hit:                                       # a step (what, arg[, after]): `after` s past the trigger
+                ag.script = sorted(ag.script + [(self.t + (st[2] if len(st) > 2 else 0.0), st[0], st[1]) for st in steps],
+                                   key=lambda x: x[0])
+            else:
+                keep.append((when, steps))
+        ag.armed = keep
 
     def _must_yield(self, ag, band=60.0):
         """A scripted car at the next zone on its lane yields to the ego approaching or inside it when the ego's lane
@@ -412,6 +445,12 @@ def junction_rb_early(rng):
     return {"ego": _ego(rng, s=300.0, v=11.1), "dest": 460.0, "side_prio": False,
             "agents": [{"id": "truck", "lane": "c_0", "s": 20.0, "v": 0.0, "moving": False, "breaks_rules": True,
                         "length": 15.0, "width": 2.5, "script": [(go, "go", None), (go, "v", 5.0)]}]}
+
+
+def _card(name):
+    """A scene card by its scenario name: "card:NAME[:VARIANT]" (road/scenarios/NAME.yaml) → its spec on this road."""
+    import scenario_cards
+    return scenario_cards.exerciser(name)
 
 
 SCENARIOS = {"cruise": cruise, "lead_brake": lead_brake, "lead_lanes_free": lead_lanes_free, "junction": junction,

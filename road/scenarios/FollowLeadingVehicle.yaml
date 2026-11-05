@@ -1,0 +1,21 @@
+scenario: FollowLeadingVehicle
+title: a lead 25 m ahead at 10 m/s brakes hard to a stop 20 m before the next junction
+source: {suite: lb1, type: Scenario2 FollowLeadingVehicle, code: srunner/scenarios/follow_leading_vehicle.py:61-143, pin: scenario_runner v0.9.13 85109e7ce130, license: "CARLA scenario_runner, MIT License, Copyright (c) 2018 CARLA"}
+exercises: planner brake_follow, keep_lead; responder brake_lon
+verdict: PORTABLE
+sites: {lb1: Scenario2, towns: {Town03: all}}
+dt: 0.1
+ticks: 900
+ego: {v: 10.0}
+exerciser: {ego_s: 200.0, dest: 395.0}
+params:
+  distance: {value: 25, range: [25, 25], default: 25, drives: actors.lead.at.ahead, threshold: 12.0, safe: above}
+  # threshold: RSS's safe gap behind a 10 m/s lead braking at 8 m/s² (rho 0.5 s): about 12 m
+actors:   # brake 1.0 in CARLA: a hard stop (8 m/s² here), when the lead is 20 m before the junction (s 380)
+  - id: lead
+    kind: car
+    at: {ahead: 25, lane: 0}
+    v: 10.0
+    script: [{t: 0.0, v: 10.0}, {when: {traveled: 155.0}, brake: 8.0}]
+infractions: {scenario: []}
+expect: {arrived: false, collisions: 0, violations: 0}   # the ego stops behind the stopped lead: no arrival by design
