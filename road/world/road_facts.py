@@ -64,6 +64,14 @@ SLOW_RANGE, SLOW_MARGIN, NEAR_WALK = 60.0, 2.0, 1.0
 PACE_BAND = 3.5     # over a pace's target before the planner brakes: one planner period's accel or soft brake stays inside it, m/s
 STILL = 0.1                       # m/s: a car at or under this stands
 PLAN_T = 1.0                      # the planner's period (s): accel_ok looks one plan ahead
+# the gap records' projection (road-scenarios s-e23be780 step 3, steps/road-gap-vocabulary-architect.md; the numbers are nina's,
+# named for the architect's word): a standing obstacle, the oncoming lane's verdict for a pass, an emergency vehicle
+STAND_V = 0.5                     # m/s: a lead at or under this stands (lead_standing; STILL is a car at rest)
+QUEUE_GAP = 10.0                  # m: a standing lead with another car standing this close ahead of it is a queue, not an obstacle
+WAIT_M = 25.0                     # m: a lead standing this close to its lane's end may wait at the junction or its light
+RETURN_T = 2.0                    # s: the room to come back in front of the obstacle, at the pass speed (RETURN_M = RETURN_T · v_pass)
+REACH = 100.0                     # m: the ego's sensor range (the run's sensor.range): an oncoming lane seen less far than the pass needs is busy
+EMERGENCY = ("emergency",)        # the vClasses of an emergency vehicle with its lights on (SUMO's vClass; the cards' kind)
 
 
 def inside(z, m):
@@ -205,6 +213,99 @@ def fold_of(states, movers, ego):
     return Situation.fold([s for s in states if s.type.startswith("xing") or s.id.split(":")[0] not in released], ego.dyn)
 
 
+def oncoming_home(lm, ego):
+    """When the ego drives on the opposite direction's lane beside its route (a pass through the oncoming lane), the route
+    lane it came from, else None: a route lane whose opposite neighbour is the ego's lane."""
+    for rid in ego.route or ():
+        rl = lm.lanes.get(rid)
+        if rl is None or rid == ego.lane:
+            continue
+        for side in ("left", "right"):
+            if getattr(rl, side) == ego.lane and getattr(rl, side + "_opposite"):
+                return rid
+    return None
+
+
+def _on_home(lm, ego, home):
+    """The ego's place on its route lane HOME while it drives the opposite lane: the opposite lane's s runs the other way."""
+    return lm.lanes[home].length - ego.s
+
+
+def home_side_facts(lm, ego, v, movers, home, out):
+    """On the oncoming lane, in the EGO's heading frame: its route lane HOME is its right side (adjacent(right),
+    lane_kind(right, K)), clear when the nearest mover ahead on it and the nearest behind keep RSS's safe distance from the
+    ego (a standing car behind is safe: the obstacle once passed); the left side has no lane of the ego's."""
+    from semantic_world.situation import safe_same_dir
+    out["adjacent(right)"] = 1
+    out["lane_kind(right,%s)" % getattr(lm.lanes[home], "kind", "driving")] = 1
+    out["lane_kind(left,none)"] = 1
+    s = _on_home(lm, ego, home)
+    ahead = sorted((m.s - s, m) for m in movers if m.id != ego.id and m.lane == home and m.s >= s)
+    behind = sorted((s - m.s, m) for m in movers if m.id != ego.id and m.lane == home and m.s < s)
+    ok = True
+    if ahead:
+        gap, m = ahead[0]
+        ok &= gap - m.length >= safe_same_dir(ego.dyn, m.dyn)
+    if behind:
+        gap, m = behind[0]
+        standing = (m.dyn.vmax or 0.0) <= STAND_V
+        ok &= standing and gap - ego.length >= (m.dyn.min_dist or 0.0) or gap - ego.length >= safe_same_dir(m.dyn, ego.dyn)
+    out["side_clear(right)" if ok else "side_busy(right)"] = 1
+
+
+def lead_standing(lm, lead, movers, speeds=None):
+    """The lead stands (at or under STAND_V) and is no queue: no car stands within QUEUE_GAP ahead of it on its lane, and it is
+    more than WAIT_M from its lane's end (a car waiting at the junction or its light is not an obstacle to pass)."""
+    v = (speeds or {}).get(lead.id, lead.dyn.vmax or 0.0)
+    if v > STAND_V:
+        return False
+    if lm.lanes[lead.lane].length - lead.s <= WAIT_M:
+        return False
+    return not any(m.id != lead.id and m.lane == lead.lane and 0.0 <= m.s - lead.s <= QUEUE_GAP + m.length
+                   and (speeds or {}).get(m.id, m.dyn.vmax or 0.0) <= STAND_V for m in movers)
+
+
+def pass_time(d, v, cap, accel):
+    """The time to drive D metres from V under ACCEL to CAP (then at CAP)."""
+    v, cap, accel = max(0.0, v), max(cap, 0.1), max(accel, 0.1)
+    if v >= cap:
+        return d / cap
+    d_acc = (cap * cap - v * v) / (2.0 * accel)
+    if d <= d_acc:
+        return (-v + (v * v + 2.0 * accel * d) ** 0.5) / accel
+    return (cap - v) / accel + (d - d_acc) / cap
+
+
+def oncoming_clear(lm, ego, v, cap, lead, onc, movers, speeds=None, sight_m=REACH):
+    """The oncoming lane ONC free for the WHOLE pass of the standing LEAD (the architect's arithmetic): the pass L = the gap to
+    the lead + its length + the ego's + RETURN_M (RETURN_T at the pass speed, the lane's limit); its time T from the ego's speed
+    under its accel to the limit; every mover on ONC ahead (closing) within SIGHT_M keeps (v_mean + v_onc)·(T + rho) + min_dist;
+    and the lane is seen far enough: the oncoming lane's limit · (T + rho) within SIGHT_M, the file's view test (the clear-view
+    duty is the overtaker's: unseen is busy)."""
+    d_lead = lm.ahead(ego.route or [ego.lane], ego.s, lead.lane, lead.s)
+    if d_lead is None:
+        return False
+    ret = RETURN_T * cap
+    L = max(0.0, d_lead - lead.length) + lead.length + ego.length + ret
+    T = pass_time(L, v, cap, ego.dyn.accel or 1.0)
+    rho = ego.dyn.rho or 0.0
+    lo = lm.lanes[onc]
+    v_onc_cap = lo.speed or cap
+    if v_onc_cap * (T + rho) > sight_m:
+        return False                                                     # not seen far enough for the pass: busy
+    v_mean = (v + cap) / 2.0
+    for m in movers:
+        if m.lane != onc or m.id == ego.id:
+            continue
+        rel = (lo.length - m.s) - ego.s                                  # its s runs the other way (Lanemap.pairs)
+        if rel < 0 or rel > sight_m:
+            continue                                                     # behind the ego, or beyond its sight
+        vo = (speeds or {}).get(m.id, m.dyn.vmax or 0.0)
+        if rel - m.length < (v_mean + vo) * (T + rho) + (ego.dyn.min_dist or 0.0):
+            return False
+    return True
+
+
 def facts(lm, ego, v, movers, sit, changing=None, dest=None, turn=None, lights=None, speeds=None, left_from=None, pace=None, sight=None, stood=None):
     """SPEEDS {mover id: v}: the movers' speeds (the lead's for lead_slow). LEFT_FROM (side, age s): the side the
     ego's last lane change left, and how long ago. PACE: a target speed under the limit; above it by PACE_BAND the ego is above_target (the
@@ -243,16 +344,32 @@ def facts(lm, ego, v, movers, sit, changing=None, dest=None, turn=None, lights=N
         if m is not None and getattr(m, "settled", None):
             out["settled_to(%s,%s)" % (r, m.settled)] = 1        # its lane change, seen complete
     lane = lm.lanes[ego.lane]
-    out["own_kind(%s)" % getattr(lane, "kind", "driving")] = 1          # the lanes' kinds, vocabulary (change.llp decides)
-    for side in ("left", "right"):
+    for r, mid in roles.items():                                     # an emergency vehicle, lights on: a class, never a belief (13b2f9)
+        m = by_id.get(mid)
+        if m is not None and getattr(m, "vclass", None) in EMERGENCY:
+            out["emergency(%s)" % r] = 1
+    home = oncoming_home(lm, ego)
+    if home is not None:                                             # the ego passes on the oncoming lane: the EGO's heading frame,
+        out["own_kind(oncoming)"] = 1                                # its route lane is its right side (the architect's contract)
+        home_side_facts(lm, ego, v, movers, home, out)
+    else:
+        out["own_kind(%s)" % getattr(lane, "kind", "driving")] = 1      # the lanes' kinds, vocabulary (change.llp decides)
+    for side in (() if home is not None else ("left", "right")):
         if getattr(lane, side) and not getattr(lane, side + "_opposite"):
             out["adjacent(%s)" % side] = 1
             out["lane_kind(%s,%s)" % (side, getattr(lm.lanes[getattr(lane, side)], "kind", "driving"))] = 1
-            if all(r not in bound or ("safe_long(%s)" % r in out and "safe_lat(%s)" % r in out)
-                   for r in ("lead" + side, "follow" + side)):
+            fr = roles.get("follow" + side)
+            ev = fr is not None and getattr(by_id.get(fr), "vclass", None) in EMERGENCY and \
+                (speeds or {}).get(fr, by_id[fr].dyn.vmax or 0.0) > v                  # an emergency vehicle closing behind on that side
+            if not ev and all(r not in bound or ("safe_long(%s)" % r in out and "safe_lat(%s)" % r in out)
+                              for r in ("lead" + side, "follow" + side)):
                 out["side_clear(%s)" % side] = 1                    # free to change into: each role unfilled or safe
+            else:
+                out["side_busy(%s)" % side] = 1                     # its complement: never move into an emergency vehicle's path
         else:
             out["lane_kind(%s,none)" % side] = 1                         # no same-direction lane there
+            if getattr(lane, side) and getattr(lane, side + "_opposite"):
+                out["oncoming(%s)" % side] = 1                           # the opposite direction's driving lane (668e45)
     if changing:
         out["changing(%s)" % changing] = 1
     else:
@@ -270,6 +387,12 @@ def facts(lm, ego, v, movers, sit, changing=None, dest=None, turn=None, lights=N
             out["lead_slow"] = 1
     if "lead_slow" not in out:                     # the pass is change.llp's (change_pass, change_aside); change_reason is a wish's
         out["lead_ok"] = 1
+    if "lead" in roles and "lead_slow" in out and lead_standing(lm, by_id[roles["lead"]], movers, speeds):
+        out["lead_standing"] = 1                   # a standing obstacle, not a queue (668e45)
+    for side in ("left", "right"):
+        if "oncoming(%s)" % side in out:
+            ok = "lead" in roles and oncoming_clear(lm, ego, v, cap, by_id[roles["lead"]], getattr(lane, side), movers, speeds, sight_m=REACH)
+            out["oncoming_%s(%s)" % ("clear" if ok else "busy", side)] = 1
     out["accel_ok" if gap_room(pairs, ego, v, cap, ego.dyn.accel) else "accel_no"] = 1
     out["keep_ok" if gap_room(pairs, ego, v, cap, 0.0) else "keep_no"] = 1
     if dest is not None and ego.s >= dest:
