@@ -188,7 +188,7 @@ def test_a_car_on_a_sibling_lane_is_ahead_while_they_overlap(cross):
     assert p.type == "same_dir" and p.lon == "in_front" and p.d_lon < 15.0
     assert lm.roles(ego, [waiting])["lead"] == "o"
     s = Situation().check([p])[0]
-    assert s.dangerous and s.resp_lon == "brake_min"
+    assert s.dangerous and s.resp_lon == "brake_max"        # a standing lead under 15 m at 14 m/s: brake_min needs 25.5 m,
     gone = Mover("o", left.succ[0], 30.0, dynamics_for("passenger", v=0.0), length=4.5)    # past the stretch: not on the way
     assert lm.pairs(ego, [gone])[0].type != "same_dir"
     other_lane = Mover("ego", "WC_0", 80.0, d, route=["WC_0", ":C_11_0", "CE_0"])       # another approach lane: no sibling

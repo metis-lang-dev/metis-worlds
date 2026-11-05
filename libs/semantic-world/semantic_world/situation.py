@@ -604,6 +604,13 @@ def respond(p, dangerous, before, xbefore=None, escalated=False):
     if p.type == "same_dir" and p.lon in ("at_back", "overlap_back"):
         lon = "none"                                            # the follower is the object: its response, not ours
     lat = "brake_min" if p.lateral_room else "none"
+    # the ego's LEAD at an unsafe distance, whatever the history (a cut-in first sensed in the lane, one laterally safe before,
+    # a plain follow): along the way from the PRESENT, as at a crossing (the ruling's (2) extended, -87279b; nina's finding A):
+    # brake_min while that keeps the ego behind it, brake_max while only that does (ESCALATED holds it), and brake_max still
+    # when neither does: a rear-end it cannot avoid is met at the hardest braking
+    lead = p.type == "same_dir" and p.lon == "in_front" and p.lat == "overlap"
+    if lead and (escalated or not stops_behind(p.ego, p.obj, p.d_lon, p.ego.brake_min)):
+        lon = "brake_max"
     if before is None:                                          # appeared dangerous: brake everything; same dir and
         if p.type == "same_dir" and p.lat == "overlap":         # overlapping laterally: as if long-safe before, so
             return lon, "none"                                  # along the way only (§B's table; its aside reads the other way)
@@ -612,12 +619,7 @@ def respond(p, dangerous, before, xbefore=None, escalated=False):
     if long_before and lat_before:
         return lon, lat
     if lat_before:                                              # laterally safe before: brake laterally; and when the other
-        if p.type == "same_dir" and p.lon == "in_front" and p.lat == "overlap":   # has become the ego's lead at an unsafe
-            # distance (a cut-in): brake along the way whatever the blame, from the PRESENT as at a crossing (the ruling's (2)
-            # extended, -87279b): brake_min while that keeps the ego behind it, brake_max while only that does (ESCALATED holds
-            # it), and brake_max still when neither does: a rear-end it cannot avoid is met at the hardest braking
-            if escalated or not stops_behind(p.ego, p.obj, p.d_lon, p.ego.brake_min):
-                return "brake_max", lat
+        if lead:                                                # has become the ego's lead: along the way too, whatever the blame
             return lon, lat
         return "none", lat
     return lon, "none"                                          # longitudinally safe before: brake along the way

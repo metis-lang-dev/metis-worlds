@@ -199,3 +199,19 @@ def test_a_cut_in_lead_too_close_for_brake_min_gets_brake_max_held():
     assert s.resp_lon == "brake_max" and "c:same_dir" in near.escalated
     [s] = near.check([cut(9.0)])                                  # still dangerous: held at brake_max
     assert s.resp_lon == "brake_max"
+
+
+
+def test_the_lead_escalates_whatever_its_history():
+    """nina's finding A (the architect's ruling): the lead's present test runs for every history: a cut-in first sensed in the
+    lane (before None) at the escalation geometry gets brake_max; a plain follow that brake_min keeps behind stays brake_min."""
+    from semantic_world.situation import Dynamics, Pair, Situation
+    ego = Dynamics(vmin=11.1, vmax=11.1, accel=2.0, brake_min=4.0, brake_max=8.0, rho=0.5, min_dist=1.0)
+    obj = Dynamics(vmin=3.2, vmax=3.2, accel=2.0, brake_min=4.0, brake_max=8.0, rho=0.5, min_dist=1.0)
+    lead = lambda gap: Pair("c:same_dir", "same_dir", "in_front", "overlap", gap, 0.0, ego, obj)
+    [s] = Situation().check([lead(6.5)])                         # first sensed in the lane, 6.5 m: only brake_max
+    assert s.dangerous and s.before is None and s.resp_lon == "brake_max"
+    [s] = Situation(memory={"c:same_dir": (True, True)}).check([lead(6.5)])     # both safe before: the same answer
+    assert s.resp_lon == "brake_max"
+    [s] = Situation().check([lead(12.0)])                        # a plain follow brake_min keeps behind: brake_min
+    assert s.dangerous and s.resp_lon == "brake_min"
