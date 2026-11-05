@@ -157,6 +157,12 @@ def planning_rows(pps):
     return out
 
 
+def net_edges(net_xml):
+    """The net's edge ids: the converter's edge map names some that netconvert merged away (a junction's cluster)."""
+    import xml.etree.ElementTree as ET
+    return {el.get("id") for _, el in ET.iterparse(net_xml, events=("start",)) if el.tag == "edge" and el.get("function") != "internal"}
+
+
 def net_offset(net_xml):
     import xml.etree.ElementTree as ET
     for _, el in ET.iterparse(net_xml, events=("start",)):
@@ -188,6 +194,7 @@ def convert(sid, root=ROOT, cache=CACHE, force=False):
            "net": net, "net_offset": net_offset(str(out / net)), "converter": {"commonroad-sumo": _ver("commonroad-sumo"),
            "commonroad-io": _ver("commonroad-io"), "highway_mode": conf.highway_mode, "country": conf.country_id.value},
            "tags": sorted(t.value for t in (sc.tags or ())), "edges": {str(k): v for k, v in conv.lanes_dict.items()},
+           "edges_missing": sorted(str(k) for k in conv.lanes_dict if str(k) not in net_edges(str(out / net))),
            "lanelets": lanelet_rows(sc.lanelet_network), "signs": sign_rows(sc.lanelet_network),
            "lights": light_rows(sc.lanelet_network), "intersections": intersection_rows(sc.lanelet_network),
            "obstacles": obstacle_rows(sc), "planning": planning_rows(pps), "interactive": src.name.endswith(".cr.xml")}

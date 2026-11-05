@@ -146,13 +146,29 @@ def ego_lane(net, x, y, theta):
     return best[0], best[1]
 
 
-def goal_edge(net, doc, goal):
-    """The edge the ego's route ends on: the goal's lanelet's (cr.json `edges`), else the one nearest the goal region's centre."""
+def goal_edge(net, doc, goal, start=None):
+    """The edge the ego's route ends on: of the goal's lanelets' edges (cr.json `edges`), the one farthest along a way from START
+    (a goal of several regions down a road: the route passes through them all), else the edge nearest the goal region's centre."""
     of = {la: e for e, las in doc["edges"].items() for la in las}
+    cands = []
     for la in goal.get("lanelets") or ():
         e = of.get(la)
         if e is not None and net.hasEdge(str(e)):
-            return net.getEdge(str(e))
+            cands.append(net.getEdge(str(e)))
+    for poly in goal.get("polygons") or ():        # the converter's edge map loses the edges netconvert merged: the region's own edge too
+        cx, cy = centroid(poly)
+        near = [ed for ed, _ in sorted(net.getNeighboringEdges(cx, cy, 6.0), key=lambda x: x[1]) if not ed.getID().startswith(":")]
+        if near and near[0] not in cands:
+            cands.append(near[0])
+    if cands:
+        if start is None:
+            return cands[0]
+        far = None
+        for ed in cands:
+            path, cost = net.getShortestPath(start, ed, vClass="passenger") if ed.getID() != start.getID() else ([start], 0.0)
+            if path and (far is None or cost > far[1]):
+                far = (ed, cost)
+        return far[0] if far else cands[0]
     polys = goal.get("polygons") or []
     if not polys:
         return None
@@ -167,7 +183,7 @@ def place(doc, net):
     lane, pos = ego_lane(net, s0["x"], s0["y"], s0["theta"] or 0.0)
     edge = lane.getEdge()
     goal = pp["goals"][0] if pp["goals"] else {}
-    to = goal_edge(net, doc, goal)
+    to = goal_edge(net, doc, goal, edge)
     route, why = [edge.getID()], None
     if to is not None and to.getID() != edge.getID():
         path, _ = net.getShortestPath(edge, to, vClass="passenger")

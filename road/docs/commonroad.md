@@ -63,7 +63,8 @@ under `sumo_world.SumoWorld`) reads them; a scenario not yet in the cache is con
 `cr.json`, version 1 (CommonRoad's facts only, in the scenario's frame; metres, radians from +x, steps of `dt` s):
 - `version`, `id`, `source` (the file in the checkout), `sha256`, `dt`, `net` (the net's file name), `net_offset` (netconvert's; 0,0 seen),
   `converter` (the two versions, highway mode, country), `tags`, `interactive` (an interactive scenario's `.cr.xml`);
-- `edges`: SUMO edge id → its lanelet ids (the converter's: an edge of a multi-lane road holds several);
+- `edges`: SUMO edge id → its lanelet ids (the converter's: an edge of a multi-lane road holds several); `edges_missing`: the ids of
+  that map netconvert merged away (a junction's cluster), so a reader places by geometry where an edge is missing;
 - `lanelets`: id, types, `left`/`right` bound vertices, successors, predecessors, adjacent left/right with the same-direction flag, sign
   and light ids, stop line;
 - `signs`: id, position, elements (CommonRoad's element id, e.g. `MAX_SPEED`, and its values); `lights`: id, position, offset, cycle
