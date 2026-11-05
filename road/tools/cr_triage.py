@@ -15,7 +15,9 @@ layout and row schema), every host's results pulled to taycann. The triage reads
    exclusive classes (keep_limit one at_target away while below_target holds is the law's ordinary branching), by their base
    names, and the preds of the atoms they miss.) Ground arguments (lane ids, object ids) stay out: the same
    missing `route_lane(D)` on two maps is one mechanism. The measure is the row's (harvest.md): error:<kind> for a run that did not
-   finish, else the first of `failed` (contact, sumo_collision, goal, off_lanelet, violation). A row with no record (an error
+   finish, else the first of `failed`, the hard measures first (contact, sumo_collision, violation, off_lanelet), then the
+   goal split by the architect's ruling: goal:position (its place never reached: a failure) and goal:window (reached, its time
+   window missed: SOFT, counted and reported, never a cluster, the curve or an import). A row with no record (an error
    run: the world's or the conversion's fault, never the family's) clusters by (measure, "no record").
 3. CLUSTERS: by signature, with their count, their scenarios, and ONE representative: the earliest in run order (the row's
    `started`, then id), so a rerun of the same round picks the same one.
@@ -34,7 +36,8 @@ import sys
 from pathlib import Path
 
 ROAD = Path(__file__).resolve().parent.parent
-MEASURES = ("contact", "sumo_collision", "goal", "off_lanelet", "violation")   # a row's `failed`, in harvest.md's order
+MEASURES = ("contact", "sumo_collision", "violation", "off_lanelet", "goal")   # a row's `failed`, the hard ones first
+SOFT = "goal:window"                         # the goal's place reached, its time window missed: reported, never a mechanism
 IMPORT_LIMIT = 20                                                         # representatives per import, in all
 STRUCTURAL = ("ontological", "structural")                                # the kinds the law's shape answers (spec 20 §5)
 
@@ -61,15 +64,24 @@ def rows(round_dir):
 
 def measure(row):
     """The row's failure (road/docs/harvest.md: a row passes when `error` is null and `failed` is empty): error:<kind> for a run
-    that did not finish (convert | world | timeout | crash), else the first of `failed` in MEASURES' order; None: passed."""
+    that did not finish (convert | world | timeout | crash), else the first of `failed` in MEASURES' order, the hard measures
+    first; the goal split in two: goal:position (its place never reached) and goal:window (SOFT: reached, the window missed);
+    None: passed."""
     err = row.get("error")
     if err:
         return "error:%s" % (err.get("kind") if isinstance(err, dict) else "?")
     failed = row.get("failed") or []
     for m in MEASURES:
         if m in failed:
+            if m == "goal":                          # the architect's ruling (2026-11-05): the place never reached is the failure;
+                g = row.get("goal") or {}             # reached and the window missed is SOFT (the family never meets CommonRoad's windows)
+                return SOFT if g.get("position_t") is not None else "goal:position"
             return m
     return failed[0] if failed else None
+
+
+def soft(m):
+    return m == SOFT
 
 
 def record_of(row):
@@ -216,7 +228,7 @@ def clusters(all_rows, ks):
     """The failed rows grouped by signature, in order of first appearance. → [cluster dict]."""
     by = {}
     for i, r in enumerate(all_rows):
-        if measure(r) is None:
+        if measure(r) is None or soft(measure(r)):          # passed, or only the goal's window missed: no mechanism
             continue
         sig = signature(r, ks.get(r["id"]))
         c = by.get(sig)
@@ -253,11 +265,13 @@ def curve(all_rows, cl, per=100):
 def run(round_dir, jobs=1, kinder=kind_one, write=True):
     all_rows = rows(round_dir)
     failed = [r for r in all_rows if measure(r) is not None]
-    ks = kinds(round_dir, failed, jobs=jobs, kinder=kinder)
+    hard = [r for r in failed if not soft(measure(r))]
+    ks = kinds(round_dir, hard, jobs=jobs, kinder=kinder)
     cl = clusters(all_rows, ks)
     cv = curve(all_rows, cl)
     pin = Path(round_dir).name
-    summary = {"pin": pin, "scenarios": len(all_rows), "failed": len(failed), "clusters": len(cl),
+    summary = {"pin": pin, "scenarios": len(all_rows), "failed": len(hard), "soft": len(failed) - len(hard),
+               "passed": len(all_rows) - len(failed), "clusters": len(cl),
                "by_kind": _count(c["kind"] or "no record" for c in cl),
                "by_measure": _count(measure(r) for r in failed),
                "structural_new": sum(1 for c in cl if c["kind"] in STRUCTURAL)}
@@ -278,8 +292,9 @@ def _count(xs):
 def render(out):
     s = out["summary"]
     lines = ["# harvest triage, law pin %s" % s["pin"], "",
-             "%d scenarios, %d failed, **%d distinct mechanisms** (%s). Failures by measure: %s." % (
-                 s["scenarios"], s["failed"], s["clusters"], ", ".join("%s %d" % kv for kv in s["by_kind"].items()) or "none",
+             "%d scenarios: %d passed, %d SOFT (the goal's place reached, its time window missed: reported, no mechanism), %d failed, "
+             "**%d distinct mechanisms** (%s). By measure: %s." % (
+                 s["scenarios"], s.get("passed", 0), s.get("soft", 0), s["failed"], s["clusters"], ", ".join("%s %d" % kv for kv in s["by_kind"].items()) or "none",
                  ", ".join("%s %d" % kv for kv in s["by_measure"].items()) or "none"), "",
              "| cluster | count | kind | member | measure | fired (commands) | one guard away (rules) | missing (preds) | representative |",
              "|---|---|---|---|---|---|---|---|---|"]

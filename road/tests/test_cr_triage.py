@@ -53,8 +53,10 @@ LATE = ("structural", ["brake_cross_late"], ["late"])
 
 def test_the_rows_measure_is_harvest_mds():
     assert T.measure(row("a", "1")) is None
-    assert T.measure(row("a", "1", failed=["goal"])) == "goal"
-    assert T.measure(row("a", "1", failed=["violation", "off_lanelet"])) == "off_lanelet"
+    assert T.measure(row("a", "1", failed=["goal"])) == "goal:position"
+    assert T.measure(row("a", "1", failed=["goal"], goal={"reached": False, "position_t": 12.3, "window_ok": False})) == "goal:window"
+    assert T.measure(row("a", "1", failed=["goal", "violation"], goal={"position_t": 12.3})) == "violation"   # the hard one first
+    assert T.measure(row("a", "1", failed=["violation", "off_lanelet"])) == "violation"
     assert T.measure(row("a", "1", failed=["goal", "sumo_collision", "contact"])) == "contact"
     assert T.measure(row("a", "1", error={"kind": "convert", "line": "netconvert: no lanelet", "rc": 1})) == "error:convert"
 
@@ -71,7 +73,7 @@ def test_one_mechanism_on_two_maps_is_one_cluster_its_representative_the_earlies
     assert (s["scenarios"], s["failed"], s["clusters"]) == (5, 4, 3)
     route = next(c for c in out["clusters"] if c["rules"] == ["change_route"])
     assert route["count"] == 2 and route["representative"]["id"] == "DEU_Muc-1"        # the earliest in run order
-    assert route["kind"] == "ontological" and route["measure"] == "goal"
+    assert route["kind"] == "ontological" and route["measure"] == "goal:position"
     err = next(c for c in out["clusters"] if c["measure"] == "error:timeout")
     assert err["kind"] == "no record" and err["count"] == 1                                     # no record: by its measure alone
     assert (d / "triage.md").read_text().startswith("# harvest triage, law pin d5c7c72")
@@ -128,3 +130,19 @@ def test_import_one_representative_per_cluster_biggest_first_within_the_limit_an
     assert recs[0]["trace"].startswith("traces/") and (ws / "traces" / "harvest-d5c7c72-A-1" / "seg-0.jsonl").is_file()
     assert len(T.import_round(d, ws, limit=2)) == 1                                    # the rest, never one twice
     assert T.import_round(d, ws, limit=2) == []
+
+
+def test_a_goal_reached_out_of_its_window_is_soft_counted_and_never_a_cluster(tmp_path):
+    late = {"reached": False, "position_t": 9.0, "window_ok": False}
+    d = make_round(tmp_path, "p3", {"taycann": [row("W-1", "1", failed=["goal"], goal=late), row("W-2", "2", failed=["goal"], goal=late),
+                                                row("H-1", "3", failed=["contact"]), row("P-1", "4")]})
+    calls = []
+
+    def k(r):
+        calls.append(r["id"])
+        return kinder({"H-1": LATE})(r)
+    out = T.run(d, kinder=k)
+    s = out["summary"]
+    assert (s["passed"], s["soft"], s["failed"], s["clusters"]) == (1, 2, 1, 1) and calls == ["H-1"]
+    assert s["by_measure"] == {"goal:window": 2, "contact": 1}
+    assert "2 SOFT" in (d / "triage.md").read_text()
