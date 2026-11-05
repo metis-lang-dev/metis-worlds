@@ -1,5 +1,6 @@
 """The road's trace (metis.trace; trace-replay s-c111ff41): a run of the tree under py Live, each member replayed alone from what it
 applied, with no world and no SUMO: 0 divergences. The exerciser here; straight on SUMO with METIS_ROAD_SUMO=1 (one SUMO at a time)."""
+import copy
 import importlib.util
 import os
 from pathlib import Path
@@ -194,3 +195,47 @@ def test_straight_on_sumo_replays_with_no_sumo(tmp_path, env):
     replayed(tmp_path / "t" / "straight-1")
     r = replay_composition(tmp_path / "t" / "straight-1", tree.config(None, 1))
     assert r.ok, r.divergence
+
+
+TREE_KEYS = {"v3": ("catalog", "loaded", "director"), "domains": ("names", "narrate", "clocks", "quiet", "pairs", "tick", "consult", "records")}
+
+
+def test_a_scenario_runs_trace_carries_the_config_it_was_played_with(tmp_path, env):
+    """road-service-config: the judge replays a trace on its run's config (pack_propose finds the surprise's trace's
+    config.yaml first); the scenario table's runs are road_tree's, so road_tree leaves it, without the run's own paths."""
+    import yaml
+    tree = road_tree()
+    tree.run("cruise", 1, tmp_path, ticks=5, trace=tmp_path / "t")
+    c = yaml.safe_load((tmp_path / "t" / "cruise-1" / "config.yaml").read_text())
+    assert "trace" not in c and "journal" not in c["v3"], "the run's own paths stay out: a replay writes its own"
+    want = tree.config(None, 1)
+    for sec, keys in TREE_KEYS.items():
+        assert {k: c[sec].get(k) for k in keys} == {k: want[sec].get(k) for k in keys}, sec
+    tree.run("cruise", 1, tmp_path / "plain", ticks=5)
+    assert not list((tmp_path / "plain").rglob("config.yaml")), "no trace asked: no config written"
+
+
+def test_the_bundles_service_yaml_is_the_trees_config(env):
+    """road/domains/service.yaml, beside composition.yaml: the config pack_propose falls back on for a surprise whose
+    trace carries none (the scenario table's records before road-service-config)."""
+    import yaml
+    s = yaml.safe_load((ROAD / "domains" / "service.yaml").read_text())
+    want = road_tree().config(None, 1)
+    for sec, keys in TREE_KEYS.items():
+        assert {k: s[sec].get(k) for k in keys} == {k: want[sec].get(k) for k in keys}, sec
+    comp = yaml.safe_load((ROAD / "domains" / "composition.yaml").read_text())
+    assert set(s["v3"]["loaded"]) == set(comp["specialists"]) | {comp["direct"]}
+    assert "service" not in comp, "never named in composition.yaml: a key there moves the image"
+
+
+@judged
+def test_a_pack_is_judged_on_the_config_beside_its_trace(tmp_path, env):
+    """The judge on the trace's own config.yaml, as propose.sh --config reads it: a verdict, with its reasons."""
+    import yaml
+    from metis_agent.trace import judge
+    tree = road_tree()
+    tree.run("cruise", 1, tmp_path, ticks=120, trace=tmp_path / "t")
+    d = tmp_path / "t" / "cruise-1"
+    cfg = yaml.safe_load((d / "config.yaml").read_text())
+    e = judge(d, "planner", AGAIN, ROAD, lambda root: copy.deepcopy(cfg), composition="domains")
+    assert e["verdict"] == "refused" and "yield_again repeats yield_zone in planner_domain.llp" in " ".join(e["reasons"]), e["reasons"]

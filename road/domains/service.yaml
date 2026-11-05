@@ -1,0 +1,38 @@
+# service — the road bundle's service config (road-service-config, 2026-11-05): the Live the tree takes, and the one
+# the judge replays a trace on (pack_propose / propose.sh --config: the workspace face finds it beside composition.yaml)
+# when the surprise's own trace carries no config.yaml. It is experiments/road_tree.py's config(): the tree of
+# composition.yaml, the director over the responder, the lights and the planner, one beat each, the tick protocol on;
+# every member loaded and no orchestrator catalog, no narrator, no consult seat, no records (a replay needs none).
+# road/tests/test_road_trace.py holds it to road_tree.config(). Paths are metis-agent py/'s, as its own configs';
+# no run's paths (journal, world map, trace: a run writes its own config, beside its trace). Beside composition.yaml,
+# never named in it: a `service:` key there moves the image (metisc hashes composition.yaml).
+model: ../go/models/gemma4/gemma-4-E2B-it-Q4_K_M.gguf
+template: gemma4
+stop_words: [stop, halt, freeze, quiet]
+intent:
+  grammar: ../go/grammar/e11-next.gbnf
+v3:
+  prompt: [../go/grammar/v3-orchestrator.txt]
+  catalog: []
+  loaded: [responder, signals, planner, road_director]
+  director: road_director
+  n_ctx: 16384
+  tick_ms: 1500
+domains:
+  names: [responder, signals, planner, road_director]
+  narrate: null
+  case: live
+  seed: 1
+  clocks:
+    - {domain: responder, n: 1}
+    - {domain: signals, n: 1}
+    - {domain: planner, n: 1}
+    - {domain: road_director, n: 1}
+  quiet: []
+  pairs: []
+  tick: true
+  trace: true
+  consult: false
+  records: null
+  narrator_n_ctx: 8192
+  seat_n_ctx: 8192

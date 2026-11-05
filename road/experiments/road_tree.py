@@ -8,7 +8,8 @@ destination, the responder answers the situation layer.
         [--world sumo] [--vehicles N] [--trace DIR]
 
 --world sumo runs nina's SUMO loop (road_host.new_world) in place of the exerciser; --vehicles goes into its run spec.
---trace DIR: the run's trace (metis.trace) under DIR/SCENARIO-SEED, all of it; road/tests/test_road_trace.py replays one.
+--trace DIR: the run's trace (metis.trace) under DIR/SCENARIO-SEED, all of it, its config.yaml beside it (the judge's --config);
+road/tests/test_road_trace.py replays one.
 
 One process runs the seeds one after another (a run is its own key in road_host.SHARED). Per run, one JSON line: the
 world's summary (collisions, violations, restricted, arrived, t), the journal's (grants, preempts, the responder's
@@ -81,6 +82,18 @@ def config(journal, seed):
     return cfg
 
 
+def trace_config(cfg):
+    """The run's config beside its trace, as road_host's page copies its own (WORKSPACE.md §6.1 item 3): the judge
+    (pack_propose, propose.sh --config) replays the trace on the config it was played with. Without the trace and
+    the journal keys, which are this run's: a replay writes its own."""
+    import yaml
+    c = {k: v for k, v in cfg.items() if k != "trace"}
+    c["v3"] = {k: v for k, v in c["v3"].items() if k != "journal"}
+    d = Path(cfg["trace"]["dir"])
+    d.mkdir(parents=True, exist_ok=True)
+    (d / "config.yaml").write_text(yaml.safe_dump(c, sort_keys=False))
+
+
 def run(scenario, seed, out_dir, ticks=1500, world_kind=None, vehicles=None, trace=None, sensor_range=None):
     if trace and not has_reader():
         raise no_reader("this metis-agent has no metis_agent.trace")
@@ -116,6 +129,8 @@ def run(scenario, seed, out_dir, ticks=1500, world_kind=None, vehicles=None, tra
             close()
         road_host.SHARED.pop(key, None)
         raise no_reader("this Live ignored the config's trace:")
+    if trace:
+        trace_config(cfg)
     t0 = time.perf_counter()
     for _ in range(ticks):
         lv.tick()
