@@ -106,6 +106,23 @@ agent only renders them.
 - The world page runs on metis-agent's **py** service (`demo.sh`).
 - The Go agent has no director and no world/* frames, so it does not run this demo.
 
+**The loop beside the demo** (loop-ui s-bb07923c step 2.5, the user: "ui is just wrapper which we can attach to domain
+demo world for tester to assess and interrogate"):
+- `alfworld/console.sh` starts metis-loop's console over this world's workspace (the bundle in place, as demo.sh
+  runs it) on `LOOP_ADDR` (default 127.0.0.1:8397). Open the world page with `?loop=` its URL:
+  `http://127.0.0.1:8398/world.html?live=1&loop=http://127.0.0.1:8397/`.
+- The page's **LOOP** dock frames the console's CHAT (`?panels=chat`, the console's own page, never a copy). The
+  tester says what surprised them there. pi's commands (`/surprises`, `/take`, `/ruling`, `/apply`, `/rebuild`, `/status`)
+  and its words run on the demo run's own trace (`alfworld/.metis/traces/<game>-<started>/`). An `/apply` plus `/rebuild`
+  changes what the next load runs.
+- The pi loop's model is the dot file's `[llm] loop`, e.g. `ollama:qwen3:4b`, at 0 USD. **On an 8 GB GPU it does
+  not share well with the demo's Gemma E2B** (measured 2026-11-05 on taycann): the demo holds about 3.9 GB, so Ollama
+  put 3,245 MiB of qwen3:4b's 7,562 MiB (at its 32k context) on the GPU and the rest on the CPU. Its first tool call
+  came after 8 min 10 s, against about 20 s with the GPU to itself. Run the loop on a second card (pascal's 16 GB), or
+  on OpenRouter with a budget, or take turns: stop the demo while the loop takes.
+- **What a tester cannot do yet (I9):** mark a tick of the demo run from the CHAT. The run has six members and
+  `/mark RUN K WORDS` names none, so it is refused ("has several members").
+
 **What to try** (nina's Chrome check):
 1. kitchen 13: "put the apple on the countertop", then "move the bowl to the cabinet", then "put a tomato in the
    microwave" (the episode's own goal: "Done. Tell me another task.");

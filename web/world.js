@@ -374,11 +374,33 @@ const backend = agentUrl ? await live(agentUrl) : null;
 const docks = world.docks = MetisShell.docks({
   // v3: the DIALOG drawer (fsttm-web's panel, its own part: the floor, barge-in, attention, the numbers), hidden until asked for
   // v4: the cards are tools, not folded (the world card and the journal shown by default as before; the dialog hidden)
-  names: ['talk', 'hierarchy', 'world', 'journal', 'dialog'], key: 'worldpage.docks.v4', fold: false,
+  // loop (loop-ui s-bb07923c 2.5): the pi loop's CHAT in a frame, shown when the page is opened with ?loop=URL
+  names: ['talk', 'hierarchy', 'world', 'journal', 'loop', 'dialog'], key: 'worldpage.docks.v4', fold: false,
   defaults: { talk: { shown: true, open: true }, hierarchy: { shown: true, open: true }, world: { shown: true, open: true }, journal: { shown: true, open: true },
     dialog: { shown: false, open: true } },
   onChange: st => panel?.showDialog(!!st.dialog?.shown),              // hidden: the panel draws nothing there
 });
+// the LOOP dock: the loop console (alfworld/console.sh: metis-loop console-serve in this world's directory, the bundle in
+// place) as its CHAT only (?panels=chat, CHAT.md §1: the gateway's own page in a frame, never a copy of its code); the
+// tester says what surprised them there, and the pi loop takes it on this world's traces
+const loopUrl = (() => {
+  const v = q.get('loop');
+  if (!v) return null;
+  try {
+    const u = new URL(v, location.href);
+    if (!/^https?:$/.test(u.protocol)) return null;
+    if (!u.searchParams.has('panels')) u.searchParams.set('panels', 'chat');
+    return u.href;
+  } catch { return null; }
+})();
+world.loop = loopUrl;
+if (loopUrl) {
+  $('#loopframe').src = loopUrl;
+  $('#loopframe').hidden = false;
+  $('#loopnone').hidden = true;
+  $('nav#strip [data-strip="loop"]').hidden = false;
+  if (!docks.state.loop) docks.set('loop', { shown: true, open: true, size: 3 });   // the CHAT needs room: a weight of 3 to the others' 1
+}
 docks.apply();
 MetisShell.splitter();
 panel = world.panel = new Panel($('#talkpanel'), {

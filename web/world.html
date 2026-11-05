@@ -66,6 +66,9 @@
   .fw-panel .fw-ctl { background: var(--bg); border-color: var(--line); border-radius: 0; }
   .fw-panel .fw-attn[aria-pressed="true"] { color: var(--bg); background: var(--green); border-color: var(--green); }
   #dock-dialog .dbody { display: flex; flex-direction: column; overflow: hidden; }
+  /* the LOOP dock (loop-ui s-bb07923c step 2.5): the pi loop's CHAT, the console's own page in a frame (?loop=URL) */
+  #dock-loop .dbody { display: flex; flex-direction: column; overflow: hidden; padding: 0; }
+  #loopframe { flex: 1 1 auto; width: 100%; min-height: 0; border: 0; background: var(--bg); }
   #dialogpart { flex: 1 1 auto; min-height: 0; }
   #dialogpart > .fw-bar { padding: 0 0 6px; border-bottom: 1px solid var(--line); }
   #dialogpart .fw-sec { border: 1px solid var(--line); padding: 2px 8px; background: var(--panel); }
@@ -144,12 +147,17 @@
         <header><span class="tw">▾</span><span class="tt">JOURNAL</span><button class="x" type="button" aria-label="hide the journal">✕</button></header>
         <div class="dbody"><div id="jtools"><button id="jsave" type="button" class="fw-link">save (JSONL)</button></div><ol id="jlog" tabindex="-1" aria-label="the journal's lines"></ol></div>
       </section>
+      <section class="dock" id="dock-loop" data-dock="loop" tabindex="-1" aria-label="the loop: the pi loop's chat over this world's workspace">
+        <header><span class="tw">▾</span><span class="tt">LOOP</span><button class="x" type="button" aria-label="hide the loop">✕</button></header>
+        <div class="dbody"><iframe id="loopframe" title="the pi loop's CHAT (the loop console)" hidden></iframe>
+          <p class="empty" id="loopnone">no loop console here: start it beside the demo (alfworld/console.sh) and open this page with ?loop=its URL</p></div>
+      </section>
       <section class="dock" id="dock-dialog" data-dock="dialog" tabindex="-1" aria-label="the dialog: the floor, barge-in, attention, the numbers">
         <header><span class="tw">▾</span><span class="tt">DIALOG</span><button class="x" type="button" aria-label="hide the dialog">✕</button></header>
         <div class="dbody"><div id="dialogpart"></div></div>
       </section>
     </aside>
-    <nav id="strip"><button type="button" data-strip="talk">Talk</button><button type="button" data-strip="hierarchy">Hierarchy</button><button type="button" data-strip="world">World card</button><button type="button" data-strip="journal">Journal</button><button type="button" data-strip="dialog">Dialog</button></nav>
+    <nav id="strip"><button type="button" data-strip="talk">Talk</button><button type="button" data-strip="hierarchy">Hierarchy</button><button type="button" data-strip="world">World card</button><button type="button" data-strip="journal">Journal</button><button type="button" data-strip="loop" hidden>Loop</button><button type="button" data-strip="dialog">Dialog</button></nav>
   </main>
 </div>
 <script type="module">
