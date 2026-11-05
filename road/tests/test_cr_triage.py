@@ -158,3 +158,33 @@ def test_a_machine_record_is_about_its_contact_partner_else_its_bound_things(tmp
     assert T.named_things(tr, [0, 6]) == ["cr7"]
     assert T.named_things(tr, [0, 5]) == ["cr1", "cr3"]                  # the near roles first
     assert T.named_things(tmp_path / "none", [0, 5]) == []
+
+
+def test_a_contact_from_behind_on_a_recording_is_the_worlds_the_rest_the_laws(tmp_path):
+    def truth(tr, partner_lane, partner_s):
+        rows = [{"truth": 1, "cannot": []},
+                {"k": 3, "ego": {"lane": "a", "s": 20.0, "contact": []}, "things": [{"id": "cr9", "lane": partner_lane, "s": partner_s - 2}]},
+                {"k": 4, "ego": {"lane": "a", "s": 21.0, "contact": ["cr9"]}, "things": [{"id": "cr9", "lane": partner_lane, "s": partner_s}]}]
+        (tr / "truth.jsonl").write_text("".join(json.dumps(r) + "\n" for r in rows))
+    d = make_round(tmp_path, "p4", {"taycann": [row("R-1", "1", failed=["contact"]), row("F-1", "2", failed=["contact"]),
+                                                row("S-1", "3", failed=["contact"]), row("I-1", "4", failed=["contact"], set="interactive")]})
+    for rid, lane, s in (("R-1", "a", 18.0), ("F-1", "a", 26.0), ("S-1", "b", 21.0), ("I-1", "a", 18.0)):
+        truth(d / "taycann" / "runs" / rid / "trace" / ("cr_%s-1" % rid), lane, s)
+    sides = {r["id"]: T.contact_side(T.record_of(r)[1]) for r in T.rows(d)}
+    assert sides == {"R-1": ("behind", "cr9"), "F-1": ("front", "cr9"), "S-1": ("side", "cr9"), "I-1": ("behind", "cr9")}
+    k = T.kind_one(next(r for r in T.rows(d) if r["id"] == "R-1"))
+    assert k["kind"] == "world" and "from behind on a recorded trajectory" in k["why"]
+
+    def kinder_(r):                                            # the law's half (the real triage is not run here)
+        k = T.kind_one(r) if r["id"] == "R-1" else {"kind": "structural", "member": "responder", "record": r["record_id"],
+                                                     "rules": ["brake_lon"], "atoms": ["resp_lon"]}
+        if r["id"] != "R-1":
+            k["partner"] = sides[r["id"]][0]
+        return k
+    out = T.run(d, kinder=kinder_)
+    got = sorted((c["measure"], c["kind"], c["count"]) for c in out["clusters"])
+    assert got == [("contact:behind", "structural", 1), ("contact:behind", "world", 1),      # the interactive one stays the law's
+                   ("contact:front", "structural", 1), ("contact:side", "structural", 1)]
+    made = T.import_round(d, tmp_path / "road" / ".metis", limit=20)
+    recs = [json.loads((tmp_path / "road" / ".metis" / "surprises" / ("%s.json" % s)).read_text()) for s in made]
+    assert "R-1" not in {r["harvest"]["scenario"] for r in recs}                         # the world's: not the loop's

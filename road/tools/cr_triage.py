@@ -17,7 +17,11 @@ layout and row schema), every host's results pulled to taycann. The triage reads
    missing `route_lane(D)` on two maps is one mechanism. The measure is the row's (harvest.md): error:<kind> for a run that did not
    finish, else the first of `failed`, the hard measures first (contact, sumo_collision, violation, off_lanelet), then the
    goal split by the architect's ruling: goal:position (its place never reached: a failure) and goal:window (reached, its time
-   window missed: SOFT, counted and reported, never a cluster, the curve or an import). A row with no record (an error
+   window missed: SOFT, counted and reported, never a cluster, the curve or an import).
+   A contact (or SUMO collision) is split by its partner at the first contact tick of the truth column: behind (on the ego's
+   lane, behind it), front (the ego the rear party) or side (another lane: crossing, merging). One from BEHIND on a RECORDED
+   trajectory is kind world, never triaged or imported (the architect's ruling: a recording does not react, it rear-ends
+   us); front and side stay the law's. A row with no record (an error
    run: the world's or the conversion's fault, never the family's) clusters by (measure, "no record").
 3. CLUSTERS: by signature, with their count, their scenarios, and ONE representative: the earliest in run order (the row's
    `started`, then id), so a rerun of the same round picks the same one.
@@ -123,6 +127,12 @@ def kind_one(row):
     out = {"member": member, "record": rec.get("id"), "rules": [], "atoms": []}
     if tr is None:
         return dict(out, kind=None, why="no trace")
+    m = measure(row)
+    if m in ("contact", "sumo_collision"):
+        side, partner = contact_side(tr)
+        out.update(partner=side, partner_id=partner)
+        if side == "behind" and row.get("set") == "recorded":     # the architect's ruling (2026-11-05): the recording rear-ends us
+            return dict(out, kind="world", why="%s hit the ego from behind on a recorded trajectory, which does not react" % partner)
     try:
         from metis import surprise_kind as SK
         if not rec.get("window") and rec.get("k") is None:            # a worker's record without a window: the run's end
@@ -147,6 +157,25 @@ def kind_one(row):
                 atoms=sorted({o["missing"].split("(")[0] for o in near}),
                 ground=sorted({"%s ⟵ %s" % (o["ground"], o["missing"]) for o in near})[:12],
                 missing_columns=(t.get("evidence") or {}).get("missing") or [])
+
+
+def contact_side(tr):
+    """Where the ego's first contact partner was at the first contact tick of the truth column: behind (on the ego's lane, its
+    front behind the ego's), front (ahead on the ego's lane: the ego the rear party), side (another lane: crossing, merging,
+    beside) → (side, partner id); (None, None) without a truth or a contact."""
+    from metis import surprise_kind as SK
+    rows, _ = SK.read_truth(tr)
+    for k in sorted(rows or {}):
+        ego = rows[k].get("ego") or {}
+        hit = ego.get("contact") or []
+        if not hit:
+            continue
+        pid = sorted(hit)[0]
+        th = next((x for x in rows[k].get("things") or () if x.get("id") == pid), None)
+        if th is None or th.get("lane") != ego.get("lane") or th.get("s") is None or ego.get("s") is None:
+            return "side", pid
+        return ("behind" if th["s"] < ego["s"] else "front"), pid
+    return None, None
 
 
 ROLE_ORDER = ("lead", "follower", "leadleft", "leadright", "followleft", "followright")
@@ -242,6 +271,8 @@ def _safe(name):
 def signature(row, k):
     """The mechanism's signature of a failed ROW with its triage K (a tuple, hashable)."""
     m = measure(row)
+    if k and k.get("partner") and m in ("contact", "sumo_collision"):
+        m = "%s:%s" % (m, k["partner"])                     # behind (the world's when recorded) | front | side
     if not k or (k.get("kind") is None and k.get("why") in ("no record", "no trace")):
         return (None, m, "no record", (), (), ())
     return (k.get("member"), m, k.get("kind"), tuple(k.get("fired") or ()), tuple(k.get("rules") or ()), tuple(k.get("atoms") or ()))
@@ -370,7 +401,7 @@ def import_round(round_dir, to, limit=IMPORT_LIMIT):
         if len(made) >= limit:
             break
         key = "%s:%s" % (data["summary"]["pin"], c["id"])
-        if key in done or c["kind"] in (None, "no record"):
+        if key in done or c["kind"] in (None, "no record", "world"):       # the world's faults are not the loop's
             continue
         rep = c["representative"]
         rec, tr = record_of({"record_id": rep["record"], "_host": rep["host"], "id": rep["id"]})
