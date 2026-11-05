@@ -188,3 +188,14 @@ def test_a_contact_from_behind_on_a_recording_is_the_worlds_the_rest_the_laws(tm
     made = T.import_round(d, tmp_path / "road" / ".metis", limit=20)
     recs = [json.loads((tmp_path / "road" / ".metis" / "surprises" / ("%s.json" % s)).read_text()) for s in made]
     assert "R-1" not in {r["harvest"]["scenario"] for r in recs}                         # the world's: not the loop's
+
+
+def test_a_scenario_the_world_could_not_pose_is_an_error_of_the_worlds():
+    """The architect's ruling (the catalog at d5c7c72): no goal edge, or a run of at most 5 ticks, is error:world, never a fail."""
+    def cr(goal_edge, ticks, failed=("goal",)):
+        return row("x", "1", failed=list(failed), ticks=ticks, summary={"director": {"cr": {"goal_edge": goal_edge}}})
+    assert T.measure(cr(None, 300)) == "error:world"
+    assert T.measure(cr("e12", 3)) == "error:world"
+    assert T.measure(cr("e12", 300)) == "goal:position"
+    assert T.measure(cr(None, 300, failed=())) == "error:world"               # even a pass
+    assert T.measure(row("y", "1", failed=["goal"])) == "goal:position"        # no summary (older rows): as before

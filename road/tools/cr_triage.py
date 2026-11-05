@@ -74,6 +74,8 @@ def measure(row):
     err = row.get("error")
     if err:
         return "error:%s" % (err.get("kind") if isinstance(err, dict) else "?")
+    if no_goal(row):                                 # the architect's ruling (2026-11-05, catalog at d5c7c72): a world fault
+        return "error:world"
     failed = row.get("failed") or []
     for m in MEASURES:
         if m in failed:
@@ -82,6 +84,19 @@ def measure(row):
                 return SOFT if g.get("position_t") is not None else "goal:position"
             return m
     return failed[0] if failed else None
+
+
+SHORT_TICKS = 5                              # a run this short "arrived" on a route of a metre: no result
+
+
+def no_goal(row):
+    """The world could not pose the scenario: cr_world found no goal edge (cr2sumo merges lanelets into edges cr_world cannot map
+    by name), or the run ended within SHORT_TICKS (the ego "arrived" at tick 1 on a 1 m route). Counted as error:world, never a
+    failure of the family's, until the converter's fix reruns them (the architect's ruling)."""
+    cr = ((row.get("summary") or {}).get("director") or {}).get("cr") or {}
+    if "goal_edge" in cr and cr["goal_edge"] is None:
+        return True
+    return row.get("ticks") is not None and row["ticks"] <= SHORT_TICKS
 
 
 def soft(m):
