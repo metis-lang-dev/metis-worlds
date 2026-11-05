@@ -54,6 +54,8 @@ class Lane:
     disallow: tuple = None
     function: str = "normal"            # SUMO's edge function: normal | internal | crossing | walkingarea (a net read
                                         # with walking=True keeps the last two: the mixed adapter's crosswalks and areas)
+    kind: str = "driving"               # the lane's OpenDRIVE kind as netconvert keeps it in the edge's type: driving |
+                                        # parking | bidirectional (road-scenarios s-e23be780; driving where a net says none)
 
 
 @dataclass

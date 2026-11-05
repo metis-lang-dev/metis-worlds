@@ -193,6 +193,9 @@ def _dist_to_line(x, y, line):
     return best
 
 
+LANE_KINDS = ("driving", "parking", "bidirectional")    # the kinds a lane keeps (any other: driving)
+
+
 def load_net(path, walking=False):
     """WALKING (the mixed adapter, wc-world s-db2f8e59): keep the `crossing` and `walkingarea` edges as lanes of that
     `function` (a crosswalk's lane, allow pedestrian; a walking area's polygon in its shape), outside the vehicle graph
@@ -213,14 +216,18 @@ def load_net(path, walking=False):
             continue
         internal = func == "internal"
         edges[eid] = {"from": e.get("from"), "to": e.get("to"), "lanes": [], "internal": internal}
+        kinds = (e.get("type") or "").split("|")            # OpenDRIVE's lane types, lane 0 first ("parking|driving")
         for ln in e.iter("lane"):
             allow = ln.get("allow")
+            i = int(ln.get("index", 0))
+            kind = kinds[i] if len(kinds) > 1 and i < len(kinds) else (kinds[0] if kinds[0] in LANE_KINDS else "driving")
             lanes[ln.get("id")] = Lane(
                 ln.get("id"), float(ln.get("length")), float(ln.get("width", DEFAULT_WIDTH)),
                 speed=float(ln.get("speed", DEFAULT_SPEED)), shape=_shape(ln.get("shape")), internal=internal,
                 junction=(eid[1:].rsplit("_", 1)[0] if internal else None), edge=eid, index=int(ln.get("index", 0)),
                 allow=tuple(allow.split()) if allow else None,
-                disallow=tuple(ln.get("disallow").split()) if ln.get("disallow") else None)
+                disallow=tuple(ln.get("disallow").split()) if ln.get("disallow") else None,
+                kind=kind if kind in LANE_KINDS else "driving")
             edges[eid]["lanes"].append(ln.get("id"))
     # neighbours: same edge by index (0 rightmost), the leftmost lane's opposite on the reverse edge
     for eid, e in edges.items():

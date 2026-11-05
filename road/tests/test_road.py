@@ -369,3 +369,22 @@ def test_the_light_on_a_link():
     assert road_facts.signal_of(Link(tl=None, tl_link=None), {"C": "rrr"}) == "off"
     assert road_facts.signal_of(Link(tl="D", tl_link=0), {"C": "rrr"}) == "off"
 
+
+
+def test_the_lanes_kinds_are_vocabulary():
+    """road-scenarios s-e23be780 (record 463d7d): the net keeps OpenDRIVE's lane kinds (Town03: parking, bidirectional);
+    the host states own_kind(K) and lane_kind(D, K) of both sides every tick (none: no same-direction lane) and no longer
+    derives change_reason from a slow lead (change.llp's pass rules read lead_slow; change_reason is a wish's)."""
+    from semantic_world import net as netmod
+    lanes = netmod.load_net(str(Path(__file__).resolve().parents[1] / "maps" / "Town03.net.xml")).lanemap().lanes
+    assert (lanes["65_1"].kind, lanes["65_2"].kind, lanes["20_0"].kind, lanes["20_1"].kind) == \
+        ("driving", "bidirectional", "parking", "driving")
+    w = road_world.RoadWorld("lead_brake", 1)
+    f = w.observe()[0]
+    assert f.get("own_kind(driving)") == 1
+    assert sum(1 for a in f if a.startswith("lane_kind(left,")) == 1 and sum(1 for a in f if a.startswith("lane_kind(right,")) == 1
+    lead_slow = road_world.RoadWorld("lead_lanes_free", 1)
+    for _ in range(60):
+        lead_slow.step()
+    g = lead_slow.observe()[0]
+    assert not any(a.startswith("change_reason(") for a in g)

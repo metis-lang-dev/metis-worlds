@@ -16,12 +16,13 @@ a1..a3, vru1). The facts (every number stays here; the rules read classes):
 - the other cars, as observed (road-2 item 2; a mover's `signal` / `settled`, sumo_perceive): signalled(R, S) while
   the role's indicator shows side S, settled_to(R, D) for a while after its lane change to side D is seen complete;
   a pair whose other has settled into a lane not the ego's is left out of the fold (released);
-- the lanes: adjacent(D) for a same-direction neighbour on side D; changing(D) while a lane change to D runs;
+- the lanes: adjacent(D) for a same-direction neighbour on side D; own_kind(K) of the ego's lane and lane_kind(D, K) of each
+  side every tick (K driving | parking | bidirectional, none: no same-direction lane there); changing(D) while a lane change to D runs;
   settled(D) when no change runs and the ego did not leave side D within SETTLE_S (LEFT_FROM: the world's (side, age
   s) of its last change): an observed fact of its own manoeuvre, never a belief (road step 5: the planner's change
   ping-pong between two lanes whose leads both read slow);
 - progress: below_target (the ego under what it wants by more than 0.5 m/s), above_target (over it by more than PACE_BAND), else at_target:
-  what it wants is min(pace, the limit in law; law_limit: inside a junction, the limit it came in on); change_reason(D): a slow lead, each adjacent side; lead_slow (the
+  what it wants is min(pace, the limit in law; law_limit: inside a junction, the limit it came in on); change_reason(D): a person's wish only (road_wishes); lead_slow (the
   lead within SLOW_RANGE ahead, slower than the ego's limit by more than SLOW_MARGIN, and the ego not slower than it
   by more than SLOW_MARGIN: nothing to gain behind it), else lead_ok (accel_ok then brings the ego up to it); accel_ok when
   two plans (2 PLAN_T) of full acceleration keep the lead at a safe distance (gap_room), else accel_no; keep_ok when
@@ -242,9 +243,13 @@ def facts(lm, ego, v, movers, sit, changing=None, dest=None, turn=None, lights=N
         if m is not None and getattr(m, "settled", None):
             out["settled_to(%s,%s)" % (r, m.settled)] = 1        # its lane change, seen complete
     lane = lm.lanes[ego.lane]
+    out["own_kind(%s)" % getattr(lane, "kind", "driving")] = 1          # the lanes' kinds, vocabulary (change.llp decides)
     for side in ("left", "right"):
         if getattr(lane, side) and not getattr(lane, side + "_opposite"):
             out["adjacent(%s)" % side] = 1
+            out["lane_kind(%s,%s)" % (side, getattr(lm.lanes[getattr(lane, side)], "kind", "driving"))] = 1
+        else:
+            out["lane_kind(%s,none)" % side] = 1                         # no same-direction lane there
     if changing:
         out["changing(%s)" % changing] = 1
     else:
@@ -260,9 +265,7 @@ def facts(lm, ego, v, movers, sit, changing=None, dest=None, turn=None, lights=N
         lv = (speeds or {}).get(lead.id, lead.dyn.vmax)
         if d is not None and 0 <= d <= SLOW_RANGE and lv < cap - SLOW_MARGIN and v >= lv - SLOW_MARGIN:
             out["lead_slow"] = 1
-    if "lead_slow" in out:
-        out.update(("change_reason(%s)" % s, 1) for s in ("left", "right") if "adjacent(%s)" % s in out)
-    if "lead_slow" not in out:
+    if "lead_slow" not in out:                     # the pass is change.llp's (change_pass, change_aside); change_reason is a wish's
         out["lead_ok"] = 1
     out["accel_ok" if gap_room(pairs, ego, v, cap, ego.dyn.accel) else "accel_no"] = 1
     out["keep_ok" if gap_room(pairs, ego, v, cap, 0.0) else "keep_no"] = 1
