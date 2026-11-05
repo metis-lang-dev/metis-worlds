@@ -3,7 +3,7 @@ title: a car parked half in the ego's lane with its hazards on, distance m ahead
 source: {suite: lb2, type: ParkedObstacle, code: srunner/scenarios/route_obstacles.py:301, pin: scenario_runner v0.9.16 94ff3b8af752, license: "CARLA scenario_runner, MIT License, Copyright (c) 2018 CARLA"}
 exercises: planner change (past a stopped lead), brake_follow
 verdict: PORTABLE
-sites: {lb1: Scenario1, towns: {Town03: [0, 1, 2]}}   # straight-lane obstacles on S1 sites; a same-direction lane: Town03
+sites: {lb1: Scenario1, towns: {Town03: [42, 49]}}   # nina's review (step 2a): two lanes, >= 190 m free before the junction; distance clipped to the free run minus 66 m on SUMO
 dt: 0.1
 ticks: 1200
 ego: {v: 11.1}

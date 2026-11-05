@@ -106,7 +106,8 @@ def test_a_card_plays_on_the_exerciser_with_its_trigger_armed():
     import random
     spec = C.exerciser("card:StaticCutIn")(random.Random(1))
     cut = next(a for a in spec["agents"] if a["id"] == "cutin")
-    assert cut["lane"] == "e_0" and cut["armed"] == [({"gap": 30.0}, [("v", 11.1, 0.0)]), ({"gap": 30.0}, [("lane", "e_1", 1.5)])]
+    want = {"beside": True, "tta": 2.7, "dist": 15.0}                 # the source's TTA to the point beside it (nina's review)
+    assert cut["lane"] == "e_0" and cut["armed"] == [(want, [("v", 11.1, 0.0)]), (want, [("lane", "e_1", 1.5)])]
     side = C.exerciser("card:OppositeVehicleTakingPriority")(random.Random(1))["agents"][0]
     assert side["lane"] == "c_0" and side["v"] == 0.0 and side["moving"] is False
     assert side["armed"] == [({"at": 400.0, "tta": 2.2, "dist": 12.0}, [("go", True, 0.0), ("speed", 16.7, 0.0)])]

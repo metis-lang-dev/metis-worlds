@@ -254,7 +254,8 @@ class RoadWorld:
     def _arm(self, ag):
         """road-scenarios: a card's trigger, the source's own condition, fires its steps once: `gap` (the ego's front
         within D m of this one's rear, it ahead on the ego's lane or a next one), `tta` (the ego's time to arrival at
-        `at` (an s on the main road) at most T s, or `dist` m from it), `traveled` (this one has gone D m), `t`."""
+        `at` (an s on the main road), or `beside` (the point of its lane beside this one: a cut-in's collision point),
+        at most T s, or `dist` m from it), `traveled` (this one has gone D m), `t`."""
         keep = []
         for when, steps in ag.armed:
             e = self.ego.m
@@ -265,8 +266,8 @@ class RoadWorld:
                 near = abs(int(ag.m.lane[2:] or 0) - int(e.lane[2:] or 0)) <= 1 if ag.m.lane[2:].isdigit() and e.lane[2:].isdigit() else ag.m.lane == e.lane
                 rear = ag.m.s - ag.m.length
                 hit = hit or (near and 0.0 <= rear - e.s <= when["gap"])
-            if "at" in when:
-                d = when["at"] - e.s
+            if "at" in when or when.get("beside"):            # `beside`: the point of the ego's lane beside this one
+                d = (ag.m.s if when.get("beside") else when["at"]) - e.s
                 hit = hit or (0.0 <= d <= when.get("dist", 0.0)) or (d >= 0.0 and d / max(self.ego.v, 0.1) <= when.get("tta", 0.0))
             if "traveled" in when:
                 hit = hit or ag.m.s - ag.s0 >= when["traveled"]

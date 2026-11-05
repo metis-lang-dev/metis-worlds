@@ -3,7 +3,7 @@ title: a police car and two crashed cars block the ego's lane distance m ahead; 
 source: {suite: lb2, type: Accident, code: srunner/scenarios/route_obstacles.py:52, pin: scenario_runner v0.9.16 94ff3b8af752, license: "CARLA scenario_runner, MIT License, Copyright (c) 2018 CARLA"}
 exercises: planner change (past a stopped lead), brake_follow
 verdict: PORTABLE
-sites: {lb1: Scenario1, towns: {Town03: [3, 4, 5]}}
+sites: {lb1: Scenario1, towns: {Town03: [127, 135]}}   # nina's review (step 2a): two lanes, >= 190 m free before the junction; distance clipped to the free run minus 66 m on SUMO
 dt: 0.1
 ticks: 1200
 ego: {v: 11.1}

@@ -3,7 +3,7 @@ title: at an unsignalled junction a car from the side road takes the ego's prior
 source: {suite: lb2, type: OppositeVehicleTakingPriority, code: srunner/scenarios/opposite_vehicle_taking_priority.py:256, pin: scenario_runner v0.9.16 94ff3b8af752, license: "CARLA scenario_runner, MIT License, Copyright (c) 2018 CARLA"}
 exercises: planner brake_cross; responder brake_lon
 verdict: PORTABLE
-sites: {lb1: Scenario10, towns: {Town03: [0, 1, 2]}}   # unsignalled junctions: S10 sites
+sites: {lb1: Scenario10, towns: {Town03: [1, 18, 30]}}   # S10 poses on an all-major lane at a junction with a minor approach (nina's review)
 dt: 0.1
 ticks: 900
 ego: {v: 11.1}
