@@ -325,8 +325,9 @@ def test_what_the_other_cars_show_are_facts_and_a_settled_pair_is_released():
     road_facts.facts(w.map, ego, 11.0, [cut], sit, speeds={"c": 6.0})                  # beside: laterally safe
     cut.lane = "e_1"
     _, _, fold, _ = road_facts.facts(w.map, ego, 11.0, [cut], sit, speeds={"c": 6.0})
-    assert fold["resp_lon"] == "brake_min"     # it cut in and is now the lead at an unsafe distance: brake along the way
-    # whatever the blame (the rule 5 ruling (3), road-scenarios s-e23be780; before it: the memory, lateral only)
+    assert fold["resp_lon"] == "brake_max"     # it cut in and is now the lead at an unsafe distance: brake along the way
+    # whatever the blame (the rule 5 ruling (3), road-scenarios s-e23be780; before it: the memory, lateral only); 3.5 m to a
+    # 6 m/s lead at 11 m/s: brake_min would need 4.1 m, so only brake_max keeps the ego behind (the escalation, -87279b)
     cut.settled = "right"
     _, _, fold, _ = road_facts.facts(w.map, ego, 11.0, [cut], sit, speeds={"c": 6.0})
     assert fold["resp_lon"] != "none"                                                   # settled in: along the way
