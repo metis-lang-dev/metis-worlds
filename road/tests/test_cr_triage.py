@@ -146,3 +146,15 @@ def test_a_goal_reached_out_of_its_window_is_soft_counted_and_never_a_cluster(tm
     assert (s["passed"], s["soft"], s["failed"], s["clusters"]) == (1, 2, 1, 1) and calls == ["H-1"]
     assert s["by_measure"] == {"goal:window": 2, "contact": 1}
     assert "2 SOFT" in (d / "triage.md").read_text()
+
+
+def test_a_machine_record_is_about_its_contact_partner_else_its_bound_things(tmp_path):
+    tr = tmp_path / "tr"
+    tr.mkdir()
+    rows = [{"truth": 1, "cannot": []},
+            {"k": 5, "ego": {"lane": "a", "contact": []}, "things": [{"id": "cr3", "role": "a1"}, {"id": "cr1", "role": "lead"}]},
+            {"k": 6, "ego": {"lane": "a", "contact": ["cr7"]}, "things": []}]
+    (tr / "truth.jsonl").write_text("".join(json.dumps(r) + "\n" for r in rows))
+    assert T.named_things(tr, [0, 6]) == ["cr7"]
+    assert T.named_things(tr, [0, 5]) == ["cr1", "cr3"]                  # the near roles first
+    assert T.named_things(tmp_path / "none", [0, 5]) == []

@@ -128,6 +128,10 @@ def kind_one(row):
         if not rec.get("window") and rec.get("k") is None:            # a worker's record without a window: the run's end
             rec = dict(rec, window=tail_window(tr))
             out["window"] = rec["window"]
+        named = named_things(tr, rec.get("window") or [rec.get("k"), rec.get("k")])
+        if named:                                                     # the world names what it saw (spec 20 §4 reads the words)
+            rec = dict(rec, words=" ".join([rec.get("words") or rec.get("reading") or ""] + named))
+            out["named"] = named
         t = SK.triage(rec, tr, _program(member) if member else None)
     except Exception as e:                                  # noqa: BLE001 — the triage of one record never stops the round
         return dict(out, kind="computational", why="the triage failed: %s" % str(e).splitlines()[0][:200])
@@ -143,6 +147,29 @@ def kind_one(row):
                 atoms=sorted({o["missing"].split("(")[0] for o in near}),
                 ground=sorted({"%s ⟵ %s" % (o["ground"], o["missing"]) for o in near})[:12],
                 missing_columns=(t.get("evidence") or {}).get("missing") or [])
+
+
+ROLE_ORDER = ("lead", "follower", "leadleft", "leadright", "followleft", "followright")
+
+
+def named_things(tr, window):
+    """The truth's things a machine record is about (its words name none: the worker's sentence names the scenario and the
+    measure): the ego's contact partners inside WINDOW; else the things bound to a role at the window's last truth row, the
+    near roles first. → [thing id]. [] without a truth column."""
+    from metis import surprise_kind as SK
+    rows, _ = SK.read_truth(tr)
+    if not rows or not window or window[0] is None:
+        return []
+    k0, k1 = window
+    inside = [rows[k] for k in sorted(rows) if k0 <= k <= k1]
+    hit = sorted({c for r in inside for c in ((r.get("ego") or {}).get("contact") or ())})
+    if hit:
+        return hit
+    if not inside:
+        return []
+    bound = [th for th in inside[-1].get("things") or () if th.get("role")]
+    order = {r: i for i, r in enumerate(ROLE_ORDER)}
+    return [th["id"] for th in sorted(bound, key=lambda th: (order.get(th["role"], len(order)), th["id"]))][:3]
 
 
 TAIL = 300                                                   # ticks: the window of a record that names none (30 planner beats)
