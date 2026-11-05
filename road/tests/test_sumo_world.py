@@ -177,7 +177,7 @@ def test_loop_projects_the_belief_and_restricts(straight, tmp_path):
     loop = sumo_host.Loop({"scenario": "straight", "seed": 1, "vehicles": 2}, str(tmp_path / "w"), traci=tr)
     assert loop.warmup == 1 and loop.tick == 0                                    # the episode begins with the ego in
     facts, roles, fold, _ = loop.observe()
-    assert {"now", "type(lead,same_dir)", "dangerous(lead)", "resp_lon(brake_min)", "type(vru1,not_relevant)"} <= set(facts)
+    assert {"now", "type(lead,same_dir)", "dangerous(lead)", "resp_lon(brake_min)", "role_empty(vru1)"} <= set(facts)   # no walker: role_empty, no filler (spec 20 §2)
     assert roles["lead"] != "stop" and fold["resp_lon"] == "brake_min"             # a track's name, never the world's id
     loop.command(("accel", None), life=10)
     assert loop.step() is True

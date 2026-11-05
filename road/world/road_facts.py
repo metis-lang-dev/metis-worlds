@@ -11,8 +11,9 @@ a1..a3, vru1). The facts (every number stays here; the rules read classes):
   dangerous(o), safe_before(o, B), resp(o, R), safe_lat_left/right(o), resp_side(o, side, R) (the library's
   resp_lat(o, side, R): renamed, a pred has one arity), xing_case(o, C),
   xing_before(o, C); and the fold's resp_lon(R), resp_lat(R), resp_lat_left(R), resp_lat_right(R);
-- a role nobody fills: type(o, not_relevant), safe_long(o), safe_lat(o), safe_lat_left(o), safe_lat_right(o) — a
-  vacant role is no danger;
+- a role nobody fills: role_empty(o) and nothing else (spec 20 §2, surprise-kinds s-7a02c2ac: no class and no safety fact
+  where the host saw nobody; not_relevant is a SEEN mover's class); side_clear(D) when the D side is free to change into:
+  adjacent(D), and its lead and follower each unfilled or safe_long and safe_lat by the fold;
 - the other cars, as observed (road-2 item 2; a mover's `signal` / `settled`, sumo_perceive): signalled(R, S) while
   the role's indicator shows side S, settled_to(R, D) for a while after its lane change to side D is seen complete;
   a pair whose other has settled into a lane not the ego's is left out of the fold (released);
@@ -233,8 +234,7 @@ def facts(lm, ego, v, movers, sit, changing=None, dest=None, turn=None, lights=N
     bound = set(roles)
     for r in OBJ_ROLES:
         if r not in bound:
-            out.update({"type(%s,not_relevant)" % r: 1, "safe_long(%s)" % r: 1, "safe_lat(%s)" % r: 1,
-                        "safe_lat_left(%s)" % r: 1, "safe_lat_right(%s)" % r: 1})
+            out["role_empty(%s)" % r] = 1                          # nobody the host saw there: no filler (spec 20 §2)
     by_id = {m.id: m for m in movers}
     for r, mid in roles.items():
         m = by_id.get(mid)
@@ -248,6 +248,9 @@ def facts(lm, ego, v, movers, sit, changing=None, dest=None, turn=None, lights=N
         if getattr(lane, side) and not getattr(lane, side + "_opposite"):
             out["adjacent(%s)" % side] = 1
             out["lane_kind(%s,%s)" % (side, getattr(lm.lanes[getattr(lane, side)], "kind", "driving"))] = 1
+            if all(r not in bound or ("safe_long(%s)" % r in out and "safe_lat(%s)" % r in out)
+                   for r in ("lead" + side, "follow" + side)):
+                out["side_clear(%s)" % side] = 1                    # free to change into: each role unfilled or safe
         else:
             out["lane_kind(%s,none)" % side] = 1                         # no same-direction lane there
     if changing:

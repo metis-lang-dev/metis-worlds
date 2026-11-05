@@ -85,7 +85,7 @@ def planner_facts(w, facts, v):
             out.pop(a, None)
         out["above_target" if v > STOPPED else "at_target"] = 1
         return out
-    if w["pace"] == "brisk" and "type(lead,not_relevant)" not in out:
+    if w["pace"] == "brisk" and "role_empty(lead)" not in out:
         out.update(("change_reason(%s)" % s, 1) for s in SIDES if "adjacent(%s)" % s in out)
     if w["follow"]:
         for s in SIDES:
