@@ -74,7 +74,8 @@ def measure(row):
 
 def record_of(row):
     """(the record dict, its trace's directory) of a failed row, or (None, None). The worker writes records/<record_id>.json with
-    trace `traces/<run>`, the trace itself in runs/<scenario id>/trace/ (harvest.md); a trace under the host's traces/ is read too."""
+    trace `traces/<run>` and `trace_path` runs/<scenario id>/trace/<run>/ (the trace itself, relative to the host); a trace under
+    runs/<id>/trace/ or the host's traces/ is read too. A directory with no segment is no trace."""
     rid = row.get("record_id")
     if not rid:
         return None, None
@@ -83,9 +84,14 @@ def record_of(row):
     if not p.is_file():
         return None, None
     rec = json.loads(p.read_text())
-    scen = rec.get("scenario") or row.get("id")
-    for tr in ([h / "runs" / str(scen) / "trace"] + ([h / rec["trace"]] if rec.get("trace") else [])):
-        if tr.is_dir():
+    scen = str(row.get("id") or rec.get("scenario") or "")
+    scen = scen[len("cr:"):] if scen.startswith("cr:") else scen
+    run = Path(rec.get("trace") or "").name
+    cands = ([h / rec["trace_path"]] if rec.get("trace_path") else []) + \
+        ([h / "runs" / scen / "trace" / run] if run else []) + [h / "runs" / scen / "trace"] + \
+        ([h / rec["trace"]] if rec.get("trace") else [])
+    for tr in cands:                                    # the worker's trace_path first (runs/<id>/trace/<run>/)
+        if tr.is_dir() and any(tr.glob("seg-*.jsonl")):
             return rec, tr
     return rec, None
 
@@ -107,6 +113,9 @@ def kind_one(row):
         return dict(out, kind=None, why="no trace")
     try:
         from metis import surprise_kind as SK
+        if not rec.get("window") and rec.get("k") is None:            # a worker's record without a window: the run's end
+            rec = dict(rec, window=tail_window(tr))
+            out["window"] = rec["window"]
         t = SK.triage(rec, tr, _program(member) if member else None)
     except Exception as e:                                  # noqa: BLE001 — the triage of one record never stops the round
         return dict(out, kind="computational", why="the triage failed: %s" % str(e).splitlines()[0][:200])
@@ -124,16 +133,30 @@ def kind_one(row):
                 missing_columns=(t.get("evidence") or {}).get("missing") or [])
 
 
+TAIL = 300                                                   # ticks: the window of a record that names none (30 planner beats)
+
+
+def tail_window(tr):
+    """The last TAIL ticks the trace at TR holds: a goal never reached is the run's end; a record naming no window is read there."""
+    from metis import trace as MT
+    segs = MT.read(str(tr))
+    ks = [x["k"] for x in segs[-1].ticks if "k" in x] if segs else []
+    hi = ks[-1] if ks else (segs[-1].k0 if segs else 0)
+    return [max(segs[0].k0 if segs else 0, hi - TAIL), hi]
+
+
 # the host's exclusive classes (road_facts): a rule one of these short while its sibling holds is the law's ordinary branching,
 # never a near miss (keep_limit one `at_target` away while below_target holds)
 EXCLUSIVE = {"below_target", "at_target", "above_target", "accel_ok", "accel_no", "keep_ok", "keep_no", "lead_ok", "lead_slow",
              "seen_ahead", "unseen_ahead", "cross_settled", "cross_unsettled", "cross_overlap", "side_clear", "side_busy",
              "oncoming_clear", "oncoming_busy", "can_stop", "late", "zfree", "zbusy", "zclear", "inch_room", "inch_no",
-             "road_in_view", "road_hidden", "safe_long", "safe_lat", "role_empty", "zone_at", "signal"}
+             "road_in_view", "road_hidden", "safe_long", "safe_lat", "role_empty", "zone_at", "signal",
+             "own_kind", "lane_kind",           # the lane's kind: change_home is one own_kind(oncoming) short on every other lane
+             "change_reason"}                   # a person's wish, absent while none is said: `change` is always one short of it
 
 
 def _base(name):
-    return str(name).split("(")[0].split("@")[0]
+    return str(name).split("(")[0].split("@")[0].split("[")[0]
 
 
 def near_miss(o, commands):

@@ -26,13 +26,14 @@ def make_round(tmp_path, pin, hosts):
         for r in rs:
             (d / host / "rows" / ("%s.json" % r["id"])).write_text(json.dumps(r))
             if r.get("record_id"):
-                tr = d / host / "runs" / r["id"] / "trace"
+                tr = d / host / "runs" / r["id"] / "trace" / ("cr_%s-1" % r["id"])     # the worker's: runs/<id>/trace/<run>/
                 tr.mkdir(parents=True)
                 (tr / "seg-0.jsonl").write_text("{}\n")
                 (tr / "config.yaml").write_text("model: none\n")
                 (d / host / "records" / ("%s.json" % r["record_id"])).write_text(json.dumps(
                     {"id": r["record_id"], "member": "planner", "trace": "traces/cr_%s-1" % r["id"], "window": [10, 40], "k": 40,
-                     "reading": "%s: %s failed" % (r["id"], r["failed"][0]), "atoms": r["failed"], "scenario": r["id"],
+                     "reading": "%s: %s failed" % (r["id"], r["failed"][0]), "atoms": r["failed"], "scenario": "cr:%s" % r["id"],
+                     "trace_path": "runs/%s/trace/cr_%s-1" % (r["id"], r["id"]),
                      "row": "rows/%s.json" % r["id"], "who": "world", "status": "open"}))
     return d
 
@@ -81,6 +82,7 @@ def test_the_real_triage_says_no_trace_when_the_run_dir_is_gone(tmp_path):
     d = make_round(tmp_path, "p0", {"taycann": [row("A-1", "1", failed=["goal"])]})
     import shutil
     shutil.rmtree(d / "taycann" / "runs" / "A-1")
+    assert T.record_of(T.rows(d)[0])[1] is None
     r = T.rows(d)[0]
     assert T.kind_one(r)["why"] == "no trace"
 
