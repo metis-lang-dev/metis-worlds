@@ -120,6 +120,34 @@ def gap_room(pairs, ego, v, cap, accel, t=2 * PLAN_T):
 
 
 SETTLE_S = 10.0                 # s: the side the ego left is not settled again before this
+ROUTE_REACH = 150.0             # m: route_lane(D) is stated this far before the ego's lane ends (early enough to change while the zone is far)
+
+
+def route_side(lm, ego):
+    """route_lane(D) (ec8088, the architect's vocabulary): the ego's lane does not continue along its route (no way out of it reaches
+    the route's next edge) within ROUTE_REACH of its end, and a same-direction lane toward D does (the first such, right before left).
+    Never inside a junction, never on the route's last edge, never with no route's edges (the exerciser: `ego.route_edges` unset).
+    → "left" | "right" | None."""
+    edges = getattr(ego, "route_edges", None)
+    lane = lm.lanes.get(ego.lane)
+    if not edges or lane is None or lane.internal or lane.edge not in edges:
+        return None
+    i = edges.index(lane.edge)
+    if i + 1 >= len(edges) or lane.length - ego.s > ROUTE_REACH:
+        return None
+    nxt = edges[i + 1]
+
+    def on(l):
+        return any(lm.lanes[w[-1]].edge == nxt for w in lm.ways(l.id))
+    if on(lane):
+        return None
+    for side in ("right", "left"):
+        cur = lane
+        while getattr(cur, side) and not getattr(cur, side + "_opposite", False):
+            cur = lm.lanes[getattr(cur, side)]
+            if on(cur):
+                return side
+    return None
 
 
 LIGHTS = {"G": "green", "g": "green_yield", "y": "amber", "Y": "amber", "r": "red", "u": "red", "s": "red"}
@@ -370,6 +398,9 @@ def facts(lm, ego, v, movers, sit, changing=None, dest=None, turn=None, lights=N
             out["lane_kind(%s,none)" % side] = 1                         # no same-direction lane there
             if getattr(lane, side) and getattr(lane, side + "_opposite"):
                 out["oncoming(%s)" % side] = 1                           # the opposite direction's driving lane (668e45)
+    rs = route_side(lm, ego) if home is None else None
+    if rs is not None:
+        out["route_lane(%s)" % rs] = 1                               # my lane leaves my route; the D lane carries it on (change_route)
     if changing:
         out["changing(%s)" % changing] = 1
     else:

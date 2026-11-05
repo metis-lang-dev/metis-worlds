@@ -112,6 +112,7 @@ class Perception:
         lane_ = self.lanemap.lanes.get(e["lane"])
         ego_m = Mover(ego_id, e["lane"], e["s"], dynamics_for(e["vclass"], v=e["speed"], lane=lane_, ego=True),
                       route=route, length=e["length"], width=e["width"], vclass=e["vclass"])
+        ego_m.route_edges = list(e.get("route") or [])          # the route's edges: a lane with no way on ends `route` (road_facts.route_side)
         return self.movers(ego_m), ego_m
 
     def observed(self, dets):

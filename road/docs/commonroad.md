@@ -60,7 +60,7 @@ scenario file's sha256 and the version match (`--force` converts again); `--inde
 of the checkout: id, set, source, path, country, map, tags, dt) for the page's picker. `road/world/cr_world.py` (the `cr:<id>` kind,
 under `sumo_world.SumoWorld`) reads them; a scenario not yet in the cache is converted once by running the tool.
 
-`cr.json`, version 1 (CommonRoad's facts only, in the scenario's frame; metres, radians from +x, steps of `dt` s):
+`cr.json`, version 2 (CommonRoad's facts only, in the scenario's frame; metres, radians from +x, steps of `dt` s):
 - `version`, `id`, `source` (the file in the checkout), `sha256`, `dt`, `net` (the net's file name), `net_offset` (netconvert's; 0,0 seen),
   `converter` (the two versions, highway mode, country), `tags`, `interactive` (an interactive scenario's `.cr.xml`);
 - `edges`: SUMO edge id → its lanelet ids (the converter's: an edge of a multi-lane road holds several); `edges_missing`: the ids of
@@ -71,6 +71,10 @@ under `sumo_world.SumoWorld`) reads them; a scenario not yet in the cache is con
   (state, steps); `intersections`: id, incomings (lanelets, successors left/straight/right, `left_of`);
 - `obstacles`: id, type (CommonRoad's: car, truck, bus, bicycle, pedestrian, priorityVehicle, parkedVehicle, …), role, length, width,
   `trajectory` (the initial state then the prediction's: `k`, `x`, `y`, `theta`, `v`; a static obstacle has its initial state alone);
+- `right_before_left`: {SUMO junction id: its CommonRoad intersection ids}, the junctions the post-pass made right_before_left (version 2,
+  commonroad-world step 2 (4)): the converter makes a junction `priority` (a main road) where the scenario states none; a junction of the
+  scenario's own intersections whose incoming lanelets carry no right-of-way sign (yield, stop, priority, right of way, 4-way stop) and no
+  light is patched in the cached net (`netconvert -s NET -n PATCH`, the frame kept), so the yield law reads the scenario's priority;
 - `planning`: per planning problem its id, `initial` (k, x, y, theta, v) and `goals` (each: `polygons` of its position's shapes, a
   circle as 24 points; `lanelets` of the goal position; `time`, `velocity`, `orientation` as [lo, hi] or null).
 

@@ -26,7 +26,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-CR_JSON_VERSION = 1
+CR_JSON_VERSION = 2
 ROAD = Path(__file__).resolve().parents[1]
 CACHE = Path(os.environ.get("COMMONROAD_CACHE", str(ROAD / "maps" / "cr")))
 CONVERT = ROAD / "tools" / "cr_convert.py"

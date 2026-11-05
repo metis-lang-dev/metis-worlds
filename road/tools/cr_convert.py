@@ -24,7 +24,7 @@ import os
 import sys
 from pathlib import Path
 
-CR_JSON_VERSION = 1
+CR_JSON_VERSION = 2
 ROAD = Path(__file__).resolve().parents[1]
 ROOT = Path(os.environ.get("COMMONROAD_ROOT", "/bigdata/datasets/commonroad"))
 CACHE = Path(os.environ.get("COMMONROAD_CACHE", str(ROAD / "maps" / "cr")))
@@ -163,6 +163,53 @@ def net_edges(net_xml):
     return {el.get("id") for _, el in ET.iterparse(net_xml, events=("start",)) if el.tag == "edge" and el.get("function") != "internal"}
 
 
+RIGHT_OF_WAY_SIGNS = ("YIELD", "STOP", "STOP_4_WAY", "PRIORITY", "RIGHT_OF_WAY", "PRIORITY_OVER_ONCOMING", "PRIORITY_OPPOSITE_DIRECTION")
+
+
+def unsigned_junctions(net_xml, doc):
+    """The SUMO junctions of the scenario's own intersections whose incoming lanelets carry no right-of-way sign (yield, stop,
+    priority, right of way) and no light: the scenario states no priority there, so the net must not invent one (the
+    architect's ruling, commonroad-world step 2 (4)). → {junction id: [its intersection ids]}; only `priority` junctions."""
+    import xml.etree.ElementTree as ET
+    to_node, jtype = {}, {}
+    for _, el in ET.iterparse(net_xml, events=("start",)):
+        if el.tag == "edge" and el.get("function") != "internal":
+            to_node[el.get("id")] = el.get("to")
+        elif el.tag == "junction":
+            jtype[el.get("id")] = el.get("type")
+    edge_of = {la: e for e, las in doc["edges"].items() for la in las}
+    signs = {s["id"]: {x["id"] for x in s["elements"]} for s in doc["signs"]}
+    lanelets = {la["id"]: la for la in doc["lanelets"]}
+    out = {}
+    for inter in doc["intersections"]:
+        incoming = [l for g in inter["incomings"] for l in g["lanelets"]]
+        if any(lanelets[l]["lights"] for l in incoming if l in lanelets):
+            continue
+        if any(signs.get(s, set()) & set(RIGHT_OF_WAY_SIGNS) for l in incoming if l in lanelets for s in lanelets[l]["signs"]):
+            continue
+        nodes = {to_node.get(str(edge_of.get(l))) for l in incoming} - {None}
+        for n in nodes:
+            if jtype.get(n) == "priority":
+                out.setdefault(n, []).append(inter["id"])
+    return out
+
+
+def right_before_left(out_dir, net, doc):
+    """Patch the unsigned junctions to right_before_left in the cached net (netconvert -s NET -n PATCH, the frame kept)."""
+    import subprocess
+    net_xml = str(out_dir / net)
+    js = unsigned_junctions(net_xml, doc)
+    if not js:
+        return {}
+    patch = out_dir / "rbl.nod.xml"
+    patch.write_text("<nodes>\n%s</nodes>\n" % "".join('  <node id="%s" type="right_before_left"/>\n' % j for j in sorted(js)))
+    tmp = out_dir / ("rbl." + net)
+    subprocess.run(["netconvert", "-s", net_xml, "-n", str(patch), "-o", str(tmp), "--no-warnings"], check=True, capture_output=True)
+    os.replace(tmp, net_xml)
+    patch.unlink()
+    return js
+
+
 def net_offset(net_xml):
     import xml.etree.ElementTree as ET
     for _, el in ET.iterparse(net_xml, events=("start",)):
@@ -198,6 +245,7 @@ def convert(sid, root=ROOT, cache=CACHE, force=False):
            "lanelets": lanelet_rows(sc.lanelet_network), "signs": sign_rows(sc.lanelet_network),
            "lights": light_rows(sc.lanelet_network), "intersections": intersection_rows(sc.lanelet_network),
            "obstacles": obstacle_rows(sc), "planning": planning_rows(pps), "interactive": src.name.endswith(".cr.xml")}
+    doc["right_before_left"] = right_before_left(out, net, doc)       # the scenario's priority, not the converter's
     meta.write_text(json.dumps(doc))
     return out
 
