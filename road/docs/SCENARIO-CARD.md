@@ -85,6 +85,13 @@ Every hand change to what the source states is a `patches` entry: `{what: "the o
 
 CI (step 5) runs every card on the exerciser per push, and the SUMO cards nightly on panzer, and compares the measured standing with `verdict.status`: a card that moves in EITHER direction fails the run (a regression, or an unexplained fix that someone must read and then record as the new verdict with its `since`). CI prints coverage: `tags` × status counts, per regulation group.
 
+## 6b. One verdict per host; the index's `run`; one town per card (opus's and george's points, 2026-11-06)
+
+- **The verdict is per host.** A card plays on the exerciser (fast, the CI's per-push check) and on SUMO (the nightly), and the two can stand apart (StaticCutIn: pass on the exerciser, fail on three SUMO sites). So `verdict` is keyed by host: `verdict: {exerciser: {status, since, record, note}, sumo: {status, since, record, note}}`; a host the card cannot play has `{status: skip, note: "why"}` (the v1 `exerciser.skip`). CI compares each host's measured standing with its own entry only. A card's single-host summary, where one word is needed (the picker), is SUMO's when present, else the exerciser's.
+- **One town per card.** `map.town` is one town, the card's reference placement; `sites` lists every placement, and the host's standing is measured over all its sites (the worst site decides, as the tables do today). A list of towns is not needed.
+- **The catalog's index** (`road/catalog/index.json`, written by `scenario_run.py index`) carries per row: `id`, `source`, `tags`, `verdict` (per host), `map`, and `run`: the run spec the host starts (`card:NAME@TOWN#SITE` for a CARLA card, `cr:ID` for a CommonRoad card), so the page's picker starts a row without deriving it.
+- **Layout wins over paths**: the runner reads `road/catalog/<source>/` (§7); `road/scenarios/` is gone once the ten cards move.
+
 ## 6a. Answers to the runner's open points (george's design note, steps/runner-design-george.md)
 
 - **The end condition** is §3's four rules, read from the card: `ticks` (outer bound), `ego.goal` (reached; or window end + 30 s for a region goal; a time-only goal ends at its window's end), `exerciser.dest` / the route's end (arrival, only once no window is open). Nothing else ends a run; a crash is an `error` row.
