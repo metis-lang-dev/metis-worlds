@@ -233,24 +233,54 @@ class RoadHost:
             else:
                 raise ValueError("the road's page says run:SCENARIO:SEED, crfind:QUERY, play, pause, speed:X, mark:N:start, mark:N:stop or watching, not %r" % line)
 
+    def catalog_rows(self):
+        """The scenario catalog's rows (road/docs/SCENARIO-CARD.md §7): road/catalog/index.json when the runner wrote it, else built
+        from the cards (road/catalog/<source>/*.yaml) as they are. Each row: id, source, set "catalog", tags, verdict, map, and `run`,
+        the scenario the page starts: a CARLA card at its first site on its town, a CommonRoad one as cr:ID."""
+        import scenario_cards as C
+        import yaml
+        idx = C.ROAD / "catalog" / "index.json"
+        if idx.is_file():
+            return json.loads(idx.read_text()).get("rows") or []
+        rows = []
+        for f in sorted((C.ROAD / "catalog").glob("*/*.yaml")):
+            try:
+                c = yaml.safe_load(f.read_text())
+            except Exception:                                      # noqa: BLE001 — an unreadable card is left out of the picker, not the page
+                continue
+            src, town = c.get("source") or {}, (c.get("map") or {}).get("town")
+            if src.get("suite") == "commonroad":
+                run = "cr:%s" % c["scenario"]
+            elif town:
+                want = ((c.get("sites") or {}).get("towns") or {}).get(town)
+                first = 0 if want == "all" or not want else want[0]
+                run = "card:%s@%s#%s" % (c["scenario"], town, first)
+            else:
+                continue
+            rows.append({"id": c["scenario"], "set": "catalog", "source": f.parent.name, "tags": c.get("tags") or [],
+                         "verdict": (c.get("verdict") or {}).get("status"), "map": town or (c.get("map") or {}).get("net"), "run": run,
+                         "country": "", "cached": True})
+        return rows
+
     def cr_find(self, query):
         """The Traffic dock's CommonRoad picker (commonroad-world step 3): the checkout's index (../.worlds/cr-cache/index.json, made by
         road/setup-commonroad.sh) filtered by every word of QUERY (in the id, country, map, set, source or tags), the first CR_LIST
         rows as a world/cr_list frame, each with whether its conversion is cached (a cached one starts at once)."""
         import cr_world
         idx = cr_world.CACHE / "index.json"
-        if not idx.is_file():
+        catalog = self.catalog_rows()                              # the catalog's cards first, the raw checkout second (§7)
+        if not idx.is_file() and not catalog:
             self.shared["cr_list"] = {"ev": "world/cr_list", "q": query, "n": 0, "rows": [],
                                       "error": "no index of the checkout here: road/setup-commonroad.sh makes it"}
             return
-        st = idx.stat().st_mtime
-        if self.shared.get("cr_index_at") != st:
+        st = idx.stat().st_mtime if idx.is_file() else None
+        if st is not None and self.shared.get("cr_index_at") != st:
             self.shared.update(cr_index=json.loads(idx.read_text())["rows"], cr_index_at=st)
         words = query.lower().split()
-        hits = [r for r in self.shared["cr_index"]
-                if all(w in " ".join([r["id"], r.get("country", ""), r.get("map", ""), r.get("set", ""), r.get("source", ""), *r.get("tags", [])]).lower()
+        hits = [r for r in catalog + (self.shared.get("cr_index") or [])
+                if all(w in " ".join(str(x or "") for x in [r["id"], r.get("country"), r.get("map"), r.get("set"), r.get("source"), r.get("verdict"), *(r.get("tags") or [])]).lower()
                        for w in words)]
-        rows = [dict(r, cached=(cr_world.CACHE / r["id"] / "cr.json").is_file()) for r in hits[:CR_LIST]]
+        rows = [r if r.get("set") == "catalog" else dict(r, cached=(cr_world.CACHE / r["id"] / "cr.json").is_file()) for r in hits[:CR_LIST]]
         self.shared["cr_list"] = {"ev": "world/cr_list", "q": query, "n": len(hits), "rows": rows}
 
     def mark(self, line):

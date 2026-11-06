@@ -1,8 +1,11 @@
+card: 2
 scenario: StaticCutIn
 title: a queue of stopped cars on the next lane; one cuts into the ego's lane as the ego comes
-source: {suite: lb2, type: StaticCutIn, code: srunner/scenarios/cut_in_with_static_vehicle.py:36, pin: scenario_runner v0.9.16 94ff3b8af752, license: "CARLA scenario_runner, MIT License, Copyright (c) 2018 CARLA"}
+source: {suite: lb2, type: StaticCutIn, code: srunner/scenarios/cut_in_with_static_vehicle.py:36, pin: scenario_runner v0.9.16 94ff3b8af752, license: "CARLA scenario_runner, MIT License, Copyright (c) 2018 CARLA", portable: true}
+patches: []
+tags: [cut-in, following]
 exercises: responder brake_lon; planner brake_follow
-verdict: PORTABLE
+map: {town: Town03}
 sites: {lb1: Scenario1, towns: {Town03: [42, 49, 127, 135]}}   # the ego on Town03's left lane _1, >= 120 m free (nina's review)
 dt: 0.1
 ticks: 1200
@@ -15,16 +18,18 @@ params:
   # speed_perc 100) and is in the ego's lane after 1.5 s (half its change_time 3 s; the exerciser's lane cut is
   # instant); threshold: the ego's stop from 11.1 m/s at 6 m/s² (1.85 s)
 actors:   # 6 stopped cars on the right lane, 11 m apart: 2 behind the cut-in car, it, 3 in front (:65-67)
-  - {id: q1, kind: car, at: {ahead: 78, lane: -1}, v: 0.0, moving: false}
-  - {id: q2, kind: car, at: {ahead: 89, lane: -1}, v: 0.0, moving: false}
+  - {id: q1, kind: car, mode: scripted, at: {ahead: 78, lane: -1}, v: 0.0, moving: false}
+  - {id: q2, kind: car, mode: scripted, at: {ahead: 89, lane: -1}, v: 0.0, moving: false}
   - id: cutin
     kind: car
+    mode: scripted
     at: {ahead: 100, lane: -1}
     v: 0.0
     trigger: {beside: true, tta: 2.7, dist: 15.0}
     script: [{when: trigger, v: 11.1}, {when: trigger, after: 1.5, lane: 1}]
-  - {id: q4, kind: car, at: {ahead: 111, lane: -1}, v: 0.0, moving: false}
-  - {id: q5, kind: car, at: {ahead: 122, lane: -1}, v: 0.0, moving: false}
-  - {id: q6, kind: car, at: {ahead: 133, lane: -1}, v: 0.0, moving: false}
+  - {id: q4, kind: car, mode: scripted, at: {ahead: 111, lane: -1}, v: 0.0, moving: false}
+  - {id: q5, kind: car, mode: scripted, at: {ahead: 122, lane: -1}, v: 0.0, moving: false}
+  - {id: q6, kind: car, mode: scripted, at: {ahead: 133, lane: -1}, v: 0.0, moving: false}
 infractions: {scenario: []}
 expect: {arrived: true, collisions: 0, violations: 0}
+verdict: {status: fail, since: {worlds: 13b7dac, catalog: ef793dc}, record: 20261105T031542-40f229, note: "SUMO as the source: 3 of 4 sites collide with the cut-in car (Town03#49, Town03#127, Town03#135; DS 60/60/60), Town03#42 holds; measured by hand at the migration (scenario-catalog step 4)"}

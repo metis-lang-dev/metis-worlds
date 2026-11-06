@@ -1,5 +1,5 @@
 """scenario_cards — the CARLA challenge scenarios as the road world's scene cards (road-scenarios s-e23be780 step 2;
-nina's triage in step 1). A card (road/scenarios/<NAME>.yaml) is one scenario TYPE of scenario_runner / the
+nina's triage in step 1). A card (road/catalog/carla/<NAME>.yaml) is one scenario TYPE of scenario_runner / the
 Leaderboard: what happens, its actors placed relative to the ego and the trigger, the source's own trigger
 condition and parameters (with their ranges), what the family is expected to do (the laws it exercises: the
 hypothesis a surprise falsifies) and the Leaderboard's infractions. The same card plays on two worlds:
@@ -8,7 +8,7 @@ hypothesis a surprise falsifies) and the Leaderboard's infractions. The same car
   no lights): the actors placed on its road relative to the ego (`exerciser`), the trigger armed on its movers
   (road_world.Agent.armed); kinematic cards only (lead brakes, a stopped vehicle, a cut-in, a car taking priority);
 - SUMO (sumo_host over TraCI, on CARLA's Town01/02/03 converted, road/maps): the card's SITES, the Leaderboard 1.0
-  trigger poses of its shape in our towns (road/scenarios/sites/, CARLA's data, MIT), placed by CARLA's own
+  trigger poses of its shape in our towns (road/catalog/carla/sites/, CARLA's data, MIT), placed by CARLA's own
   co-simulation transform with the net's netOffset (`carla_to_sumo`; nina verified it on all 834 poses).
 
     import scenario_cards as C
@@ -28,9 +28,16 @@ from pathlib import Path
 import yaml
 
 ROAD = Path(__file__).resolve().parents[1]
-SCEN = ROAD / "scenarios"
+SCEN = ROAD / "catalog" / "carla"            # the CARLA cards, v2 (road/docs/SCENARIO-CARD.md; in road/scenarios before scenario-catalog step 4)
 SITES = SCEN / "sites" / "lb1-triggers-town010203.json"
 MAPS = ROAD / "maps"
+# the regulation groups a card's `tags` name (road/docs/SCENARIO-CARD.md §5; a tag is added by the architect, with its coverage.md row)
+TAG_VOCABULARY = ("following", "lane-keeping", "lane-change", "overtaking", "oncoming-pass", "cut-in", "merge-zipper", "junction-priority",
+                  "right-before-left", "stop-sign", "yield-sign", "traffic-light", "turning-left", "turning-right", "roundabout",
+                  "pedestrian-crossing", "cyclist", "emergency-vehicle", "parking", "obstacle-static", "route-following", "speed-limit",
+                  "visibility", "highway-ramp")
+MODES = ("scripted", "recorded", "model")
+STATUS = ("pass", "soft", "fail", "world")
 SITE_REF = re.compile(r"S(\d+)\.(\d+)")      # a site from another LB1 scenario's poses: "S1.157" = Scenario1's #157
 
 # the exerciser's road (road_world.road()): the ego's lane and start, the zones a card's `at` names
@@ -49,7 +56,7 @@ def names():
 
 
 def load(name):
-    """The card NAME (road/scenarios/NAME.yaml); "NAME:VARIANT" applies one of its generated variants."""
+    """The card NAME (road/catalog/carla/NAME.yaml); "NAME:VARIANT" applies one of its generated variants."""
     name = name[5:] if name.startswith("card:") else name
     base, _, var = name.partition(":")
     card = yaml.safe_load((SCEN / ("%s.yaml" % base)).read_text())

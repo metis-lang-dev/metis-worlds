@@ -1,8 +1,11 @@
+card: 2
 scenario: YieldToEmergencyVehicle
 title: an emergency vehicle closes from behind at the ego's speed + 25 m/s; free the lane
-source: {suite: lb2, type: YieldToEmergencyVehicle, code: srunner/scenarios/yield_to_emergency_vehicle.py, pin: scenario_runner v0.9.16 94ff3b8af752, license: "CARLA scenario_runner, MIT License, Copyright (c) 2018 CARLA"}
+source: {suite: lb2, type: YieldToEmergencyVehicle, code: srunner/scenarios/yield_to_emergency_vehicle.py, pin: scenario_runner v0.9.16 94ff3b8af752, license: "CARLA scenario_runner, MIT License, Copyright (c) 2018 CARLA", portable: true}
+patches: []
+tags: [emergency-vehicle, lane-change]
 exercises: "none: a gap (no rule yields to a vehicle from behind; nina's triage row 38): the family should fail here"
-verdict: PORTABLE
+map: {town: Town03}
 sites: {lb1: Scenario1, towns: {Town03: [49]}}   # "a highway with at least two lanes and no junctions" (the source :36-37):
 # #49's straight (67) is 314 m junction to junction; #42's (-67) is 1 m short at d 110 (nina's gap-cards review §2, the ruling)
 dt: 0.1
@@ -18,6 +21,7 @@ params:
 actors:   # SUMO's bluelight device; the infraction: held behind the ego (within 30 m, below 90 % of its allowed speed) > 5 s
   - id: ambulance
     kind: emergency
+    mode: scripted
     at: {behind: 110, lane: 0}
     v: 30.0         # in the run at its speed (the source's vehicle drives it from the start)
     v_rel: 25.0     # held at the ego's speed + 25 m/s every tick, capped by emergency_t's maxSpeed 30. The CHOICE (the
@@ -26,3 +30,4 @@ actors:   # SUMO's bluelight device; the infraction: held behind the ego (within
 infractions: {scenario: [yield_emergency_vehicle]}   # LB 2.0's YieldToEmergencyVehicleTest (the director's emergency_lb)
 # expect's emergency_held_s is OURS (held within 30 m below 90 % of its allowed speed, red waits out), not the LB test
 expect: {arrived: true, collisions: 0, violations: 0, emergency_held_s: 5.0}
+verdict: {status: pass, since: {worlds: 13b7dac, catalog: ef793dc}, note: "SUMO as the source: all 1 sites meet expect (DS 100); measured by hand at the migration (scenario-catalog step 4)"}

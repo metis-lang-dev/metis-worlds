@@ -1,8 +1,11 @@
+card: 2
 scenario: ConstructionObstacle
 title: cones, a board and debris close the ego's lane distance m ahead; change lanes
-source: {suite: lb2, type: ConstructionObstacle, code: srunner/scenarios/construction_crash_vehicle.py:48, pin: scenario_runner v0.9.16 94ff3b8af752, license: "CARLA scenario_runner, MIT License, Copyright (c) 2018 CARLA"}
+source: {suite: lb2, type: ConstructionObstacle, code: srunner/scenarios/construction_crash_vehicle.py:48, pin: scenario_runner v0.9.16 94ff3b8af752, license: "CARLA scenario_runner, MIT License, Copyright (c) 2018 CARLA", portable: true}
+patches: []
+tags: [obstacle-static, lane-change]
 exercises: planner change
-verdict: PORTABLE
+map: {town: Town03}
 sites: {lb1: Scenario1, towns: {Town03: [43, 50]}}   # nina's review (step 2a): two lanes, >= 190 m free before the junction; distance clipped to the free run minus 66 m on SUMO
 dt: 0.1
 ticks: 1200
@@ -11,6 +14,7 @@ exerciser: {dest: 400.0}
 params:
   distance: {value: 100, range: [50, 200], default: 100, drives: actors.works.at.ahead, threshold: 32.0, safe: above}
 actors:   # the props as one static body over the closed lane (in SUMO: a stopped vehicle, kind static: a layout collision)
-  - {id: works, kind: static, at: {ahead: 100, lane: 0}, length: 8.0, width: 3.0, v: 0.0, moving: false}
+  - {id: works, kind: static, mode: scripted, at: {ahead: 100, lane: 0}, length: 8.0, width: 3.0, v: 0.0, moving: false}
 infractions: {scenario: [scenario_timeout: 240]}
 expect: {arrived: true, collisions: 0, violations: 0}
+verdict: {status: pass, since: {worlds: 13b7dac, catalog: ef793dc}, note: "SUMO as the source: all 2 sites meet expect (DS 100); measured by hand at the migration (scenario-catalog step 4)"}

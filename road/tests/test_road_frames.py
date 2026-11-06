@@ -194,6 +194,7 @@ def test_the_commonroad_picker_finds_by_every_word_and_says_a_missing_index(monk
     say whether the conversion is cached; no index: said."""
     import cr_world
     monkeypatch.setattr(cr_world, "CACHE", tmp_path)
+    monkeypatch.setattr(road_host.RoadHost, "catalog_rows", lambda self: [])     # the raw checkout's index alone (the catalog: the next test)
     a = host()
     a.world(["crfind:t-junction"])
     assert a.shared["cr_list"]["error"].startswith("no index") and a.shared["cr_list"]["rows"] == []
@@ -229,6 +230,26 @@ def test_a_commonroad_run_sends_its_goal_with_the_net_and_its_measures_with_the_
     assert sf["cr"] == {"goal_reached": False, "goal_t": None, "goal_position_t": 4.2, "goal_window_s": [[7.0, 7.0]], "contact": False, "off_lanelet_m": 0.0}
     plain = loop(net)
     assert "goal" not in road_frames.net_frame(plain) and road_frames.scene_frame(plain)["cr"] is None and "cr" not in road_frames.summary_frame(plain)
+
+
+def test_the_picker_lists_the_catalogs_cards_first_and_runs_one_at_its_first_site(monkeypatch, tmp_path):
+    """road/docs/SCENARIO-CARD.md §7 (scenario-catalog step 4): the catalog's cards come before the raw checkout, each with the
+    scenario the page starts (a CARLA card at its town's first site); with no checkout index the catalog alone is listed."""
+    import cr_world
+    monkeypatch.setattr(cr_world, "CACHE", tmp_path)
+    a = host()
+    a.world(["crfind:cut-in"])
+    f = a.shared["cr_list"]
+    assert "error" not in f and f["rows"], f
+    ids = [r["id"] for r in f["rows"]]
+    assert "StaticCutIn" in ids and "ParkingCutIn" in ids
+    r = next(r for r in f["rows"] if r["id"] == "StaticCutIn")
+    assert r["set"] == "catalog" and r["run"] == "card:StaticCutIn@Town03#42" and "cut-in" in r["tags"]
+    (tmp_path / "index.json").write_text(json.dumps({"version": 4, "rows": [{"id": "ZAM_Cutin-1_1_T-1", "set": "recorded", "source": "hand-crafted",
+                                                                             "country": "ZAM", "map": "Cutin", "tags": ["cut-in"]}]}))
+    a.world(["crfind:cut-in"])
+    rows = a.shared["cr_list"]["rows"]
+    assert [r["set"] for r in rows][-1] == "recorded" and all(r["set"] == "catalog" for r in rows[:-1]), "the catalog first"
 
 
 def test_a_trip_still_held_is_not_doubled(monkeypatch):

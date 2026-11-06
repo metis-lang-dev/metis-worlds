@@ -121,7 +121,7 @@ class RoadWorld:
         self.name, self.seed, self.rng = scenario, seed, random.Random(seed)
         self.sensor_range = float(sensor_range)
         self.t, self.tick = 0.0, 0
-        # a scene card (road-scenarios s-e23be780): "card:NAME[:VARIANT]", road/scenarios/NAME.yaml placed on this road
+        # a scene card (road-scenarios s-e23be780): "card:NAME[:VARIANT]", road/catalog/carla/NAME.yaml placed on this road
         spec = SCENARIOS[scenario](self.rng) if scenario in SCENARIOS else _card(scenario)(self.rng)
         self.map = road(side_prio=spec.get("side_prio", False))
         e = spec["ego"]
@@ -507,7 +507,7 @@ def junction_rb_early(rng):
 
 
 def _card(name):
-    """A scene card by its scenario name: "card:NAME[:VARIANT]" (road/scenarios/NAME.yaml) → its spec on this road."""
+    """A scene card by its scenario name: "card:NAME[:VARIANT]" (road/catalog/carla/NAME.yaml) → its spec on this road."""
     import scenario_cards
     return scenario_cards.exerciser(name)
 

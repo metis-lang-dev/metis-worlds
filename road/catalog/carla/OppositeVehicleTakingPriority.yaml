@@ -1,8 +1,11 @@
+card: 2
 scenario: OppositeVehicleTakingPriority
 title: at an unsignalled junction a car from the side road takes the ego's priority at 60 km/h, timed to the ego
-source: {suite: lb2, type: OppositeVehicleTakingPriority, code: srunner/scenarios/opposite_vehicle_taking_priority.py:256, pin: scenario_runner v0.9.16 94ff3b8af752, license: "CARLA scenario_runner, MIT License, Copyright (c) 2018 CARLA"}
+source: {suite: lb2, type: OppositeVehicleTakingPriority, code: srunner/scenarios/opposite_vehicle_taking_priority.py:256, pin: scenario_runner v0.9.16 94ff3b8af752, license: "CARLA scenario_runner, MIT License, Copyright (c) 2018 CARLA", portable: true}
+patches: []
+tags: [junction-priority]
 exercises: planner brake_cross; responder brake_lon
-verdict: PORTABLE
+map: {town: Town03}
 sites: {lb1: Scenario10, towns: {Town03: [1, 2, 3, 4, 5, 6, 7, 8]}}
 # the straight-across junctions only (nina's gap-cards review §5, the architect's ruling): 730 (S10 #1-8, from its two major
 # arms 3 and -2); at 1135 and 82 (the old #18, #30) the minor arms only turn onto the ego's road. 1082 (Scenario1's #157-160,
@@ -21,6 +24,7 @@ params:
 actors:   # still at the side road's start; it crosses at 16.7 m/s from when the ego is TTA s from the junction (s 400)
   - id: adversary
     kind: car
+    mode: scripted
     at: {road: side, s: 0.0, from: right}   # the source's `direction` (right): its arm right of the ego's heading
     sync: true      # SUMO: SyncArrival to the conflict point once triggered, held from the ego's last 1 s
     v: 0.0
@@ -30,3 +34,4 @@ actors:   # still at the side road's start; it crosses at 16.7 m/s from when the
     script: [{when: trigger, go: true, speed: 16.7}]
 infractions: {scenario: []}
 expect: {arrived: true, collisions: 0, violations: 0}
+verdict: {status: pass, since: {worlds: 13b7dac, catalog: ef793dc}, note: "SUMO as the source: all 16 sites meet expect (DS 100); measured by hand at the migration (scenario-catalog step 4)"}

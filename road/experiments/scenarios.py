@@ -1,4 +1,4 @@
-"""scenarios.py — every scene card (road/scenarios/*.yaml) and its generated variants run by the road family on a world,
+"""scenarios.py — every scene card (road/catalog/carla/*.yaml) and its generated variants run by the road family on a world,
 one row per run: arrived, collisions, violations, the planner's commands, the card's expectation, the Leaderboard
 2.0's infractions and Driving Score beside ours (road-scenarios s-e23be780 step 2). Run from metis-agent/py's venv
 (road_tree's Live), METIS_HOME at the road family when the checkout is not beside metis-catalog.

@@ -1,4 +1,4 @@
-# road/scenarios — the CARLA challenge scenarios as scene cards (road-scenarios s-e23be780)
+# road/catalog/carla — the CARLA challenge scenarios as scene cards, v2 (road-scenarios s-e23be780; scenario-catalog s-92e0b650)
 
 The user (2026-11-05): "extract scenarios for scenario runner from Carla road challenge … with small adaptations it
 should work on SUMO. We will introduce new road feature together with scenario to test and we reuse road challenge
@@ -9,14 +9,15 @@ their MIT notice (`sites/`, `sites/LICENSE`).
 
 ## A card
 
-One file per scenario TYPE, `NAME.yaml`:
+One file per scenario TYPE, `NAME.yaml`, in the scenario card's v2 format (road/docs/SCENARIO-CARD.md: `card: 2`, `map`,
+`tags` from its §5 vocabulary, `actors[].mode`, `verdict` the family's standing, `patches`). The v1 keys below keep their meaning:
 
 | key | what |
 |---|---|
 | `scenario`, `title` | the type and what happens, in one line |
 | `source` | `suite` (lb2: Leaderboard 2.0; lb1: Scenario1–10), `type`, `code` (file:line in scenario_runner), `pin`, `license` |
 | `exercises` | the road family's laws the scenario tests: the hypothesis a surprise falsifies |
-| `verdict` | PORTABLE or PORTABLE-WALKER (nina's triage) |
+| `source.portable` | nina's triage verdict on the SOURCE (v1's `verdict: PORTABLE`; `portable_as: PORTABLE-WALKER`) |
 | `sites` | `lb1`: the Leaderboard 1.0 trigger set of the card's shape, `towns`: {Town01/02/03: [indexes] or all} into `sites/` |
 | `ego` | its speed; `exerciser` its start, destination and the side road's priority on the exerciser (`skip`: SUMO only) |
 | `params` | the source's parameters: `value`, `range` over the route files, `default`, `drives` (the card path it sets), `threshold` and `safe` (above or below) for the research note's §4b variants |

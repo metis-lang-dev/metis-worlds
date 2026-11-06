@@ -1,4 +1,4 @@
-"""The scene cards (road-scenarios s-e23be780 step 2): the CARLA challenge scenarios as road/scenarios/*.yaml. Each card
+"""The scene cards (road-scenarios s-e23be780 step 2): the CARLA challenge scenarios as road/catalog/carla/*.yaml. Each card
 loads with its source and its license; its sites (CARLA's Leaderboard 1.0 trigger poses) land on a lane of our net by
 CARLA's own co-simulation transform; its variants are the research note's §4b (two clear, three borderline); and the
 road family plays every card on the exerciser as its expectation says (the replay CI runs; SUMO stays out of CI)."""
@@ -27,9 +27,14 @@ def test_every_card_has_its_source_its_license_and_a_place():
         src = c["source"]
         assert src["suite"] in ("lb1", "lb2") and src["code"].startswith("srunner/scenarios/") and src["pin"], n
         assert "MIT License, Copyright (c) 2018 CARLA" in src["license"], n
-        assert c["verdict"] in ("PORTABLE", "PORTABLE-WALKER"), n
+        assert c["card"] == 2 and src.get("portable") is True, n                  # v2 (road/docs/SCENARIO-CARD.md): v1's verdict is source.portable
         assert c.get("exercises") and c.get("expect") is not None, n
-        assert c.get("sites", {}).get("towns"), n
+        assert c.get("sites", {}).get("towns") and c["map"]["town"] in c["sites"]["towns"], n
+        assert c["tags"] and set(c["tags"]) <= set(C.TAG_VOCABULARY), n
+        assert c["patches"] == [] and all(a["mode"] in C.MODES for a in c["actors"]), n
+        v = c["verdict"]
+        assert v["status"] in C.STATUS and v["since"]["worlds"] and v["since"]["catalog"], n
+        assert (v["status"] != "fail") or v.get("record") or v.get("note"), n
     assert (C.SITES.parent / "LICENSE").read_text().startswith("The trigger poses in this directory are CARLA's data")
 
 

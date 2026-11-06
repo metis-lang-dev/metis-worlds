@@ -1,8 +1,11 @@
+card: 2
 scenario: ParkedObstacleTwoWays
 title: a car parked in the ego's only lane; pass it through the oncoming lane against a flow
-source: {suite: lb2, type: ParkedObstacleTwoWays, code: srunner/scenarios/route_obstacles.py:461, pin: scenario_runner v0.9.16 94ff3b8af752, license: "CARLA scenario_runner, MIT License, Copyright (c) 2018 CARLA"}
+source: {suite: lb2, type: ParkedObstacleTwoWays, code: srunner/scenarios/route_obstacles.py:461, pin: scenario_runner v0.9.16 94ff3b8af752, license: "CARLA scenario_runner, MIT License, Copyright (c) 2018 CARLA", portable: true}
+patches: []
+tags: [obstacle-static, oncoming-pass]
 exercises: "none: a gap (passing through the oncoming lane; nina's triage row 26): the family should fail here"
-verdict: PORTABLE
+map: {town: Town01}
 sites: {lb1: Scenario1, towns: {Town01: [0, 1], Town02: [0, 1]}}   # one lane each way, 150-220 m free (nina's review)
 dt: 0.1
 ticks: 2600
@@ -12,12 +15,13 @@ params:
   distance: {value: 90, range: [50, 130], default: 120, drives: actors.parked.at.ahead, threshold: 32.0, safe: above}
   # default 120: ParkedObstacle's, which ParkedObstacleTwoWays inherits (route_obstacles.py:328; nina's gap-cards review §1)
 actors:
-  - {id: parked, kind: car, at: {ahead: 90, lane: 0}, v: 0.0, moving: false}
+  - {id: parked, kind: car, mode: scripted, at: {ahead: 90, lane: 0}, v: 0.0, moving: false}
   # the source's OppositeActorFlow (atomic_behaviors.py:3541-3701): started when the ego is within 50 m of the parked car,
   # then 5 s idle; its source 1.5 x the limit (km/h) + 30 m = 105 m beyond the car, on the oncoming lane; continuous, each
   # gap drawn from `frequency` [from, to] (the default [20, 100]); 11.1 m/s (the flows' 50 km/h cap)
   - id: oncoming
     kind: car
+    mode: scripted
     at: {ahead: 105, beyond: parked, opposite: true}
     v: 11.1
     flow: {gap: [20.0, 100.0]}
@@ -25,3 +29,4 @@ actors:
     script: [{when: trigger, after: 5.0, flow: true}]
 infractions: {scenario: [scenario_timeout: 240]}
 expect: {arrived: true, collisions: 0, violations: 0}
+verdict: {status: pass, since: {worlds: 13b7dac, catalog: ef793dc}, note: "SUMO as the source: all 4 sites meet expect (DS 100); measured by hand at the migration (scenario-catalog step 4)"}

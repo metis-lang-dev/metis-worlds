@@ -1,8 +1,11 @@
+card: 2
 scenario: ParkingCutIn
 title: a car parked at the side pulls out into the ego's lane at 20 km/h just as the ego arrives
-source: {suite: lb2, type: ParkingCutIn, code: srunner/scenarios/parking_cut_in.py:26, pin: scenario_runner v0.9.16 94ff3b8af752, license: "CARLA scenario_runner, MIT License, Copyright (c) 2018 CARLA"}
+source: {suite: lb2, type: ParkingCutIn, code: srunner/scenarios/parking_cut_in.py:26, pin: scenario_runner v0.9.16 94ff3b8af752, license: "CARLA scenario_runner, MIT License, Copyright (c) 2018 CARLA", portable: true}
+patches: []
+tags: [cut-in, parking]
 exercises: responder brake_lon; planner brake_follow
-verdict: PORTABLE
+map: {town: Town03}
 sites: {lb1: Scenario1, towns: {Town03: [19, 91, 95, 96]}}
 # Town03's real parking lanes (the architect's ruling on nina's 2d review): the four edges with a parking _0 beside the driving
 # _1 long enough for the source's layout, 20 (#19), 76 (#91), -20 (#95), -76 (#96); 20/-20 are junction 730's minor arms
@@ -18,12 +21,14 @@ params:
   # TTA 2.35 s OR 10 m to the collision point, the ego's lane beside the adversary at 35 m (parking_cut_in.py:54-55,
   # :106-109; 26 m at 11.1 m/s); it pulls out for 20 km/h (BasicAgent's default target), in the ego's lane after 1.5 s
 actors:   # the blocker at 28 m, the adversary at 35 m on the side (here the right lane)
-  - {id: blocker, kind: car, at: {ahead: 128, lane: -1}, v: 0.0, moving: false}
+  - {id: blocker, kind: car, mode: scripted, at: {ahead: 128, lane: -1}, v: 0.0, moving: false}
   - id: adversary
     kind: car
+    mode: scripted
     at: {ahead: 135, lane: -1}
     v: 0.0
     trigger: {beside: true, tta: 2.35, dist: 10.0}
     script: [{when: trigger, v: 5.6}, {when: trigger, after: 1.5, lane: 1}]
 infractions: {scenario: []}
 expect: {arrived: true, collisions: 0, violations: 0}
+verdict: {status: pass, since: {worlds: 13b7dac, catalog: ef793dc}, note: "SUMO as the source: all 4 sites meet expect (DS 100); measured by hand at the migration (scenario-catalog step 4)"}

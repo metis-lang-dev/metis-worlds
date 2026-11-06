@@ -1,0 +1,22 @@
+card: 2
+scenario: Accident
+title: a police car and two crashed cars block the ego's lane distance m ahead; pass by a lane change
+source: {suite: lb2, type: Accident, code: srunner/scenarios/route_obstacles.py:52, pin: scenario_runner v0.9.16 94ff3b8af752, license: "CARLA scenario_runner, MIT License, Copyright (c) 2018 CARLA", portable: true}
+patches: []
+tags: [obstacle-static, lane-change, overtaking]
+exercises: planner change (past a stopped lead), brake_follow
+map: {town: Town03}
+sites: {lb1: Scenario1, towns: {Town03: [127, 135]}}   # nina's review (step 2a): two lanes, >= 190 m free before the junction; distance clipped to the free run minus 66 m on SUMO
+dt: 0.1
+ticks: 1200
+ego: {v: 11.1}
+exerciser: {dest: 420.0}
+params:
+  distance: {value: 120, range: [50, 200], default: 120, drives: actors.police.at.ahead, threshold: 32.0, safe: above}
+actors:   # police at distance, the first crashed car +10 m, the second +6 m (route_obstacles.py:69-70)
+  - {id: police, kind: car, mode: scripted, at: {ahead: 120, lane: 0}, v: 0.0, moving: false}
+  - {id: crash1, kind: car, mode: scripted, at: {ahead: 130, lane: 0}, v: 0.0, moving: false}
+  - {id: crash2, kind: car, mode: scripted, at: {ahead: 136, lane: 0}, v: 0.0, moving: false}
+infractions: {scenario: [scenario_timeout: 240]}
+expect: {arrived: true, collisions: 0, violations: 0}
+verdict: {status: pass, since: {worlds: 13b7dac, catalog: ef793dc}, note: "SUMO as the source: all 2 sites meet expect (DS 100); measured by hand at the migration (scenario-catalog step 4)"}

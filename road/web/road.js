@@ -120,9 +120,11 @@ export class RoadMap {
       b.type = 'button';
       b.textContent = r.id + (r.cached ? '' : ' ·');
       b.title = r.cached ? 'converted: starts at once' : 'not yet converted: the first run takes a few seconds';
-      sm.textContent = ` ${r.set} · ${r.source}${r.tags?.length ? ' · ' + r.tags.join(', ') : ''}`;
+      sm.textContent = ` ${r.set} · ${r.source}${r.verdict ? ' · ' + r.verdict : ''}${r.tags?.length ? ' · ' + r.tags.join(', ') : ''}`;
       b.append(document.createElement('br'), sm);
-      b.onclick = () => { $('#t-cr').value = r.id; this.crRun(); };
+      b.onclick = r.run && !r.run.startsWith('cr:')                // a catalog card (card:NAME@TOWN#SITE) runs as it is; a CommonRoad id through the field
+        ? () => { this.crWant = r.run; $('#t-cr-msg').textContent = `starting ${r.run}…`; this.line(`run:${r.run}:${Math.max(1, Number($('#seed').value) || 1)}`); this.hold(false, false); }
+        : () => { $('#t-cr').value = r.run ? r.run.slice(3) : r.id; this.crRun(); };
       li.append(b);
       return li;
     }));

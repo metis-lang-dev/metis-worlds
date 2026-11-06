@@ -1,8 +1,11 @@
+card: 2
 scenario: HardBreakRoute
 title: every car ahead of the ego is sent to speed 0 for 10 s, then restarts
-source: {suite: lb2, type: HardBreakRoute, code: srunner/scenarios/hard_break.py:24, pin: scenario_runner v0.9.16 94ff3b8af752, license: "CARLA scenario_runner, MIT License, Copyright (c) 2018 CARLA"}
+source: {suite: lb2, type: HardBreakRoute, code: srunner/scenarios/hard_break.py:24, pin: scenario_runner v0.9.16 94ff3b8af752, license: "CARLA scenario_runner, MIT License, Copyright (c) 2018 CARLA", portable: true}
+patches: []
+tags: [following]
 exercises: planner brake_follow; responder brake_lon
-verdict: PORTABLE
+map: {town: Town01}
 sites: {lb1: Scenario1, towns: {Town01: [0, 1], Town02: [0, 1], Town03: [42, 49]}}   # anywhere with traffic ahead; Town03
 # 42/49, not 9/10: those sit 19 m before junction 730, so the lead at 30 m braked past it and the ego changed lanes around
 # it (nina's 2b review §5)
@@ -14,13 +17,16 @@ params: {}
 actors:   # the Traffic Manager's response to a target of 0 (not an instant stop): 4 m/s² here; restart after 10 s
   - id: lead
     kind: car
+    mode: scripted
     at: {ahead: 30, lane: 0}
     v: 11.0
     script: [{t: 0.0, v: 11.0}, {t: 5.0, brake: 4.0}, {t: 15.0, v: 11.0}]
   - id: next
     kind: car
+    mode: scripted
     at: {ahead: 45, lane: 1}
     v: 11.0
     script: [{t: 0.0, v: 11.0}, {t: 5.0, brake: 4.0}, {t: 15.0, v: 11.0}]
 infractions: {scenario: []}
 expect: {arrived: true, collisions: 0, violations: 0}
+verdict: {status: pass, since: {worlds: 13b7dac, catalog: ef793dc}, note: "SUMO as the source: all 6 sites meet expect (DS 100); measured by hand at the migration (scenario-catalog step 4)"}
