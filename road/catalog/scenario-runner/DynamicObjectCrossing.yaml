@@ -38,6 +38,6 @@ verdict:
     status: fail
     record: 20261106T162719-f5ad6f
     since:
-      worlds: dc24c3d
+      worlds: 61e2bb7
       catalog: ef793dc
-    note: collisions 3 > 0
+    note: collisions 12 > 0
