@@ -308,3 +308,30 @@ def test_the_ego_standing_when_hit_is_the_worlds(tmp_path):
     rows[1]["ego"]["v"] = 2.0
     (tr / "truth.jsonl").write_text("".join(json.dumps(r) + "\n" for r in rows))
     assert not T.ego_standing(tr)
+
+
+def test_ruling_l2_a_met_cut_in_and_an_unavoidable_start_are_the_worlds(tmp_path):
+    """(i) a partner coming from another lane, bound before, lead under 1 s before the contact, with brake_max asked in that second;
+    not when the ego came onto the partner's lane, nor for a partner never bound. (iii) at the first moving tick no brake stops
+    within the gap to the lead (the lead braking at its hardest meanwhile)."""
+    def run(name, things_by_k, resp_by_k=None, ego_lane="a"):
+        tr = tmp_path / name / "trace" / "cr_x-1"
+        tr.mkdir(parents=True)
+        rows = [{"truth": 1}] + [{"k": k, "ego": {"lane": ego_lane, "s": 10.0 + k * 0.5, "v": 5.0, "contact": ["P"] if k == 30 else []},
+                                  "things": th} for k, th in things_by_k.items()]
+        (tr / "truth.jsonl").write_text("".join(json.dumps(r) + "\n" for r in rows))
+        (tmp_path / name / "cr:x-1.jsonl").write_text("".join(json.dumps({"tick": k - 1, "resp": r}) + "\n" for k, r in (resp_by_k or {}).items()))
+        return tr
+    cut = {k: [{"id": "P", "lane": "b" if k < 25 else "a", "s": 30.0, "v": 4.0, "role": "a1" if k < 25 else "lead", "length": 4.5}] for k in range(15, 31)}
+    assert T.cut_in_met(run("cut", cut, {28: "brake_max"}), "P")
+    assert not T.cut_in_met(run("soft", cut, {28: "brake_min"}), "P")                 # no brake_max: the law's
+    merge = {k: [{"id": "P", "lane": "a", "s": 30.0, "v": 0.0, "role": "leadright" if k < 25 else "lead", "length": 4.5}] for k in range(15, 31)}
+    assert not T.cut_in_met(run("merge", merge, {28: "brake_max"}), "P")              # the ego onto the partner's lane
+    start = {k: [{"id": "P", "lane": "a", "s": 13.0 + k * 0.5, "v": 0.3, "role": "lead", "length": 4.5}] for k in range(2, 31)}
+    tr = run("start", start)
+    rows = [json.loads(x) for x in (tr / "truth.jsonl").read_text().splitlines()]
+    for r in rows:
+        if "k" in r:
+            r["ego"]["v"] = 15.0
+    (tr / "truth.jsonl").write_text("".join(json.dumps(r) + "\n" for r in rows))
+    assert T.unavoidable_start(tr, "P")                                                # 15 m/s, ~2 m behind a crawling lead

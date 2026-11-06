@@ -173,6 +173,11 @@ def kind_one(row):
         if lane_jumping(tr, partner):                                # the architect's ruling (2026-11-06): the playback's
             return dict(out, kind="world", why="%s jumped across lanes (>= %d flips in the %d ticks before the contact): a played "
                         "obstacle remapped each tick inside a junction, no track holds it" % (partner, JUMP_FLIPS, FOLLOW_TICKS))
+        if row.get("set") == "recorded" and cut_in_met(tr, partner):  # ruling L2 (i): the cut-in escalation did what it could
+            return dict(out, kind="world", why="%s cut in ahead of the ego (lead under %d ticks before the contact) and the fold "
+                        "asked brake_max in that second" % (partner, CUTIN_TICKS))
+        if unavoidable_start(tr, partner):                            # ruling L2 (iii): no brake stops within the gap at the start
+            return dict(out, kind="world", why="an unavoidable start: at the first tick braking at brake_max needs more than the gap to %s" % partner)
         if row.get("set") == "recorded" and ego_standing(tr):       # ruling W (2026-11-06): the other's duty
             return dict(out, kind="world", why="the ego stood (v < %.1f m/s) when %s hit it on a recorded trajectory" % (STAND_V, partner))
         if side == "initial":                                        # ruling B (b): the scenario starts in or at contact
@@ -273,6 +278,82 @@ def lane_jumping(tr, pid):
     lanes = [x.get("lane") for j in range(max(0, kc - FOLLOW_TICKS), kc + 1) if j in rows
              for x in rows[j].get("things") or () if x.get("id") == pid and x.get("lane")]
     return sum(1 for a, b in zip(lanes, lanes[1:]) if a != b) >= JUMP_FLIPS
+
+
+CUTIN_TICKS = 10                                # a lead bound this shortly before the contact cut in (1 s)
+
+
+def world_log(tr):
+    """The run's world log beside its trace (runs/<id>/cr:<id>-<seed>.jsonl): {trace k: row} (the log's tick is the trace's k - 1)."""
+    out = {}
+    for f in sorted(Path(tr).parent.parent.glob("*.jsonl")):
+        if f.name.startswith("j-"):
+            continue
+        for line in f.read_text().splitlines():
+            try:
+                r = json.loads(line)
+            except ValueError:
+                continue
+            if "tick" in r:
+                out[int(r["tick"]) + 1] = r
+    return out
+
+
+def cut_in_met(tr, pid):
+    """PID cut in: it became the ego's lead within CUTIN_TICKS of the first contact, coming from another lane (the partner's lane
+    changed into the ego's, not the ego onto the partner's) and bound to some role before (seen, paired); and the fold asked brake_max
+    in that second (ruling L2 (i): the cut-in escalation did what it could)."""
+    from metis import surprise_kind as SK
+    rows, _ = SK.read_truth(tr)
+    kc = first_contact_tick(tr)
+    if kc is None:
+        return False
+    role = lambda k: next((x.get("role") for x in rows[k].get("things") or () if x.get("id") == pid), None) if k in rows else None
+    if role(kc) != "lead":
+        return False
+    since = kc
+    while since - 1 in rows and role(since - 1) == "lead":
+        since -= 1
+    if kc - since >= CUTIN_TICKS:
+        return False
+    th = lambda k: next((x for x in rows[k].get("things") or () if x.get("id") == pid), None) if k in rows else None
+    before = [th(k) for k in range(max(0, since - CUTIN_TICKS), since) if th(k)]
+    ego_lane = (rows[kc].get("ego") or {}).get("lane")
+    if not before or all(x.get("lane") == ego_lane for x in before):
+        return False                                # the ego came onto ITS lane (a merge into a standing car): no cut-in
+    if not any(x.get("role") for x in before):
+        return False                                # never bound before: a convergence with no pair (L3), not a cut-in
+    log = world_log(tr)
+    return any((log.get(k) or {}).get("resp") == "brake_max" for k in range(max(0, kc - CUTIN_TICKS), kc + 1))
+
+
+def unavoidable_start(tr, pid):
+    """At the run's first tick with the ego moving, PID is its lead and no response could avoid the contact: braking at brake_max
+    from the ego's speed (its response time and floor kept) needs more than the gap, the lead braking at its hardest meanwhile
+    (RSS's longitudinal test with the ego's hardest brake). The gap: the truth pair's d_lon in the world log (a lead on the route's
+    next lane included), else the same lane's s."""
+    from metis import surprise_kind as SK
+    from semantic_world.lane import dynamics_for
+    rows, _ = SK.read_truth(tr)
+    k0 = next((k for k in sorted(rows or {}) if ((rows[k].get("ego") or {}).get("v") or 0) > 0), None)
+    if k0 is None:
+        return False
+    ego = rows[k0]["ego"]
+    th = next((x for x in rows[k0].get("things") or () if x.get("id") == pid), None)
+    if th is None or th.get("role") != "lead":
+        return False
+    pair = next((d for d in (world_log(tr).get(k0) or {}).get("truth") or () if str(d.get("id", "")).startswith(pid + ":")
+                 and d.get("type") == "same_dir"), None)
+    if pair is not None and pair.get("d_lon") is not None:
+        gap = pair["d_lon"]
+    elif th.get("lane") == ego.get("lane") and th.get("s") is not None:
+        gap = th["s"] - (th.get("length") or 4.5) - ego["s"]
+    else:
+        return False
+    d, o = dynamics_for("passenger", v=ego["v"], ego=True), dynamics_for("passenger", v=th.get("v") or 0.0)
+    v, vf = ego["v"], th.get("v") or 0.0
+    need = v * (d.rho or 0.0) + v * v / (2.0 * d.brake_max) + (d.min_dist or 0.0) - vf * vf / (2.0 * o.brake_max)
+    return need > gap
 
 
 STAND_V = 0.1                                   # m/s: the ego standing at its first contact
