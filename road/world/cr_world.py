@@ -329,7 +329,9 @@ class Director:
     """The recorded obstacles played, and the CommonRoad measures taken, before each SUMO step (SumoWorld.step)."""
 
     def __init__(self, doc, placed, net):
-        self.doc, self.pl = doc, placed
+        self.doc, self.pl, self.net = doc, placed, net
+        self.sumo_driven = set()                  # interactive obstacles handed to SUMO after their insertion
+        self._release = set()
         self.dt = float(doc.get("dt") or 0.1)
         self.k0 = placed["ego"]["k0"]
         self.obstacles = doc["obstacles"]
@@ -378,8 +380,17 @@ class Director:
     def tick(self, c, t):
         k = self.k(t)
         ids = set(c.vehicle.getIDList())
+        for vid in list(self._release):                                  # inserted last step: SUMO's car-following from now
+            if vid in ids:
+                c.vehicle.setSpeed(vid, -1)
+            self._release.discard(vid)
         for o in self.obstacles:
             vid = "cr%s" % o["id"]
+            if vid in self.sumo_driven:
+                continue                                                 # SUMO drives it (car-following on its route)
+            if self._sumo_drives(o):
+                self._insert_driven(c, o, vid, t)
+                continue
             s = at(o["trajectory"], k)
             if s is None and len(o["trajectory"]) == 1 and k >= o["trajectory"][0]["k"]:
                 s = o["trajectory"][0]                                   # a static obstacle: its pose for good
@@ -407,6 +418,41 @@ class Director:
             except Exception as e:                                       # noqa: BLE001 — one obstacle's failure is the report's, not the run's end
                 self.errors.append((round(t, 2), vid, str(e)[:120]))
         self._measure(c, t, k)
+
+    def _sumo_drives(self, o):
+        """An interactive scenario's obstacle is its initial state alone (the set expects a simulator to drive it): a moving
+        one-state obstacle is SUMO's to drive, never a pose replayed for good (it stood still while reporting 24 m/s:
+        DEU_Frankfurt-74_11_I-1, the architect's ruling). A one-state obstacle at rest stays a static pose."""
+        tr = o["trajectory"]
+        return (len(tr) == 1 and o.get("role") == "dynamic" and o["type"] in VCLASS and float(tr[0]["v"] or 0.0) > 0.1
+                and tr[0]["x"] is not None)
+
+    def _insert_driven(self, c, o, vid, t):
+        s0 = o["trajectory"][0]
+        if self.k(t) < s0["k"]:
+            return
+        L, W, th = float(o["length"] or 4.5), float(o["width"] or 1.8), float(s0["theta"] or 0.0)
+        fx, fy = s0["x"] + 0.5 * L * math.cos(th), s0["y"] + 0.5 * L * math.sin(th)
+        try:
+            edge = self._edge_near(c, s0["x"], s0["y"])
+            way = [edge]
+            if self.net is not None and self.net.hasEdge(edge):
+                to = drive_on(self.net, self.net.getEdge(edge))
+                path, _ = self.net.getShortestPath(self.net.getEdge(edge), to) if to.getID() != edge else ([to], 0)
+                way = [e.getID() for e in path] if path else [edge]
+            rid = "r_" + vid
+            c.route.add(rid, way)
+            c.vehicle.add(vid, rid, typeID="cr_" + o["type"], depart="now", departSpeed="%.2f" % float(s0["v"]))
+            c.vehicle.setLength(vid, L)
+            c.vehicle.setWidth(vid, W)
+            c.vehicle.moveToXY(vid, edge, -1, fx, fy, angle=90.0 - math.degrees(th), keepRoute=1)
+            c.vehicle.setSpeed(vid, float(s0["v"]))               # its initial speed for the first step, then SUMO's own
+            self.added.add(vid)
+            self.sumo_driven.add(vid)
+            self._release.add(vid)
+        except Exception as e:                                           # noqa: BLE001 — one obstacle's failure is the report's
+            self.errors.append((round(t, 2), vid, str(e)[:120]))
+            self.sumo_driven.add(vid)
 
     def _edge_near(self, c, x, y):
         try:
@@ -439,10 +485,20 @@ class Director:
             if ok and self.goal_t is None:
                 self.goal_t = round(t, 2)
         mine = box(e["x"], e["y"], e["theta"], e["length"], e["width"])
+        live = set(c.vehicle.getIDList()) if self.sumo_driven else ()
         for o in self.obstacles:
-            s = at(o["trajectory"], k)
-            if s is None and len(o["trajectory"]) == 1 and k >= o["trajectory"][0]["k"]:
-                s = o["trajectory"][0]
+            vid = "cr%s" % o["id"]
+            if vid in self.sumo_driven:                                 # where SUMO has it, its centre from the front bumper
+                if vid not in live:
+                    continue
+                (fx, fy), ang = c.vehicle.getPosition(vid), c.vehicle.getAngle(vid)
+                th = math.radians(90.0 - ang)
+                L = float(o["length"] or 4.5)
+                s = {"x": fx - 0.5 * L * math.cos(th), "y": fy - 0.5 * L * math.sin(th), "theta": th}
+            else:
+                s = at(o["trajectory"], k)
+                if s is None and len(o["trajectory"]) == 1 and k >= o["trajectory"][0]["k"]:
+                    s = o["trajectory"][0]
             if s is None or s["x"] is None:
                 continue
             if overlap(mine, box(s["x"], s["y"], float(s["theta"] or 0.0), float(o["length"] or 4.5), float(o["width"] or 1.8))):
