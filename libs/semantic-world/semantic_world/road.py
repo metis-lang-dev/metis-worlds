@@ -213,7 +213,8 @@ class RoadMap(core.SemanticMap):
                 if z > 0:
                     d["intent"][t] = {i: round(v / z, 6) for i, v in post.items()}
             d["belief"][t] = {c: 1.0}
-            d.setdefault("pos", {})[t] = {"lane": x["lane"], "s": float(x["s"])}     # the exact sighting (a cell
+            d.setdefault("pos", {})[t] = {"lane": x["lane"], "s": float(x["s"]),    # the exact sighting (a cell
+                                          **{k: float(x[k]) for k in ("x", "y", "heading") if x.get(k) is not None}}
             for k in ("length", "width"):                                           # is too coarse for RSS)
                 if k in x:
                     d["things"][t][k] = float(x[k])
@@ -262,7 +263,9 @@ class RoadMap(core.SemanticMap):
         within the gate max(GATE_MIN, 1.5 · speed · dt · gap + GATE_MIN) along and one lane across; pairs taken
         greedily, cheapest first (a cell-level gate swaps two cars a bin apart: the pair memory keyed by track
         follows the wrong car). A track without an exact sighting goes through bayes.associate's cell gate; a
-        detection no track takes is a new track (bayes's naming: class, class_2, …). → [(track, cell)]."""
+        detection no track takes is a new track (bayes's naming: class, class_2, …). A detection on a lane the track's lane
+        does not reach (no offset: a body remapped across a junction's overlapping internal lanes, cr-harvest's lane-jumpers)
+        is matched by POSITION when both carry x, y: the distance to the track's predicted point, one lane's cost. → [(track, cell)]."""
         dt, clock, last, pos = d["dt"], d["clock"], d["last_seen"], d.setdefault("pos", {})
         cands = []
         for i, x in enumerate(detections):
@@ -273,6 +276,10 @@ class RoadMap(core.SemanticMap):
                 v = d["speed"].get(t, 0.0)
                 p = pos[t]
                 off = self.offset(p["lane"], p["s"] + v * dt * gap, x["lane"], x["s"])
+                if off is None and "x" in p and x.get("x") is not None:          # the lane remapped (a body moved by its
+                    h = p.get("heading", 0.0)                                    # position inside a junction: the lane is an
+                    px, py = p["x"] + v * dt * gap * math.cos(h), p["y"] + v * dt * gap * math.sin(h)   # attribute, cr-tracks):
+                    off = (math.hypot(x["x"] - px, x["y"] - py), 1)              # follow the body by where it is
                 if off is None:
                     continue
                 ds, lanes = off

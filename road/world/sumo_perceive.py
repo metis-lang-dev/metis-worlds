@@ -97,7 +97,9 @@ class Perception:
         seen = self.sensor.sense(ego_b, bodies, self.occluders, ego_id=ego_id)
         dets = [{"class": belief_class(others[k]["vclass"]), "lane": others[k]["lane"], "s": others[k]["s"],
                  "speed": others[k]["speed"], "length": others[k]["length"], "width": others[k]["width"],
-                 "signals": others[k].get("signals", 0), "lat": others[k].get("lat", 0.0)} for k in seen]
+                 "signals": others[k].get("signals", 0), "lat": others[k].get("lat", 0.0),
+                 "x": others[k]["x"], "y": others[k]["y"], "heading": others[k].get("heading", 0.0)} for k in seen]   # where the body is
+                 # (the sensor's position; no identity): a track follows it when its lane is remapped (road.associate)
         pts = {c: xy for c, xy in self.points.items() if abs(xy[0] - e["x"]) <= self.sensor.range and abs(xy[1] - e["y"]) <= self.sensor.range}
         visible = set(self.sensor.visible(ego_b, pts, bodies, self.occluders, ego_id=ego_id))
         seen_cells = {road.cell(x["lane"], x["s"]) for x in dets}

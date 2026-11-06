@@ -91,3 +91,18 @@ def test_cars_a_bin_apart_keep_their_tracks_by_exact_sighting():
         order = sorted(d["pos"], key=lambda t: d["pos"][t]["s"])
         names = names or order
         assert order == names and len(d["pos"]) == 3
+
+
+def test_a_body_remapped_across_a_junctions_lanes_keeps_its_track_by_position(tmp_path):
+    """cr-tracks (ARG_Carcarana-10_1_T-1, junction 73): a recorded obstacle moved by its position is mapped each tick onto
+    whichever overlapping internal lane is nearest, its s jumping with it (:73_2_0 10.9, :73_11_0 21.3, :73_1_0 14.2, …). No
+    lane offset joins them; the track follows the body by where it is, the lane an attribute that flips."""
+    lanes = [":73_2_0", ":73_11_0", ":73_1_0", ":73_4_0", ":73_10_0", ":73_8_0"]
+    jumps = [10.9, 21.3, 14.2, 16.0, 8.8, 19.9]
+    lm = LaneMap([Lane(l, 40.0, internal=True, junction="73") for l in lanes])
+    m = road.RoadMap.build(str(tmp_path / "road.json"), lm, dt=0.2)
+    for k in range(12):
+        x = 100.0 + 2.0 * k                                             # 10 m/s along +x, 0.2 s a tick
+        m.cycle([{"class": "passenger", "lane": lanes[k % 6], "s": jumps[k % 6], "speed": 10.0, "x": x, "y": 50.0, "heading": 0.0}])
+        d = m.load()
+        assert len([t for t, b in d["belief"].items() if b]) == 1, (k, sorted(d["belief"]))   # one track, never a new one
