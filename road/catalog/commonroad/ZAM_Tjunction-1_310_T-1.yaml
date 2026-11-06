@@ -1,4 +1,5 @@
 card: 2
+set: regression
 scenario: ZAM_Tjunction-1_310_T-1
 title: a T-junction left turn whose goal window opens after the route's end (the run-end rule's case)
 source:

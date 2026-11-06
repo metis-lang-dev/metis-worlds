@@ -1,0 +1,145 @@
+card: 2
+set: regression
+scenario: ARG_Carcarana-4_5_I-1-1
+title: CommonRoad ARG_Carcarana-4_5_I-1-1 (interactive / scenario-factory)
+source:
+  suite: commonroad
+  type: interactive/scenario-factory
+  code: /bigdata/datasets/commonroad/scenarios/scenarios/interactive/scenario-factory/ARG_Carcarana-4_5_I-1-1/ARG_Carcarana-4_5_I-1-1.cr.xml
+  pin: commonroad-interactive-scenarios 749e342013cc069980039fa91ba587f62993aaaf
+  license: CommonRoad interactive scenarios, BSD 3-Clause License, Copyright (c) 2023 Technical University of Munich
+  tags:
+  - critical
+  - intersection
+  - simulated
+patches: []
+tags:
+- junction-priority
+- right-before-left
+- route-following
+- speed-limit
+exercises: the family on CommonRoad's planning problem
+map:
+  net: catalog/commonroad/ARG_Carcarana-4_5_I-1-1/ARG_Carcarana-4_5_I-1-1.net.xml
+  data: catalog/commonroad/ARG_Carcarana-4_5_I-1-1/cr.json
+  route_note: 'a time-only goal: the ego drives on'
+dt: 0.1
+ticks: 1500
+ego:
+  v: 10.477
+  at:
+    lane: '5621_0'
+    s: 75.55
+  route:
+  - '5621'
+  - '5966'
+  - '5538'
+  - '5541'
+  - '6156'
+  goal:
+    time:
+    - 3.3
+    - 3.3
+exerciser:
+  skip: 'a CommonRoad map: the exerciser has no net of its own'
+actors:
+- id: cr342
+  kind: car
+  length: 4.8559
+  width: 2.0
+  at:
+    x: -295.9389
+    y: -386.1884
+    heading: 1.3666
+  v: 0.8198
+  mode: recorded
+  trajectory: catalog/commonroad/ARG_Carcarana-4_5_I-1-1/obstacles/cr342.jsonl
+- id: cr389
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: -306.9133
+    y: -438.6441
+    heading: 1.3643
+  v: 0.6111
+  mode: recorded
+  trajectory: catalog/commonroad/ARG_Carcarana-4_5_I-1-1/obstacles/cr389.jsonl
+- id: cr3100
+  kind: truck
+  length: 7.5
+  width: 2.6
+  at:
+    x: -304.7469
+    y: -428.1349
+    heading: 1.3774
+  v: 1.6625
+  mode: recorded
+  trajectory: catalog/commonroad/ARG_Carcarana-4_5_I-1-1/obstacles/cr3100.jsonl
+- id: cr3142
+  kind: truck
+  length: 7.5
+  width: 2.6
+  at:
+    x: -308.4185
+    y: -406.0156
+    heading: 0.3354
+  v: 1.9782
+  mode: recorded
+  trajectory: catalog/commonroad/ARG_Carcarana-4_5_I-1-1/obstacles/cr3142.jsonl
+- id: cr3161
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: -322.4217
+    y: -406.0934
+    heading: -0.1982
+  v: 1.1577
+  mode: recorded
+  trajectory: catalog/commonroad/ARG_Carcarana-4_5_I-1-1/obstacles/cr3161.jsonl
+- id: cr3176
+  kind: car
+  length: 4.4435
+  width: 1.7793
+  at:
+    x: -333.3249
+    y: -403.8327
+    heading: -0.2056
+  v: 1.2379
+  mode: recorded
+  trajectory: catalog/commonroad/ARG_Carcarana-4_5_I-1-1/obstacles/cr3176.jsonl
+- id: cr3188
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: -344.0836
+    y: -401.5747
+    heading: -0.2071
+  v: 1.1897
+  mode: recorded
+  trajectory: catalog/commonroad/ARG_Carcarana-4_5_I-1-1/obstacles/cr3188.jsonl
+- id: cr3209
+  kind: truck
+  length: 12.4
+  width: 2.7
+  at:
+    x: -358.1231
+    y: -398.6182
+    heading: -0.2077
+  v: 0.2875
+  mode: recorded
+  trajectory: catalog/commonroad/ARG_Carcarana-4_5_I-1-1/obstacles/cr3209.jsonl
+expect:
+  goal: true
+  collisions: 0
+  violations: 0
+  off_lanelet: 0
+verdict:
+  exerciser: skip
+  sumo:
+    status: pass
+    since:
+      worlds: 13b7dac
+      catalog: ef793dc

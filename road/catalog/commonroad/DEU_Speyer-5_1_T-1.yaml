@@ -1,0 +1,172 @@
+card: 2
+set: working
+scenario: DEU_Speyer-5_1_T-1
+title: CommonRoad DEU_Speyer-5_1_T-1 (recorded / scenario-factory)
+source:
+  suite: commonroad
+  type: recorded/scenario-factory
+  code: /bigdata/datasets/commonroad/scenarios/scenarios/recorded/scenario-factory/DEU_Speyer-5_1_T-1.xml
+  pin: commonroad-scenarios 2416dc27faf3ee36b6799f42712da72a34a2c8fd
+  license: CommonRoad scenarios, BSD 3-Clause License, Copyright (c) 2019 Technical University of Munich
+  tags:
+  - critical
+  - intersection
+  - simulated
+patches: []
+tags:
+- cyclist
+- junction-priority
+- right-before-left
+- route-following
+- speed-limit
+exercises: 'the family on CommonRoad''s planning problem: the harvest''s mechanism 54257713 (contact:initial)'
+map:
+  net: catalog/commonroad/DEU_Speyer-5_1_T-1/DEU_Speyer-5_1_T-1.net.xml
+  data: catalog/commonroad/DEU_Speyer-5_1_T-1/cr.json
+  route_note: 'a time-only goal: the ego drives on'
+dt: 0.1
+ticks: 1500
+ego:
+  v: 4.557
+  at:
+    lane: '58297_0'
+    s: 54.59
+  route:
+  - '58297'
+  - '58291'
+  - '58294'
+  - '58331'
+  - '58439'
+  - '58290'
+  - '58296'
+  goal:
+    time:
+    - 3.3
+    - 3.3
+exerciser:
+  skip: 'a CommonRoad map: the exerciser has no net of its own'
+actors:
+- id: cr35
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: -457.1943
+    y: -716.8978
+    heading: 2.7199
+  v: 1.4711
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Speyer-5_1_T-1/obstacles/cr35.jsonl
+- id: cr37
+  kind: bicycle
+  length: 2.0
+  width: 0.68
+  at:
+    x: -423.3284
+    y: -705.3854
+    heading: 0.1646
+  v: 6.9394
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Speyer-5_1_T-1/obstacles/cr37.jsonl
+- id: cr311
+  kind: car
+  length: 5.0
+  width: 1.7299
+  at:
+    x: -413.965
+    y: -701.4202
+    heading: 2.6216
+  v: 4.0136
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Speyer-5_1_T-1/obstacles/cr311.jsonl
+- id: cr314
+  kind: car
+  length: 5.0
+  width: 1.7894
+  at:
+    x: -434.3446
+    y: -712.3772
+    heading: 1.0731
+  v: 6.3381
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Speyer-5_1_T-1/obstacles/cr314.jsonl
+- id: cr324
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: -401.6968
+    y: -708.4116
+    heading: 2.6295
+  v: 3.5183
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Speyer-5_1_T-1/obstacles/cr324.jsonl
+- id: cr327
+  kind: truck
+  length: 12.4
+  width: 2.7
+  at:
+    x: -440.5345
+    y: -715.1383
+    heading: -2.3614
+  v: 0.2474
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Speyer-5_1_T-1/obstacles/cr327.jsonl
+- id: cr329
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: -386.5446
+    y: -716.96
+    heading: 2.6278
+  v: 3.8229
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Speyer-5_1_T-1/obstacles/cr329.jsonl
+- id: cr331
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: -439.7966
+    y: -691.1725
+    heading: 5.5608
+  v: 2.6795
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Speyer-5_1_T-1/obstacles/cr331.jsonl
+- id: cr333
+  kind: truck
+  length: 10.2278
+  width: 2.7
+  at:
+    x: -463.28
+    y: -677.0679
+    heading: 5.7591
+  v: 2.0881
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Speyer-5_1_T-1/obstacles/cr333.jsonl
+- id: cr339
+  kind: car
+  length: 5.0
+  width: 1.7869
+  at:
+    x: -373.71
+    y: -724.207
+    heading: 2.6275
+  v: 0.0165
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Speyer-5_1_T-1/obstacles/cr339.jsonl
+expect:
+  goal: true
+  collisions: 0
+  violations: 0
+  off_lanelet: 0
+verdict:
+  exerciser: skip
+  sumo:
+    status: world
+    since:
+      worlds: 13b7dac
+      catalog: ef793dc
+    record: contact
+    note: contact

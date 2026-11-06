@@ -1,0 +1,168 @@
+card: 2
+set: regression
+scenario: FRA_MoissyCramayel-3_6_I-1-1
+title: CommonRoad FRA_MoissyCramayel-3_6_I-1-1 (interactive / scenario-factory)
+source:
+  suite: commonroad
+  type: interactive/scenario-factory
+  code: /bigdata/datasets/commonroad/scenarios/scenarios/interactive/scenario-factory/FRA_MoissyCramayel-3_6_I-1-1/FRA_MoissyCramayel-3_6_I-1-1.cr.xml
+  pin: commonroad-interactive-scenarios 749e342013cc069980039fa91ba587f62993aaaf
+  license: CommonRoad interactive scenarios, BSD 3-Clause License, Copyright (c) 2023 Technical University of Munich
+  tags:
+  - critical
+  - intersection
+  - simulated
+patches: []
+tags:
+- cyclist
+- junction-priority
+- right-before-left
+- route-following
+- speed-limit
+exercises: the family on CommonRoad's planning problem
+map:
+  net: catalog/commonroad/FRA_MoissyCramayel-3_6_I-1-1/FRA_MoissyCramayel-3_6_I-1-1.net.xml
+  data: catalog/commonroad/FRA_MoissyCramayel-3_6_I-1-1/cr.json
+  route_note: 'a time-only goal: the ego drives on'
+dt: 0.1
+ticks: 1500
+ego:
+  v: 3.638
+  at:
+    lane: '70906_0'
+    s: 0.0
+  route:
+  - '70906'
+  - '70903'
+  - '70938'
+  - '70935'
+  - '70932'
+  goal:
+    time:
+    - 3.3
+    - 3.3
+exerciser:
+  skip: 'a CommonRoad map: the exerciser has no net of its own'
+actors:
+- id: cr32
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 101.5
+    y: -615.8465
+    heading: 0.5183
+  v: 0.6496
+  mode: recorded
+  trajectory: catalog/commonroad/FRA_MoissyCramayel-3_6_I-1-1/obstacles/cr32.jsonl
+- id: cr33
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 109.1209
+    y: -600.6797
+    heading: -1.7935
+  v: 3.9873
+  mode: recorded
+  trajectory: catalog/commonroad/FRA_MoissyCramayel-3_6_I-1-1/obstacles/cr33.jsonl
+- id: cr35
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 105.105
+    y: -584.2755
+    heading: -1.0804
+  v: 0.0
+  mode: recorded
+  trajectory: catalog/commonroad/FRA_MoissyCramayel-3_6_I-1-1/obstacles/cr35.jsonl
+- id: cr38
+  kind: bicycle
+  length: 1.6524
+  width: 0.68
+  at:
+    x: 121.8785
+    y: -596.9353
+    heading: -2.6206
+  v: 3.0451
+  mode: recorded
+  trajectory: catalog/commonroad/FRA_MoissyCramayel-3_6_I-1-1/obstacles/cr38.jsonl
+- id: cr311
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 85.6245
+    y: -620.4752
+    heading: -0.0556
+  v: 0.1379
+  mode: recorded
+  trajectory: catalog/commonroad/FRA_MoissyCramayel-3_6_I-1-1/obstacles/cr311.jsonl
+- id: cr312
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 129.9099
+    y: -594.0746
+    heading: -2.6448
+  v: 1.281
+  mode: recorded
+  trajectory: catalog/commonroad/FRA_MoissyCramayel-3_6_I-1-1/obstacles/cr312.jsonl
+- id: cr316
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 58.1021
+    y: -672.2893
+    heading: 0.4202
+  v: 3.6432
+  mode: recorded
+  trajectory: catalog/commonroad/FRA_MoissyCramayel-3_6_I-1-1/obstacles/cr316.jsonl
+- id: cr322
+  kind: car
+  length: 4.9742
+  width: 2.0
+  at:
+    x: 76.1734
+    y: -619.6559
+    heading: -0.1425
+  v: 0.3236
+  mode: recorded
+  trajectory: catalog/commonroad/FRA_MoissyCramayel-3_6_I-1-1/obstacles/cr322.jsonl
+- id: cr323
+  kind: car
+  length: 2.2463
+  width: 0.8
+  at:
+    x: 65.7445
+    y: -618.0352
+    heading: -0.1616
+  v: 0.7269
+  mode: recorded
+  trajectory: catalog/commonroad/FRA_MoissyCramayel-3_6_I-1-1/obstacles/cr323.jsonl
+- id: cr326
+  kind: car
+  length: 4.6019
+  width: 2.0
+  at:
+    x: 55.0466
+    y: -615.8295
+    heading: -0.2652
+  v: 1.6805
+  mode: recorded
+  trajectory: catalog/commonroad/FRA_MoissyCramayel-3_6_I-1-1/obstacles/cr326.jsonl
+expect:
+  goal: true
+  collisions: 0
+  violations: 0
+  off_lanelet: 0
+verdict:
+  exerciser: skip
+  sumo:
+    status: pass
+    since:
+      worlds: 13b7dac
+      catalog: ef793dc

@@ -1,0 +1,296 @@
+card: 2
+set: working
+scenario: USA_Peach-4_1_T-1
+title: CommonRoad USA_Peach-4_1_T-1 (recorded / NGSIM)
+source:
+  suite: commonroad
+  type: recorded/NGSIM
+  code: /bigdata/datasets/commonroad/scenarios/scenarios/recorded/NGSIM/Peachtree/USA_Peach-4_1_T-1.xml
+  pin: commonroad-scenarios 2416dc27faf3ee36b6799f42712da72a34a2c8fd
+  license: CommonRoad scenarios, BSD 3-Clause License, Copyright (c) 2019 Technical University of Munich
+  tags:
+  - comfort
+  - lane_change
+  - multi_lane
+  - oncoming_traffic
+  - parallel_lanes
+  - speed_limit
+  - urban
+patches: []
+tags:
+- lane-change
+- oncoming-pass
+- route-following
+- speed-limit
+- traffic-light
+exercises: the family on CommonRoad's planning problem
+map:
+  net: catalog/commonroad/USA_Peach-4_1_T-1/USA_Peach-4_1_T-1.net.xml
+  data: catalog/commonroad/USA_Peach-4_1_T-1/cr.json
+dt: 0.1
+ticks: 1500
+ego:
+  v: 0.0
+  at:
+    lane: '43343_2'
+    s: 13.07
+  route:
+  - '43343'
+  goal:
+    region:
+      polygons:
+      - - - -5.8877
+          - -29.3063
+        - - -3.2927
+          - -29.4557
+        - - -3.5317
+          - -33.6075
+        - - -6.1267
+          - -33.4581
+        - - -5.8877
+          - -29.3063
+    time:
+    - 6.5
+    - 7.0
+    v:
+    - 4.1738
+    - 10.1738
+    heading:
+    - -1.7155
+    - -1.541
+exerciser:
+  skip: 'a CommonRoad map: the exerciser has no net of its own'
+actors:
+- id: cr88
+  kind: car
+  length: 5.0292
+  width: 1.9812
+  at:
+    x: 0.2994
+    y: -51.6351
+    heading: -1.179
+  v: 6.2728
+  mode: recorded
+  trajectory: catalog/commonroad/USA_Peach-4_1_T-1/obstacles/cr88.jsonl
+- id: cr93
+  kind: car
+  length: 5.2121
+  width: 1.9812
+  at:
+    x: -5.7428
+    y: -51.6479
+    heading: -1.6294
+  v: 6.2911
+  mode: recorded
+  trajectory: catalog/commonroad/USA_Peach-4_1_T-1/obstacles/cr93.jsonl
+- id: cr118
+  kind: car
+  length: 4.7549
+  width: 2.1336
+  at:
+    x: -1.3987
+    y: -33.1904
+    heading: -1.6242
+  v: 4.5507
+  mode: recorded
+  trajectory: catalog/commonroad/USA_Peach-4_1_T-1/obstacles/cr118.jsonl
+- id: cr124
+  kind: car
+  length: 6.096
+  width: 1.9812
+  at:
+    x: -4.8045
+    y: -40.107
+    heading: -1.6061
+  v: 1.5301
+  mode: recorded
+  trajectory: catalog/commonroad/USA_Peach-4_1_T-1/obstacles/cr124.jsonl
+- id: cr134
+  kind: car
+  length: 4.8768
+  width: 2.1336
+  at:
+    x: -4.0205
+    y: -22.5711
+    heading: -1.6464
+  v: 0.0396
+  mode: recorded
+  trajectory: catalog/commonroad/USA_Peach-4_1_T-1/obstacles/cr134.jsonl
+- id: cr154
+  kind: car
+  length: 5.6388
+  width: 2.1336
+  at:
+    x: -0.7839
+    y: -25.056
+    heading: -1.5646
+  v: 5.7241
+  mode: recorded
+  trajectory: catalog/commonroad/USA_Peach-4_1_T-1/obstacles/cr154.jsonl
+- id: cr160
+  kind: car
+  length: 4.8768
+  width: 2.1336
+  at:
+    x: -4.592
+    y: -30.8257
+    heading: -1.6241
+  v: 0.0
+  mode: recorded
+  trajectory: catalog/commonroad/USA_Peach-4_1_T-1/obstacles/cr160.jsonl
+- id: cr172
+  kind: car
+  length: 5.7912
+  width: 2.1336
+  at:
+    x: -3.0275
+    y: -7.8196
+    heading: -1.6248
+  v: 0.0
+  mode: recorded
+  trajectory: catalog/commonroad/USA_Peach-4_1_T-1/obstacles/cr172.jsonl
+- id: cr187
+  kind: car
+  length: 4.8768
+  width: 2.1336
+  at:
+    x: -3.0516
+    y: 0.1191
+    heading: -1.6275
+  v: 0.0
+  mode: recorded
+  trajectory: catalog/commonroad/USA_Peach-4_1_T-1/obstacles/cr187.jsonl
+- id: cr192
+  kind: car
+  length: 5.6388
+  width: 2.1336
+  at:
+    x: -8.8289
+    y: -51.6932
+    heading: -1.627
+  v: 1.3045
+  mode: recorded
+  trajectory: catalog/commonroad/USA_Peach-4_1_T-1/obstacles/cr192.jsonl
+- id: cr198
+  kind: car
+  length: 4.8768
+  width: 2.1336
+  at:
+    x: 0.2039
+    y: -8.9945
+    heading: -1.6057
+  v: 5.7729
+  mode: recorded
+  trajectory: catalog/commonroad/USA_Peach-4_1_T-1/obstacles/cr198.jsonl
+- id: cr225
+  kind: car
+  length: 4.7244
+  width: 2.1336
+  at:
+    x: 7.1223
+    y: -62.2313
+    heading: 0.005
+  v: 6.8184
+  mode: recorded
+  trajectory: catalog/commonroad/USA_Peach-4_1_T-1/obstacles/cr225.jsonl
+- id: cr249
+  kind: car
+  length: 5.0597
+  width: 2.1336
+  at:
+    x: -8.3748
+    y: -44.6946
+    heading: -1.7377
+  v: 1.1887
+  mode: recorded
+  trajectory: catalog/commonroad/USA_Peach-4_1_T-1/obstacles/cr249.jsonl
+- id: cr256
+  kind: car
+  length: 7.0104
+  width: 2.1336
+  at:
+    x: -1.055
+    y: -76.4904
+    heading: 1.503
+  v: 0.2164
+  mode: recorded
+  trajectory: catalog/commonroad/USA_Peach-4_1_T-1/obstacles/cr256.jsonl
+- id: cr262
+  kind: car
+  length: 6.096
+  width: 2.1336
+  at:
+    x: 1.8708
+    y: -73.9543
+    heading: 1.5125
+  v: 2.3988
+  mode: recorded
+  trajectory: catalog/commonroad/USA_Peach-4_1_T-1/obstacles/cr262.jsonl
+- id: cr271
+  kind: car
+  length: 7.0104
+  width: 1.9812
+  at:
+    x: 1.556
+    y: -81.6473
+    heading: 1.5209
+  v: 0.9632
+  mode: recorded
+  trajectory: catalog/commonroad/USA_Peach-4_1_T-1/obstacles/cr271.jsonl
+- id: cr334
+  kind: car
+  length: 5.6388
+  width: 2.1336
+  at:
+    x: -2.6474
+    y: -96.2623
+    heading: 1.5227
+  v: 0.125
+  mode: recorded
+  trajectory: catalog/commonroad/USA_Peach-4_1_T-1/obstacles/cr334.jsonl
+- id: cr335
+  kind: car
+  length: 4.4501
+  width: 2.1336
+  at:
+    x: 1.0812
+    y: -90.0363
+    heading: 1.4696
+  v: 0.0701
+  mode: recorded
+  trajectory: catalog/commonroad/USA_Peach-4_1_T-1/obstacles/cr335.jsonl
+- id: cr347
+  kind: car
+  length: 5.9436
+  width: 2.1336
+  at:
+    x: 0.532
+    y: -98.2799
+    heading: 1.5384
+  v: 0.1189
+  mode: recorded
+  trajectory: catalog/commonroad/USA_Peach-4_1_T-1/obstacles/cr347.jsonl
+- id: cr1689
+  kind: car
+  length: 4.7244
+  width: 2.1336
+  at:
+    x: -1.7876
+    y: -85.6515
+    heading: 1.4984
+  v: 0.0
+  mode: recorded
+  trajectory: catalog/commonroad/USA_Peach-4_1_T-1/obstacles/cr1689.jsonl
+expect:
+  goal: true
+  collisions: 0
+  violations: 0
+  off_lanelet: 0
+verdict:
+  exerciser: skip
+  sumo:
+    status: soft
+    since:
+      worlds: 13b7dac
+      catalog: ef793dc
+    note: goal:window

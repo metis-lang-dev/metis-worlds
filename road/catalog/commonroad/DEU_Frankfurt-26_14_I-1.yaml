@@ -1,0 +1,216 @@
+card: 2
+set: working
+scenario: DEU_Frankfurt-26_14_I-1
+title: CommonRoad DEU_Frankfurt-26_14_I-1 (interactive / SUMO)
+source:
+  suite: commonroad
+  type: interactive/SUMO
+  code: /bigdata/datasets/commonroad/scenarios/scenarios/interactive/SUMO/DEU_Frankfurt-26_14_I-1/DEU_Frankfurt-26_14_I-1.cr.xml
+  pin: commonroad-interactive-scenarios 749e342013cc069980039fa91ba587f62993aaaf
+  license: CommonRoad interactive scenarios, BSD 3-Clause License, Copyright (c) 2023 Technical University of Munich
+  tags:
+  - highway
+patches: []
+tags:
+- route-following
+- speed-limit
+- yield-sign
+exercises: 'the family on CommonRoad''s planning problem: the harvest''s mechanism 26688b24 (contact)'
+map:
+  net: catalog/commonroad/DEU_Frankfurt-26_14_I-1/DEU_Frankfurt-26_14_I-1.net.xml
+  data: catalog/commonroad/DEU_Frankfurt-26_14_I-1/cr.json
+dt: 0.1
+ticks: 1500
+ego:
+  v: 8.935
+  at:
+    lane: '1372_0'
+    s: 105.25
+  route:
+  - '1372'
+  - '1371'
+  - '1378'
+  goal:
+    region:
+      lanelets:
+      - 1378
+    time:
+    - 19.9
+    - 20.0
+exerciser:
+  skip: 'a CommonRoad map: the exerciser has no net of its own'
+actors:
+- id: cr30610
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 468509.4604
+    y: 5544520.993
+    heading: -2.9086
+  v: 17.3391
+  mode: model
+- id: cr30612
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 468543.0958
+    y: 5544528.7489
+    heading: -2.9141
+  v: 14.1931
+  mode: model
+- id: cr30614
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 468570.4585
+    y: 5544535.0578
+    heading: -2.8843
+  v: 9.06
+  mode: model
+- id: cr30615
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 468587.8206
+    y: 5544541.5398
+    heading: -2.7841
+  v: 8.9357
+  mode: model
+- id: cr30619
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 468625.1896
+    y: 5544550.6096
+    heading: -2.9372
+  v: 9.2762
+  mode: model
+- id: cr30621
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 468644.5808
+    y: 5544554.6514
+    heading: -2.9363
+  v: 9.6002
+  mode: model
+- id: cr30628
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 468665.1906
+    y: 5544558.9084
+    heading: -2.9366
+  v: 10.2046
+  mode: model
+- id: cr30631
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 468349.1464
+    y: 5544481.8818
+    heading: -2.8763
+  v: 24.2622
+  mode: model
+- id: cr30636
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 468399.4811
+    y: 5544494.4202
+    heading: -2.9102
+  v: 25.523
+  mode: model
+- id: cr30639
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 468243.7502
+    y: 5544447.6334
+    heading: -2.8057
+  v: 28.9824
+  mode: model
+- id: cr30645
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 468447.3723
+    y: 5544505.7868
+    heading: -2.9146
+  v: 25.3485
+  mode: model
+- id: cr30648
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 468685.4355
+    y: 5544563.1527
+    heading: -2.9333
+  v: 10.5117
+  mode: model
+- id: cr30650
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 468707.0968
+    y: 5544567.7913
+    heading: -2.9266
+  v: 11.3171
+  mode: model
+- id: cr30651
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 468751.7997
+    y: 5544588.9068
+    heading: -2.4052
+  v: 12.4915
+  mode: model
+- id: cr30653
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 468777.4662
+    y: 5544605.2058
+    heading: -2.9057
+  v: 8.6649
+  mode: model
+- id: cr30655
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 468790.2939
+    y: 5544596.4432
+    heading: 1.6617
+  v: 2.9455
+  mode: model
+expect:
+  goal: true
+  collisions: 0
+  violations: 0
+  off_lanelet: 0
+verdict:
+  exerciser: skip
+  sumo:
+    status: fail
+    since:
+      worlds: 13b7dac
+      catalog: ef793dc
+    record: 20261106T231252-7f44ee
+    note: contact

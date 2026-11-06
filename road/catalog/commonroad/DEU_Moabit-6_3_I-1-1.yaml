@@ -1,0 +1,134 @@
+card: 2
+set: regression
+scenario: DEU_Moabit-6_3_I-1-1
+title: CommonRoad DEU_Moabit-6_3_I-1-1 (interactive / scenario-factory)
+source:
+  suite: commonroad
+  type: interactive/scenario-factory
+  code: /bigdata/datasets/commonroad/scenarios/scenarios/interactive/scenario-factory/DEU_Moabit-6_3_I-1-1/DEU_Moabit-6_3_I-1-1.cr.xml
+  pin: commonroad-interactive-scenarios 749e342013cc069980039fa91ba587f62993aaaf
+  license: CommonRoad interactive scenarios, BSD 3-Clause License, Copyright (c) 2023 Technical University of Munich
+  tags:
+  - critical
+  - intersection
+  - simulated
+patches: []
+tags:
+- junction-priority
+- right-before-left
+- route-following
+- speed-limit
+exercises: the family on CommonRoad's planning problem
+map:
+  net: catalog/commonroad/DEU_Moabit-6_3_I-1-1/DEU_Moabit-6_3_I-1-1.net.xml
+  data: catalog/commonroad/DEU_Moabit-6_3_I-1-1/cr.json
+  route_note: 'a time-only goal: the ego drives on'
+dt: 0.1
+ticks: 1500
+ego:
+  v: 2.587
+  at:
+    lane: '107071_0'
+    s: 69.91
+  route:
+  - '107071'
+  - '108347'
+  - '108353'
+  - '110110'
+  - '108713'
+  goal:
+    time:
+    - 3.3
+    - 3.3
+exerciser:
+  skip: 'a CommonRoad map: the exerciser has no net of its own'
+actors:
+- id: cr31
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: -573.0671
+    y: 78.4268
+    heading: -0.2665
+  v: 1.3234
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Moabit-6_3_I-1-1/obstacles/cr31.jsonl
+- id: cr39
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: -556.4174
+    y: 73.8743
+    heading: -0.2664
+  v: 3.6352
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Moabit-6_3_I-1-1/obstacles/cr39.jsonl
+- id: cr312
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: -524.7535
+    y: 64.4563
+    heading: 2.1943
+  v: 1.648
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Moabit-6_3_I-1-1/obstacles/cr312.jsonl
+- id: cr313
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: -565.2399
+    y: 76.2876
+    heading: -0.2663
+  v: 2.3743
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Moabit-6_3_I-1-1/obstacles/cr313.jsonl
+- id: cr318
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: -583.7854
+    y: 81.3516
+    heading: -0.2662
+  v: 2.0675
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Moabit-6_3_I-1-1/obstacles/cr318.jsonl
+- id: cr329
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: -520.63
+    y: 67.3619
+    heading: -1.8386
+  v: 1.9806
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Moabit-6_3_I-1-1/obstacles/cr329.jsonl
+- id: cr332
+  kind: car
+  length: 4.8868
+  width: 2.0
+  at:
+    x: -512.8907
+    y: 96.5164
+    heading: -1.8386
+  v: 1.1898
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Moabit-6_3_I-1-1/obstacles/cr332.jsonl
+expect:
+  goal: true
+  collisions: 0
+  violations: 0
+  off_lanelet: 0
+verdict:
+  exerciser: skip
+  sumo:
+    status: pass
+    since:
+      worlds: 13b7dac
+      catalog: ef793dc

@@ -1,0 +1,155 @@
+card: 2
+set: regression
+scenario: ESP_Inca-3_3_I-1-1
+title: CommonRoad ESP_Inca-3_3_I-1-1 (interactive / scenario-factory)
+source:
+  suite: commonroad
+  type: interactive/scenario-factory
+  code: /bigdata/datasets/commonroad/scenarios/scenarios/interactive/scenario-factory/ESP_Inca-3_3_I-1-1/ESP_Inca-3_3_I-1-1.cr.xml
+  pin: commonroad-interactive-scenarios 749e342013cc069980039fa91ba587f62993aaaf
+  license: CommonRoad interactive scenarios, BSD 3-Clause License, Copyright (c) 2023 Technical University of Munich
+  tags:
+  - critical
+  - intersection
+  - simulated
+patches: []
+tags:
+- cyclist
+- junction-priority
+- right-before-left
+- route-following
+- speed-limit
+exercises: the family on CommonRoad's planning problem
+map:
+  net: catalog/commonroad/ESP_Inca-3_3_I-1-1/ESP_Inca-3_3_I-1-1.net.xml
+  data: catalog/commonroad/ESP_Inca-3_3_I-1-1/cr.json
+  route_note: 'a time-only goal: the ego drives on'
+dt: 0.1
+ticks: 1500
+ego:
+  v: 9.617
+  at:
+    lane: '18123_0'
+    s: 22.03
+  route:
+  - '18123'
+  - '18125'
+  - '18162'
+  goal:
+    time:
+    - 3.3
+    - 3.3
+exerciser:
+  skip: 'a CommonRoad map: the exerciser has no net of its own'
+actors:
+- id: cr39
+  kind: bicycle
+  length: 2.0
+  width: 0.68
+  at:
+    x: 935.2826
+    y: -875.9151
+    heading: 0.9583
+  v: 1.3629
+  mode: recorded
+  trajectory: catalog/commonroad/ESP_Inca-3_3_I-1-1/obstacles/cr39.jsonl
+- id: cr313
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 937.6047
+    y: -870.1582
+    heading: 0.9583
+  v: 0.0
+  mode: recorded
+  trajectory: catalog/commonroad/ESP_Inca-3_3_I-1-1/obstacles/cr313.jsonl
+- id: cr320
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 918.3504
+    y: -895.035
+    heading: 0.8136
+  v: 5.3813
+  mode: recorded
+  trajectory: catalog/commonroad/ESP_Inca-3_3_I-1-1/obstacles/cr320.jsonl
+- id: cr327
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 910.5984
+    y: -905.372
+    heading: -0.5765
+  v: 1.0337
+  mode: recorded
+  trajectory: catalog/commonroad/ESP_Inca-3_3_I-1-1/obstacles/cr327.jsonl
+- id: cr332
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 893.1513
+    y: -894.04
+    heading: -0.5798
+  v: 1.8261
+  mode: recorded
+  trajectory: catalog/commonroad/ESP_Inca-3_3_I-1-1/obstacles/cr332.jsonl
+- id: cr335
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 878.1565
+    y: -884.2346
+    heading: -0.5795
+  v: 2.6362
+  mode: recorded
+  trajectory: catalog/commonroad/ESP_Inca-3_3_I-1-1/obstacles/cr335.jsonl
+- id: cr338
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 861.4093
+    y: -873.3051
+    heading: -0.5779
+  v: 5.1996
+  mode: recorded
+  trajectory: catalog/commonroad/ESP_Inca-3_3_I-1-1/obstacles/cr338.jsonl
+- id: cr341
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 947.4521
+    y: -868.366
+    heading: 2.6924
+  v: 0.6007
+  mode: recorded
+  trajectory: catalog/commonroad/ESP_Inca-3_3_I-1-1/obstacles/cr341.jsonl
+- id: cr346
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 984.8271
+    y: -886.3823
+    heading: 2.6924
+  v: 14.0051
+  mode: recorded
+  trajectory: catalog/commonroad/ESP_Inca-3_3_I-1-1/obstacles/cr346.jsonl
+expect:
+  goal: true
+  collisions: 0
+  violations: 0
+  off_lanelet: 0
+verdict:
+  exerciser: skip
+  sumo:
+    status: pass
+    since:
+      worlds: 13b7dac
+      catalog: ef793dc

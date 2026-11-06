@@ -1,0 +1,167 @@
+card: 2
+set: working
+scenario: FRA_Miramas-5_1_T-1
+title: CommonRoad FRA_Miramas-5_1_T-1 (recorded / scenario-factory)
+source:
+  suite: commonroad
+  type: recorded/scenario-factory
+  code: /bigdata/datasets/commonroad/scenarios/scenarios/recorded/scenario-factory/FRA_Miramas-5_1_T-1.xml
+  pin: commonroad-scenarios 2416dc27faf3ee36b6799f42712da72a34a2c8fd
+  license: CommonRoad scenarios, BSD 3-Clause License, Copyright (c) 2019 Technical University of Munich
+  tags:
+  - critical
+  - intersection
+  - simulated
+patches: []
+tags:
+- following
+- junction-priority
+- right-before-left
+- route-following
+- speed-limit
+exercises: 'the family on CommonRoad''s planning problem: the harvest''s mechanism 3691f55f (contact:behind)'
+map:
+  net: catalog/commonroad/FRA_Miramas-5_1_T-1/FRA_Miramas-5_1_T-1.net.xml
+  data: catalog/commonroad/FRA_Miramas-5_1_T-1/cr.json
+  route_note: 'a time-only goal: the ego drives on'
+dt: 0.1
+ticks: 1500
+ego:
+  v: 3.784
+  at:
+    lane: '23491_0'
+    s: 15.56
+  route:
+  - '23491'
+  - '23456'
+  goal:
+    time:
+    - 3.3
+    - 3.3
+exerciser:
+  skip: 'a CommonRoad map: the exerciser has no net of its own'
+actors:
+- id: cr31
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 235.7704
+    y: -909.1124
+    heading: -1.3455
+  v: 10.0212
+  mode: recorded
+  trajectory: catalog/commonroad/FRA_Miramas-5_1_T-1/obstacles/cr31.jsonl
+- id: cr318
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 239.8976
+    y: -911.6232
+    heading: 1.6604
+  v: 6.1872
+  mode: recorded
+  trajectory: catalog/commonroad/FRA_Miramas-5_1_T-1/obstacles/cr318.jsonl
+- id: cr324
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 261.5232
+    y: -951.7812
+    heading: 2.6227
+  v: 6.2193
+  mode: recorded
+  trajectory: catalog/commonroad/FRA_Miramas-5_1_T-1/obstacles/cr324.jsonl
+- id: cr325
+  kind: car
+  length: 4.9909
+  width: 2.0
+  at:
+    x: 271.7967
+    y: -957.1635
+    heading: 2.6872
+  v: 3.7654
+  mode: recorded
+  trajectory: catalog/commonroad/FRA_Miramas-5_1_T-1/obstacles/cr325.jsonl
+- id: cr331
+  kind: truck
+  length: 12.4
+  width: 2.7
+  at:
+    x: 241.8627
+    y: -928.779
+    heading: 1.6881
+  v: 2.9459
+  mode: recorded
+  trajectory: catalog/commonroad/FRA_Miramas-5_1_T-1/obstacles/cr331.jsonl
+- id: cr332
+  kind: car
+  length: 2.5
+  width: 0.8
+  at:
+    x: 246.6687
+    y: -967.0061
+    heading: 1.5905
+  v: 0.8878
+  mode: recorded
+  trajectory: catalog/commonroad/FRA_Miramas-5_1_T-1/obstacles/cr332.jsonl
+- id: cr333
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 253.8576
+    y: -950.9031
+    heading: -0.6321
+  v: 4.9301
+  mode: recorded
+  trajectory: catalog/commonroad/FRA_Miramas-5_1_T-1/obstacles/cr333.jsonl
+- id: cr334
+  kind: car
+  length: 4.9905
+  width: 2.0
+  at:
+    x: 247.6607
+    y: -978.1331
+    heading: 1.6863
+  v: 0.7652
+  mode: recorded
+  trajectory: catalog/commonroad/FRA_Miramas-5_1_T-1/obstacles/cr334.jsonl
+- id: cr337
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 247.4135
+    y: -940.5033
+    heading: 2.2638
+  v: 2.1108
+  mode: recorded
+  trajectory: catalog/commonroad/FRA_Miramas-5_1_T-1/obstacles/cr337.jsonl
+- id: cr341
+  kind: car
+  length: 5.0
+  width: 1.7246
+  at:
+    x: 249.2226
+    y: -991.4256
+    heading: 1.6878
+  v: 0.8716
+  mode: recorded
+  trajectory: catalog/commonroad/FRA_Miramas-5_1_T-1/obstacles/cr341.jsonl
+expect:
+  goal: true
+  collisions: 0
+  violations: 0
+  off_lanelet: 0
+verdict:
+  exerciser: skip
+  sumo:
+    status: world
+    since:
+      worlds: 13b7dac
+      catalog: ef793dc
+    record: contact
+    note: contact

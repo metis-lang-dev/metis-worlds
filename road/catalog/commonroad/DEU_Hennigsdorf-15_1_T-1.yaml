@@ -1,0 +1,123 @@
+card: 2
+set: regression
+scenario: DEU_Hennigsdorf-15_1_T-1
+title: CommonRoad DEU_Hennigsdorf-15_1_T-1 (recorded / scenario-factory)
+source:
+  suite: commonroad
+  type: recorded/scenario-factory
+  code: /bigdata/datasets/commonroad/scenarios/scenarios/recorded/scenario-factory/DEU_Hennigsdorf-15_1_T-1.xml
+  pin: commonroad-scenarios 2416dc27faf3ee36b6799f42712da72a34a2c8fd
+  license: CommonRoad scenarios, BSD 3-Clause License, Copyright (c) 2019 Technical University of Munich
+  tags:
+  - critical
+  - intersection
+  - simulated
+patches: []
+tags:
+- junction-priority
+- right-before-left
+- route-following
+- speed-limit
+exercises: the family on CommonRoad's planning problem
+map:
+  net: catalog/commonroad/DEU_Hennigsdorf-15_1_T-1/DEU_Hennigsdorf-15_1_T-1.net.xml
+  data: catalog/commonroad/DEU_Hennigsdorf-15_1_T-1/cr.json
+  route_note: 'a time-only goal: the ego drives on'
+dt: 0.1
+ticks: 1500
+ego:
+  v: 3.034
+  at:
+    lane: '2053_0'
+    s: 5.39
+  route:
+  - '2053'
+  - '1792'
+  - '3828'
+  - '1729'
+  - '1732'
+  goal:
+    time:
+    - 3.3
+    - 3.3
+exerciser:
+  skip: 'a CommonRoad map: the exerciser has no net of its own'
+actors:
+- id: cr33
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 87.6438
+    y: -797.1122
+    heading: -3.451
+  v: 1.5936
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Hennigsdorf-15_1_T-1/obstacles/cr33.jsonl
+- id: cr312
+  kind: car
+  length: 5.0
+  width: 1.5284
+  at:
+    x: 115.0092
+    y: -811.193
+    heading: -3.6306
+  v: 3.2449
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Hennigsdorf-15_1_T-1/obstacles/cr312.jsonl
+- id: cr313
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 58.4709
+    y: -785.7483
+    heading: -0.4809
+  v: 0.1548
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Hennigsdorf-15_1_T-1/obstacles/cr313.jsonl
+- id: cr314
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 123.3221
+    y: -815.6166
+    heading: -3.6306
+  v: 1.9915
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Hennigsdorf-15_1_T-1/obstacles/cr314.jsonl
+- id: cr335
+  kind: truck
+  length: 11.7965
+  width: 2.7
+  at:
+    x: 84.1757
+    y: -779.3708
+    heading: -2.2386
+  v: 1.266
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Hennigsdorf-15_1_T-1/obstacles/cr335.jsonl
+- id: cr343
+  kind: car
+  length: 5.0
+  width: 1.9691
+  at:
+    x: 92.2862
+    y: -794.7546
+    heading: -1.1471
+  v: 10.2498
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Hennigsdorf-15_1_T-1/obstacles/cr343.jsonl
+expect:
+  goal: true
+  collisions: 0
+  violations: 0
+  off_lanelet: 0
+verdict:
+  exerciser: skip
+  sumo:
+    status: pass
+    since:
+      worlds: 13b7dac
+      catalog: ef793dc

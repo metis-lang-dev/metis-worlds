@@ -1,0 +1,158 @@
+card: 2
+set: regression
+scenario: ESP_Toledo-9_1_I-1-1
+title: CommonRoad ESP_Toledo-9_1_I-1-1 (interactive / scenario-factory)
+source:
+  suite: commonroad
+  type: interactive/scenario-factory
+  code: /bigdata/datasets/commonroad/scenarios/scenarios/interactive/scenario-factory/ESP_Toledo-9_1_I-1-1/ESP_Toledo-9_1_I-1-1.cr.xml
+  pin: commonroad-interactive-scenarios 749e342013cc069980039fa91ba587f62993aaaf
+  license: CommonRoad interactive scenarios, BSD 3-Clause License, Copyright (c) 2023 Technical University of Munich
+  tags:
+  - critical
+  - intersection
+  - simulated
+patches: []
+tags:
+- cyclist
+- junction-priority
+- right-before-left
+- route-following
+- speed-limit
+exercises: the family on CommonRoad's planning problem
+map:
+  net: catalog/commonroad/ESP_Toledo-9_1_I-1-1/ESP_Toledo-9_1_I-1-1.net.xml
+  data: catalog/commonroad/ESP_Toledo-9_1_I-1-1/cr.json
+  route_note: 'a time-only goal: the ego drives on'
+dt: 0.1
+ticks: 1500
+ego:
+  v: 2.125
+  at:
+    lane: '59937_0'
+    s: 68.6
+  route:
+  - '59937'
+  - '59934'
+  - '59092'
+  - '59089'
+  - '60113'
+  - '59938'
+  goal:
+    time:
+    - 3.3
+    - 3.3
+exerciser:
+  skip: 'a CommonRoad map: the exerciser has no net of its own'
+actors:
+- id: cr39
+  kind: bicycle
+  length: 2.0
+  width: 0.68
+  at:
+    x: -695.2681
+    y: -43.235
+    heading: 1.1523
+  v: 4.5796
+  mode: recorded
+  trajectory: catalog/commonroad/ESP_Toledo-9_1_I-1-1/obstacles/cr39.jsonl
+- id: cr317
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: -689.0463
+    y: -103.7815
+    heading: 1.2069
+  v: 1.482
+  mode: recorded
+  trajectory: catalog/commonroad/ESP_Toledo-9_1_I-1-1/obstacles/cr317.jsonl
+- id: cr322
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: -652.7463
+    y: -69.7771
+    heading: 4.126
+  v: 11.6142
+  mode: recorded
+  trajectory: catalog/commonroad/ESP_Toledo-9_1_I-1-1/obstacles/cr322.jsonl
+- id: cr324
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: -636.3827
+    y: -23.8433
+    heading: -1.4681
+  v: 10.758
+  mode: recorded
+  trajectory: catalog/commonroad/ESP_Toledo-9_1_I-1-1/obstacles/cr324.jsonl
+- id: cr330
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: -692.2806
+    y: -112.2581
+    heading: 1.2055
+  v: 0.9266
+  mode: recorded
+  trajectory: catalog/commonroad/ESP_Toledo-9_1_I-1-1/obstacles/cr330.jsonl
+- id: cr333
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: -695.2282
+    y: -119.9454
+    heading: 1.2014
+  v: 0.8162
+  mode: recorded
+  trajectory: catalog/commonroad/ESP_Toledo-9_1_I-1-1/obstacles/cr333.jsonl
+- id: cr338
+  kind: car
+  length: 4.7861
+  width: 2.0
+  at:
+    x: -698.0057
+    y: -127.0785
+    heading: 1.1902
+  v: 0.2634
+  mode: recorded
+  trajectory: catalog/commonroad/ESP_Toledo-9_1_I-1-1/obstacles/cr338.jsonl
+- id: cr342
+  kind: bicycle
+  length: 2.0
+  width: 0.68
+  at:
+    x: -721.2563
+    y: -56.4104
+    heading: -0.4714
+  v: 3.7344
+  mode: recorded
+  trajectory: catalog/commonroad/ESP_Toledo-9_1_I-1-1/obstacles/cr342.jsonl
+- id: cr345
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: -700.7876
+    y: -133.9341
+    heading: 1.1838
+  v: 0.1972
+  mode: recorded
+  trajectory: catalog/commonroad/ESP_Toledo-9_1_I-1-1/obstacles/cr345.jsonl
+expect:
+  goal: true
+  collisions: 0
+  violations: 0
+  off_lanelet: 0
+verdict:
+  exerciser: skip
+  sumo:
+    status: pass
+    since:
+      worlds: 13b7dac
+      catalog: ef793dc

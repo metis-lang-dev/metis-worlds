@@ -1,0 +1,155 @@
+card: 2
+set: regression
+scenario: BEL_Putte-1_2_I-1-1
+title: CommonRoad BEL_Putte-1_2_I-1-1 (interactive / scenario-factory)
+source:
+  suite: commonroad
+  type: interactive/scenario-factory
+  code: /bigdata/datasets/commonroad/scenarios/scenarios/interactive/scenario-factory/BEL_Putte-1_2_I-1-1/BEL_Putte-1_2_I-1-1.cr.xml
+  pin: commonroad-interactive-scenarios 749e342013cc069980039fa91ba587f62993aaaf
+  license: CommonRoad interactive scenarios, BSD 3-Clause License, Copyright (c) 2023 Technical University of Munich
+  tags:
+  - critical
+  - intersection
+  - simulated
+patches: []
+tags:
+- cyclist
+- junction-priority
+- right-before-left
+- route-following
+- speed-limit
+exercises: the family on CommonRoad's planning problem
+map:
+  net: catalog/commonroad/BEL_Putte-1_2_I-1-1/BEL_Putte-1_2_I-1-1.net.xml
+  data: catalog/commonroad/BEL_Putte-1_2_I-1-1/cr.json
+  route_note: 'a time-only goal: the ego drives on'
+dt: 0.1
+ticks: 1500
+ego:
+  v: 9.704
+  at:
+    lane: '5650_0'
+    s: 69.0
+  route:
+  - '5650'
+  - '5784'
+  - '5680'
+  goal:
+    time:
+    - 3.3
+    - 3.3
+exerciser:
+  skip: 'a CommonRoad map: the exerciser has no net of its own'
+actors:
+- id: cr34
+  kind: car
+  length: 2.5
+  width: 0.8
+  at:
+    x: -177.1836
+    y: -951.5374
+    heading: -0.224
+  v: 0.9311
+  mode: recorded
+  trajectory: catalog/commonroad/BEL_Putte-1_2_I-1-1/obstacles/cr34.jsonl
+- id: cr35
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: -156.4208
+    y: -957.6899
+    heading: -0.3362
+  v: 4.3543
+  mode: recorded
+  trajectory: catalog/commonroad/BEL_Putte-1_2_I-1-1/obstacles/cr35.jsonl
+- id: cr311
+  kind: bicycle
+  length: 2.0
+  width: 0.68
+  at:
+    x: -170.2941
+    y: -954.9572
+    heading: -0.2572
+  v: 1.4883
+  mode: recorded
+  trajectory: catalog/commonroad/BEL_Putte-1_2_I-1-1/obstacles/cr311.jsonl
+- id: cr312
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: -183.3585
+    y: -950.488
+    heading: -0.2013
+  v: 0.1333
+  mode: recorded
+  trajectory: catalog/commonroad/BEL_Putte-1_2_I-1-1/obstacles/cr312.jsonl
+- id: cr316
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: -163.5598
+    y: -955.398
+    heading: -0.2912
+  v: 1.6238
+  mode: recorded
+  trajectory: catalog/commonroad/BEL_Putte-1_2_I-1-1/obstacles/cr316.jsonl
+- id: cr325
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: -202.861
+    y: -946.8859
+    heading: -0.1653
+  v: 1.3679
+  mode: recorded
+  trajectory: catalog/commonroad/BEL_Putte-1_2_I-1-1/obstacles/cr325.jsonl
+- id: cr349
+  kind: car
+  length: 2.5
+  width: 0.8
+  at:
+    x: -111.4726
+    y: -955.1816
+    heading: 0.0813
+  v: 10.7297
+  mode: recorded
+  trajectory: catalog/commonroad/BEL_Putte-1_2_I-1-1/obstacles/cr349.jsonl
+- id: cr351
+  kind: car
+  length: 4.5063
+  width: 1.8144
+  at:
+    x: -122.3758
+    y: -958.1277
+    heading: 0.4036
+  v: 9.5256
+  mode: recorded
+  trajectory: catalog/commonroad/BEL_Putte-1_2_I-1-1/obstacles/cr351.jsonl
+- id: cr353
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: -94.6583
+    y: -987.6272
+    heading: 2.5125
+  v: 11.6861
+  mode: recorded
+  trajectory: catalog/commonroad/BEL_Putte-1_2_I-1-1/obstacles/cr353.jsonl
+expect:
+  goal: true
+  collisions: 0
+  violations: 0
+  off_lanelet: 0
+verdict:
+  exerciser: skip
+  sumo:
+    status: pass
+    since:
+      worlds: 13b7dac
+      catalog: ef793dc

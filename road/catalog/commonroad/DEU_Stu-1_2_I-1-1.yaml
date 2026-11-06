@@ -1,0 +1,299 @@
+card: 2
+set: regression
+scenario: DEU_Stu-1_2_I-1-1
+title: CommonRoad DEU_Stu-1_2_I-1-1 (interactive / SUMO)
+source:
+  suite: commonroad
+  type: interactive/SUMO
+  code: /bigdata/datasets/commonroad/scenarios/scenarios/interactive/SUMO/DEU_Stu-1_2_I-1-1/DEU_Stu-1_2_I-1-1.cr.xml
+  pin: commonroad-interactive-scenarios 749e342013cc069980039fa91ba587f62993aaaf
+  license: CommonRoad interactive scenarios, BSD 3-Clause License, Copyright (c) 2023 Technical University of Munich
+  tags:
+  - highway
+  - merging_lanes
+  - parallel_lanes
+  - simulated
+  - speed_limit
+patches: []
+tags:
+- merge-zipper
+- route-following
+- speed-limit
+exercises: the family on CommonRoad's planning problem
+map:
+  net: catalog/commonroad/DEU_Stu-1_2_I-1-1/DEU_Stu-1_2_I-1-1.net.xml
+  data: catalog/commonroad/DEU_Stu-1_2_I-1-1/cr.json
+dt: 0.1
+ticks: 1500
+ego:
+  v: 22.808
+  at:
+    lane: '16_0'
+    s: 142.58
+  route:
+  - '16'
+  - '19'
+  goal:
+    region:
+      lanelets:
+      - 19
+    time:
+    - 15.9
+    - 16.0
+exerciser:
+  skip: 'a CommonRoad map: the exerciser has no net of its own'
+actors:
+- id: cr32
+  kind: car
+  length: 5.0
+  width: 1.8
+  at:
+    x: -49.2578
+    y: 239.6921
+    heading: -4.1016
+  v: 19.1757
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Stu-1_2_I-1-1/obstacles/cr32.jsonl
+- id: cr34
+  kind: car
+  length: 5.0
+  width: 1.8
+  at:
+    x: -85.3682
+    y: 336.8628
+    heading: -4.4355
+  v: 21.6726
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Stu-1_2_I-1-1/obstacles/cr34.jsonl
+- id: cr36
+  kind: car
+  length: 5.0
+  width: 1.8
+  at:
+    x: -87.3375
+    y: 330.6592
+    heading: -4.4669
+  v: 22.5614
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Stu-1_2_I-1-1/obstacles/cr36.jsonl
+- id: cr38
+  kind: car
+  length: 5.0
+  width: 1.8
+  at:
+    x: 1.1216
+    y: 198.4164
+    heading: -3.3648
+  v: 24.5589
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Stu-1_2_I-1-1/obstacles/cr38.jsonl
+- id: cr310
+  kind: car
+  length: 5.0
+  width: 1.8
+  at:
+    x: -81.3183
+    y: 270.9654
+    heading: 1.4719
+  v: 19.0265
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Stu-1_2_I-1-1/obstacles/cr310.jsonl
+- id: cr312
+  kind: car
+  length: 5.0
+  width: 1.8
+  at:
+    x: 34.1987
+    y: 195.027
+    heading: -3.1926
+  v: 24.5145
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Stu-1_2_I-1-1/obstacles/cr312.jsonl
+- id: cr314
+  kind: car
+  length: 5.0
+  width: 1.8
+  at:
+    x: 63.9404
+    y: 197.0278
+    heading: -3.1865
+  v: 24.5663
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Stu-1_2_I-1-1/obstacles/cr314.jsonl
+- id: cr315
+  kind: car
+  length: 5.0
+  width: 1.8
+  at:
+    x: 78.804
+    y: 193.1587
+    heading: -3.1393
+  v: 25.8999
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Stu-1_2_I-1-1/obstacles/cr315.jsonl
+- id: cr317
+  kind: car
+  length: 5.0
+  width: 1.8
+  at:
+    x: 106.6532
+    y: 198.4095
+    heading: -2.9967
+  v: 25.9133
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Stu-1_2_I-1-1/obstacles/cr317.jsonl
+- id: cr319
+  kind: car
+  length: 5.0
+  width: 1.8
+  at:
+    x: 114.064
+    y: 196.1536
+    heading: -2.9466
+  v: 24.5849
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Stu-1_2_I-1-1/obstacles/cr319.jsonl
+- id: cr321
+  kind: car
+  length: 5.0
+  width: 1.8
+  at:
+    x: -38.5139
+    y: 169.068
+    heading: -3.7683
+  v: 19.4456
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Stu-1_2_I-1-1/obstacles/cr321.jsonl
+- id: cr322
+  kind: car
+  length: 5.0
+  width: 1.8
+  at:
+    x: 144.9667
+    y: 207.2974
+    heading: -2.6307
+  v: 23.4379
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Stu-1_2_I-1-1/obstacles/cr322.jsonl
+- id: cr323
+  kind: car
+  length: 5.0
+  width: 1.8
+  at:
+    x: 170.1948
+    y: 229.3541
+    heading: -2.2429
+  v: 20.8313
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Stu-1_2_I-1-1/obstacles/cr323.jsonl
+- id: cr324
+  kind: car
+  length: 5.0
+  width: 1.8
+  at:
+    x: 3.2797
+    y: 145.5586
+    heading: -3.3703
+  v: 17.0384
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Stu-1_2_I-1-1/obstacles/cr324.jsonl
+- id: cr325
+  kind: car
+  length: 5.0
+  width: 1.8
+  at:
+    x: 160.4594
+    y: 223.6136
+    heading: -2.348
+  v: 21.9603
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Stu-1_2_I-1-1/obstacles/cr325.jsonl
+- id: cr326
+  kind: car
+  length: 5.0
+  width: 1.8
+  at:
+    x: 175.2818
+    y: 242.4729
+    heading: -2.152
+  v: 20.3834
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Stu-1_2_I-1-1/obstacles/cr326.jsonl
+- id: cr327
+  kind: car
+  length: 5.0
+  width: 1.8
+  at:
+    x: 30.4861
+    y: 139.2241
+    heading: -3.3703
+  v: 13.3811
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Stu-1_2_I-1-1/obstacles/cr327.jsonl
+- id: cr328
+  kind: car
+  length: 5.0
+  width: 1.8
+  at:
+    x: 188.6524
+    y: 267.4594
+    heading: -1.9532
+  v: 16.4067
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Stu-1_2_I-1-1/obstacles/cr328.jsonl
+- id: cr329
+  kind: car
+  length: 5.0
+  width: 1.8
+  at:
+    x: 183.8434
+    y: 249.8191
+    heading: -2.0958
+  v: 19.8576
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Stu-1_2_I-1-1/obstacles/cr329.jsonl
+- id: cr330
+  kind: car
+  length: 5.0
+  width: 1.8
+  at:
+    x: 49.5331
+    y: 134.7917
+    heading: -3.3702
+  v: 10.2974
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Stu-1_2_I-1-1/obstacles/cr330.jsonl
+- id: cr331
+  kind: car
+  length: 5.0
+  width: 1.8
+  at:
+    x: 63.4867
+    y: 131.5454
+    heading: -3.3702
+  v: 6.9449
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Stu-1_2_I-1-1/obstacles/cr331.jsonl
+- id: cr332
+  kind: car
+  length: 5.0
+  width: 1.8
+  at:
+    x: 72.3493
+    y: 129.4835
+    heading: -3.3702
+  v: 3.6045
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Stu-1_2_I-1-1/obstacles/cr332.jsonl
+expect:
+  goal: true
+  collisions: 0
+  violations: 0
+  off_lanelet: 0
+verdict:
+  exerciser: skip
+  sumo:
+    status: pass
+    since:
+      worlds: 13b7dac
+      catalog: ef793dc

@@ -1,0 +1,90 @@
+card: 2
+set: regression
+scenario: HRV_Pula-8_2_I-1-1
+title: CommonRoad HRV_Pula-8_2_I-1-1 (interactive / scenario-factory)
+source:
+  suite: commonroad
+  type: interactive/scenario-factory
+  code: /bigdata/datasets/commonroad/scenarios/scenarios/interactive/scenario-factory/HRV_Pula-8_2_I-1-1/HRV_Pula-8_2_I-1-1.cr.xml
+  pin: commonroad-interactive-scenarios 749e342013cc069980039fa91ba587f62993aaaf
+  license: CommonRoad interactive scenarios, BSD 3-Clause License, Copyright (c) 2023 Technical University of Munich
+  tags:
+  - critical
+  - intersection
+  - simulated
+patches: []
+tags:
+- cyclist
+- junction-priority
+- right-before-left
+- route-following
+- speed-limit
+exercises: the family on CommonRoad's planning problem
+map:
+  net: catalog/commonroad/HRV_Pula-8_2_I-1-1/HRV_Pula-8_2_I-1-1.net.xml
+  data: catalog/commonroad/HRV_Pula-8_2_I-1-1/cr.json
+  route_note: 'a time-only goal: the ego drives on'
+dt: 0.1
+ticks: 1500
+ego:
+  v: 11.597
+  at:
+    lane: '13179_0'
+    s: 45.17
+  route:
+  - '13179'
+  - '12569'
+  - '12424'
+  - '12862'
+  goal:
+    time:
+    - 3.3
+    - 3.3
+exerciser:
+  skip: 'a CommonRoad map: the exerciser has no net of its own'
+actors:
+- id: cr38
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 200.3391
+    y: 393.4299
+    heading: -0.6889
+  v: 14.8496
+  mode: recorded
+  trajectory: catalog/commonroad/HRV_Pula-8_2_I-1-1/obstacles/cr38.jsonl
+- id: cr39
+  kind: bicycle
+  length: 2.0
+  width: 0.68
+  at:
+    x: 206.787
+    y: 386.386
+    heading: -0.6806
+  v: 5.0228
+  mode: recorded
+  trajectory: catalog/commonroad/HRV_Pula-8_2_I-1-1/obstacles/cr39.jsonl
+- id: cr312
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 225.0877
+    y: 372.0607
+    heading: -0.7838
+  v: 12.2709
+  mode: recorded
+  trajectory: catalog/commonroad/HRV_Pula-8_2_I-1-1/obstacles/cr312.jsonl
+expect:
+  goal: true
+  collisions: 0
+  violations: 0
+  off_lanelet: 0
+verdict:
+  exerciser: skip
+  sumo:
+    status: pass
+    since:
+      worlds: 13b7dac
+      catalog: ef793dc

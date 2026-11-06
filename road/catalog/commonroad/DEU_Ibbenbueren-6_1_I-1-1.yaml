@@ -1,0 +1,167 @@
+card: 2
+set: regression
+scenario: DEU_Ibbenbueren-6_1_I-1-1
+title: CommonRoad DEU_Ibbenbueren-6_1_I-1-1 (interactive / scenario-factory)
+source:
+  suite: commonroad
+  type: interactive/scenario-factory
+  code: /bigdata/datasets/commonroad/scenarios/scenarios/interactive/scenario-factory/DEU_Ibbenbueren-6_1_I-1-1/DEU_Ibbenbueren-6_1_I-1-1.cr.xml
+  pin: commonroad-interactive-scenarios 749e342013cc069980039fa91ba587f62993aaaf
+  license: CommonRoad interactive scenarios, BSD 3-Clause License, Copyright (c) 2023 Technical University of Munich
+  tags:
+  - critical
+  - intersection
+  - simulated
+patches: []
+tags:
+- cyclist
+- junction-priority
+- right-before-left
+- route-following
+- speed-limit
+exercises: the family on CommonRoad's planning problem
+map:
+  net: catalog/commonroad/DEU_Ibbenbueren-6_1_I-1-1/DEU_Ibbenbueren-6_1_I-1-1.net.xml
+  data: catalog/commonroad/DEU_Ibbenbueren-6_1_I-1-1/cr.json
+  route_note: 'a time-only goal: the ego drives on'
+dt: 0.1
+ticks: 1500
+ego:
+  v: 3.572
+  at:
+    lane: '31669_0'
+    s: 19.46
+  route:
+  - '31669'
+  - '31715'
+  - '36025'
+  - '31862'
+  goal:
+    time:
+    - 3.3
+    - 3.3
+exerciser:
+  skip: 'a CommonRoad map: the exerciser has no net of its own'
+actors:
+- id: cr31
+  kind: car
+  length: 4.9088
+  width: 2.0
+  at:
+    x: 782.2557
+    y: 478.3325
+    heading: -1.4629
+  v: 1.9503
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Ibbenbueren-6_1_I-1-1/obstacles/cr31.jsonl
+- id: cr32
+  kind: car
+  length: 2.0273
+  width: 0.8
+  at:
+    x: 795.3588
+    y: 417.4007
+    heading: -1.78
+  v: 6.5563
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Ibbenbueren-6_1_I-1-1/obstacles/cr32.jsonl
+- id: cr33
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 780.0391
+    y: 486.1832
+    heading: -1.1648
+  v: 0.8962
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Ibbenbueren-6_1_I-1-1/obstacles/cr33.jsonl
+- id: cr34
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 797.4418
+    y: 427.9166
+    heading: -1.7532
+  v: 5.044
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Ibbenbueren-6_1_I-1-1/obstacles/cr34.jsonl
+- id: cr35
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 804.9711
+    y: 458.0394
+    heading: 4.1528
+  v: 3.0604
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Ibbenbueren-6_1_I-1-1/obstacles/cr35.jsonl
+- id: cr36
+  kind: bicycle
+  length: 2.0
+  width: 0.68
+  at:
+    x: 805.2977
+    y: 443.4737
+    heading: 1.3904
+  v: 1.8664
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Ibbenbueren-6_1_I-1-1/obstacles/cr36.jsonl
+- id: cr37
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 789.8702
+    y: 470.541
+    heading: 2.8559
+  v: 5.7232
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Ibbenbueren-6_1_I-1-1/obstacles/cr37.jsonl
+- id: cr320
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 799.3776
+    y: 438.4132
+    heading: -1.7532
+  v: 3.9102
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Ibbenbueren-6_1_I-1-1/obstacles/cr320.jsonl
+- id: cr330
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 814.3277
+    y: 465.4634
+    heading: 3.4755
+  v: 1.0185
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Ibbenbueren-6_1_I-1-1/obstacles/cr330.jsonl
+- id: cr335
+  kind: car
+  length: 4.5459
+  width: 2.0
+  at:
+    x: 799.2605
+    y: 418.8754
+    heading: 1.4707
+  v: 0.6599
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Ibbenbueren-6_1_I-1-1/obstacles/cr335.jsonl
+expect:
+  goal: true
+  collisions: 0
+  violations: 0
+  off_lanelet: 0
+verdict:
+  exerciser: skip
+  sumo:
+    status: pass
+    since:
+      worlds: 13b7dac
+      catalog: ef793dc

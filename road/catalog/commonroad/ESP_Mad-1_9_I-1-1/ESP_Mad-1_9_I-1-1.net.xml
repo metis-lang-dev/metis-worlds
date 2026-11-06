@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-06 23:04:22 by Eclipse SUMO netconvert Version 1.18.0
+<configuration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/netconvertConfiguration.xsd">
+
+    <input>
+        <node-files value="/home/axadmin/repo/perotheia-packages/.worlds/cr-cache/ESP_Mad-1_9_I-1-1/ESP_Mad-1_9_I-1-1.nod.xml"/>
+        <edge-files value="/home/axadmin/repo/perotheia-packages/.worlds/cr-cache/ESP_Mad-1_9_I-1-1/ESP_Mad-1_9_I-1-1.edg.xml"/>
+        <connection-files value="/home/axadmin/repo/perotheia-packages/.worlds/cr-cache/ESP_Mad-1_9_I-1-1/ESP_Mad-1_9_I-1-1.con.xml"/>
+        <tllogic-files value="/home/axadmin/repo/perotheia-packages/.worlds/cr-cache/ESP_Mad-1_9_I-1-1/ESP_Mad-1_9_I-1-1.tll.xml"/>
+        <type-files value="/home/axadmin/repo/perotheia-packages/.worlds/cr-cache/ESP_Mad-1_9_I-1-1/ESP_Mad-1_9_I-1-1.typ.xml"/>
+    </input>
+
+    <output>
+        <output-file value="/home/axadmin/repo/perotheia-packages/.worlds/cr-cache/ESP_Mad-1_9_I-1-1/ESP_Mad-1_9_I-1-1.net.xml"/>
+    </output>
+
+    <processing>
+        <geometry.remove.keep-edges.explicit value="true"/>
+        <geometry.remove.min-length value="0.0"/>
+        <geometry.avoid-overlap value="true"/>
+        <offset.disable-normalization value="true"/>
+    </processing>
+
+    <tls_building>
+        <tls.guess-signals value="true"/>
+        <tls.green.time value="50"/>
+        <tls.yellow.time value="10"/>
+        <tls.red.time value="50"/>
+        <tls.allred.time value="50"/>
+        <tls.left-green.time value="50"/>
+        <tls.crossing-min.time value="50"/>
+        <tls.crossing-clearance.time value="50"/>
+        <tls.group-signals value="true"/>
+    </tls_building>
+
+    <junctions>
+        <no-turnarounds value="true"/>
+        <junctions.internal-link-detail value="20"/>
+    </junctions>
+
+    <random_number>
+        <seed value="1234"/>
+    </random_number>
+
+</configuration>
+-->
+
+<net version="1.16" junctionCornerDetail="5" junctionLinkDetail="20" limitTurnSpeed="5.50" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/net_file.xsd">
+
+    <location netOffset="0.00,0.00" convBoundary="-109.19,-53.85,91.28,63.44" origBoundary="-110.05,-55.38,92.14,64.97" projParameter="!"/>
+
+    <type id="highway.residential_speed_13.89" priority="3" speed="13.89" disallow="pedestrian tram rail_urban rail rail_electric ship"/>
+
+    <edge id="5" from="1" to="2" priority="3" type="highway.residential_speed_13.89" spreadType="center" length="226.24">
+        <lane id="5_0" index="0" disallow="pedestrian tram rail_urban rail rail_electric ship" speed="13.89" length="226.24" width="3.50" customShape="1" shape="-110.05,55.82 -11.54,0.22 86.97,-55.38"/>
+        <lane id="5_1" index="1" disallow="pedestrian tram rail_urban rail rail_electric ship" speed="13.89" length="226.24" width="3.50" customShape="1" shape="-108.33,58.87 -9.82,3.27 88.69,-52.33"/>
+    </edge>
+    <edge id="8" from="3" to="4" priority="3" type="highway.residential_speed_13.89" spreadType="center" length="226.24">
+        <lane id="8_0" index="0" disallow="pedestrian tram rail_urban rail rail_electric ship" speed="13.89" length="226.24" width="3.50" customShape="1" shape="92.14,-46.23 -6.38,9.37 -104.90,64.97"/>
+        <lane id="8_1" index="1" disallow="pedestrian tram rail_urban rail rail_electric ship" speed="13.89" length="226.24" width="3.50" customShape="1" shape="90.42,-49.28 -8.10,6.32 -106.61,61.92"/>
+    </edge>
+
+    <junction id="1" type="dead_end" x="-109.19" y="57.35" incLanes="" intLanes="" shape="-107.47,60.39 -110.91,54.30"/>
+    <junction id="2" type="dead_end" x="87.83" y="-53.85" incLanes="5_0 5_1" intLanes="" shape="86.11,-56.90 89.55,-50.80"/>
+    <junction id="3" type="dead_end" x="91.28" y="-47.76" incLanes="" intLanes="" shape="89.56,-50.81 93.00,-44.71"/>
+    <junction id="4" type="dead_end" x="-105.75" y="63.44" incLanes="8_0 8_1" intLanes="" shape="-104.03,66.49 -107.48,60.39"/>
+
+</net>

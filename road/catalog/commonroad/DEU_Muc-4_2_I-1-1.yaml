@@ -1,0 +1,80 @@
+card: 2
+set: regression
+scenario: DEU_Muc-4_2_I-1-1
+title: CommonRoad DEU_Muc-4_2_I-1-1 (interactive / hand-crafted)
+source:
+  suite: commonroad
+  type: interactive/hand-crafted
+  code: /bigdata/datasets/commonroad/scenarios/scenarios/interactive/hand-crafted/DEU_Muc-4_2_I-1-1/DEU_Muc-4_2_I-1-1.cr.xml
+  pin: commonroad-interactive-scenarios 749e342013cc069980039fa91ba587f62993aaaf
+  license: CommonRoad interactive scenarios, BSD 3-Clause License, Copyright (c) 2023 Technical University of Munich
+  tags:
+  - comfort
+  - lane_change
+  - no_oncoming_traffic
+  - parallel_lanes
+  - speed_limit
+  - two_lane
+  - urban
+patches: []
+tags:
+- lane-change
+- route-following
+- speed-limit
+exercises: the family on CommonRoad's planning problem
+map:
+  net: catalog/commonroad/DEU_Muc-4_2_I-1-1/DEU_Muc-4_2_I-1-1.net.xml
+  data: catalog/commonroad/DEU_Muc-4_2_I-1-1/cr.json
+dt: 0.1
+ticks: 1500
+ego:
+  v: 14.0
+  at:
+    lane: '34784_1'
+    s: 129.07
+  route:
+  - '34784'
+  goal:
+    region:
+      lanelets:
+      - 34784
+    time:
+    - 5.0
+    - 5.0
+exerciser:
+  skip: 'a CommonRoad map: the exerciser has no net of its own'
+actors:
+- id: cr202
+  kind: car
+  length: 4.8
+  width: 2.0
+  at:
+    x: 9.5844
+    y: -3.1541
+    heading: 0.0
+  v: 6.0
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Muc-4_2_I-1-1/obstacles/cr202.jsonl
+- id: cr203
+  kind: car
+  length: 4.8
+  width: 2.0
+  at:
+    x: -16.9673
+    y: -3.6062
+    heading: 0.0
+  v: 14.0
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Muc-4_2_I-1-1/obstacles/cr203.jsonl
+expect:
+  goal: true
+  collisions: 0
+  violations: 0
+  off_lanelet: 0
+verdict:
+  exerciser: skip
+  sumo:
+    status: pass
+    since:
+      worlds: 13b7dac
+      catalog: ef793dc

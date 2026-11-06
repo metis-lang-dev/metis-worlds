@@ -1,0 +1,105 @@
+card: 2
+set: working
+scenario: DEU_B471-1_1_T-1
+title: CommonRoad DEU_B471-1_1_T-1 (recorded / hand-crafted)
+source:
+  suite: commonroad
+  type: recorded/hand-crafted
+  code: /bigdata/datasets/commonroad/scenarios/scenarios/recorded/hand-crafted/DEU_B471-1_1_T-1.xml
+  pin: commonroad-scenarios 2416dc27faf3ee36b6799f42712da72a34a2c8fd
+  license: CommonRoad scenarios, BSD 3-Clause License, Copyright (c) 2019 Technical University of Munich
+  tags:
+  - comfort
+  - lane_change
+  - oncoming_traffic
+  - parallel_lanes
+  - speed_limit
+  - two_lane
+  - urban
+patches: []
+tags:
+- lane-change
+- oncoming-pass
+- route-following
+- speed-limit
+exercises: 'the family on CommonRoad''s planning problem: the harvest''s mechanism 2d630f57 (goal:position)'
+map:
+  net: catalog/commonroad/DEU_B471-1_1_T-1/DEU_B471-1_1_T-1.net.xml
+  data: catalog/commonroad/DEU_B471-1_1_T-1/cr.json
+dt: 0.1
+ticks: 1500
+ego:
+  v: 18.0
+  at:
+    lane: '38807_0'
+    s: 200.03
+  route:
+  - '38807'
+  goal:
+    region:
+      polygons:
+      - - - 95.3533
+          - 36.9551
+        - - 94.4493
+          - 38.9649
+        - - 134.6467
+          - 57.0449
+        - - 135.5507
+          - 55.0351
+        - - 95.3533
+          - 36.9551
+    time:
+    - 0.0
+    - 5.0
+    heading:
+    - -0.1745
+    - 0.1745
+exerciser:
+  skip: 'a CommonRoad map: the exerciser has no net of its own'
+actors:
+- id: cr206
+  kind: car
+  length: 13.6
+  width: 2.5
+  at:
+    x: 143.1849
+    y: 63.3349
+    heading: -2.7402
+  v: 8.3
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_B471-1_1_T-1/obstacles/cr206.jsonl
+- id: cr207
+  kind: car
+  length: 4.8
+  width: 2.0
+  at:
+    x: 197.0141
+    y: 86.6929
+    heading: -2.7402
+  v: 28.0
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_B471-1_1_T-1/obstacles/cr207.jsonl
+- id: cr399
+  kind: car
+  length: 7.3477
+  width: 3.0224
+  at:
+    x: 89.097
+    y: 35.359
+    heading: 0.4293
+  v: 0.0
+  mode: recorded
+expect:
+  goal: true
+  collisions: 0
+  violations: 0
+  off_lanelet: 0
+verdict:
+  exerciser: skip
+  sumo:
+    status: fail
+    since:
+      worlds: 13b7dac
+      catalog: ef793dc
+    record: 20261106T151936-251215
+    note: goal:position

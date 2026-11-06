@@ -1,0 +1,173 @@
+card: 2
+set: working
+scenario: ESP_Ceuta-4_3_I-1-1
+title: CommonRoad ESP_Ceuta-4_3_I-1-1 (interactive / scenario-factory)
+source:
+  suite: commonroad
+  type: interactive/scenario-factory
+  code: /bigdata/datasets/commonroad/scenarios/scenarios/interactive/scenario-factory/ESP_Ceuta-4_3_I-1-1/ESP_Ceuta-4_3_I-1-1.cr.xml
+  pin: commonroad-interactive-scenarios 749e342013cc069980039fa91ba587f62993aaaf
+  license: CommonRoad interactive scenarios, BSD 3-Clause License, Copyright (c) 2023 Technical University of Munich
+  tags:
+  - critical
+  - intersection
+  - simulated
+patches: []
+tags:
+- cyclist
+- junction-priority
+- right-before-left
+- route-following
+- speed-limit
+exercises: 'the family on CommonRoad''s planning problem: the harvest''s mechanism 54257713 (contact:initial)'
+map:
+  net: catalog/commonroad/ESP_Ceuta-4_3_I-1-1/ESP_Ceuta-4_3_I-1-1.net.xml
+  data: catalog/commonroad/ESP_Ceuta-4_3_I-1-1/cr.json
+  route_note: 'a time-only goal: the ego drives on'
+dt: 0.1
+ticks: 1500
+ego:
+  v: 1.478
+  at:
+    lane: '68157_0'
+    s: 56.16
+  route:
+  - '68157'
+  - '68159'
+  - '68406'
+  - '68408'
+  - '67376'
+  - '67967'
+  - '69757'
+  - '67410'
+  goal:
+    time:
+    - 3.3
+    - 3.3
+exerciser:
+  skip: 'a CommonRoad map: the exerciser has no net of its own'
+actors:
+- id: cr32
+  kind: truck
+  length: 7.5
+  width: 2.6
+  at:
+    x: 203.2055
+    y: 469.059
+    heading: -3.6862
+  v: 0.0006
+  mode: recorded
+  trajectory: catalog/commonroad/ESP_Ceuta-4_3_I-1-1/obstacles/cr32.jsonl
+- id: cr36
+  kind: car
+  length: 2.5
+  width: 0.8
+  at:
+    x: 214.2299
+    y: 462.0787
+    heading: 2.596
+  v: 0.9801
+  mode: recorded
+  trajectory: catalog/commonroad/ESP_Ceuta-4_3_I-1-1/obstacles/cr36.jsonl
+- id: cr310
+  kind: bicycle
+  length: 2.0
+  width: 0.68
+  at:
+    x: 212.867
+    y: 464.8498
+    heading: -3.6876
+  v: 0.3742
+  mode: recorded
+  trajectory: catalog/commonroad/ESP_Ceuta-4_3_I-1-1/obstacles/cr310.jsonl
+- id: cr321
+  kind: car
+  length: 5.0
+  width: 1.5011
+  at:
+    x: 222.6562
+    y: 462.6456
+    heading: 1.4125
+  v: 2.6171
+  mode: recorded
+  trajectory: catalog/commonroad/ESP_Ceuta-4_3_I-1-1/obstacles/cr321.jsonl
+- id: cr330
+  kind: car
+  length: 4.4829
+  width: 2.0
+  at:
+    x: 226.4998
+    y: 455.3712
+    heading: 2.2899
+  v: 1.9416
+  mode: recorded
+  trajectory: catalog/commonroad/ESP_Ceuta-4_3_I-1-1/obstacles/cr330.jsonl
+- id: cr338
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 243.1564
+    y: 444.5705
+    heading: 2.5465
+  v: 3.8965
+  mode: recorded
+  trajectory: catalog/commonroad/ESP_Ceuta-4_3_I-1-1/obstacles/cr338.jsonl
+- id: cr344
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 252.6845
+    y: 439.0316
+    heading: 2.5964
+  v: 3.849
+  mode: recorded
+  trajectory: catalog/commonroad/ESP_Ceuta-4_3_I-1-1/obstacles/cr344.jsonl
+- id: cr348
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 262.3305
+    y: 433.1789
+    heading: 2.596
+  v: 4.0748
+  mode: recorded
+  trajectory: catalog/commonroad/ESP_Ceuta-4_3_I-1-1/obstacles/cr348.jsonl
+- id: cr350
+  kind: car
+  length: 2.3523
+  width: 0.8
+  at:
+    x: 270.5779
+    y: 428.1722
+    heading: 2.5959
+  v: 3.085
+  mode: recorded
+  trajectory: catalog/commonroad/ESP_Ceuta-4_3_I-1-1/obstacles/cr350.jsonl
+- id: cr355
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 277.789
+    y: 423.7947
+    heading: 2.5959
+  v: 1.7828
+  mode: recorded
+  trajectory: catalog/commonroad/ESP_Ceuta-4_3_I-1-1/obstacles/cr355.jsonl
+expect:
+  goal: true
+  collisions: 0
+  violations: 0
+  off_lanelet: 0
+verdict:
+  exerciser: skip
+  sumo:
+    status: world
+    since:
+      worlds: 13b7dac
+      catalog: ef793dc
+    record: contact
+    note: contact

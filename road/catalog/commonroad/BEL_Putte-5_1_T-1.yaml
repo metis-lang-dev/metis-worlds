@@ -1,0 +1,167 @@
+card: 2
+set: working
+scenario: BEL_Putte-5_1_T-1
+title: CommonRoad BEL_Putte-5_1_T-1 (recorded / scenario-factory)
+source:
+  suite: commonroad
+  type: recorded/scenario-factory
+  code: /bigdata/datasets/commonroad/scenarios/scenarios/recorded/scenario-factory/BEL_Putte-5_1_T-1.xml
+  pin: commonroad-scenarios 2416dc27faf3ee36b6799f42712da72a34a2c8fd
+  license: CommonRoad scenarios, BSD 3-Clause License, Copyright (c) 2019 Technical University of Munich
+  tags:
+  - critical
+  - intersection
+  - simulated
+patches: []
+tags:
+- following
+- junction-priority
+- right-before-left
+- route-following
+- speed-limit
+exercises: 'the family on CommonRoad''s planning problem: the harvest''s mechanism 3691f55f (contact:behind)'
+map:
+  net: catalog/commonroad/BEL_Putte-5_1_T-1/BEL_Putte-5_1_T-1.net.xml
+  data: catalog/commonroad/BEL_Putte-5_1_T-1/cr.json
+  route_note: 'a time-only goal: the ego drives on'
+dt: 0.1
+ticks: 1500
+ego:
+  v: 4.989
+  at:
+    lane: '8040_0'
+    s: 65.97
+  route:
+  - '8040'
+  - '8051'
+  goal:
+    time:
+    - 3.3
+    - 3.3
+exerciser:
+  skip: 'a CommonRoad map: the exerciser has no net of its own'
+actors:
+- id: cr32
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 967.6198
+    y: 721.9656
+    heading: 1.7753
+  v: 0.0666
+  mode: recorded
+  trajectory: catalog/commonroad/BEL_Putte-5_1_T-1/obstacles/cr32.jsonl
+- id: cr33
+  kind: car
+  length: 2.5
+  width: 0.8
+  at:
+    x: 972.2756
+    y: 716.3308
+    heading: 3.5383
+  v: 1.7374
+  mode: recorded
+  trajectory: catalog/commonroad/BEL_Putte-5_1_T-1/obstacles/cr33.jsonl
+- id: cr34
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 941.0641
+    y: 701.04
+    heading: 0.3249
+  v: 0.0848
+  mode: recorded
+  trajectory: catalog/commonroad/BEL_Putte-5_1_T-1/obstacles/cr34.jsonl
+- id: cr310
+  kind: truck
+  length: 7.5
+  width: 2.6
+  at:
+    x: 970.5827
+    y: 711.2495
+    heading: 3.07
+  v: 7.3762
+  mode: recorded
+  trajectory: catalog/commonroad/BEL_Putte-5_1_T-1/obstacles/cr310.jsonl
+- id: cr312
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 982.2665
+    y: 715.4423
+    heading: -2.0211
+  v: 0.484
+  mode: recorded
+  trajectory: catalog/commonroad/BEL_Putte-5_1_T-1/obstacles/cr312.jsonl
+- id: cr317
+  kind: car
+  length: 5.0
+  width: 1.9928
+  at:
+    x: 1005.5741
+    y: 687.6859
+    heading: 2.3486
+  v: 6.221
+  mode: recorded
+  trajectory: catalog/commonroad/BEL_Putte-5_1_T-1/obstacles/cr317.jsonl
+- id: cr320
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 1013.6778
+    y: 679.459
+    heading: 2.3486
+  v: 2.1735
+  mode: recorded
+  trajectory: catalog/commonroad/BEL_Putte-5_1_T-1/obstacles/cr320.jsonl
+- id: cr323
+  kind: car
+  length: 4.8787
+  width: 2.0
+  at:
+    x: 1024.7815
+    y: 668.1859
+    heading: 2.3486
+  v: 4.7405
+  mode: recorded
+  trajectory: catalog/commonroad/BEL_Putte-5_1_T-1/obstacles/cr323.jsonl
+- id: cr325
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 996.7752
+    y: 727.5889
+    heading: 3.5882
+  v: 1.1654
+  mode: recorded
+  trajectory: catalog/commonroad/BEL_Putte-5_1_T-1/obstacles/cr325.jsonl
+- id: cr333
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 916.1109
+    y: 774.1293
+    heading: 5.4884
+  v: 23.2294
+  mode: recorded
+  trajectory: catalog/commonroad/BEL_Putte-5_1_T-1/obstacles/cr333.jsonl
+expect:
+  goal: true
+  collisions: 0
+  violations: 0
+  off_lanelet: 0
+verdict:
+  exerciser: skip
+  sumo:
+    status: world
+    since:
+      worlds: 13b7dac
+      catalog: ef793dc
+    record: contact
+    note: contact

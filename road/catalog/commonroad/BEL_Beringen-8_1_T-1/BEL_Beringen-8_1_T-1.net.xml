@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-06 19:12:58 by Eclipse SUMO netconvert Version 1.18.0
+<configuration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/netconvertConfiguration.xsd">
+
+    <input>
+        <sumo-net-file value="/home/axadmin/repo/perotheia-packages/.worlds/cr-cache/BEL_Beringen-8_1_T-1/BEL_Beringen-8_1_T-1.net.xml"/>
+        <node-files value="/home/axadmin/repo/perotheia-packages/.worlds/cr-cache/BEL_Beringen-8_1_T-1/rbl.nod.xml"/>
+    </input>
+
+    <output>
+        <output-file value="/home/axadmin/repo/perotheia-packages/.worlds/cr-cache/BEL_Beringen-8_1_T-1/rbl.BEL_Beringen-8_1_T-1.net.xml"/>
+    </output>
+
+    <processing>
+        <geometry.min-radius.fix.railways value="false"/>
+        <geometry.max-grade.fix value="false"/>
+        <offset.disable-normalization value="true"/>
+        <lefthand value="0"/>
+    </processing>
+
+    <junctions>
+        <no-turnarounds value="true"/>
+        <junctions.corner-detail value="5"/>
+        <junctions.internal-link-detail value="20"/>
+        <junctions.limit-turn-speed value="5.50"/>
+        <rectangular-lane-cut value="0"/>
+    </junctions>
+
+    <pedestrian>
+        <walkingareas value="0"/>
+    </pedestrian>
+
+    <report>
+        <no-warnings value="true"/>
+    </report>
+
+</configuration>
+-->
+
+<net version="1.16" junctionCornerDetail="5" junctionLinkDetail="20" limitTurnSpeed="5.50" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/net_file.xsd">
+
+    <location netOffset="0.00,0.00" convBoundary="903.07,774.33,1017.97,922.40" origBoundary="903.07,774.33,1017.97,922.40" projParameter="!"/>
+
+    <type id="highway.residential" priority="3" speed="13.89" disallow="pedestrian tram rail_urban rail rail_electric ship"/>
+    <type id="highway.residential_speed_13.89" priority="3" speed="13.89" disallow="pedestrian tram rail_urban rail rail_electric ship"/>
+
+    <edge id=":13_0" function="internal">
+        <lane id=":13_0_0" index="0" disallow="pedestrian tram rail_urban rail rail_electric ship" speed="8.96" length="19.27" width="3.50" shape="978.49,860.35 976.83,860.75 975.20,861.40 973.19,862.60 971.36,864.05 969.30,866.13 967.10,868.87 964.83,872.29 964.52,872.79"/>
+    </edge>
+    <edge id=":13_1" function="internal">
+        <lane id=":13_1_0" index="0" disallow="pedestrian tram rail_urban rail rail_electric ship" speed="13.89" length="31.72" width="3.50" shape="980.50,857.63 977.68,855.59 968.92,848.79 961.58,842.64 955.96,837.56"/>
+    </edge>
+    <edge id=":13_2" function="internal">
+        <lane id=":13_2_0" index="0" disallow="pedestrian tram rail_urban rail rail_electric ship" speed="13.89" length="31.26" width="3.50" shape="977.59,844.41 977.47,844.65 974.19,852.09 969.63,862.85 966.76,868.80 964.52,872.79"/>
+    </edge>
+    <edge id=":13_3" function="internal">
+        <lane id=":13_3_0" index="0" disallow="pedestrian tram rail_urban rail rail_electric ship" speed="13.89" length="42.08" width="3.50" shape="958.34,834.98 960.91,837.58 963.24,840.33 965.29,843.29 967.01,846.45 967.93,848.67 968.64,850.97 969.13,853.32 969.37,855.71 969.38,858.11 969.14,860.50 968.70,862.86 967.65,866.31 966.24,869.62 964.52,872.79"/>
+    </edge>
+    <edge id=":13_4" function="internal">
+        <lane id=":13_4_0" index="0" disallow="pedestrian tram rail_urban rail rail_electric ship" speed="13.80" length="37.31" width="3.50" shape="961.50,871.03 963.06,868.15 964.33,865.19 965.25,862.11 965.64,860.06 965.83,857.97 965.83,855.88 965.61,853.80 965.18,851.76 964.56,849.75 963.75,847.82 962.22,845.01 960.37,842.37 958.28,839.89 955.96,837.56"/>
+    </edge>
+
+    <edge id="102438" from="10" to="13" priority="3" type="highway.residential_speed_13.89" spreadType="center" length="70.00">
+        <lane id="102438_0" index="0" disallow="pedestrian tram rail_urban rail rail_electric ship" speed="13.89" length="70.00" width="3.50" customShape="1" shape="1017.97,774.33 1003.55,800.34 994.48,816.02 986.35,829.33 976.99,844.03"/>
+    </edge>
+    <edge id="102647" from="13" to="2" priority="3" type="highway.residential_speed_13.89" spreadType="center" length="70.00" shape="967.32,853.65 903.07,791.73">
+        <lane id="102647_0" index="0" disallow="pedestrian tram rail_urban rail rail_electric ship" speed="13.89" length="70.00" width="3.50" customShape="1" shape="955.96,837.56 942.71,825.34 929.18,813.41 915.02,801.44 903.07,791.73"/>
+    </edge>
+    <edge id="102648" from="4" to="13" priority="3" type="highway.residential_speed_13.89" spreadType="center" length="70.00" shape="905.48,789.19 969.75,851.13">
+        <lane id="102648_0" index="0" disallow="pedestrian tram rail_urban rail rail_electric ship" speed="13.89" length="70.00" width="3.50" customShape="1" shape="905.48,789.19 917.16,798.67 931.41,810.71 945.03,822.72 958.37,835.02"/>
+    </edge>
+    <edge id="102722" from="11" to="13" priority="3" type="highway.residential" spreadType="center" length="57.82" shape="931.71,920.58 966.97,851.54">
+        <lane id="102722_0" index="0" disallow="pedestrian tram rail_urban rail rail_electric ship" speed="13.89" length="57.82" width="3.50" customShape="1" shape="931.71,920.58 946.61,895.80 961.52,870.99"/>
+    </edge>
+    <edge id="102723" from="13" to="8" priority="3" type="highway.residential_speed_13.89" spreadType="center" length="57.88" shape="970.09,853.13 934.70,922.40">
+        <lane id="102723_0" index="0" disallow="pedestrian tram rail_urban rail rail_electric ship" speed="13.89" length="57.88" width="3.50" customShape="1" shape="964.52,872.79 949.61,897.60 934.70,922.40"/>
+    </edge>
+    <edge id="102775" from="12" to="13" priority="3" type="highway.residential_speed_13.89" spreadType="center" length="34.32">
+        <lane id="102775_0" index="0" disallow="pedestrian tram rail_urban rail rail_electric ship" speed="13.89" length="34.32" width="3.50" customShape="1" shape="1014.33,884.83 997.60,870.50 991.17,865.42 980.55,857.57"/>
+    </edge>
+
+    <junction id="10" type="dead_end" x="1017.97" y="774.33" incLanes="" intLanes="" shape="1016.44,773.48 1019.50,775.18"/>
+    <junction id="11" type="dead_end" x="931.71" y="920.58" incLanes="" intLanes="" shape="933.21,921.48 930.21,919.68"/>
+    <junction id="12" type="dead_end" x="1014.33" y="884.83" incLanes="" intLanes="" shape="1015.47,883.50 1013.19,886.16"/>
+    <junction id="13" type="right_before_left" x="968.51" y="852.37" incLanes="102775_0 102438_0 102648_0 102722_0" intLanes=":13_0_0 :13_1_0 :13_2_0 :13_3_0 :13_4_0" shape="979.51,858.98 981.59,856.16 979.57,854.42 978.14,852.63 977.32,850.79 977.10,848.90 977.48,846.96 978.47,844.97 975.51,843.09 972.78,843.55 970.44,842.43 967.45,840.42 963.81,837.51 959.52,833.70 954.77,838.85 959.21,843.67 962.23,848.65 963.81,853.78 963.98,859.07 962.71,864.50 960.02,870.09 966.02,873.69 969.25,868.53 972.08,864.46 974.53,861.47 976.58,859.55 978.24,858.72" rightOfWay="edgePriority">
+        <request index="0" response="00000" foes="01100" cont="0"/>
+        <request index="1" response="10000" foes="11100" cont="0"/>
+        <request index="2" response="00011" foes="01011" cont="0"/>
+        <request index="3" response="00111" foes="00111" cont="0"/>
+        <request index="4" response="00000" foes="00010" cont="0"/>
+    </junction>
+    <junction id="2" type="dead_end" x="903.07" y="791.73" incLanes="102647_0" intLanes="" shape="901.97,793.09 904.17,790.37"/>
+    <junction id="4" type="dead_end" x="905.48" y="789.19" incLanes="" intLanes="" shape="904.38,790.55 906.58,787.83"/>
+    <junction id="8" type="dead_end" x="934.70" y="922.40" incLanes="102723_0" intLanes="" shape="936.20,923.30 933.20,921.50"/>
+
+    <connection from="102438" to="102723" fromLane="0" toLane="0" contPos="-4.00" shape="982.83,834.85 980.23,839.22 977.47,844.65 974.19,852.09 969.63,862.85 966.76,868.80 964.52,872.79" via=":13_2_0" dir="s" state="="/>
+    <connection from="102648" to="102723" fromLane="0" toLane="0" contPos="-4.00" shape="958.37,835.02 960.91,837.58 963.24,840.33 965.29,843.29 967.01,846.45 967.93,848.67 968.64,850.97 969.13,853.32 969.37,855.71 969.38,858.11 969.14,860.50 968.70,862.86 967.65,866.31 966.24,869.62 964.52,872.79" via=":13_3_0" dir="l" state="="/>
+    <connection from="102722" to="102647" fromLane="0" toLane="0" contPos="-4.00" shape="961.50,871.03 963.06,868.15 964.33,865.19 965.25,862.11 965.64,860.06 965.83,857.97 965.83,855.88 965.61,853.80 965.18,851.76 964.56,849.75 963.75,847.82 962.22,845.01 960.37,842.37 958.28,839.89 955.96,837.56" via=":13_4_0" dir="r" state="M"/>
+    <connection from="102775" to="102723" fromLane="0" toLane="0" contPos="-4.00" shape="987.88,862.98 985.88,861.75 983.74,860.83 982.04,860.39 980.29,860.22 978.54,860.34 976.83,860.75 975.20,861.40 973.19,862.60 971.36,864.05 969.30,866.13 967.10,868.87 964.83,872.29 964.52,872.79" via=":13_0_0" dir="r" state="M"/>
+    <connection from="102775" to="102647" fromLane="0" toLane="0" contPos="-4.00" shape="987.88,862.98 977.68,855.59 968.92,848.79 961.58,842.64 955.96,837.56" via=":13_1_0" dir="s" state="="/>
+
+    <connection from=":13_0" to="102723" fromLane="0" toLane="0" dir="r" state="M"/>
+    <connection from=":13_1" to="102647" fromLane="0" toLane="0" dir="s" state="M"/>
+    <connection from=":13_2" to="102723" fromLane="0" toLane="0" dir="s" state="M"/>
+    <connection from=":13_3" to="102723" fromLane="0" toLane="0" dir="l" state="M"/>
+    <connection from=":13_4" to="102647" fromLane="0" toLane="0" dir="r" state="M"/>
+
+</net>

@@ -1,0 +1,144 @@
+card: 2
+set: working
+scenario: USA_Peach-4_3_T-1
+title: CommonRoad USA_Peach-4_3_T-1 (recorded / NGSIM)
+source:
+  suite: commonroad
+  type: recorded/NGSIM
+  code: /bigdata/datasets/commonroad/scenarios/scenarios/recorded/NGSIM/Peachtree/USA_Peach-4_3_T-1.xml
+  pin: commonroad-scenarios 2416dc27faf3ee36b6799f42712da72a34a2c8fd
+  license: CommonRoad scenarios, BSD 3-Clause License, Copyright (c) 2019 Technical University of Munich
+  tags:
+  - comfort
+  - intersection
+  - multi_lane
+  - oncoming_traffic
+  - speed_limit
+  - turn_left
+  - urban
+patches: []
+tags:
+- junction-priority
+- oncoming-pass
+- route-following
+- speed-limit
+- traffic-light
+- turning-left
+exercises: the family on CommonRoad's planning problem
+map:
+  net: catalog/commonroad/USA_Peach-4_3_T-1/USA_Peach-4_3_T-1.net.xml
+  data: catalog/commonroad/USA_Peach-4_3_T-1/cr.json
+dt: 0.1
+ticks: 1500
+ego:
+  v: 1.78
+  at:
+    lane: '43406_2'
+    s: 23.58
+  route:
+  - '43406'
+  - '43476'
+  goal:
+    region:
+      polygons:
+      - - - -7.5366
+          - 14.8412
+        - - -7.5439
+          - 12.8643
+        - - -11.7238
+          - 12.8798
+        - - -11.7165
+          - 14.8567
+        - - -7.5366
+          - 14.8412
+    time:
+    - 6.2
+    - 6.7
+    v:
+    - 3.7117
+    - 9.7117
+    heading:
+    - 2.9854
+    - 3.1599
+exerciser:
+  skip: 'a CommonRoad map: the exerciser has no net of its own'
+actors:
+- id: cr11
+  kind: car
+  length: 5.1206
+  width: 2.2555
+  at:
+    x: -0.7225
+    y: 25.5791
+    heading: -1.6496
+  v: 11.6616
+  mode: recorded
+  trajectory: catalog/commonroad/USA_Peach-4_3_T-1/obstacles/cr11.jsonl
+- id: cr17
+  kind: car
+  length: 5.1816
+  width: 2.1641
+  at:
+    x: 0.6681
+    y: 56.9789
+    heading: -1.5934
+  v: 13.0698
+  mode: recorded
+  trajectory: catalog/commonroad/USA_Peach-4_3_T-1/obstacles/cr17.jsonl
+- id: cr53
+  kind: car
+  length: 4.7244
+  width: 2.1336
+  at:
+    x: 3.6117
+    y: 55.1979
+    heading: -1.6066
+  v: 7.1201
+  mode: recorded
+  trajectory: catalog/commonroad/USA_Peach-4_3_T-1/obstacles/cr53.jsonl
+- id: cr98
+  kind: car
+  length: 12.0396
+  width: 2.1336
+  at:
+    x: 5.7852
+    y: 41.2379
+    heading: 1.5035
+  v: 9.7018
+  mode: recorded
+  trajectory: catalog/commonroad/USA_Peach-4_3_T-1/obstacles/cr98.jsonl
+- id: cr102
+  kind: car
+  length: 4.8768
+  width: 2.1336
+  at:
+    x: 2.4015
+    y: -20.5277
+    heading: 1.4899
+  v: 5.8552
+  mode: recorded
+  trajectory: catalog/commonroad/USA_Peach-4_3_T-1/obstacles/cr102.jsonl
+- id: cr104
+  kind: car
+  length: 5.0292
+  width: 2.1336
+  at:
+    x: 5.9744
+    y: -18.8191
+    heading: 1.5234
+  v: 11.0917
+  mode: recorded
+  trajectory: catalog/commonroad/USA_Peach-4_3_T-1/obstacles/cr104.jsonl
+expect:
+  goal: true
+  collisions: 0
+  violations: 0
+  off_lanelet: 0
+verdict:
+  exerciser: skip
+  sumo:
+    status: soft
+    since:
+      worlds: 13b7dac
+      catalog: ef793dc
+    note: goal:window

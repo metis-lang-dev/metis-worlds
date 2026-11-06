@@ -1,0 +1,70 @@
+card: 2
+set: regression
+scenario: ESP_Almansa-2_3_I-1-1
+title: CommonRoad ESP_Almansa-2_3_I-1-1 (interactive / scenario-factory)
+source:
+  suite: commonroad
+  type: interactive/scenario-factory
+  code: /bigdata/datasets/commonroad/scenarios/scenarios/interactive/scenario-factory/ESP_Almansa-2_3_I-1-1/ESP_Almansa-2_3_I-1-1.cr.xml
+  pin: commonroad-interactive-scenarios 749e342013cc069980039fa91ba587f62993aaaf
+  license: CommonRoad interactive scenarios, BSD 3-Clause License, Copyright (c) 2023 Technical University of Munich
+  tags:
+  - critical
+  - intersection
+  - simulated
+patches: []
+tags:
+- junction-priority
+- right-before-left
+- route-following
+- speed-limit
+exercises: the family on CommonRoad's planning problem
+map:
+  net: catalog/commonroad/ESP_Almansa-2_3_I-1-1/ESP_Almansa-2_3_I-1-1.net.xml
+  data: catalog/commonroad/ESP_Almansa-2_3_I-1-1/cr.json
+  route_note: 'a time-only goal: the ego drives on'
+dt: 0.1
+ticks: 1500
+ego:
+  v: 9.263
+  at:
+    lane: '10579_0'
+    s: 16.55
+  route:
+  - '10579'
+  - '10420'
+  - '9995'
+  - '10453'
+  - '10575'
+  - '10572'
+  - '10316'
+  goal:
+    time:
+    - 3.3
+    - 3.3
+exerciser:
+  skip: 'a CommonRoad map: the exerciser has no net of its own'
+actors:
+- id: cr310
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: -335.9669
+    y: 469.2078
+    heading: 0.7711
+  v: 6.8682
+  mode: recorded
+  trajectory: catalog/commonroad/ESP_Almansa-2_3_I-1-1/obstacles/cr310.jsonl
+expect:
+  goal: true
+  collisions: 0
+  violations: 0
+  off_lanelet: 0
+verdict:
+  exerciser: skip
+  sumo:
+    status: pass
+    since:
+      worlds: 13b7dac
+      catalog: ef793dc

@@ -1,0 +1,97 @@
+card: 2
+set: working
+scenario: ZAM_Zip-1_30_T-1
+title: CommonRoad ZAM_Zip-1_30_T-1 (recorded / hand-crafted)
+source:
+  suite: commonroad
+  type: recorded/hand-crafted
+  code: /bigdata/datasets/commonroad/scenarios/scenarios/recorded/hand-crafted/ZAM_Zip-1_30_T-1.xml
+  pin: commonroad-scenarios 2416dc27faf3ee36b6799f42712da72a34a2c8fd
+  license: CommonRoad scenarios, BSD 3-Clause License, Copyright (c) 2019 Technical University of Munich
+  tags:
+  - highway
+  - lane_change
+  - merging_lanes
+  - parallel_lanes
+  - single_lane
+patches: []
+tags:
+- lane-change
+- merge-zipper
+- route-following
+- speed-limit
+exercises: 'the family on CommonRoad''s planning problem: the harvest''s mechanism c5423b21 (violation)'
+map:
+  net: catalog/commonroad/ZAM_Zip-1_30_T-1/ZAM_Zip-1_30_T-1.net.xml
+  data: catalog/commonroad/ZAM_Zip-1_30_T-1/cr.json
+dt: 0.1
+ticks: 1500
+ego:
+  v: 9.615
+  at:
+    lane: '26_1'
+    s: 60.57
+  route:
+  - '26'
+  - '24'
+  goal:
+    region:
+      lanelets:
+      - 27
+      - 28
+    time:
+    - 8.4
+    - 8.5
+    v:
+    - 0.0
+    - 16.95
+exerciser:
+  skip: 'a CommonRoad map: the exerciser has no net of its own'
+actors:
+- id: cr1
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: -100.2593
+    y: 9.3817
+    heading: -0.0499
+  v: 9.9054
+  mode: recorded
+  trajectory: catalog/commonroad/ZAM_Zip-1_30_T-1/obstacles/cr1.jsonl
+- id: cr2
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: -85.2438
+    y: 5.4204
+    heading: 0.0029
+  v: 9.9013
+  mode: recorded
+  trajectory: catalog/commonroad/ZAM_Zip-1_30_T-1/obstacles/cr2.jsonl
+- id: cr3
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: -70.2439
+    y: 5.465
+    heading: 0.0033
+  v: 9.9013
+  mode: recorded
+  trajectory: catalog/commonroad/ZAM_Zip-1_30_T-1/obstacles/cr3.jsonl
+expect:
+  goal: true
+  collisions: 0
+  violations: 0
+  off_lanelet: 0
+verdict:
+  exerciser: skip
+  sumo:
+    status: fail
+    since:
+      worlds: 13b7dac
+      catalog: ef793dc
+    record: 20261106T161508-8c86d9
+    note: violation

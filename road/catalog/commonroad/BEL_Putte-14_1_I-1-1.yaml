@@ -1,0 +1,109 @@
+card: 2
+set: working
+scenario: BEL_Putte-14_1_I-1-1
+title: CommonRoad BEL_Putte-14_1_I-1-1 (interactive / scenario-factory)
+source:
+  suite: commonroad
+  type: interactive/scenario-factory
+  code: /bigdata/datasets/commonroad/scenarios/scenarios/interactive/scenario-factory/BEL_Putte-14_1_I-1-1/BEL_Putte-14_1_I-1-1.cr.xml
+  pin: commonroad-interactive-scenarios 749e342013cc069980039fa91ba587f62993aaaf
+  license: CommonRoad interactive scenarios, BSD 3-Clause License, Copyright (c) 2023 Technical University of Munich
+  tags:
+  - critical
+  - simulated
+patches: []
+tags:
+- cyclist
+- route-following
+- speed-limit
+exercises: 'the family on CommonRoad''s planning problem: the harvest''s mechanism 26688b24 (contact)'
+map:
+  net: catalog/commonroad/BEL_Putte-14_1_I-1-1/BEL_Putte-14_1_I-1-1.net.xml
+  data: catalog/commonroad/BEL_Putte-14_1_I-1-1/cr.json
+  route_note: 'a time-only goal: the ego drives on'
+dt: 0.1
+ticks: 1500
+ego:
+  v: 12.484
+  at:
+    lane: '13130_0'
+    s: 64.86
+  route:
+  - '13130'
+  - '13089'
+  goal:
+    time:
+    - 3.3
+    - 3.3
+exerciser:
+  skip: 'a CommonRoad map: the exerciser has no net of its own'
+actors:
+- id: cr315
+  kind: bicycle
+  length: 2.0
+  width: 0.5792
+  at:
+    x: 537.9981
+    y: 847.93
+    heading: 2.6986
+  v: 3.4865
+  mode: recorded
+  trajectory: catalog/commonroad/BEL_Putte-14_1_I-1-1/obstacles/cr315.jsonl
+- id: cr317
+  kind: bicycle
+  length: 1.8829
+  width: 0.68
+  at:
+    x: 577.1579
+    y: 831.122
+    heading: 2.8257
+  v: 5.0251
+  mode: recorded
+  trajectory: catalog/commonroad/BEL_Putte-14_1_I-1-1/obstacles/cr317.jsonl
+- id: cr318
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 561.4767
+    y: 835.3136
+    heading: 2.7272
+  v: 10.1108
+  mode: recorded
+  trajectory: catalog/commonroad/BEL_Putte-14_1_I-1-1/obstacles/cr318.jsonl
+- id: cr319
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 584.2161
+    y: 827.2826
+    heading: 2.9072
+  v: 8.0069
+  mode: recorded
+  trajectory: catalog/commonroad/BEL_Putte-14_1_I-1-1/obstacles/cr319.jsonl
+- id: cr321
+  kind: car
+  length: 5.0
+  width: 1.7445
+  at:
+    x: 606.1057
+    y: 821.8986
+    heading: 2.8854
+  v: 12.7604
+  mode: recorded
+  trajectory: catalog/commonroad/BEL_Putte-14_1_I-1-1/obstacles/cr321.jsonl
+expect:
+  goal: true
+  collisions: 0
+  violations: 0
+  off_lanelet: 0
+verdict:
+  exerciser: skip
+  sumo:
+    status: fail
+    since:
+      worlds: 13b7dac
+      catalog: ef793dc
+    record: 20261106T181553-b42784
+    note: contact

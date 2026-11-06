@@ -1,0 +1,101 @@
+card: 2
+set: regression
+scenario: BEL_Nivelles-3_2_T-1
+title: CommonRoad BEL_Nivelles-3_2_T-1 (recorded / scenario-factory)
+source:
+  suite: commonroad
+  type: recorded/scenario-factory
+  code: /bigdata/datasets/commonroad/scenarios/scenarios/recorded/scenario-factory/BEL_Nivelles-3_2_T-1.xml
+  pin: commonroad-scenarios 2416dc27faf3ee36b6799f42712da72a34a2c8fd
+  license: CommonRoad scenarios, BSD 3-Clause License, Copyright (c) 2019 Technical University of Munich
+  tags:
+  - critical
+  - intersection
+  - simulated
+patches: []
+tags:
+- cyclist
+- junction-priority
+- right-before-left
+- route-following
+- speed-limit
+exercises: the family on CommonRoad's planning problem
+map:
+  net: catalog/commonroad/BEL_Nivelles-3_2_T-1/BEL_Nivelles-3_2_T-1.net.xml
+  data: catalog/commonroad/BEL_Nivelles-3_2_T-1/cr.json
+  route_note: 'a time-only goal: the ego drives on'
+dt: 0.1
+ticks: 1500
+ego:
+  v: 8.995
+  at:
+    lane: '10691_0'
+    s: 69.0
+  route:
+  - '10691'
+  - '10721'
+  - '10808'
+  - '10709'
+  goal:
+    time:
+    - 3.3
+    - 3.3
+exerciser:
+  skip: 'a CommonRoad map: the exerciser has no net of its own'
+actors:
+- id: cr312
+  kind: car
+  length: 5.0
+  width: 1.7461
+  at:
+    x: -881.8445
+    y: -657.8573
+    heading: -3.6988
+  v: 0.4643
+  mode: recorded
+  trajectory: catalog/commonroad/BEL_Nivelles-3_2_T-1/obstacles/cr312.jsonl
+- id: cr329
+  kind: car
+  length: 5.0
+  width: 1.9329
+  at:
+    x: -888.2929
+    y: -654.855
+    heading: -0.3256
+  v: 0.8986
+  mode: recorded
+  trajectory: catalog/commonroad/BEL_Nivelles-3_2_T-1/obstacles/cr329.jsonl
+- id: cr331
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: -869.0171
+    y: -619.2897
+    heading: 0.289
+  v: 6.3008
+  mode: recorded
+  trajectory: catalog/commonroad/BEL_Nivelles-3_2_T-1/obstacles/cr331.jsonl
+- id: cr335
+  kind: bicycle
+  length: 2.0
+  width: 0.68
+  at:
+    x: -916.7272
+    y: -635.6821
+    heading: -0.6272
+  v: 6.7713
+  mode: recorded
+  trajectory: catalog/commonroad/BEL_Nivelles-3_2_T-1/obstacles/cr335.jsonl
+expect:
+  goal: true
+  collisions: 0
+  violations: 0
+  off_lanelet: 0
+verdict:
+  exerciser: skip
+  sumo:
+    status: pass
+    since:
+      worlds: 13b7dac
+      catalog: ef793dc

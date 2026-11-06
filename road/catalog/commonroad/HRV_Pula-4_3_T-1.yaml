@@ -1,0 +1,171 @@
+card: 2
+set: working
+scenario: HRV_Pula-4_3_T-1
+title: CommonRoad HRV_Pula-4_3_T-1 (recorded / scenario-factory)
+source:
+  suite: commonroad
+  type: recorded/scenario-factory
+  code: /bigdata/datasets/commonroad/scenarios/scenarios/recorded/scenario-factory/HRV_Pula-4_3_T-1.xml
+  pin: commonroad-scenarios 2416dc27faf3ee36b6799f42712da72a34a2c8fd
+  license: CommonRoad scenarios, BSD 3-Clause License, Copyright (c) 2019 Technical University of Munich
+  tags:
+  - critical
+  - intersection
+  - simulated
+patches: []
+tags:
+- cyclist
+- following
+- junction-priority
+- right-before-left
+- route-following
+- speed-limit
+exercises: 'the family on CommonRoad''s planning problem: the harvest''s mechanism 3691f55f (contact:behind)'
+map:
+  net: catalog/commonroad/HRV_Pula-4_3_T-1/HRV_Pula-4_3_T-1.net.xml
+  data: catalog/commonroad/HRV_Pula-4_3_T-1/cr.json
+  route_note: 'a time-only goal: the ego drives on'
+dt: 0.1
+ticks: 1500
+ego:
+  v: 2.402
+  at:
+    lane: '10538_0'
+    s: 69.02
+  route:
+  - '10538'
+  - '10565'
+  - '10562'
+  - '10559'
+  - '10556'
+  goal:
+    time:
+    - 3.3
+    - 3.3
+exerciser:
+  skip: 'a CommonRoad map: the exerciser has no net of its own'
+actors:
+- id: cr34
+  kind: car
+  length: 4.8279
+  width: 1.8474
+  at:
+    x: -131.7925
+    y: 443.8086
+    heading: -4.5133
+  v: 8.3252
+  mode: recorded
+  trajectory: catalog/commonroad/HRV_Pula-4_3_T-1/obstacles/cr34.jsonl
+- id: cr39
+  kind: bicycle
+  length: 2.0
+  width: 0.68
+  at:
+    x: -101.5026
+    y: 434.0566
+    heading: -2.9462
+  v: 1.7625
+  mode: recorded
+  trajectory: catalog/commonroad/HRV_Pula-4_3_T-1/obstacles/cr39.jsonl
+- id: cr321
+  kind: car
+  length: 3.7253
+  width: 2.0
+  at:
+    x: -101.9506
+    y: 431.7665
+    heading: -2.9497
+  v: 4.0396
+  mode: recorded
+  trajectory: catalog/commonroad/HRV_Pula-4_3_T-1/obstacles/cr321.jsonl
+- id: cr333
+  kind: bicycle
+  length: 2.0
+  width: 0.68
+  at:
+    x: -97.4103
+    y: 434.8634
+    heading: -2.944
+  v: 2.0375
+  mode: recorded
+  trajectory: catalog/commonroad/HRV_Pula-4_3_T-1/obstacles/cr333.jsonl
+- id: cr339
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: -85.2962
+    y: 435.9106
+    heading: -2.7988
+  v: 2.2943
+  mode: recorded
+  trajectory: catalog/commonroad/HRV_Pula-4_3_T-1/obstacles/cr339.jsonl
+- id: cr340
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: -129.7091
+    y: 411.6606
+    heading: -4.6551
+  v: 7.0201
+  mode: recorded
+  trajectory: catalog/commonroad/HRV_Pula-4_3_T-1/obstacles/cr340.jsonl
+- id: cr345
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: -129.2862
+    y: 402.1068
+    heading: -4.6681
+  v: 6.2286
+  mode: recorded
+  trajectory: catalog/commonroad/HRV_Pula-4_3_T-1/obstacles/cr345.jsonl
+- id: cr347
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: -72.2331
+    y: 439.0408
+    heading: -2.9118
+  v: 2.2714
+  mode: recorded
+  trajectory: catalog/commonroad/HRV_Pula-4_3_T-1/obstacles/cr347.jsonl
+- id: cr349
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: -129.0197
+    y: 394.669
+    heading: -4.6822
+  v: 6.3168
+  mode: recorded
+  trajectory: catalog/commonroad/HRV_Pula-4_3_T-1/obstacles/cr349.jsonl
+- id: cr351
+  kind: car
+  length: 5.0
+  width: 1.9899
+  at:
+    x: -63.3341
+    y: 441.0249
+    heading: -2.9245
+  v: 2.423
+  mode: recorded
+  trajectory: catalog/commonroad/HRV_Pula-4_3_T-1/obstacles/cr351.jsonl
+expect:
+  goal: true
+  collisions: 0
+  violations: 0
+  off_lanelet: 0
+verdict:
+  exerciser: skip
+  sumo:
+    status: world
+    since:
+      worlds: 13b7dac
+      catalog: ef793dc
+    record: contact
+    note: contact

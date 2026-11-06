@@ -1,0 +1,655 @@
+card: 2
+set: working
+scenario: DEU_Reutlingen-2_1_I-1-1
+title: CommonRoad DEU_Reutlingen-2_1_I-1-1 (interactive / SUMO)
+source:
+  suite: commonroad
+  type: interactive/SUMO
+  code: /bigdata/datasets/commonroad/scenarios/scenarios/interactive/SUMO/DEU_Reutlingen-2_1_I-1-1/DEU_Reutlingen-2_1_I-1-1.cr.xml
+  pin: commonroad-interactive-scenarios 749e342013cc069980039fa91ba587f62993aaaf
+  license: CommonRoad interactive scenarios, BSD 3-Clause License, Copyright (c) 2023 Technical University of Munich
+  tags:
+  - critical
+  - intersection
+  - simulated
+patches: []
+tags:
+- cyclist
+- junction-priority
+- right-before-left
+- route-following
+- speed-limit
+exercises: 'the family on CommonRoad''s planning problem: the harvest''s mechanism 54257713 (contact:initial)'
+map:
+  net: catalog/commonroad/DEU_Reutlingen-2_1_I-1-1/DEU_Reutlingen-2_1_I-1-1.net.xml
+  data: catalog/commonroad/DEU_Reutlingen-2_1_I-1-1/cr.json
+dt: 0.1
+ticks: 1500
+ego:
+  v: 6.287
+  at:
+    lane: '517_0'
+    s: 11.13
+  route:
+  - '517'
+  - '13'
+  - '10'
+  - '349'
+  goal:
+    region:
+      lanelets:
+      - 349
+    time:
+    - 9.9
+    - 10.0
+exerciser:
+  skip: 'a CommonRoad map: the exerciser has no net of its own'
+actors:
+- id: cr30
+  kind: truck
+  length: 7.5
+  width: 2.4387
+  at:
+    x: -176.7265
+    y: 411.6503
+    heading: -0.5279
+  v: 0.0
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Reutlingen-2_1_I-1-1/obstacles/cr30.jsonl
+- id: cr31
+  kind: car
+  length: 4.7134
+  width: 1.7057
+  at:
+    x: -234.1365
+    y: 361.7376
+    heading: -4.3764
+  v: 0.0002
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Reutlingen-2_1_I-1-1/obstacles/cr31.jsonl
+- id: cr32
+  kind: car
+  length: 4.8714
+  width: 1.9124
+  at:
+    x: -152.7071
+    y: 421.81
+    heading: 0.9932
+  v: 11.1374
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Reutlingen-2_1_I-1-1/obstacles/cr32.jsonl
+- id: cr33
+  kind: car
+  length: 1.7
+  width: 0.5923
+  at:
+    x: -175.0057
+    y: 393.0224
+    heading: -2.1
+  v: 0.0
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Reutlingen-2_1_I-1-1/obstacles/cr33.jsonl
+- id: cr34
+  kind: car
+  length: 4.2504
+  width: 1.6445
+  at:
+    x: -231.8335
+    y: 355.1432
+    heading: -4.3764
+  v: 0.0018
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Reutlingen-2_1_I-1-1/obstacles/cr34.jsonl
+- id: cr36
+  kind: car
+  length: 4.2
+  width: 1.8028
+  at:
+    x: -212.035
+    y: 384.6684
+    heading: -3.1026
+  v: 14.6246
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Reutlingen-2_1_I-1-1/obstacles/cr36.jsonl
+- id: cr37
+  kind: bicycle
+  length: 1.6764
+  width: 0.4093
+  at:
+    x: -236.3059
+    y: 373.4278
+    heading: 1.6694
+  v: 2.3082
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Reutlingen-2_1_I-1-1/obstacles/cr37.jsonl
+- id: cr39
+  kind: car
+  length: 5.0
+  width: 1.6
+  at:
+    x: -204.1975
+    y: 381.2335
+    heading: -0.0489
+  v: 0.0191
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Reutlingen-2_1_I-1-1/obstacles/cr39.jsonl
+- id: cr312
+  kind: bicycle
+  length: 1.2
+  width: 0.68
+  at:
+    x: -188.6132
+    y: 415.6086
+    heading: -0.2875
+  v: 0.0
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Reutlingen-2_1_I-1-1/obstacles/cr312.jsonl
+- id: cr313
+  kind: car
+  length: 4.2
+  width: 1.8066
+  at:
+    x: -160.5328
+    y: 450.2157
+    heading: -0.5033
+  v: 0.0017
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Reutlingen-2_1_I-1-1/obstacles/cr313.jsonl
+- id: cr316
+  kind: car
+  length: 4.6777
+  width: 1.9148
+  at:
+    x: -177.6593
+    y: 387.9973
+    heading: -2.0314
+  v: 0.0
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Reutlingen-2_1_I-1-1/obstacles/cr316.jsonl
+- id: cr318
+  kind: car
+  length: 4.7151
+  width: 1.9708
+  at:
+    x: -156.5885
+    y: 422.272
+    heading: -2.1478
+  v: 0.0168
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Reutlingen-2_1_I-1-1/obstacles/cr318.jsonl
+- id: cr320
+  kind: car
+  length: 4.839
+  width: 1.7904
+  at:
+    x: -184.4657
+    y: 415.522
+    heading: -0.3895
+  v: 0.0
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Reutlingen-2_1_I-1-1/obstacles/cr320.jsonl
+- id: cr321
+  kind: truck
+  length: 6.7
+  width: 2.2539
+  at:
+    x: -153.6148
+    y: 446.2948
+    heading: -0.52
+  v: 0.0
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Reutlingen-2_1_I-1-1/obstacles/cr321.jsonl
+- id: cr322
+  kind: car
+  length: 5.0
+  width: 1.7311
+  at:
+    x: -236.7721
+    y: 368.6112
+    heading: -4.3764
+  v: 0.0
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Reutlingen-2_1_I-1-1/obstacles/cr322.jsonl
+- id: cr324
+  kind: car
+  length: 4.719
+  width: 1.7666
+  at:
+    x: -166.7496
+    y: 453.3624
+    heading: -0.415
+  v: 0.0142
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Reutlingen-2_1_I-1-1/obstacles/cr324.jsonl
+- id: cr327
+  kind: car
+  length: 4.9606
+  width: 1.8173
+  at:
+    x: -167.0616
+    y: 371.8376
+    heading: 2.5224
+  v: 5.1067
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Reutlingen-2_1_I-1-1/obstacles/cr327.jsonl
+- id: cr328
+  kind: car
+  length: 5.0
+  width: 1.6893
+  at:
+    x: -173.6171
+    y: 456.1569
+    heading: -0.3661
+  v: 0.0619
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Reutlingen-2_1_I-1-1/obstacles/cr328.jsonl
+- id: cr329
+  kind: car
+  length: 4.2
+  width: 1.8268
+  at:
+    x: -172.2095
+    y: 397.7031
+    heading: -2.111
+  v: 0.0032
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Reutlingen-2_1_I-1-1/obstacles/cr329.jsonl
+- id: cr330
+  kind: car
+  length: 4.2
+  width: 1.9424
+  at:
+    x: -160.3977
+    y: 416.4199
+    heading: -2.1478
+  v: 0.0
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Reutlingen-2_1_I-1-1/obstacles/cr330.jsonl
+- id: cr331
+  kind: car
+  length: 4.8743
+  width: 1.8448
+  at:
+    x: -190.469
+    y: 378.7093
+    heading: -0.2903
+  v: 0.0
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Reutlingen-2_1_I-1-1/obstacles/cr331.jsonl
+- id: cr332
+  kind: car
+  length: 1.7
+  width: 0.4851
+  at:
+    x: -167.1563
+    y: 396.4052
+    heading: 1.0309
+  v: 11.617
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Reutlingen-2_1_I-1-1/obstacles/cr332.jsonl
+- id: cr334
+  kind: car
+  length: 5.0
+  width: 1.8813
+  at:
+    x: -229.4808
+    y: 348.4062
+    heading: -4.3764
+  v: 0.0097
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Reutlingen-2_1_I-1-1/obstacles/cr334.jsonl
+- id: cr335
+  kind: car
+  length: 4.2
+  width: 1.8128
+  at:
+    x: -180.515
+    y: 458.406
+    heading: -0.2548
+  v: 0.1667
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Reutlingen-2_1_I-1-1/obstacles/cr335.jsonl
+- id: cr336
+  kind: truck
+  length: 11.8546
+  width: 2.5548
+  at:
+    x: -150.58
+    y: 431.4949
+    heading: -2.1483
+  v: 0.2232
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Reutlingen-2_1_I-1-1/obstacles/cr336.jsonl
+- id: cr338
+  kind: bicycle
+  length: 1.5341
+  width: 0.4422
+  at:
+    x: -139.1215
+    y: 451.9952
+    heading: -2.1455
+  v: 0.0
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Reutlingen-2_1_I-1-1/obstacles/cr338.jsonl
+- id: cr339
+  kind: car
+  length: 4.2
+  width: 1.6
+  at:
+    x: -197.3401
+    y: 380.3024
+    heading: -0.226
+  v: 0.0003
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Reutlingen-2_1_I-1-1/obstacles/cr339.jsonl
+- id: cr340
+  kind: car
+  length: 1.7
+  width: 0.4
+  at:
+    x: -189.4931
+    y: 376.5301
+    heading: -0.3075
+  v: 0.0
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Reutlingen-2_1_I-1-1/obstacles/cr340.jsonl
+- id: cr342
+  kind: car
+  length: 4.2
+  width: 1.8517
+  at:
+    x: -156.5134
+    y: 362.2058
+    heading: 2.3296
+  v: 7.3756
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Reutlingen-2_1_I-1-1/obstacles/cr342.jsonl
+- id: cr343
+  kind: car
+  length: 4.5398
+  width: 1.6862
+  at:
+    x: -227.0718
+    y: 341.508
+    heading: -4.3764
+  v: 0.0375
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Reutlingen-2_1_I-1-1/obstacles/cr343.jsonl
+- id: cr344
+  kind: car
+  length: 4.4908
+  width: 1.7846
+  at:
+    x: -171.734
+    y: 459.1648
+    heading: 2.7696
+  v: 11.9228
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Reutlingen-2_1_I-1-1/obstacles/cr344.jsonl
+- id: cr345
+  kind: car
+  length: 4.3501
+  width: 1.6
+  at:
+    x: -187.4601
+    y: 459.9881
+    heading: -0.2057
+  v: 0.353
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Reutlingen-2_1_I-1-1/obstacles/cr345.jsonl
+- id: cr347
+  kind: car
+  length: 4.7822
+  width: 1.8316
+  at:
+    x: -224.6775
+    y: 334.6519
+    heading: -4.3764
+  v: 0.1015
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Reutlingen-2_1_I-1-1/obstacles/cr347.jsonl
+- id: cr352
+  kind: car
+  length: 5.0
+  width: 1.6024
+  at:
+    x: -136.7684
+    y: 452.5359
+    heading: -2.1455
+  v: 0.0
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Reutlingen-2_1_I-1-1/obstacles/cr352.jsonl
+- id: cr353
+  kind: car
+  length: 2.5
+  width: 0.5552
+  at:
+    x: -193.8827
+    y: 461.1113
+    heading: -0.1569
+  v: 0.579
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Reutlingen-2_1_I-1-1/obstacles/cr353.jsonl
+- id: cr354
+  kind: car
+  length: 4.2
+  width: 1.8553
+  at:
+    x: -130.6308
+    y: 331.2452
+    heading: 2.163
+  v: 16.2865
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Reutlingen-2_1_I-1-1/obstacles/cr354.jsonl
+- id: cr355
+  kind: car
+  length: 4.841
+  width: 1.8395
+  at:
+    x: -222.192
+    y: 327.5347
+    heading: -4.3764
+  v: 0.2354
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Reutlingen-2_1_I-1-1/obstacles/cr355.jsonl
+- id: cr358
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: -132.4878
+    y: 459.4262
+    heading: -2.1455
+  v: 0.6261
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Reutlingen-2_1_I-1-1/obstacles/cr358.jsonl
+- id: cr359
+  kind: car
+  length: 5.0
+  width: 1.9429
+  at:
+    x: -211.4401
+    y: 381.2033
+    heading: 0.0439
+  v: 0.1459
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Reutlingen-2_1_I-1-1/obstacles/cr359.jsonl
+- id: cr360
+  kind: truck
+  length: 12.4
+  width: 2.4557
+  at:
+    x: -100.9553
+    y: 282.6565
+    heading: 2.1042
+  v: 13.7834
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Reutlingen-2_1_I-1-1/obstacles/cr360.jsonl
+- id: cr361
+  kind: car
+  length: 4.6421
+  width: 1.8298
+  at:
+    x: -200.7647
+    y: 461.8911
+    heading: -0.078
+  v: 0.8128
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Reutlingen-2_1_I-1-1/obstacles/cr361.jsonl
+- id: cr362
+  kind: truck
+  length: 7.3537
+  width: 2.3512
+  at:
+    x: -220.6959
+    y: 380.5227
+    heading: 0.0856
+  v: 1.0073
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Reutlingen-2_1_I-1-1/obstacles/cr362.jsonl
+- id: cr363
+  kind: car
+  length: 5.0
+  width: 1.7941
+  at:
+    x: -127.2824
+    y: 467.5336
+    heading: -2.1352
+  v: 1.9713
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Reutlingen-2_1_I-1-1/obstacles/cr363.jsonl
+- id: cr364
+  kind: car
+  length: 4.2
+  width: 1.8272
+  at:
+    x: -219.7336
+    y: 320.495
+    heading: -4.3764
+  v: 0.4345
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Reutlingen-2_1_I-1-1/obstacles/cr364.jsonl
+- id: cr365
+  kind: bicycle
+  length: 2.0
+  width: 0.4648
+  at:
+    x: -222.5471
+    y: 378.8452
+    heading: 0.0899
+  v: 6.9145
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Reutlingen-2_1_I-1-1/obstacles/cr365.jsonl
+- id: cr366
+  kind: car
+  length: 4.8027
+  width: 1.8046
+  at:
+    x: -89.6695
+    y: 263.5084
+    heading: 2.1019
+  v: 12.957
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Reutlingen-2_1_I-1-1/obstacles/cr366.jsonl
+- id: cr368
+  kind: car
+  length: 4.686
+  width: 1.6961
+  at:
+    x: -121.5257
+    y: 476.6259
+    heading: -2.1352
+  v: 3.0419
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Reutlingen-2_1_I-1-1/obstacles/cr368.jsonl
+- id: cr370
+  kind: car
+  length: 2.5
+  width: 0.5266
+  at:
+    x: -116.1684
+    y: 485.2704
+    heading: -2.1141
+  v: 3.6714
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Reutlingen-2_1_I-1-1/obstacles/cr370.jsonl
+- id: cr371
+  kind: truck
+  length: 7.4682
+  width: 2.3905
+  at:
+    x: -253.3036
+    y: 372.5195
+    heading: 0.3156
+  v: 0.0
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Reutlingen-2_1_I-1-1/obstacles/cr371.jsonl
+- id: cr372
+  kind: car
+  length: 4.2
+  width: 1.8088
+  at:
+    x: -217.2963
+    y: 313.5155
+    heading: 1.9068
+  v: 0.6556
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Reutlingen-2_1_I-1-1/obstacles/cr372.jsonl
+- id: cr374
+  kind: car
+  length: 5.0
+  width: 1.8618
+  at:
+    x: -209.1012
+    y: 462.2419
+    heading: -0.0221
+  v: 1.0111
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Reutlingen-2_1_I-1-1/obstacles/cr374.jsonl
+- id: cr375
+  kind: car
+  length: 5.0
+  width: 1.8152
+  at:
+    x: -110.6887
+    y: 494.358
+    heading: -2.1113
+  v: 3.9969
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Reutlingen-2_1_I-1-1/obstacles/cr375.jsonl
+- id: cr377
+  kind: car
+  length: 5.0
+  width: 1.7741
+  at:
+    x: -261.7003
+    y: 369.7814
+    heading: 0.3149
+  v: 0.0786
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Reutlingen-2_1_I-1-1/obstacles/cr377.jsonl
+- id: cr378
+  kind: car
+  length: 4.2
+  width: 1.9155
+  at:
+    x: -105.6844
+    y: 502.906
+    heading: -2.0939
+  v: 3.2619
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Reutlingen-2_1_I-1-1/obstacles/cr378.jsonl
+expect:
+  goal: true
+  collisions: 0
+  violations: 0
+  off_lanelet: 0
+verdict:
+  exerciser: skip
+  sumo:
+    status: world
+    since:
+      worlds: 13b7dac
+      catalog: ef793dc
+    record: contact
+    note: contact

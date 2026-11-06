@@ -1,0 +1,355 @@
+card: 2
+set: working
+scenario: USA_US101-26_2_I-1-1
+title: CommonRoad USA_US101-26_2_I-1-1 (interactive / NGSIM)
+source:
+  suite: commonroad
+  type: interactive/NGSIM
+  code: /bigdata/datasets/commonroad/scenarios/scenarios/interactive/NGSIM/US101/USA_US101-26_2_I-1-1/USA_US101-26_2_I-1-1.cr.xml
+  pin: commonroad-interactive-scenarios 749e342013cc069980039fa91ba587f62993aaaf
+  license: CommonRoad interactive scenarios, BSD 3-Clause License, Copyright (c) 2023 Technical University of Munich
+  tags:
+  - comfort
+  - highway
+  - lane_change
+  - multi_lane
+  - no_oncoming_traffic
+  - parallel_lanes
+  - slip_road
+patches: []
+tags:
+- highway-ramp
+- lane-change
+- route-following
+exercises: the family on CommonRoad's planning problem
+map:
+  net: catalog/commonroad/USA_US101-26_2_I-1-1/USA_US101-26_2_I-1-1.net.xml
+  data: catalog/commonroad/USA_US101-26_2_I-1-1/cr.json
+  route_note: 'a time-only goal: the ego drives on'
+dt: 0.1
+ticks: 1500
+ego:
+  v: 12.728
+  at:
+    lane: '17_0'
+    s: 40.7
+  route:
+  - '17'
+  - '16'
+  goal:
+    time:
+    - 8.0
+    - 8.0
+exerciser:
+  skip: 'a CommonRoad map: the exerciser has no net of its own'
+actors:
+- id: cr2
+  kind: car
+  length: 4.4196
+  width: 1.4935
+  at:
+    x: 73.5589
+    y: -42.5653
+    heading: -0.7424
+  v: 15.5143
+  mode: recorded
+  trajectory: catalog/commonroad/USA_US101-26_2_I-1-1/obstacles/cr2.jsonl
+- id: cr4
+  kind: car
+  length: 4.8768
+  width: 1.4935
+  at:
+    x: 65.7018
+    y: -52.4381
+    heading: -0.7503
+  v: 12.6004
+  mode: recorded
+  trajectory: catalog/commonroad/USA_US101-26_2_I-1-1/obstacles/cr4.jsonl
+- id: cr5
+  kind: car
+  length: 5.1816
+  width: 2.4079
+  at:
+    x: 61.1243
+    y: -43.9668
+    heading: -0.7203
+  v: 12.0305
+  mode: recorded
+  trajectory: catalog/commonroad/USA_US101-26_2_I-1-1/obstacles/cr5.jsonl
+- id: cr6
+  kind: car
+  length: 4.2672
+  width: 1.4935
+  at:
+    x: 51.5551
+    y: -42.6546
+    heading: -0.7016
+  v: 13.0942
+  mode: recorded
+  trajectory: catalog/commonroad/USA_US101-26_2_I-1-1/obstacles/cr6.jsonl
+- id: cr8
+  kind: car
+  length: 4.7244
+  width: 1.6459
+  at:
+    x: 45.9992
+    y: -30.8201
+    heading: -0.7125
+  v: 12.2072
+  mode: recorded
+  trajectory: catalog/commonroad/USA_US101-26_2_I-1-1/obstacles/cr8.jsonl
+- id: cr9
+  kind: car
+  length: 5.7912
+  width: 1.9507
+  at:
+    x: 55.181
+    y: -34.592
+    heading: -0.7039
+  v: 15.0449
+  mode: recorded
+  trajectory: catalog/commonroad/USA_US101-26_2_I-1-1/obstacles/cr9.jsonl
+- id: cr10
+  kind: car
+  length: 5.1816
+  width: 2.1031
+  at:
+    x: 57.4893
+    y: -26.841
+    heading: -0.7024
+  v: 14.6213
+  mode: recorded
+  trajectory: catalog/commonroad/USA_US101-26_2_I-1-1/obstacles/cr10.jsonl
+- id: cr12
+  kind: car
+  length: 4.4196
+  width: 1.7983
+  at:
+    x: 42.1087
+    y: -14.1342
+    heading: -0.715
+  v: 15.2187
+  mode: recorded
+  trajectory: catalog/commonroad/USA_US101-26_2_I-1-1/obstacles/cr12.jsonl
+- id: cr13
+  kind: car
+  length: 4.8768
+  width: 1.4935
+  at:
+    x: 48.2624
+    y: -24.0085
+    heading: -0.714
+  v: 13.5514
+  mode: recorded
+  trajectory: catalog/commonroad/USA_US101-26_2_I-1-1/obstacles/cr13.jsonl
+- id: cr14
+  kind: car
+  length: 7.3152
+  width: 2.5908
+  at:
+    x: 37.7336
+    y: -27.7993
+    heading: -0.7141
+  v: 10.8295
+  mode: recorded
+  trajectory: catalog/commonroad/USA_US101-26_2_I-1-1/obstacles/cr14.jsonl
+- id: cr18
+  kind: car
+  length: 4.4196
+  width: 1.9507
+  at:
+    x: 23.8403
+    y: -19.3871
+    heading: -0.778
+  v: 13.7465
+  mode: recorded
+  trajectory: catalog/commonroad/USA_US101-26_2_I-1-1/obstacles/cr18.jsonl
+- id: cr20
+  kind: car
+  length: 5.334
+  width: 1.7983
+  at:
+    x: 25.2624
+    y: -8.2073
+    heading: -0.7142
+  v: 15.24
+  mode: recorded
+  trajectory: catalog/commonroad/USA_US101-26_2_I-1-1/obstacles/cr20.jsonl
+- id: cr21
+  kind: car
+  length: 5.4864
+  width: 2.1031
+  at:
+    x: 32.3929
+    y: -18.8263
+    heading: -0.7142
+  v: 12.192
+  mode: recorded
+  trajectory: catalog/commonroad/USA_US101-26_2_I-1-1/obstacles/cr21.jsonl
+- id: cr22
+  kind: car
+  length: 5.0292
+  width: 1.9507
+  at:
+    x: 32.8212
+    y: -10.4223
+    heading: -0.7142
+  v: 12.192
+  mode: recorded
+  trajectory: catalog/commonroad/USA_US101-26_2_I-1-1/obstacles/cr22.jsonl
+- id: cr23
+  kind: car
+  length: 4.2672
+  width: 1.6459
+  at:
+    x: 26.1525
+    y: -0.2012
+    heading: -0.7142
+  v: 13.716
+  mode: recorded
+  trajectory: catalog/commonroad/USA_US101-26_2_I-1-1/obstacles/cr23.jsonl
+- id: cr25
+  kind: car
+  length: 5.6388
+  width: 1.7983
+  at:
+    x: 9.9377
+    y: 0.9403
+    heading: -0.7142
+  v: 12.5608
+  mode: recorded
+  trajectory: catalog/commonroad/USA_US101-26_2_I-1-1/obstacles/cr25.jsonl
+- id: cr26
+  kind: car
+  length: 3.5052
+  width: 2.1336
+  at:
+    x: 20.5012
+    y: 0.2621
+    heading: -0.7142
+  v: 12.192
+  mode: recorded
+  trajectory: catalog/commonroad/USA_US101-26_2_I-1-1/obstacles/cr26.jsonl
+- id: cr27
+  kind: car
+  length: 5.4864
+  width: 1.9507
+  at:
+    x: 4.9801
+    y: 18.5419
+    heading: -0.7405
+  v: 14.7858
+  mode: recorded
+  trajectory: catalog/commonroad/USA_US101-26_2_I-1-1/obstacles/cr27.jsonl
+- id: cr31
+  kind: car
+  length: 4.7244
+  width: 2.1031
+  at:
+    x: 6.7062
+    y: -0.9942
+    heading: -0.7142
+  v: 13.713
+  mode: recorded
+  trajectory: catalog/commonroad/USA_US101-26_2_I-1-1/obstacles/cr31.jsonl
+- id: cr32
+  kind: car
+  length: 5.0292
+  width: 1.7983
+  at:
+    x: 7.353
+    y: 11.5501
+    heading: -0.7137
+  v: 12.951
+  mode: recorded
+  trajectory: catalog/commonroad/USA_US101-26_2_I-1-1/obstacles/cr32.jsonl
+- id: cr34
+  kind: car
+  length: 3.81
+  width: 1.8288
+  at:
+    x: -4.6128
+    y: 13.7651
+    heading: -0.7285
+  v: 12.0792
+  mode: recorded
+  trajectory: catalog/commonroad/USA_US101-26_2_I-1-1/obstacles/cr34.jsonl
+- id: cr35
+  kind: car
+  length: 3.6576
+  width: 1.524
+  at:
+    x: -13.9839
+    y: 18.3752
+    heading: -0.7938
+  v: 11.2776
+  mode: recorded
+  trajectory: catalog/commonroad/USA_US101-26_2_I-1-1/obstacles/cr35.jsonl
+- id: cr37
+  kind: car
+  length: 5.334
+  width: 2.2555
+  at:
+    x: -17.8235
+    y: 35.1794
+    heading: -0.766
+  v: 15.237
+  mode: recorded
+  trajectory: catalog/commonroad/USA_US101-26_2_I-1-1/obstacles/cr37.jsonl
+- id: cr39
+  kind: car
+  length: 5.334
+  width: 1.3411
+  at:
+    x: -12.3215
+    y: 35.8067
+    heading: -0.7669
+  v: 12.7742
+  mode: recorded
+  trajectory: catalog/commonroad/USA_US101-26_2_I-1-1/obstacles/cr39.jsonl
+- id: cr40
+  kind: car
+  length: 6.096
+  width: 1.9507
+  at:
+    x: -13.4776
+    y: 21.717
+    heading: -0.6939
+  v: 11.9207
+  mode: recorded
+  trajectory: catalog/commonroad/USA_US101-26_2_I-1-1/obstacles/cr40.jsonl
+- id: cr42
+  kind: car
+  length: 5.4864
+  width: 1.9507
+  at:
+    x: -11.1413
+    y: 10.4937
+    heading: -0.6709
+  v: 11.2959
+  mode: recorded
+  trajectory: catalog/commonroad/USA_US101-26_2_I-1-1/obstacles/cr42.jsonl
+- id: cr48
+  kind: car
+  length: 4.7244
+  width: 1.7983
+  at:
+    x: -23.6878
+    y: 26.8608
+    heading: -0.6813
+  v: 10.8143
+  mode: recorded
+  trajectory: catalog/commonroad/USA_US101-26_2_I-1-1/obstacles/cr48.jsonl
+expect:
+  goal: true
+  collisions: 0
+  violations: 0
+  off_lanelet: 0
+verdict:
+  exerciser: skip
+  sumo:
+    status: soft
+    since:
+      worlds: 13b7dac
+      catalog: ef793dc
+    note: goal:window

@@ -1,0 +1,101 @@
+card: 2
+set: regression
+scenario: DEU_Gar-1_2_I-1-1
+title: CommonRoad DEU_Gar-1_2_I-1-1 (interactive / hand-crafted)
+source:
+  suite: commonroad
+  type: interactive/hand-crafted
+  code: /bigdata/datasets/commonroad/scenarios/scenarios/interactive/hand-crafted/DEU_Gar-1_2_I-1-1/DEU_Gar-1_2_I-1-1.cr.xml
+  pin: commonroad-interactive-scenarios 749e342013cc069980039fa91ba587f62993aaaf
+  license: CommonRoad interactive scenarios, BSD 3-Clause License, Copyright (c) 2023 Technical University of Munich
+  tags:
+  - comfort
+  - lane_following
+  - merging_lanes
+  - multi_lane
+  - no_oncoming_traffic
+  - rural
+  - speed_limit
+patches: []
+tags:
+- merge-zipper
+- route-following
+exercises: the family on CommonRoad's planning problem
+map:
+  net: catalog/commonroad/DEU_Gar-1_2_I-1-1/DEU_Gar-1_2_I-1-1.net.xml
+  data: catalog/commonroad/DEU_Gar-1_2_I-1-1/cr.json
+  route_note: 'a time-only goal: the ego drives on'
+dt: 0.1
+ticks: 1500
+ego:
+  v: 17.0
+  at:
+    lane: '47238_1'
+    s: 98.24
+  route:
+  - '47238'
+  - '47242'
+  - '47246'
+  goal:
+    time:
+    - 2.0
+    - 2.0
+exerciser:
+  skip: 'a CommonRoad map: the exerciser has no net of its own'
+actors:
+- id: cr200
+  kind: car
+  length: 4.8
+  width: 2.0
+  at:
+    x: -1.0214
+    y: -3.0013
+    heading: 0.0
+  v: 16.0
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Gar-1_2_I-1-1/obstacles/cr200.jsonl
+- id: cr201
+  kind: car
+  length: 4.8
+  width: 2.0
+  at:
+    x: 13.64
+    y: 0.3974
+    heading: 0.0
+  v: 10.0
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Gar-1_2_I-1-1/obstacles/cr201.jsonl
+- id: cr202
+  kind: car
+  length: 4.8
+  width: 2.0
+  at:
+    x: 25.9368
+    y: -2.2842
+    heading: -0.0436
+  v: 10.0
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Gar-1_2_I-1-1/obstacles/cr202.jsonl
+- id: cr203
+  kind: car
+  length: 4.8
+  width: 2.0
+  at:
+    x: -19.4276
+    y: -3.5336
+    heading: 0.0
+  v: 12.0
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Gar-1_2_I-1-1/obstacles/cr203.jsonl
+expect:
+  goal: true
+  collisions: 0
+  violations: 0
+  off_lanelet: 0
+verdict:
+  exerciser: skip
+  sumo:
+    status: pass
+    since:
+      worlds: 13b7dac
+      catalog: ef793dc

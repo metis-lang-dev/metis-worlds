@@ -1,0 +1,61 @@
+card: 2
+set: regression
+scenario: ZAM_Urban-3_1
+title: CommonRoad ZAM_Urban-3_1 (recorded / hand-crafted)
+source:
+  suite: commonroad
+  type: recorded/hand-crafted
+  code: /bigdata/datasets/commonroad/scenarios/scenarios/recorded/hand-crafted/ZAM_Urban-3_1.xml
+  pin: commonroad-scenarios 2416dc27faf3ee36b6799f42712da72a34a2c8fd
+  license: CommonRoad scenarios, BSD 3-Clause License, Copyright (c) 2019 Technical University of Munich
+  tags:
+  - critical
+  - evasive
+  - multi_lane
+patches: []
+tags:
+- obstacle-static
+- route-following
+exercises: the family on CommonRoad's planning problem
+map:
+  net: catalog/commonroad/ZAM_Urban-3_1/ZAM_Urban-3_1.net.xml
+  data: catalog/commonroad/ZAM_Urban-3_1/cr.json
+  route_note: 'a time-only goal: the ego drives on'
+dt: 0.25
+ticks: 1500
+ego:
+  v: 13.06
+  at:
+    lane: '1_0'
+    s: 59.56
+  route:
+  - '1'
+  goal:
+    time:
+    - 5.75
+    - 6.0
+exerciser:
+  skip: 'a CommonRoad map: the exerciser has no net of its own'
+actors:
+- id: cr55371
+  kind: static
+  length: 1.8
+  width: 1.3474
+  at:
+    x: 72.16
+    y: 0.1
+    heading: 0.09
+  v: 0.0
+  mode: static
+expect:
+  goal: true
+  collisions: 0
+  violations: 0
+  off_lanelet: 0
+verdict:
+  exerciser: skip
+  sumo:
+    status: pass
+    since:
+      worlds: 13b7dac
+      catalog: ef793dc

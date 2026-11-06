@@ -1,0 +1,166 @@
+card: 2
+set: regression
+scenario: ITA_Empoli-8_1_T-1
+title: CommonRoad ITA_Empoli-8_1_T-1 (recorded / scenario-factory)
+source:
+  suite: commonroad
+  type: recorded/scenario-factory
+  code: /bigdata/datasets/commonroad/scenarios/scenarios/recorded/scenario-factory/ITA_Empoli-8_1_T-1.xml
+  pin: commonroad-scenarios 2416dc27faf3ee36b6799f42712da72a34a2c8fd
+  license: CommonRoad scenarios, BSD 3-Clause License, Copyright (c) 2019 Technical University of Munich
+  tags:
+  - critical
+  - intersection
+  - simulated
+patches: []
+tags:
+- cyclist
+- junction-priority
+- right-before-left
+- route-following
+- speed-limit
+exercises: the family on CommonRoad's planning problem
+map:
+  net: catalog/commonroad/ITA_Empoli-8_1_T-1/ITA_Empoli-8_1_T-1.net.xml
+  data: catalog/commonroad/ITA_Empoli-8_1_T-1/cr.json
+  route_note: 'a time-only goal: the ego drives on'
+dt: 0.1
+ticks: 1500
+ego:
+  v: 3.839
+  at:
+    lane: '3655_0'
+    s: 64.68
+  route:
+  - '3655'
+  - '6535'
+  - '4006'
+  goal:
+    time:
+    - 3.3
+    - 3.3
+exerciser:
+  skip: 'a CommonRoad map: the exerciser has no net of its own'
+actors:
+- id: cr30
+  kind: truck
+  length: 7.5
+  width: 2.6
+  at:
+    x: -308.9501
+    y: -71.5209
+    heading: 0.142
+  v: 4.6864
+  mode: recorded
+  trajectory: catalog/commonroad/ITA_Empoli-8_1_T-1/obstacles/cr30.jsonl
+- id: cr37
+  kind: bicycle
+  length: 2.0
+  width: 0.68
+  at:
+    x: -304.5595
+    y: -92.0732
+    heading: 1.3669
+  v: 2.5632
+  mode: recorded
+  trajectory: catalog/commonroad/ITA_Empoli-8_1_T-1/obstacles/cr37.jsonl
+- id: cr38
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: -305.7587
+    y: -78.6763
+    heading: 1.9158
+  v: 2.0619
+  mode: recorded
+  trajectory: catalog/commonroad/ITA_Empoli-8_1_T-1/obstacles/cr38.jsonl
+- id: cr39
+  kind: bicycle
+  length: 2.0
+  width: 0.68
+  at:
+    x: -310.2901
+    y: -66.7892
+    heading: -3.0646
+  v: 6.8964
+  mode: recorded
+  trajectory: catalog/commonroad/ITA_Empoli-8_1_T-1/obstacles/cr39.jsonl
+- id: cr311
+  kind: car
+  length: 5.0
+  width: 1.7125
+  at:
+    x: -341.6784
+    y: -64.0215
+    heading: -0.2898
+  v: 3.9798
+  mode: recorded
+  trajectory: catalog/commonroad/ITA_Empoli-8_1_T-1/obstacles/cr311.jsonl
+- id: cr312
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: -301.0373
+    y: -48.5937
+    heading: -0.9193
+  v: 6.8792
+  mode: recorded
+  trajectory: catalog/commonroad/ITA_Empoli-8_1_T-1/obstacles/cr312.jsonl
+- id: cr313
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: -311.3888
+    y: -42.2787
+    heading: -0.343
+  v: 5.5075
+  mode: recorded
+  trajectory: catalog/commonroad/ITA_Empoli-8_1_T-1/obstacles/cr313.jsonl
+- id: cr328
+  kind: truck
+  length: 7.5
+  width: 2.1861
+  at:
+    x: -358.0467
+    y: -59.1343
+    heading: -0.2902
+  v: 3.3154
+  mode: recorded
+  trajectory: catalog/commonroad/ITA_Empoli-8_1_T-1/obstacles/cr328.jsonl
+- id: cr334
+  kind: car
+  length: 4.482
+  width: 2.0
+  at:
+    x: -321.9944
+    y: -38.8633
+    heading: -0.3077
+  v: 4.5248
+  mode: recorded
+  trajectory: catalog/commonroad/ITA_Empoli-8_1_T-1/obstacles/cr334.jsonl
+- id: cr339
+  kind: car
+  length: 4.9314
+  width: 2.0
+  at:
+    x: -331.9908
+    y: -35.7228
+    heading: -0.3544
+  v: 3.6749
+  mode: recorded
+  trajectory: catalog/commonroad/ITA_Empoli-8_1_T-1/obstacles/cr339.jsonl
+expect:
+  goal: true
+  collisions: 0
+  violations: 0
+  off_lanelet: 0
+verdict:
+  exerciser: skip
+  sumo:
+    status: pass
+    since:
+      worlds: 13b7dac
+      catalog: ef793dc

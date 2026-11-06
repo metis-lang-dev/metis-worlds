@@ -1,0 +1,187 @@
+card: 2
+set: regression
+scenario: DEU_Muc-8_2_I-1-1
+title: CommonRoad DEU_Muc-8_2_I-1-1 (interactive / SUMO)
+source:
+  suite: commonroad
+  type: interactive/SUMO
+  code: /bigdata/datasets/commonroad/scenarios/scenarios/interactive/SUMO/DEU_Muc-8_2_I-1-1/DEU_Muc-8_2_I-1-1.cr.xml
+  pin: commonroad-interactive-scenarios 749e342013cc069980039fa91ba587f62993aaaf
+  license: CommonRoad interactive scenarios, BSD 3-Clause License, Copyright (c) 2023 Technical University of Munich
+  tags:
+  - comfort
+  - intersection
+  - urban
+patches: []
+tags:
+- junction-priority
+- route-following
+- speed-limit
+exercises: the family on CommonRoad's planning problem
+map:
+  net: catalog/commonroad/DEU_Muc-8_2_I-1-1/DEU_Muc-8_2_I-1-1.net.xml
+  data: catalog/commonroad/DEU_Muc-8_2_I-1-1/cr.json
+dt: 0.1
+ticks: 1500
+ego:
+  v: 6.881
+  at:
+    lane: '25_0'
+    s: 62.86
+  route:
+  - '25'
+  - '28'
+  goal:
+    region:
+      lanelets:
+      - 28
+    time:
+    - 12.1
+    - 12.1
+exerciser:
+  skip: 'a CommonRoad map: the exerciser has no net of its own'
+actors:
+- id: cr35
+  kind: car
+  length: 5.0
+  width: 1.8
+  at:
+    x: -22.1224
+    y: -35.35
+    heading: -3.4669
+  v: 8.3495
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Muc-8_2_I-1-1/obstacles/cr35.jsonl
+- id: cr36
+  kind: car
+  length: 5.0
+  width: 1.8
+  at:
+    x: -11.8356
+    y: -27.3363
+    heading: -1.8806
+  v: 8.2934
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Muc-8_2_I-1-1/obstacles/cr36.jsonl
+- id: cr37
+  kind: car
+  length: 5.0
+  width: 1.8
+  at:
+    x: -82.2978
+    y: -22.503
+    heading: -0.1541
+  v: 7.8357
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Muc-8_2_I-1-1/obstacles/cr37.jsonl
+- id: cr38
+  kind: car
+  length: 5.0
+  width: 1.8
+  at:
+    x: -99.2693
+    y: -19.7369
+    heading: -0.153
+  v: 8.3172
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Muc-8_2_I-1-1/obstacles/cr38.jsonl
+- id: cr39
+  kind: car
+  length: 5.0
+  width: 1.8
+  at:
+    x: -63.0411
+    y: -23.2982
+    heading: -3.3574
+  v: 8.7672
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Muc-8_2_I-1-1/obstacles/cr39.jsonl
+- id: cr40
+  kind: car
+  length: 5.0
+  width: 1.8
+  at:
+    x: -67.0399
+    y: -25.0178
+    heading: -0.1828
+  v: 7.7091
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Muc-8_2_I-1-1/obstacles/cr40.jsonl
+- id: cr41
+  kind: car
+  length: 5.0
+  width: 1.8
+  at:
+    x: -140.8674
+    y: -15.9329
+    heading: -0.0658
+  v: 8.6961
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Muc-8_2_I-1-1/obstacles/cr41.jsonl
+- id: cr310
+  kind: car
+  length: 5.0
+  width: 1.8
+  at:
+    x: -156.5994
+    y: -15.0492
+    heading: -0.0541
+  v: 8.4697
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Muc-8_2_I-1-1/obstacles/cr310.jsonl
+- id: cr312
+  kind: car
+  length: 5.0
+  width: 1.8
+  at:
+    x: -171.5173
+    y: -14.29
+    heading: -0.0502
+  v: 7.9887
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Muc-8_2_I-1-1/obstacles/cr312.jsonl
+- id: cr314
+  kind: car
+  length: 5.0
+  width: 1.8
+  at:
+    x: -184.9458
+    y: -13.6153
+    heading: -0.0502
+  v: 7.0164
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Muc-8_2_I-1-1/obstacles/cr314.jsonl
+- id: cr316
+  kind: car
+  length: 5.0
+  width: 1.8
+  at:
+    x: -195.4759
+    y: -13.0719
+    heading: -0.0559
+  v: 4.7625
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Muc-8_2_I-1-1/obstacles/cr316.jsonl
+- id: cr317
+  kind: car
+  length: 5.0
+  width: 1.8
+  at:
+    x: 20.7152
+    y: 68.8188
+    heading: -1.8613
+  v: 2.1725
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Muc-8_2_I-1-1/obstacles/cr317.jsonl
+expect:
+  goal: true
+  collisions: 0
+  violations: 0
+  off_lanelet: 0
+verdict:
+  exerciser: skip
+  sumo:
+    status: pass
+    since:
+      worlds: 13b7dac
+      catalog: ef793dc

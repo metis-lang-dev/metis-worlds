@@ -1,0 +1,170 @@
+card: 2
+set: working
+scenario: BEL_Nivelles-7_4_T-1
+title: CommonRoad BEL_Nivelles-7_4_T-1 (recorded / scenario-factory)
+source:
+  suite: commonroad
+  type: recorded/scenario-factory
+  code: /bigdata/datasets/commonroad/scenarios/scenarios/recorded/scenario-factory/BEL_Nivelles-7_4_T-1.xml
+  pin: commonroad-scenarios 2416dc27faf3ee36b6799f42712da72a34a2c8fd
+  license: CommonRoad scenarios, BSD 3-Clause License, Copyright (c) 2019 Technical University of Munich
+  tags:
+  - critical
+  - intersection
+  - simulated
+patches: []
+tags:
+- cyclist
+- following
+- junction-priority
+- right-before-left
+- route-following
+- speed-limit
+exercises: 'the family on CommonRoad''s planning problem: the harvest''s mechanism 3691f55f (contact:behind)'
+map:
+  net: catalog/commonroad/BEL_Nivelles-7_4_T-1/BEL_Nivelles-7_4_T-1.net.xml
+  data: catalog/commonroad/BEL_Nivelles-7_4_T-1/cr.json
+  route_note: 'a time-only goal: the ego drives on'
+dt: 0.1
+ticks: 1500
+ego:
+  v: 3.298
+  at:
+    lane: '6903_0'
+    s: 62.63
+  route:
+  - '6903'
+  - '6906'
+  - '6909'
+  - '7391'
+  goal:
+    time:
+    - 3.3
+    - 3.3
+exerciser:
+  skip: 'a CommonRoad map: the exerciser has no net of its own'
+actors:
+- id: cr37
+  kind: bicycle
+  length: 2.0
+  width: 0.68
+  at:
+    x: 619.3342
+    y: -60.288
+    heading: 2.1856
+  v: 4.2665
+  mode: recorded
+  trajectory: catalog/commonroad/BEL_Nivelles-7_4_T-1/obstacles/cr37.jsonl
+- id: cr311
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 598.6231
+    y: -77.9288
+    heading: 0.8238
+  v: 0.0
+  mode: recorded
+  trajectory: catalog/commonroad/BEL_Nivelles-7_4_T-1/obstacles/cr311.jsonl
+- id: cr312
+  kind: car
+  length: 4.8538
+  width: 2.0
+  at:
+    x: 618.8412
+    y: -63.3218
+    heading: 2.1896
+  v: 5.2035
+  mode: recorded
+  trajectory: catalog/commonroad/BEL_Nivelles-7_4_T-1/obstacles/cr312.jsonl
+- id: cr314
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 593.2369
+    y: -83.1379
+    heading: 0.7166
+  v: 0.0
+  mode: recorded
+  trajectory: catalog/commonroad/BEL_Nivelles-7_4_T-1/obstacles/cr314.jsonl
+- id: cr331
+  kind: car
+  length: 4.8702
+  width: 1.9989
+  at:
+    x: 638.3756
+    y: -89.323
+    heading: 2.1736
+  v: 2.3658
+  mode: recorded
+  trajectory: catalog/commonroad/BEL_Nivelles-7_4_T-1/obstacles/cr331.jsonl
+- id: cr335
+  kind: bicycle
+  length: 2.0
+  width: 0.6575
+  at:
+    x: 622.9913
+    y: -65.3585
+    heading: 2.2044
+  v: 0.1568
+  mode: recorded
+  trajectory: catalog/commonroad/BEL_Nivelles-7_4_T-1/obstacles/cr335.jsonl
+- id: cr339
+  kind: car
+  length: 2.5
+  width: 0.8
+  at:
+    x: 627.2841
+    y: -71.6932
+    heading: 2.2941
+  v: 2.1441
+  mode: recorded
+  trajectory: catalog/commonroad/BEL_Nivelles-7_4_T-1/obstacles/cr339.jsonl
+- id: cr342
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 648.2909
+    y: -101.8091
+    heading: 2.1875
+  v: 1.899
+  mode: recorded
+  trajectory: catalog/commonroad/BEL_Nivelles-7_4_T-1/obstacles/cr342.jsonl
+- id: cr346
+  kind: car
+  length: 5.0
+  width: 1.8822
+  at:
+    x: 656.5087
+    y: -115.0905
+    heading: 2.0971
+  v: 2.066
+  mode: recorded
+  trajectory: catalog/commonroad/BEL_Nivelles-7_4_T-1/obstacles/cr346.jsonl
+- id: cr351
+  kind: car
+  length: 4.646
+  width: 2.0
+  at:
+    x: 662.0536
+    y: -135.0674
+    heading: 1.6489
+  v: 1.6068
+  mode: recorded
+  trajectory: catalog/commonroad/BEL_Nivelles-7_4_T-1/obstacles/cr351.jsonl
+expect:
+  goal: true
+  collisions: 0
+  violations: 0
+  off_lanelet: 0
+verdict:
+  exerciser: skip
+  sumo:
+    status: world
+    since:
+      worlds: 13b7dac
+      catalog: ef793dc
+    record: contact
+    note: contact

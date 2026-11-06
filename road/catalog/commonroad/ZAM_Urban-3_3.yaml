@@ -1,0 +1,88 @@
+card: 2
+set: working
+scenario: ZAM_Urban-3_3
+title: CommonRoad ZAM_Urban-3_3 (recorded / hand-crafted)
+source:
+  suite: commonroad
+  type: recorded/hand-crafted
+  code: /bigdata/datasets/commonroad/scenarios/scenarios/recorded/hand-crafted/ZAM_Urban-3_3.xml
+  pin: commonroad-scenarios 2416dc27faf3ee36b6799f42712da72a34a2c8fd
+  license: CommonRoad scenarios, BSD 3-Clause License, Copyright (c) 2019 Technical University of Munich
+  tags:
+  - critical
+  - rural
+  - two_lane
+  - urban
+patches: []
+tags:
+- obstacle-static
+- route-following
+exercises: 'the family on CommonRoad''s planning problem: the harvest''s mechanism 2d630f57 (goal:position)'
+map:
+  net: catalog/commonroad/ZAM_Urban-3_3/ZAM_Urban-3_3.net.xml
+  data: catalog/commonroad/ZAM_Urban-3_3/cr.json
+dt: 0.1
+ticks: 1500
+ego:
+  v: 9.0
+  at:
+    lane: '1_0'
+    s: 70.0
+  route:
+  - '1'
+  goal:
+    region:
+      polygons:
+      - - - 90.0
+          - -0.8
+        - - 90.0
+          - 0.8
+        - - 95.0
+          - 0.8
+        - - 95.0
+          - -0.8
+        - - 90.0
+          - -0.8
+    time:
+    - 3.0
+    - 4.0
+    heading:
+    - -0.2
+    - 0.2
+exerciser:
+  skip: 'a CommonRoad map: the exerciser has no net of its own'
+actors:
+- id: cr6
+  kind: static
+  length: 4.0
+  width: 2.5
+  at:
+    x: 85.0
+    y: -1.0
+    heading: 0.02
+  v: 0.0
+  mode: static
+- id: cr7
+  kind: static
+  length: 4.0
+  width: 2.5
+  at:
+    x: 85.0
+    y: 4.0
+    heading: 0.02
+  v: 0.0
+  mode: static
+expect:
+  goal: true
+  collisions: 0
+  violations: 0
+  off_lanelet: 0
+verdict:
+  exerciser: skip
+  sumo:
+    status: fail
+    since:
+      worlds: 13b7dac
+      catalog: ef793dc
+    record: 20261106T155637-56e6ad
+    note: goal:position

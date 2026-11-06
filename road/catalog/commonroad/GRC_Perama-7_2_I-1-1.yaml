@@ -1,0 +1,167 @@
+card: 2
+set: regression
+scenario: GRC_Perama-7_2_I-1-1
+title: CommonRoad GRC_Perama-7_2_I-1-1 (interactive / scenario-factory)
+source:
+  suite: commonroad
+  type: interactive/scenario-factory
+  code: /bigdata/datasets/commonroad/scenarios/scenarios/interactive/scenario-factory/GRC_Perama-7_2_I-1-1/GRC_Perama-7_2_I-1-1.cr.xml
+  pin: commonroad-interactive-scenarios 749e342013cc069980039fa91ba587f62993aaaf
+  license: CommonRoad interactive scenarios, BSD 3-Clause License, Copyright (c) 2023 Technical University of Munich
+  tags:
+  - critical
+  - intersection
+  - simulated
+patches: []
+tags:
+- cyclist
+- junction-priority
+- right-before-left
+- route-following
+- speed-limit
+exercises: the family on CommonRoad's planning problem
+map:
+  net: catalog/commonroad/GRC_Perama-7_2_I-1-1/GRC_Perama-7_2_I-1-1.net.xml
+  data: catalog/commonroad/GRC_Perama-7_2_I-1-1/cr.json
+  route_note: 'a time-only goal: the ego drives on'
+dt: 0.1
+ticks: 1500
+ego:
+  v: 3.491
+  at:
+    lane: '66233_0'
+    s: 30.86
+  route:
+  - '66233'
+  - '66307'
+  - '66379'
+  - '66573'
+  goal:
+    time:
+    - 3.3
+    - 3.3
+exerciser:
+  skip: 'a CommonRoad map: the exerciser has no net of its own'
+actors:
+- id: cr37
+  kind: bicycle
+  length: 2.0
+  width: 0.6458
+  at:
+    x: -53.9613
+    y: -683.3827
+    heading: -0.7901
+  v: 5.2869
+  mode: recorded
+  trajectory: catalog/commonroad/GRC_Perama-7_2_I-1-1/obstacles/cr37.jsonl
+- id: cr315
+  kind: car
+  length: 3.5
+  width: 2.0
+  at:
+    x: -13.9373
+    y: -686.3368
+    heading: -2.9064
+  v: 2.7269
+  mode: recorded
+  trajectory: catalog/commonroad/GRC_Perama-7_2_I-1-1/obstacles/cr315.jsonl
+- id: cr322
+  kind: car
+  length: 2.5
+  width: 0.8
+  at:
+    x: -45.3047
+    y: -664.1203
+    heading: -2.5802
+  v: 1.9048
+  mode: recorded
+  trajectory: catalog/commonroad/GRC_Perama-7_2_I-1-1/obstacles/cr322.jsonl
+- id: cr329
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: -35.7006
+    y: -664.4788
+    heading: 0.4422
+  v: 9.9095
+  mode: recorded
+  trajectory: catalog/commonroad/GRC_Perama-7_2_I-1-1/obstacles/cr329.jsonl
+- id: cr330
+  kind: car
+  length: 4.4753
+  width: 2.0
+  at:
+    x: -61.0084
+    y: -685.094
+    heading: -5.5315
+  v: 0.6896
+  mode: recorded
+  trajectory: catalog/commonroad/GRC_Perama-7_2_I-1-1/obstacles/cr330.jsonl
+- id: cr334
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: -70.2292
+    y: -691.9305
+    heading: 0.5064
+  v: 0.0296
+  mode: recorded
+  trajectory: catalog/commonroad/GRC_Perama-7_2_I-1-1/obstacles/cr334.jsonl
+- id: cr340
+  kind: car
+  length: 5.0
+  width: 1.9167
+  at:
+    x: -88.6661
+    y: -701.3392
+    heading: 0.4696
+  v: 0.2767
+  mode: recorded
+  trajectory: catalog/commonroad/GRC_Perama-7_2_I-1-1/obstacles/cr340.jsonl
+- id: cr341
+  kind: car
+  length: 5.0
+  width: 1.8468
+  at:
+    x: -52.0513
+    y: -672.571
+    heading: -2.3705
+  v: 5.935
+  mode: recorded
+  trajectory: catalog/commonroad/GRC_Perama-7_2_I-1-1/obstacles/cr341.jsonl
+- id: cr349
+  kind: car
+  length: 4.8915
+  width: 2.0
+  at:
+    x: -25.2214
+    y: -656.7169
+    heading: -2.803
+  v: 4.823
+  mode: recorded
+  trajectory: catalog/commonroad/GRC_Perama-7_2_I-1-1/obstacles/cr349.jsonl
+- id: cr354
+  kind: bicycle
+  length: 2.0
+  width: 0.68
+  at:
+    x: 5.176
+    y: -640.0155
+    heading: -2.3828
+  v: 8.123
+  mode: recorded
+  trajectory: catalog/commonroad/GRC_Perama-7_2_I-1-1/obstacles/cr354.jsonl
+expect:
+  goal: true
+  collisions: 0
+  violations: 0
+  off_lanelet: 0
+verdict:
+  exerciser: skip
+  sumo:
+    status: pass
+    since:
+      worlds: 13b7dac
+      catalog: ef793dc

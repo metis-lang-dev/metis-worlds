@@ -1,0 +1,126 @@
+card: 2
+set: regression
+scenario: RUS_Bicycle-8_1_I-1-1
+title: CommonRoad RUS_Bicycle-8_1_I-1-1 (interactive / THI-Bicycle)
+source:
+  suite: commonroad
+  type: interactive/THI-Bicycle
+  code: /bigdata/datasets/commonroad/scenarios/scenarios/interactive/THI-Bicycle/RUS_Bicycle-8_1_I-1-1/RUS_Bicycle-8_1_I-1-1.cr.xml
+  pin: commonroad-interactive-scenarios 749e342013cc069980039fa91ba587f62993aaaf
+  license: CommonRoad interactive scenarios, BSD 3-Clause License, Copyright (c) 2023 Technical University of Munich
+  tags:
+  - critical
+  - multi_lane
+  - oncoming_traffic
+  - parallel_lanes
+  - urban
+patches: []
+tags:
+- cyclist
+- oncoming-pass
+- route-following
+exercises: the family on CommonRoad's planning problem
+map:
+  net: catalog/commonroad/RUS_Bicycle-8_1_I-1-1/RUS_Bicycle-8_1_I-1-1.net.xml
+  data: catalog/commonroad/RUS_Bicycle-8_1_I-1-1/cr.json
+dt: 0.1
+ticks: 1500
+ego:
+  v: 11.0
+  at:
+    lane: '7_0'
+    s: 2.5
+  route:
+  - '7'
+  goal:
+    region:
+      polygons:
+      - - - 19.0
+          - 15.5
+        - - 19.0
+          - 24.5
+        - - 31.0
+          - 24.5
+        - - 31.0
+          - 15.5
+        - - 19.0
+          - 15.5
+    time:
+    - 2.0
+    - 3.1
+    v:
+    - 5.0
+    - 15.0
+    heading:
+    - -0.3927
+    - 0.3927
+exerciser:
+  skip: 'a CommonRoad map: the exerciser has no net of its own'
+actors:
+- id: cr1
+  kind: bicycle
+  length: 1.5
+  width: 1.0
+  at:
+    x: 21.41
+    y: 33.6
+    heading: -1.5708
+  v: 6.0
+  mode: recorded
+  trajectory: catalog/commonroad/RUS_Bicycle-8_1_I-1-1/obstacles/cr1.jsonl
+- id: cr2
+  kind: car
+  length: 2.8
+  width: 1.6
+  at:
+    x: 25.0
+    y: 32.0
+    heading: 3.1416
+  v: 0.0
+  mode: recorded
+  trajectory: catalog/commonroad/RUS_Bicycle-8_1_I-1-1/obstacles/cr2.jsonl
+- id: cr3
+  kind: car
+  length: 2.8
+  width: 1.6
+  at:
+    x: 18.0
+    y: 26.1
+    heading: 3.1416
+  v: 5.0
+  mode: recorded
+  trajectory: catalog/commonroad/RUS_Bicycle-8_1_I-1-1/obstacles/cr3.jsonl
+- id: cr4
+  kind: car
+  length: 2.8
+  width: 1.6
+  at:
+    x: 25.0
+    y: 26.0
+    heading: 3.1416
+  v: 0.0
+  mode: recorded
+  trajectory: catalog/commonroad/RUS_Bicycle-8_1_I-1-1/obstacles/cr4.jsonl
+- id: cr5
+  kind: car
+  length: 2.8
+  width: 1.6
+  at:
+    x: 25.0
+    y: 29.0
+    heading: 3.1416
+  v: 0.0
+  mode: recorded
+  trajectory: catalog/commonroad/RUS_Bicycle-8_1_I-1-1/obstacles/cr5.jsonl
+expect:
+  goal: true
+  collisions: 0
+  violations: 0
+  off_lanelet: 0
+verdict:
+  exerciser: skip
+  sumo:
+    status: pass
+    since:
+      worlds: 13b7dac
+      catalog: ef793dc

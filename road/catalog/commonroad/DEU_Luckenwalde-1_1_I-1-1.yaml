@@ -1,0 +1,487 @@
+card: 2
+set: working
+scenario: DEU_Luckenwalde-1_1_I-1-1
+title: CommonRoad DEU_Luckenwalde-1_1_I-1-1 (interactive / SUMO)
+source:
+  suite: commonroad
+  type: interactive/SUMO
+  code: /bigdata/datasets/commonroad/scenarios/scenarios/interactive/SUMO/DEU_Luckenwalde-1_1_I-1-1/DEU_Luckenwalde-1_1_I-1-1.cr.xml
+  pin: commonroad-interactive-scenarios 749e342013cc069980039fa91ba587f62993aaaf
+  license: CommonRoad interactive scenarios, BSD 3-Clause License, Copyright (c) 2023 Technical University of Munich
+  tags:
+  - critical
+  - intersection
+  - simulated
+patches: []
+tags:
+- cyclist
+- junction-priority
+- right-before-left
+- route-following
+- speed-limit
+exercises: the family on CommonRoad's planning problem
+map:
+  net: catalog/commonroad/DEU_Luckenwalde-1_1_I-1-1/DEU_Luckenwalde-1_1_I-1-1.net.xml
+  data: catalog/commonroad/DEU_Luckenwalde-1_1_I-1-1/cr.json
+dt: 0.1
+ticks: 1500
+ego:
+  v: 14.705
+  at:
+    lane: '14_0'
+    s: 64.26
+  route:
+  - '14'
+  - '102'
+  goal:
+    region:
+      lanelets:
+      - 102
+    time:
+    - 9.9
+    - 10.0
+exerciser:
+  skip: 'a CommonRoad map: the exerciser has no net of its own'
+actors:
+- id: cr32
+  kind: car
+  length: 4.8017
+  width: 1.8314
+  at:
+    x: -401.9311
+    y: -150.2026
+    heading: 0.7494
+  v: 0.0
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Luckenwalde-1_1_I-1-1/obstacles/cr32.jsonl
+- id: cr33
+  kind: car
+  length: 2.4871
+  width: 0.6119
+  at:
+    x: -427.9055
+    y: -159.8278
+    heading: -0.5671
+  v: 0.0
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Luckenwalde-1_1_I-1-1/obstacles/cr33.jsonl
+- id: cr35
+  kind: car
+  length: 5.0
+  width: 1.7067
+  at:
+    x: -405.8496
+    y: -125.1299
+    heading: -3.4954
+  v: 0.0
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Luckenwalde-1_1_I-1-1/obstacles/cr35.jsonl
+- id: cr36
+  kind: car
+  length: 4.2438
+  width: 1.81
+  at:
+    x: -399.2465
+    y: -127.7945
+    heading: -3.5711
+  v: 0.0
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Luckenwalde-1_1_I-1-1/obstacles/cr36.jsonl
+- id: cr37
+  kind: car
+  length: 4.5872
+  width: 1.6
+  at:
+    x: -429.3225
+    y: -121.6469
+    heading: -0.246
+  v: 0.0
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Luckenwalde-1_1_I-1-1/obstacles/cr37.jsonl
+- id: cr310
+  kind: truck
+  length: 6.8374
+  width: 2.3963
+  at:
+    x: -381.0946
+    y: -127.1439
+    heading: -2.4619
+  v: 0.0
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Luckenwalde-1_1_I-1-1/obstacles/cr310.jsonl
+- id: cr312
+  kind: car
+  length: 5.0
+  width: 1.6387
+  at:
+    x: -396.5141
+    y: -145.1618
+    heading: 0.7494
+  v: 0.0
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Luckenwalde-1_1_I-1-1/obstacles/cr312.jsonl
+- id: cr313
+  kind: car
+  length: 5.0
+  width: 1.7864
+  at:
+    x: -407.3483
+    y: -155.2433
+    heading: 0.7494
+  v: 0.0
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Luckenwalde-1_1_I-1-1/obstacles/cr313.jsonl
+- id: cr314
+  kind: car
+  length: 4.9782
+  width: 1.717
+  at:
+    x: -436.3887
+    y: -119.8728
+    heading: -0.246
+  v: 0.0
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Luckenwalde-1_1_I-1-1/obstacles/cr314.jsonl
+- id: cr315
+  kind: bicycle
+  length: 1.4772
+  width: 0.5684
+  at:
+    x: -349.5344
+    y: -109.5188
+    heading: 0.6388
+  v: 6.9281
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Luckenwalde-1_1_I-1-1/obstacles/cr315.jsonl
+- id: cr316
+  kind: car
+  length: 4.3929
+  width: 1.6535
+  at:
+    x: -375.8514
+    y: -123.0173
+    heading: -2.4852
+  v: 0.0
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Luckenwalde-1_1_I-1-1/obstacles/cr316.jsonl
+- id: cr317
+  kind: car
+  length: 5.0
+  width: 1.8238
+  at:
+    x: -421.8761
+    y: -133.8085
+    heading: 1.0755
+  v: 0.0
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Luckenwalde-1_1_I-1-1/obstacles/cr317.jsonl
+- id: cr318
+  kind: car
+  length: 5.0
+  width: 1.6796
+  at:
+    x: -412.8316
+    y: -160.3583
+    heading: 0.7532
+  v: 0.0
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Luckenwalde-1_1_I-1-1/obstacles/cr318.jsonl
+- id: cr320
+  kind: car
+  length: 4.3751
+  width: 1.8897
+  at:
+    x: -371.1514
+    y: -119.4124
+    heading: -2.4908
+  v: 0.0
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Luckenwalde-1_1_I-1-1/obstacles/cr320.jsonl
+- id: cr321
+  kind: car
+  length: 4.2
+  width: 1.8766
+  at:
+    x: -425.2503
+    y: -140.0536
+    heading: 1.0752
+  v: 0.0
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Luckenwalde-1_1_I-1-1/obstacles/cr321.jsonl
+- id: cr322
+  kind: truck
+  length: 7.0646
+  width: 2.2
+  at:
+    x: -364.924
+    y: -114.7613
+    heading: -2.5028
+  v: 0.0
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Luckenwalde-1_1_I-1-1/obstacles/cr322.jsonl
+- id: cr324
+  kind: car
+  length: 1.7046
+  width: 0.5441
+  at:
+    x: -442.0571
+    y: -118.4497
+    heading: -0.246
+  v: 0.0
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Luckenwalde-1_1_I-1-1/obstacles/cr324.jsonl
+- id: cr325
+  kind: bicycle
+  length: 1.2
+  width: 0.5518
+  at:
+    x: -423.7341
+    y: -173.7552
+    heading: 0.8525
+  v: 0.0
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Luckenwalde-1_1_I-1-1/obstacles/cr325.jsonl
+- id: cr326
+  kind: car
+  length: 4.4796
+  width: 1.7492
+  at:
+    x: -428.505
+    y: -146.0678
+    heading: 1.0746
+  v: 0.0
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Luckenwalde-1_1_I-1-1/obstacles/cr326.jsonl
+- id: cr327
+  kind: car
+  length: 1.8307
+  width: 0.5787
+  at:
+    x: -359.3759
+    y: -110.6408
+    heading: -2.5028
+  v: 0.0
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Luckenwalde-1_1_I-1-1/obstacles/cr327.jsonl
+- id: cr328
+  kind: car
+  length: 5.0
+  width: 1.7374
+  at:
+    x: -433.2961
+    y: -154.7133
+    heading: -1.0379
+  v: 0.0846
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Luckenwalde-1_1_I-1-1/obstacles/cr328.jsonl
+- id: cr329
+  kind: car
+  length: 5.0
+  width: 1.9056
+  at:
+    x: -447.7352
+    y: -117.0241
+    heading: -0.246
+  v: 0.0
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Luckenwalde-1_1_I-1-1/obstacles/cr329.jsonl
+- id: cr330
+  kind: car
+  length: 4.9693
+  width: 1.7616
+  at:
+    x: -454.9975
+    y: -115.2007
+    heading: -0.246
+  v: 0.0001
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Luckenwalde-1_1_I-1-1/obstacles/cr330.jsonl
+- id: cr331
+  kind: car
+  length: 4.4487
+  width: 1.9234
+  at:
+    x: -354.8608
+    y: -107.2882
+    heading: -2.5031
+  v: 0.0002
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Luckenwalde-1_1_I-1-1/obstacles/cr331.jsonl
+- id: cr332
+  kind: car
+  length: 4.2
+  width: 1.6443
+  at:
+    x: -433.2603
+    y: -147.7405
+    heading: -2.0484
+  v: 0.605
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Luckenwalde-1_1_I-1-1/obstacles/cr332.jsonl
+- id: cr333
+  kind: car
+  length: 4.2
+  width: 1.635
+  at:
+    x: -426.3345
+    y: -173.4745
+    heading: 0.8525
+  v: 0.0
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Luckenwalde-1_1_I-1-1/obstacles/cr333.jsonl
+- id: cr334
+  kind: car
+  length: 4.7632
+  width: 1.6735
+  at:
+    x: -462.1455
+    y: -113.4061
+    heading: -0.246
+  v: 0.0007
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Luckenwalde-1_1_I-1-1/obstacles/cr334.jsonl
+- id: cr336
+  kind: car
+  length: 2.5
+  width: 0.5118
+  at:
+    x: -350.0841
+    y: -103.7428
+    heading: -2.5031
+  v: 0.0009
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Luckenwalde-1_1_I-1-1/obstacles/cr336.jsonl
+- id: cr337
+  kind: car
+  length: 4.8024
+  width: 1.73
+  at:
+    x: -469.215
+    y: -111.6312
+    heading: -0.246
+  v: 0.0034
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Luckenwalde-1_1_I-1-1/obstacles/cr337.jsonl
+- id: cr338
+  kind: car
+  length: 4.2
+  width: 1.8021
+  at:
+    x: -430.2423
+    y: -178.9583
+    heading: 0.8516
+  v: 0.0
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Luckenwalde-1_1_I-1-1/obstacles/cr338.jsonl
+- id: cr339
+  kind: car
+  length: 4.7745
+  width: 2.0
+  at:
+    x: -428.3753
+    y: -138.4764
+    heading: -2.0678
+  v: 0.4201
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Luckenwalde-1_1_I-1-1/obstacles/cr339.jsonl
+- id: cr340
+  kind: car
+  length: 4.7184
+  width: 1.6862
+  at:
+    x: -453.4992
+    y: -111.9665
+    heading: 2.8957
+  v: 14.5217
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Luckenwalde-1_1_I-1-1/obstacles/cr340.jsonl
+- id: cr341
+  kind: truck
+  length: 11.6
+  width: 2.6004
+  at:
+    x: -479.6095
+    y: -109.0215
+    heading: -0.246
+  v: 0.014
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Luckenwalde-1_1_I-1-1/obstacles/cr341.jsonl
+- id: cr342
+  kind: bicycle
+  length: 1.8104
+  width: 0.5818
+  at:
+    x: -406.9168
+    y: -100.8499
+    heading: -2.1619
+  v: 6.88
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Luckenwalde-1_1_I-1-1/obstacles/cr342.jsonl
+- id: cr343
+  kind: car
+  length: 5.0
+  width: 1.7754
+  at:
+    x: -345.0781
+    y: -100.0272
+    heading: -2.5031
+  v: 0.0032
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Luckenwalde-1_1_I-1-1/obstacles/cr343.jsonl
+- id: cr345
+  kind: car
+  length: 5.0
+  width: 1.9083
+  at:
+    x: -490.1268
+    y: -106.3809
+    heading: -0.246
+  v: 0.0396
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Luckenwalde-1_1_I-1-1/obstacles/cr345.jsonl
+- id: cr346
+  kind: car
+  length: 5.0
+  width: 1.8264
+  at:
+    x: -397.6263
+    y: -89.8062
+    heading: -2.0833
+  v: 11.6909
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Luckenwalde-1_1_I-1-1/obstacles/cr346.jsonl
+- id: cr347
+  kind: car
+  length: 4.2
+  width: 1.7605
+  at:
+    x: -387.2544
+    y: -74.1827
+    heading: -2.2428
+  v: 8.4918
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Luckenwalde-1_1_I-1-1/obstacles/cr347.jsonl
+- id: cr348
+  kind: car
+  length: 5.0
+  width: 1.8903
+  at:
+    x: -378.8157
+    y: -64.2888
+    heading: -2.3213
+  v: 5.177
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Luckenwalde-1_1_I-1-1/obstacles/cr348.jsonl
+expect:
+  goal: true
+  collisions: 0
+  violations: 0
+  off_lanelet: 0
+verdict:
+  exerciser: skip
+  sumo:
+    status: soft
+    since:
+      worlds: 13b7dac
+      catalog: ef793dc
+    note: goal:window

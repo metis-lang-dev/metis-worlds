@@ -1,0 +1,105 @@
+card: 2
+set: working
+scenario: ZAM_Ramp-1_1-T-1
+title: CommonRoad ZAM_Ramp-1_1-T-1 (recorded / hand-crafted)
+source:
+  suite: commonroad
+  type: recorded/hand-crafted
+  code: /bigdata/datasets/commonroad/scenarios/scenarios/recorded/hand-crafted/ZAM_Ramp-1_1-T-1.xml
+  pin: commonroad-scenarios 2416dc27faf3ee36b6799f42712da72a34a2c8fd
+  license: CommonRoad scenarios, BSD 3-Clause License, Copyright (c) 2019 Technical University of Munich
+  tags:
+  - interstate
+  - multi_lane
+  - no_oncoming_traffic
+  - parallel_lanes
+patches: []
+tags:
+- lane-keeping
+- route-following
+exercises: 'the family on CommonRoad''s planning problem: the harvest''s mechanism c99ed63e (off_lanelet)'
+map:
+  net: catalog/commonroad/ZAM_Ramp-1_1-T-1/ZAM_Ramp-1_1-T-1.net.xml
+  data: catalog/commonroad/ZAM_Ramp-1_1-T-1/cr.json
+dt: 0.1
+ticks: 1500
+ego:
+  v: 0.0
+  at:
+    lane: '5_0'
+    s: 0.0
+  route:
+  - '5'
+  - '3'
+  goal:
+    region:
+      polygons:
+      - - - 45.0
+          - 0.0
+        - - 45.0
+          - 3.5
+        - - 55.0
+          - 3.5
+        - - 55.0
+          - 0.0
+        - - 45.0
+          - 0.0
+    time:
+    - 0.0
+    - 10.0
+    v:
+    - 0.0
+    - 50.0
+    heading:
+    - -0.01
+    - 0.01
+exerciser:
+  skip: 'a CommonRoad map: the exerciser has no net of its own'
+actors:
+- id: cr13
+  kind: car
+  length: 4.508
+  width: 1.61
+  at:
+    x: 110.0
+    y: 5.25
+    heading: 0.0
+  v: 25.0
+  mode: recorded
+  trajectory: catalog/commonroad/ZAM_Ramp-1_1-T-1/obstacles/cr13.jsonl
+- id: cr14
+  kind: car
+  length: 4.508
+  width: 1.61
+  at:
+    x: 100.0
+    y: 5.25
+    heading: 0.0
+  v: 20.0
+  mode: recorded
+  trajectory: catalog/commonroad/ZAM_Ramp-1_1-T-1/obstacles/cr14.jsonl
+- id: cr15
+  kind: car
+  length: 4.508
+  width: 1.61
+  at:
+    x: 130.0
+    y: -1.75
+    heading: 0.0
+  v: 11.0
+  mode: recorded
+  trajectory: catalog/commonroad/ZAM_Ramp-1_1-T-1/obstacles/cr15.jsonl
+expect:
+  goal: true
+  collisions: 0
+  violations: 0
+  off_lanelet: 0
+verdict:
+  exerciser: skip
+  sumo:
+    status: fail
+    since:
+      worlds: 13b7dac
+      catalog: ef793dc
+    record: 20261106T160411-66cbfe
+    note: off_lanelet

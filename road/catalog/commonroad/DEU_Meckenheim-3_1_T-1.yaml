@@ -1,0 +1,165 @@
+card: 2
+set: regression
+scenario: DEU_Meckenheim-3_1_T-1
+title: CommonRoad DEU_Meckenheim-3_1_T-1 (recorded / scenario-factory)
+source:
+  suite: commonroad
+  type: recorded/scenario-factory
+  code: /bigdata/datasets/commonroad/scenarios/scenarios/recorded/scenario-factory/DEU_Meckenheim-3_1_T-1.xml
+  pin: commonroad-scenarios 2416dc27faf3ee36b6799f42712da72a34a2c8fd
+  license: CommonRoad scenarios, BSD 3-Clause License, Copyright (c) 2019 Technical University of Munich
+  tags:
+  - critical
+  - intersection
+  - simulated
+patches: []
+tags:
+- cyclist
+- junction-priority
+- right-before-left
+- route-following
+- speed-limit
+exercises: the family on CommonRoad's planning problem
+map:
+  net: catalog/commonroad/DEU_Meckenheim-3_1_T-1/DEU_Meckenheim-3_1_T-1.net.xml
+  data: catalog/commonroad/DEU_Meckenheim-3_1_T-1/cr.json
+  route_note: 'a time-only goal: the ego drives on'
+dt: 0.1
+ticks: 1500
+ego:
+  v: 11.428
+  at:
+    lane: '7190_0'
+    s: 4.26
+  route:
+  - '7190'
+  - '7583'
+  goal:
+    time:
+    - 3.3
+    - 3.3
+exerciser:
+  skip: 'a CommonRoad map: the exerciser has no net of its own'
+actors:
+- id: cr320
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 6.0722
+    y: -997.1063
+    heading: 0.2948
+  v: 0.3937
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Meckenheim-3_1_T-1/obstacles/cr320.jsonl
+- id: cr322
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 3.261
+    y: -987.3606
+    heading: 4.5825
+  v: 1.3778
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Meckenheim-3_1_T-1/obstacles/cr322.jsonl
+- id: cr325
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 2.9474
+    y: -972.5982
+    heading: 4.9375
+  v: 2.2515
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Meckenheim-3_1_T-1/obstacles/cr325.jsonl
+- id: cr329
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: -0.0643
+    y: -964.0178
+    heading: 5.1248
+  v: 2.2678
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Meckenheim-3_1_T-1/obstacles/cr329.jsonl
+- id: cr330
+  kind: bicycle
+  length: 2.0
+  width: 0.68
+  at:
+    x: 11.8878
+    y: -957.2181
+    heading: 2.2652
+  v: 6.7309
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Meckenheim-3_1_T-1/obstacles/cr330.jsonl
+- id: cr333
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: -2.9197
+    y: -958.3106
+    heading: 5.2189
+  v: 2.324
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Meckenheim-3_1_T-1/obstacles/cr333.jsonl
+- id: cr334
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 13.5738
+    y: -961.5507
+    heading: 2.4399
+  v: 10.6363
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Meckenheim-3_1_T-1/obstacles/cr334.jsonl
+- id: cr336
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: -9.3488
+    y: -947.229
+    heading: 5.2438
+  v: 2.708
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Meckenheim-3_1_T-1/obstacles/cr336.jsonl
+- id: cr340
+  kind: car
+  length: 4.4784
+  width: 1.7819
+  at:
+    x: -13.7812
+    y: -939.6831
+    heading: 5.2422
+  v: 3.9194
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Meckenheim-3_1_T-1/obstacles/cr340.jsonl
+- id: cr344
+  kind: car
+  length: 4.8612
+  width: 2.0
+  at:
+    x: -27.5592
+    y: -917.4132
+    heading: 5.2936
+  v: 4.1431
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Meckenheim-3_1_T-1/obstacles/cr344.jsonl
+expect:
+  goal: true
+  collisions: 0
+  violations: 0
+  off_lanelet: 0
+verdict:
+  exerciser: skip
+  sumo:
+    status: pass
+    since:
+      worlds: 13b7dac
+      catalog: ef793dc

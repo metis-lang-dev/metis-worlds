@@ -1,0 +1,94 @@
+card: 2
+set: working
+scenario: ZAM_Zip-1_62_I-1-1
+title: CommonRoad ZAM_Zip-1_62_I-1-1 (interactive / hand-crafted)
+source:
+  suite: commonroad
+  type: interactive/hand-crafted
+  code: /bigdata/datasets/commonroad/scenarios/scenarios/interactive/hand-crafted/ZAM_Zip-1_62_I-1-1/ZAM_Zip-1_62_I-1-1.cr.xml
+  pin: commonroad-interactive-scenarios 749e342013cc069980039fa91ba587f62993aaaf
+  license: CommonRoad interactive scenarios, BSD 3-Clause License, Copyright (c) 2023 Technical University of Munich
+  tags:
+  - highway
+  - lane_change
+  - merging_lanes
+  - parallel_lanes
+  - single_lane
+patches: []
+tags:
+- lane-change
+- merge-zipper
+- route-following
+- speed-limit
+exercises: the family on CommonRoad's planning problem
+map:
+  net: catalog/commonroad/ZAM_Zip-1_62_I-1-1/ZAM_Zip-1_62_I-1-1.net.xml
+  data: catalog/commonroad/ZAM_Zip-1_62_I-1-1/cr.json
+dt: 0.1
+ticks: 1500
+ego:
+  v: 11.226
+  at:
+    lane: '26_1'
+    s: 60.57
+  route:
+  - '26'
+  goal:
+    region:
+      lanelets:
+      - 25
+    time:
+    - 8.4
+    - 8.5
+    v:
+    - 0.0
+    - 16.2262
+exerciser:
+  skip: 'a CommonRoad map: the exerciser has no net of its own'
+actors:
+- id: cr1
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: -90.926
+    y: 8.8873
+    heading: 0.0037
+  v: 11.5607
+  mode: recorded
+  trajectory: catalog/commonroad/ZAM_Zip-1_62_I-1-1/obstacles/cr1.jsonl
+- id: cr2
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: -105.9158
+    y: 4.8685
+    heading: 0.0472
+  v: 11.5607
+  mode: recorded
+  trajectory: catalog/commonroad/ZAM_Zip-1_62_I-1-1/obstacles/cr2.jsonl
+- id: cr3
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: -90.917
+    y: 5.4052
+    heading: 0.0026
+  v: 14.5607
+  mode: recorded
+  trajectory: catalog/commonroad/ZAM_Zip-1_62_I-1-1/obstacles/cr3.jsonl
+expect:
+  goal: true
+  collisions: 0
+  violations: 0
+  off_lanelet: 0
+verdict:
+  exerciser: skip
+  sumo:
+    status: soft
+    since:
+      worlds: 13b7dac
+      catalog: ef793dc
+    note: goal:window

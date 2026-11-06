@@ -1,0 +1,848 @@
+card: 2
+set: working
+scenario: USA_Lanker-2_7_I-1-1
+title: CommonRoad USA_Lanker-2_7_I-1-1 (interactive / NGSIM)
+source:
+  suite: commonroad
+  type: interactive/NGSIM
+  code: /bigdata/datasets/commonroad/scenarios/scenarios/interactive/NGSIM/Lankershim/USA_Lanker-2_7_I-1-1/USA_Lanker-2_7_I-1-1.cr.xml
+  pin: commonroad-interactive-scenarios 749e342013cc069980039fa91ba587f62993aaaf
+  license: CommonRoad interactive scenarios, BSD 3-Clause License, Copyright (c) 2023 Technical University of Munich
+  tags:
+  - comfort
+  - intersection
+  - lane_following
+  - multi_lane
+  - oncoming_traffic
+  - speed_limit
+  - urban
+patches: []
+tags:
+- junction-priority
+- oncoming-pass
+- route-following
+- speed-limit
+exercises: the family on CommonRoad's planning problem
+map:
+  net: catalog/commonroad/USA_Lanker-2_7_I-1-1/USA_Lanker-2_7_I-1-1.net.xml
+  data: catalog/commonroad/USA_Lanker-2_7_I-1-1/cr.json
+dt: 0.1
+ticks: 1500
+ego:
+  v: 3.761
+  at:
+    lane: '3426_1'
+    s: 15.38
+  route:
+  - '3426'
+  - '3438'
+  - '3450'
+  - '3542'
+  goal:
+    region:
+      polygons:
+      - - - -35.4082
+          - -70.241
+        - - -34.0781
+          - -70.9008
+        - - -34.9358
+          - -72.6298
+        - - -36.2659
+          - -71.97
+        - - -35.4082
+          - -70.241
+    time:
+    - 8.6
+    - 9.0
+    v:
+    - 7.0554
+    - 13.0554
+    heading:
+    - -2.129
+    - -1.9544
+exerciser:
+  skip: 'a CommonRoad map: the exerciser has no net of its own'
+actors:
+- id: cr2487
+  kind: car
+  length: 4.1148
+  width: 1.9812
+  at:
+    x: -24.735
+    y: -77.8925
+    heading: 1.1262
+  v: 0.0
+  mode: recorded
+  trajectory: catalog/commonroad/USA_Lanker-2_7_I-1-1/obstacles/cr2487.jsonl
+- id: cr2488
+  kind: car
+  length: 5.0597
+  width: 2.3165
+  at:
+    x: -48.0655
+    y: -91.9676
+    heading: -1.9693
+  v: 11.8537
+  mode: recorded
+  trajectory: catalog/commonroad/USA_Lanker-2_7_I-1-1/obstacles/cr2488.jsonl
+- id: cr2489
+  kind: car
+  length: 4.5415
+  width: 2.0726
+  at:
+    x: -27.6714
+    y: -83.8396
+    heading: 1.1137
+  v: 0.0
+  mode: recorded
+  trajectory: catalog/commonroad/USA_Lanker-2_7_I-1-1/obstacles/cr2489.jsonl
+- id: cr2496
+  kind: car
+  length: 5.5169
+  width: 2.225
+  at:
+    x: -40.6047
+    y: -76.2958
+    heading: -2.0194
+  v: 12.4084
+  mode: recorded
+  trajectory: catalog/commonroad/USA_Lanker-2_7_I-1-1/obstacles/cr2496.jsonl
+- id: cr2497
+  kind: car
+  length: 4.3891
+  width: 2.2555
+  at:
+    x: -0.4413
+    y: -74.7146
+    heading: -0.559
+  v: 9.7506
+  mode: recorded
+  trajectory: catalog/commonroad/USA_Lanker-2_7_I-1-1/obstacles/cr2497.jsonl
+- id: cr2498
+  kind: car
+  length: 5.2121
+  width: 2.2555
+  at:
+    x: -30.5906
+    y: -54.7347
+    heading: -2.0353
+  v: 9.7445
+  mode: recorded
+  trajectory: catalog/commonroad/USA_Lanker-2_7_I-1-1/obstacles/cr2498.jsonl
+- id: cr2500
+  kind: car
+  length: 4.1148
+  width: 2.1946
+  at:
+    x: -53.6404
+    y: -121.9616
+    heading: -1.9691
+  v: 15.4137
+  mode: recorded
+  trajectory: catalog/commonroad/USA_Lanker-2_7_I-1-1/obstacles/cr2500.jsonl
+- id: cr2501
+  kind: car
+  length: 4.0538
+  width: 2.2555
+  at:
+    x: -22.321
+    y: -38.2169
+    heading: -2.035
+  v: 11.1069
+  mode: recorded
+  trajectory: catalog/commonroad/USA_Lanker-2_7_I-1-1/obstacles/cr2501.jsonl
+- id: cr2502
+  kind: car
+  length: 4.8768
+  width: 2.2555
+  at:
+    x: -43.365
+    y: -99.2075
+    heading: -1.991
+  v: 15.2461
+  mode: recorded
+  trajectory: catalog/commonroad/USA_Lanker-2_7_I-1-1/obstacles/cr2502.jsonl
+- id: cr2507
+  kind: car
+  length: 4.3891
+  width: 2.2555
+  at:
+    x: -48.5486
+    y: -102.2073
+    heading: -1.9741
+  v: 11.2593
+  mode: recorded
+  trajectory: catalog/commonroad/USA_Lanker-2_7_I-1-1/obstacles/cr2507.jsonl
+- id: cr2515
+  kind: car
+  length: 4.5415
+  width: 2.2555
+  at:
+    x: -15.5503
+    y: -23.3975
+    heading: -2.0261
+  v: 6.666
+  mode: recorded
+  trajectory: catalog/commonroad/USA_Lanker-2_7_I-1-1/obstacles/cr2515.jsonl
+- id: cr2516
+  kind: car
+  length: 4.2977
+  width: 2.1946
+  at:
+    x: -42.5289
+    y: -88.1087
+    heading: -1.973
+  v: 12.2652
+  mode: recorded
+  trajectory: catalog/commonroad/USA_Lanker-2_7_I-1-1/obstacles/cr2516.jsonl
+- id: cr2517
+  kind: car
+  length: 4.1148
+  width: 2.1946
+  at:
+    x: -12.6561
+    y: -66.0536
+    heading: -0.7229
+  v: 6.3673
+  mode: recorded
+  trajectory: catalog/commonroad/USA_Lanker-2_7_I-1-1/obstacles/cr2517.jsonl
+- id: cr2518
+  kind: car
+  length: 4.3586
+  width: 2.1946
+  at:
+    x: -16.491
+    y: -56.1503
+    heading: -1.4074
+  v: 5.3889
+  mode: recorded
+  trajectory: catalog/commonroad/USA_Lanker-2_7_I-1-1/obstacles/cr2518.jsonl
+- id: cr2521
+  kind: car
+  length: 5.4864
+  width: 2.2555
+  at:
+    x: -9.7041
+    y: -12.1385
+    heading: -2.0155
+  v: 6.8428
+  mode: recorded
+  trajectory: catalog/commonroad/USA_Lanker-2_7_I-1-1/obstacles/cr2521.jsonl
+- id: cr2523
+  kind: car
+  length: 4.5415
+  width: 2.225
+  at:
+    x: -34.8853
+    y: -70.6047
+    heading: -2.0007
+  v: 9.6347
+  mode: recorded
+  trajectory: catalog/commonroad/USA_Lanker-2_7_I-1-1/obstacles/cr2523.jsonl
+- id: cr2524
+  kind: car
+  length: 9.7841
+  width: 2.4384
+  at:
+    x: -24.4332
+    y: -55.7919
+    heading: -2.0087
+  v: 9.2751
+  mode: recorded
+  trajectory: catalog/commonroad/USA_Lanker-2_7_I-1-1/obstacles/cr2524.jsonl
+- id: cr2526
+  kind: car
+  length: 5.5169
+  width: 2.1946
+  at:
+    x: -7.5748
+    y: -15.1754
+    heading: -2.0344
+  v: 7.3213
+  mode: recorded
+  trajectory: catalog/commonroad/USA_Lanker-2_7_I-1-1/obstacles/cr2526.jsonl
+- id: cr2527
+  kind: car
+  length: 5.2121
+  width: 2.2555
+  at:
+    x: -22.4223
+    y: -44.7978
+    heading: -2.0045
+  v: 8.8788
+  mode: recorded
+  trajectory: catalog/commonroad/USA_Lanker-2_7_I-1-1/obstacles/cr2527.jsonl
+- id: cr2529
+  kind: car
+  length: 3.81
+  width: 2.1946
+  at:
+    x: -16.1673
+    y: -47.106
+    heading: -1.7461
+  v: 6.4648
+  mode: recorded
+  trajectory: catalog/commonroad/USA_Lanker-2_7_I-1-1/obstacles/cr2529.jsonl
+- id: cr2531
+  kind: car
+  length: 3.9624
+  width: 2.1946
+  at:
+    x: -12.8826
+    y: -26.23
+    heading: -2.0351
+  v: 7.5164
+  mode: recorded
+  trajectory: catalog/commonroad/USA_Lanker-2_7_I-1-1/obstacles/cr2531.jsonl
+- id: cr2532
+  kind: car
+  length: 4.4196
+  width: 2.1336
+  at:
+    x: -17.9465
+    y: -78.6721
+    heading: 1.108
+  v: 0.0274
+  mode: recorded
+  trajectory: catalog/commonroad/USA_Lanker-2_7_I-1-1/obstacles/cr2532.jsonl
+- id: cr2533
+  kind: car
+  length: 4.511
+  width: 2.1946
+  at:
+    x: -9.8272
+    y: -33.4731
+    heading: -2.0614
+  v: 8.0315
+  mode: recorded
+  trajectory: catalog/commonroad/USA_Lanker-2_7_I-1-1/obstacles/cr2533.jsonl
+- id: cr2536
+  kind: car
+  length: 4.4806
+  width: 2.2555
+  at:
+    x: -3.8646
+    y: -0.592
+    heading: -2.0355
+  v: 6.2088
+  mode: recorded
+  trajectory: catalog/commonroad/USA_Lanker-2_7_I-1-1/obstacles/cr2536.jsonl
+- id: cr2540
+  kind: car
+  length: 4.8768
+  width: 2.2555
+  at:
+    x: -12.0085
+    y: -49.1025
+    heading: -1.5195
+  v: 6.6965
+  mode: recorded
+  trajectory: catalog/commonroad/USA_Lanker-2_7_I-1-1/obstacles/cr2540.jsonl
+- id: cr2543
+  kind: car
+  length: 4.6634
+  width: 2.2555
+  at:
+    x: 2.5142
+    y: 12.7574
+    heading: -2.0207
+  v: 7.3061
+  mode: recorded
+  trajectory: catalog/commonroad/USA_Lanker-2_7_I-1-1/obstacles/cr2543.jsonl
+- id: cr2546
+  kind: car
+  length: 4.7854
+  width: 2.1946
+  at:
+    x: 8.6252
+    y: 24.5493
+    heading: -2.0217
+  v: 0.8748
+  mode: recorded
+  trajectory: catalog/commonroad/USA_Lanker-2_7_I-1-1/obstacles/cr2546.jsonl
+- id: cr2549
+  kind: car
+  length: 4.3282
+  width: 2.2555
+  at:
+    x: -10.6
+    y: -27.6133
+    heading: -2.0338
+  v: 8.0071
+  mode: recorded
+  trajectory: catalog/commonroad/USA_Lanker-2_7_I-1-1/obstacles/cr2549.jsonl
+- id: cr2551
+  kind: car
+  length: 3.5052
+  width: 2.1336
+  at:
+    x: -21.3082
+    y: -77.3164
+    heading: 1.137
+  v: 0.0
+  mode: recorded
+  trajectory: catalog/commonroad/USA_Lanker-2_7_I-1-1/obstacles/cr2551.jsonl
+- id: cr2552
+  kind: car
+  length: 4.572
+  width: 2.3165
+  at:
+    x: 15.2046
+    y: 37.1523
+    heading: -2.0331
+  v: 0.1433
+  mode: recorded
+  trajectory: catalog/commonroad/USA_Lanker-2_7_I-1-1/obstacles/cr2552.jsonl
+- id: cr2554
+  kind: car
+  length: 4.5415
+  width: 2.2555
+  at:
+    x: 4.1687
+    y: 8.8367
+    heading: -2.0183
+  v: 7.8913
+  mode: recorded
+  trajectory: catalog/commonroad/USA_Lanker-2_7_I-1-1/obstacles/cr2554.jsonl
+- id: cr2567
+  kind: car
+  length: 4.6634
+  width: 2.2555
+  at:
+    x: 12.3636
+    y: 11.3653
+    heading: -2.0513
+  v: 9.7902
+  mode: recorded
+  trajectory: catalog/commonroad/USA_Lanker-2_7_I-1-1/obstacles/cr2567.jsonl
+- id: cr2569
+  kind: car
+  length: 3.871
+  width: 2.2555
+  at:
+    x: -2.3673
+    y: -11.7918
+    heading: -2.0273
+  v: 8.9367
+  mode: recorded
+  trajectory: catalog/commonroad/USA_Lanker-2_7_I-1-1/obstacles/cr2569.jsonl
+- id: cr2570
+  kind: car
+  length: 4.9073
+  width: 2.0726
+  at:
+    x: -22.1618
+    y: -87.1073
+    heading: 1.0972
+  v: 0.0
+  mode: recorded
+  trajectory: catalog/commonroad/USA_Lanker-2_7_I-1-1/obstacles/cr2570.jsonl
+- id: cr2572
+  kind: car
+  length: 3.6576
+  width: 2.1336
+  at:
+    x: -45.1286
+    y: -118.6016
+    heading: 1.1067
+  v: 0.0
+  mode: recorded
+  trajectory: catalog/commonroad/USA_Lanker-2_7_I-1-1/obstacles/cr2572.jsonl
+- id: cr2574
+  kind: car
+  length: 3.8405
+  width: 1.9812
+  at:
+    x: -24.396
+    y: -84.3226
+    heading: 1.1256
+  v: 0.0518
+  mode: recorded
+  trajectory: catalog/commonroad/USA_Lanker-2_7_I-1-1/obstacles/cr2574.jsonl
+- id: cr2575
+  kind: car
+  length: 4.1148
+  width: 1.9812
+  at:
+    x: -26.504
+    y: -89.0136
+    heading: 1.1224
+  v: 0.0
+  mode: recorded
+  trajectory: catalog/commonroad/USA_Lanker-2_7_I-1-1/obstacles/cr2575.jsonl
+- id: cr2577
+  kind: car
+  length: 4.511
+  width: 1.9812
+  at:
+    x: -30.6939
+    y: -90.3366
+    heading: 1.1067
+  v: 0.0335
+  mode: recorded
+  trajectory: catalog/commonroad/USA_Lanker-2_7_I-1-1/obstacles/cr2577.jsonl
+- id: cr2580
+  kind: car
+  length: 3.9929
+  width: 2.0422
+  at:
+    x: -25.5206
+    y: -93.561
+    heading: 1.1067
+  v: 0.0427
+  mode: recorded
+  trajectory: catalog/commonroad/USA_Lanker-2_7_I-1-1/obstacles/cr2580.jsonl
+- id: cr2583
+  kind: car
+  length: 4.1758
+  width: 1.9812
+  at:
+    x: -31.087
+    y: -97.8984
+    heading: 1.1067
+  v: 0.0
+  mode: recorded
+  trajectory: catalog/commonroad/USA_Lanker-2_7_I-1-1/obstacles/cr2583.jsonl
+- id: cr2584
+  kind: car
+  length: 4.2977
+  width: 2.3774
+  at:
+    x: -9.7809
+    y: -61.4118
+    heading: -1.0086
+  v: 5.587
+  mode: recorded
+  trajectory: catalog/commonroad/USA_Lanker-2_7_I-1-1/obstacles/cr2584.jsonl
+- id: cr2586
+  kind: car
+  length: 3.7795
+  width: 2.0422
+  at:
+    x: -29.3475
+    y: -101.3795
+    heading: 1.1067
+  v: 0.0152
+  mode: recorded
+  trajectory: catalog/commonroad/USA_Lanker-2_7_I-1-1/obstacles/cr2586.jsonl
+- id: cr2587
+  kind: car
+  length: 3.6271
+  width: 2.0422
+  at:
+    x: -34.6175
+    y: -104.3017
+    heading: 1.1067
+  v: 0.0
+  mode: recorded
+  trajectory: catalog/commonroad/USA_Lanker-2_7_I-1-1/obstacles/cr2587.jsonl
+- id: cr2593
+  kind: car
+  length: 4.6939
+  width: 2.0726
+  at:
+    x: 11.3499
+    y: 30.7868
+    heading: -2.0308
+  v: 0.3719
+  mode: recorded
+  trajectory: catalog/commonroad/USA_Lanker-2_7_I-1-1/obstacles/cr2593.jsonl
+- id: cr2597
+  kind: car
+  length: 4.2062
+  width: 2.0726
+  at:
+    x: -4.2555
+    y: -22.0734
+    heading: -2.0338
+  v: 9.1531
+  mode: recorded
+  trajectory: catalog/commonroad/USA_Lanker-2_7_I-1-1/obstacles/cr2597.jsonl
+- id: cr2600
+  kind: car
+  length: 4.511
+  width: 1.9812
+  at:
+    x: -33.6979
+    y: -96.0002
+    heading: 1.1067
+  v: 0.0
+  mode: recorded
+  trajectory: catalog/commonroad/USA_Lanker-2_7_I-1-1/obstacles/cr2600.jsonl
+- id: cr2601
+  kind: car
+  length: 3.9014
+  width: 2.1031
+  at:
+    x: -36.3677
+    y: -101.4806
+    heading: 1.1067
+  v: 0.0
+  mode: recorded
+  trajectory: catalog/commonroad/USA_Lanker-2_7_I-1-1/obstacles/cr2601.jsonl
+- id: cr2604
+  kind: car
+  length: 4.4501
+  width: 2.0726
+  at:
+    x: -33.4362
+    y: -109.1178
+    heading: 1.1067
+  v: 0.0
+  mode: recorded
+  trajectory: catalog/commonroad/USA_Lanker-2_7_I-1-1/obstacles/cr2604.jsonl
+- id: cr2606
+  kind: car
+  length: 3.9014
+  width: 2.1336
+  at:
+    x: 3.5105
+    y: -7.1354
+    heading: -2.0467
+  v: 9.1227
+  mode: recorded
+  trajectory: catalog/commonroad/USA_Lanker-2_7_I-1-1/obstacles/cr2606.jsonl
+- id: cr2607
+  kind: car
+  length: 3.7186
+  width: 2.0726
+  at:
+    x: -37.1445
+    y: -109.2977
+    heading: 1.1067
+  v: 0.0
+  mode: recorded
+  trajectory: catalog/commonroad/USA_Lanker-2_7_I-1-1/obstacles/cr2607.jsonl
+- id: cr2608
+  kind: car
+  length: 3.7795
+  width: 2.0422
+  at:
+    x: -36.4875
+    y: -115.477
+    heading: 1.1067
+  v: 0.0
+  mode: recorded
+  trajectory: catalog/commonroad/USA_Lanker-2_7_I-1-1/obstacles/cr2608.jsonl
+- id: cr2609
+  kind: car
+  length: 4.0234
+  width: 1.9812
+  at:
+    x: -39.3664
+    y: -107.1062
+    heading: 1.1067
+  v: 0.0
+  mode: recorded
+  trajectory: catalog/commonroad/USA_Lanker-2_7_I-1-1/obstacles/cr2609.jsonl
+- id: cr2611
+  kind: car
+  length: 3.8405
+  width: 1.9812
+  at:
+    x: -39.3018
+    y: -121.5289
+    heading: 1.1067
+  v: 0.0
+  mode: recorded
+  trajectory: catalog/commonroad/USA_Lanker-2_7_I-1-1/obstacles/cr2611.jsonl
+- id: cr2612
+  kind: car
+  length: 4.0234
+  width: 1.9812
+  at:
+    x: -40.3765
+    y: -116.2531
+    heading: 1.1067
+  v: 0.0
+  mode: recorded
+  trajectory: catalog/commonroad/USA_Lanker-2_7_I-1-1/obstacles/cr2612.jsonl
+- id: cr2615
+  kind: car
+  length: 4.2977
+  width: 2.0422
+  at:
+    x: -43.3328
+    y: -121.7749
+    heading: 1.1067
+  v: 0.0579
+  mode: recorded
+  trajectory: catalog/commonroad/USA_Lanker-2_7_I-1-1/obstacles/cr2615.jsonl
+- id: cr2616
+  kind: car
+  length: 4.3586
+  width: 2.0726
+  at:
+    x: -42.5128
+    y: -127.8543
+    heading: 1.1067
+  v: 0.0
+  mode: recorded
+  trajectory: catalog/commonroad/USA_Lanker-2_7_I-1-1/obstacles/cr2616.jsonl
+- id: cr2617
+  kind: car
+  length: 4.6939
+  width: 1.9812
+  at:
+    x: -46.1931
+    y: -128.324
+    heading: 1.1067
+  v: 0.0122
+  mode: recorded
+  trajectory: catalog/commonroad/USA_Lanker-2_7_I-1-1/obstacles/cr2617.jsonl
+- id: cr2622
+  kind: car
+  length: 4.1758
+  width: 1.9812
+  at:
+    x: -46.5043
+    y: -135.4676
+    heading: 1.1123
+  v: 0.0
+  mode: recorded
+  trajectory: catalog/commonroad/USA_Lanker-2_7_I-1-1/obstacles/cr2622.jsonl
+- id: cr2624
+  kind: car
+  length: 4.7854
+  width: 2.0422
+  at:
+    x: -42.0112
+    y: -113.2113
+    heading: 1.1067
+  v: 0.0
+  mode: recorded
+  trajectory: catalog/commonroad/USA_Lanker-2_7_I-1-1/obstacles/cr2624.jsonl
+- id: cr2628
+  kind: car
+  length: 4.572
+  width: 2.0726
+  at:
+    x: -49.5498
+    y: -141.4466
+    heading: 1.0925
+  v: 0.0
+  mode: recorded
+  trajectory: catalog/commonroad/USA_Lanker-2_7_I-1-1/obstacles/cr2628.jsonl
+- id: cr2630
+  kind: car
+  length: 4.6634
+  width: 1.9812
+  at:
+    x: -49.6645
+    y: -133.6284
+    heading: 1.1054
+  v: 0.0335
+  mode: recorded
+  trajectory: catalog/commonroad/USA_Lanker-2_7_I-1-1/obstacles/cr2630.jsonl
+- id: cr2635
+  kind: car
+  length: 3.7795
+  width: 2.0422
+  at:
+    x: -12.5066
+    y: -80.0221
+    heading: 0.4373
+  v: 0.0
+  mode: recorded
+  trajectory: catalog/commonroad/USA_Lanker-2_7_I-1-1/obstacles/cr2635.jsonl
+- id: cr2636
+  kind: car
+  length: 4.2062
+  width: 2.0726
+  at:
+    x: -55.4629
+    y: -145.0296
+    heading: 1.1036
+  v: 0.2469
+  mode: recorded
+  trajectory: catalog/commonroad/USA_Lanker-2_7_I-1-1/obstacles/cr2636.jsonl
+- id: cr2637
+  kind: car
+  length: 3.9014
+  width: 1.9507
+  at:
+    x: -17.2396
+    y: -84.9439
+    heading: 1.0426
+  v: 0.0
+  mode: recorded
+  trajectory: catalog/commonroad/USA_Lanker-2_7_I-1-1/obstacles/cr2637.jsonl
+- id: cr2642
+  kind: car
+  length: 3.9624
+  width: 2.1336
+  at:
+    x: -19.8413
+    y: -91.2633
+    heading: 1.0468
+  v: 0.1494
+  mode: recorded
+  trajectory: catalog/commonroad/USA_Lanker-2_7_I-1-1/obstacles/cr2642.jsonl
+- id: cr2647
+  kind: car
+  length: 4.1148
+  width: 1.9812
+  at:
+    x: 0.1406
+    y: -58.8683
+    heading: 2.687
+  v: 0.0
+  mode: recorded
+  trajectory: catalog/commonroad/USA_Lanker-2_7_I-1-1/obstacles/cr2647.jsonl
+- id: cr2648
+  kind: car
+  length: 3.9624
+  width: 2.1336
+  at:
+    x: -23.8053
+    y: -98.0147
+    heading: 1.0948
+  v: 0.4999
+  mode: recorded
+  trajectory: catalog/commonroad/USA_Lanker-2_7_I-1-1/obstacles/cr2648.jsonl
+- id: cr2650
+  kind: car
+  length: 4.7244
+  width: 1.9812
+  at:
+    x: -52.4069
+    y: -139.5935
+    heading: 1.1036
+  v: 0.0274
+  mode: recorded
+  trajectory: catalog/commonroad/USA_Lanker-2_7_I-1-1/obstacles/cr2650.jsonl
+- id: cr2654
+  kind: car
+  length: 5.334
+  width: 2.1336
+  at:
+    x: -49.0803
+    y: -126.3787
+    heading: 1.1067
+  v: 1.2832
+  mode: recorded
+  trajectory: catalog/commonroad/USA_Lanker-2_7_I-1-1/obstacles/cr2654.jsonl
+- id: cr2677
+  kind: car
+  length: 6.5532
+  width: 2.3774
+  at:
+    x: 5.8223
+    y: -61.9889
+    heading: 2.6874
+  v: 0.061
+  mode: recorded
+  trajectory: catalog/commonroad/USA_Lanker-2_7_I-1-1/obstacles/cr2677.jsonl
+expect:
+  goal: true
+  collisions: 0
+  violations: 0
+  off_lanelet: 0
+verdict:
+  exerciser: skip
+  sumo:
+    status: soft
+    since:
+      worlds: 13b7dac
+      catalog: ef793dc
+    note: goal:window

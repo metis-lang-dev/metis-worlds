@@ -1,4 +1,5 @@
 card: 2
+set: working
 scenario: DEU_Frankfurt-74_11_I-1
 title: interactive Frankfurt traffic driven by SUMO from its initial states (the frozen-obstacle case)
 source:

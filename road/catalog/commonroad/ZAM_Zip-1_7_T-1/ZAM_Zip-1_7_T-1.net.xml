@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-06 15:25:28 by Eclipse SUMO netconvert Version 1.18.0
+<configuration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/netconvertConfiguration.xsd">
+
+    <input>
+        <node-files value="/home/axadmin/repo/perotheia-packages/.worlds/cr-cache/ZAM_Zip-1_7_T-1/ZAM_Zip-1_7_T-1.nod.xml"/>
+        <edge-files value="/home/axadmin/repo/perotheia-packages/.worlds/cr-cache/ZAM_Zip-1_7_T-1/ZAM_Zip-1_7_T-1.edg.xml"/>
+        <connection-files value="/home/axadmin/repo/perotheia-packages/.worlds/cr-cache/ZAM_Zip-1_7_T-1/ZAM_Zip-1_7_T-1.con.xml"/>
+        <tllogic-files value="/home/axadmin/repo/perotheia-packages/.worlds/cr-cache/ZAM_Zip-1_7_T-1/ZAM_Zip-1_7_T-1.tll.xml"/>
+        <type-files value="/home/axadmin/repo/perotheia-packages/.worlds/cr-cache/ZAM_Zip-1_7_T-1/ZAM_Zip-1_7_T-1.typ.xml"/>
+    </input>
+
+    <output>
+        <output-file value="/home/axadmin/repo/perotheia-packages/.worlds/cr-cache/ZAM_Zip-1_7_T-1/ZAM_Zip-1_7_T-1.net.xml"/>
+    </output>
+
+    <processing>
+        <geometry.remove.keep-edges.explicit value="true"/>
+        <geometry.remove.min-length value="0.0"/>
+        <geometry.avoid-overlap value="true"/>
+        <offset.disable-normalization value="true"/>
+    </processing>
+
+    <tls_building>
+        <tls.guess-signals value="true"/>
+        <tls.green.time value="50"/>
+        <tls.yellow.time value="10"/>
+        <tls.red.time value="50"/>
+        <tls.allred.time value="50"/>
+        <tls.left-green.time value="50"/>
+        <tls.crossing-min.time value="50"/>
+        <tls.crossing-clearance.time value="50"/>
+        <tls.group-signals value="true"/>
+    </tls_building>
+
+    <junctions>
+        <no-turnarounds value="true"/>
+        <junctions.internal-link-detail value="20"/>
+    </junctions>
+
+    <random_number>
+        <seed value="1234"/>
+    </random_number>
+
+</configuration>
+-->
+
+<net version="1.16" junctionCornerDetail="5" junctionLinkDetail="20" limitTurnSpeed="5.50" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/net_file.xsd">
+
+    <location netOffset="0.00,0.00" convBoundary="-180.98,4.01,146.38,6.96" origBoundary="-180.99,4.01,146.38,9.22" projParameter="!"/>
+
+    <type id="highway.unclassified_speed_50.0" priority="4" speed="50.00" disallow="tram rail_urban rail rail_electric ship"/>
+
+    <edge id=":5_0" function="internal">
+        <lane id=":5_0_0" index="0" disallow="tram rail_urban rail rail_electric ship" speed="50.00" length="8.12" width="3.50" shape="-14.98,5.71 -10.96,5.70 -6.99,5.69"/>
+        <lane id=":5_0_1" index="1" disallow="tram rail_urban rail rail_electric ship" speed="50.00" length="8.12" width="3.50" shape="-14.98,8.48 -14.72,8.43 -6.98,6.53"/>
+    </edge>
+
+    <edge id="24" from="5" to="2" priority="4" type="highway.unclassified_speed_50.0" spreadType="center" length="146.98">
+        <lane id="24_0" index="0" disallow="tram rail_urban rail rail_electric ship" speed="50.00" length="146.98" width="3.50" customShape="1" shape="-6.99,5.75 72.90,4.84 146.38,4.01"/>
+    </edge>
+    <edge id="26" from="3" to="5" priority="4" type="highway.unclassified_speed_50.0" spreadType="center" length="159.61">
+        <lane id="26_0" index="0" disallow="tram rail_urban rail rail_electric ship" speed="50.00" length="159.61" width="3.50" customShape="1" shape="-180.97,5.21 -59.67,5.47 -14.98,5.77"/>
+        <lane id="26_1" index="1" disallow="tram rail_urban rail rail_electric ship" speed="50.00" length="159.61" width="3.50" customShape="1" shape="-180.99,8.71 -59.70,8.97 -14.99,9.27"/>
+    </edge>
+
+    <junction id="2" type="dead_end" x="146.38" y="4.01" incLanes="24_0" intLanes="" shape="146.36,2.26 146.40,5.76"/>
+    <junction id="3" type="dead_end" x="-180.98" y="6.96" incLanes="" intLanes="" shape="-180.98,10.46 -180.97,3.46"/>
+    <junction id="5" type="priority" x="-10.97" y="6.58" incLanes="26_0 26_1" intLanes=":5_0_0 :5_0_1" shape="-6.97,7.50 -7.01,4.00 -14.97,4.02 -14.99,11.02 -11.94,10.13 -10.98,9.29 -10.02,8.44 -8.78,7.78" rightOfWay="edgePriority">
+        <request index="0" response="10" foes="10" cont="0"/>
+        <request index="1" response="00" foes="01" cont="0"/>
+    </junction>
+
+    <connection from="26" to="24" fromLane="0" toLane="0" keepClear="0" contPos="-4.00" shape="-21.35,5.73 -10.96,5.70 -0.59,5.68" via=":5_0_0" dir="s" state="m"/>
+    <connection from="26" to="24" fromLane="1" toLane="0" keepClear="0" contPos="-4.00" shape="-21.35,9.22 -18.28,9.05 -14.72,8.43 -6.21,6.34 -2.64,5.79 -0.59,5.68" via=":5_0_1" dir="s" state="M"/>
+
+    <connection from=":5_0" to="24" fromLane="0" toLane="0" dir="s" state="M"/>
+    <connection from=":5_0" to="24" fromLane="1" toLane="0" dir="s" state="M"/>
+
+</net>

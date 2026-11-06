@@ -1,0 +1,452 @@
+card: 2
+set: regression
+scenario: DEU_Frankfurt-75_10_I-1
+title: CommonRoad DEU_Frankfurt-75_10_I-1 (interactive / SUMO)
+source:
+  suite: commonroad
+  type: interactive/SUMO
+  code: /bigdata/datasets/commonroad/scenarios/scenarios/interactive/SUMO/DEU_Frankfurt-75_10_I-1/DEU_Frankfurt-75_10_I-1.cr.xml
+  pin: commonroad-interactive-scenarios 749e342013cc069980039fa91ba587f62993aaaf
+  license: CommonRoad interactive scenarios, BSD 3-Clause License, Copyright (c) 2023 Technical University of Munich
+  tags:
+  - highway
+patches: []
+tags:
+- route-following
+- speed-limit
+- yield-sign
+exercises: the family on CommonRoad's planning problem
+map:
+  net: catalog/commonroad/DEU_Frankfurt-75_10_I-1/DEU_Frankfurt-75_10_I-1.net.xml
+  data: catalog/commonroad/DEU_Frankfurt-75_10_I-1/cr.json
+dt: 0.1
+ticks: 1500
+ego:
+  v: 35.491
+  at:
+    lane: '855_1'
+    s: 509.62
+  route:
+  - '855'
+  goal:
+    region:
+      lanelets:
+      - 854
+    time:
+    - 19.9
+    - 20.0
+exerciser:
+  skip: 'a CommonRoad map: the exerciser has no net of its own'
+actors:
+- id: cr30471
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 471138.8376
+    y: 5554765.8963
+    heading: -1.9172
+  v: 33.1146
+  mode: model
+- id: cr30474
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 471151.4335
+    y: 5554805.1307
+    heading: -1.9476
+  v: 32.7878
+  mode: model
+- id: cr30475
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 471085.2908
+    y: 5554651.3955
+    heading: -1.9217
+  v: 31.3402
+  mode: model
+- id: cr30476
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 471164.9609
+    y: 5554843.2816
+    heading: -1.9462
+  v: 32.5303
+  mode: model
+- id: cr30478
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 471180.1841
+    y: 5554880.6452
+    heading: -1.9168
+  v: 32.2152
+  mode: model
+- id: cr30479
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 471087.853
+    y: 5554652.3983
+    heading: -1.9174
+  v: 35.7997
+  mode: model
+- id: cr30483
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 471194.0523
+    y: 5554918.9974
+    heading: -1.917
+  v: 32.0836
+  mode: model
+- id: cr30484
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 471195.3001
+    y: 5554932.5981
+    heading: -1.9174
+  v: 36.1276
+  mode: model
+- id: cr30485
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 471211.4536
+    y: 5554988.3396
+    heading: -1.9166
+  v: 35.4576
+  mode: model
+- id: cr30487
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 471240.1572
+    y: 5555046.988
+    heading: -1.916
+  v: 38.3329
+  mode: model
+- id: cr30488
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 471103.3567
+    y: 5554701.3298
+    heading: -1.9203
+  v: 33.0278
+  mode: model
+- id: cr30489
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 471250.7115
+    y: 5555097.4546
+    heading: -1.9187
+  v: 31.2732
+  mode: model
+- id: cr30490
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 471120.5821
+    y: 5554747.7638
+    heading: -1.9277
+  v: 32.5899
+  mode: model
+- id: cr30491
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 471272.3506
+    y: 5555157.4585
+    heading: -1.9175
+  v: 28.1572
+  mode: model
+- id: cr30492
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 471289.3148
+    y: 5555183.4425
+    heading: -1.9159
+  v: 36.4715
+  mode: model
+- id: cr30493
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 471147.2341
+    y: 5554813.3144
+    heading: -1.8846
+  v: 29.0813
+  mode: model
+- id: cr30494
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 471142.4894
+    y: 5554809.0851
+    heading: -1.903
+  v: 34.3621
+  mode: model
+- id: cr30495
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 471168.3132
+    y: 5554873.4884
+    heading: -1.9169
+  v: 30.6735
+  mode: model
+- id: cr30497
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 471192.1272
+    y: 5554945.5883
+    heading: -1.9176
+  v: 28.6961
+  mode: model
+- id: cr30501
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 471197.473
+    y: 5554954.3517
+    heading: -1.9173
+  v: 33.0674
+  mode: model
+- id: cr30503
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 471217.0409
+    y: 5555014.621
+    heading: -1.9151
+  v: 33.2361
+  mode: model
+- id: cr30506
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 471048.0013
+    y: 5554548.006
+    heading: -1.9164
+  v: 33.6537
+  mode: model
+- id: cr30507
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 471253.8182
+    y: 5555116.8429
+    heading: -1.9151
+  v: 36.9413
+  mode: model
+- id: cr30511
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 471283.4683
+    y: 5555199.0866
+    heading: -1.916
+  v: 27.8414
+  mode: model
+- id: cr30512
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 471303.4089
+    y: 5555243.6261
+    heading: -1.9153
+  v: 30.1535
+  mode: model
+- id: cr30514
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 471095.9894
+    y: 5554658.4927
+    heading: -1.9175
+  v: 32.576
+  mode: model
+- id: cr30520
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 471102.034
+    y: 5554663.9366
+    heading: -1.9177
+  v: 37.5721
+  mode: model
+- id: cr30525
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 471118.1358
+    y: 5554708.5446
+    heading: -1.9169
+  v: 36.6755
+  mode: model
+- id: cr30526
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 471043.5331
+    y: 5554524.6699
+    heading: -1.9169
+  v: 34.4057
+  mode: model
+- id: cr30534
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 471060.0418
+    y: 5554570.5062
+    heading: -1.9163
+  v: 34.8604
+  mode: model
+- id: cr30537
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 471324.4947
+    y: 5555281.137
+    heading: -1.9174
+  v: 31.8706
+  mode: model
+- id: cr30538
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 471321.8467
+    y: 5555294.9297
+    heading: -1.9169
+  v: 29.9944
+  mode: model
+- id: cr30540
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 471354.9424
+    y: 5555375.7331
+    heading: -1.9154
+  v: 22.0986
+  mode: model
+- id: cr30542
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 471361.5632
+    y: 5555405.2
+    heading: -1.916
+  v: 18.2887
+  mode: model
+- id: cr30544
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 471376.1075
+    y: 5555445.6032
+    heading: -1.9161
+  v: 14.165
+  mode: model
+- id: cr30546
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 471376.9273
+    y: 5555457.4335
+    heading: -1.9156
+  v: 12.3747
+  mode: model
+- id: cr30549
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 471388.5836
+    y: 5555480.2574
+    heading: -1.9158
+  v: 9.8958
+  mode: model
+- id: cr30550
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 471387.7519
+    y: 5555488.7758
+    heading: -1.9172
+  v: 8.2952
+  mode: model
+- id: cr30553
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 471396.2496
+    y: 5555501.5302
+    heading: -1.9174
+  v: 5.1435
+  mode: model
+- id: cr30554
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 471394.2128
+    y: 5555506.7963
+    heading: -1.9135
+  v: 2.7804
+  mode: model
+expect:
+  goal: true
+  collisions: 0
+  violations: 0
+  off_lanelet: 0
+verdict:
+  exerciser: skip
+  sumo:
+    status: pass
+    since:
+      worlds: 13b7dac
+      catalog: ef793dc

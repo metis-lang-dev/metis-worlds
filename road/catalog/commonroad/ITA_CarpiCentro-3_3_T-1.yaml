@@ -1,0 +1,176 @@
+card: 2
+set: working
+scenario: ITA_CarpiCentro-3_3_T-1
+title: CommonRoad ITA_CarpiCentro-3_3_T-1 (recorded / scenario-factory)
+source:
+  suite: commonroad
+  type: recorded/scenario-factory
+  code: /bigdata/datasets/commonroad/scenarios/scenarios/recorded/scenario-factory/ITA_CarpiCentro-3_3_T-1.xml
+  pin: commonroad-scenarios 2416dc27faf3ee36b6799f42712da72a34a2c8fd
+  license: CommonRoad scenarios, BSD 3-Clause License, Copyright (c) 2019 Technical University of Munich
+  tags:
+  - critical
+  - intersection
+  - simulated
+patches: []
+tags:
+- cyclist
+- following
+- junction-priority
+- right-before-left
+- route-following
+- speed-limit
+exercises: 'the family on CommonRoad''s planning problem: the harvest''s mechanism 3691f55f (contact:behind)'
+map:
+  net: catalog/commonroad/ITA_CarpiCentro-3_3_T-1/ITA_CarpiCentro-3_3_T-1.net.xml
+  data: catalog/commonroad/ITA_CarpiCentro-3_3_T-1/cr.json
+  route_note: 'a time-only goal: the ego drives on'
+dt: 0.1
+ticks: 1500
+ego:
+  v: 4.736
+  at:
+    lane: '43844_0'
+    s: 63.24
+  route:
+  - '43844'
+  - '43357'
+  - '43288'
+  - '43480'
+  - '43546'
+  - '43405'
+  - '43423'
+  - '43426'
+  - '44598'
+  - '43137'
+  goal:
+    time:
+    - 3.3
+    - 3.3
+exerciser:
+  skip: 'a CommonRoad map: the exerciser has no net of its own'
+actors:
+- id: cr36
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 456.8106
+    y: -757.8344
+    heading: 2.7239
+  v: 9.9411
+  mode: recorded
+  trajectory: catalog/commonroad/ITA_CarpiCentro-3_3_T-1/obstacles/cr36.jsonl
+- id: cr317
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 479.4004
+    y: -738.9628
+    heading: -0.406
+  v: 0.0
+  mode: recorded
+  trajectory: catalog/commonroad/ITA_CarpiCentro-3_3_T-1/obstacles/cr317.jsonl
+- id: cr322
+  kind: car
+  length: 2.5
+  width: 0.8
+  at:
+    x: 476.9448
+    y: -782.3251
+    heading: 1.2244
+  v: 2.6911
+  mode: recorded
+  trajectory: catalog/commonroad/ITA_CarpiCentro-3_3_T-1/obstacles/cr322.jsonl
+- id: cr325
+  kind: car
+  length: 5.0
+  width: 1.9193
+  at:
+    x: 450.6409
+    y: -758.7216
+    heading: -0.4121
+  v: 1.127
+  mode: recorded
+  trajectory: catalog/commonroad/ITA_CarpiCentro-3_3_T-1/obstacles/cr325.jsonl
+- id: cr330
+  kind: bicycle
+  length: 2.0
+  width: 0.68
+  at:
+    x: 466.5776
+    y: -809.3349
+    heading: 0.9733
+  v: 4.5079
+  mode: recorded
+  trajectory: catalog/commonroad/ITA_CarpiCentro-3_3_T-1/obstacles/cr330.jsonl
+- id: cr331
+  kind: car
+  length: 5.0
+  width: 1.8051
+  at:
+    x: 461.676
+    y: -811.3939
+    heading: 0.6829
+  v: 5.4902
+  mode: recorded
+  trajectory: catalog/commonroad/ITA_CarpiCentro-3_3_T-1/obstacles/cr331.jsonl
+- id: cr351
+  kind: car
+  length: 2.3184
+  width: 0.7385
+  at:
+    x: 453.9816
+    y: -821.4306
+    heading: 1.094
+  v: 1.6489
+  mode: recorded
+  trajectory: catalog/commonroad/ITA_CarpiCentro-3_3_T-1/obstacles/cr351.jsonl
+- id: cr365
+  kind: truck
+  length: 7.5
+  width: 2.6
+  at:
+    x: 474.8632
+    y: -777.2898
+    heading: 4.4161
+  v: 0.0041
+  mode: recorded
+  trajectory: catalog/commonroad/ITA_CarpiCentro-3_3_T-1/obstacles/cr365.jsonl
+- id: cr369
+  kind: truck
+  length: 7.5
+  width: 2.6
+  at:
+    x: 471.3589
+    y: -735.5039
+    heading: -0.4065
+  v: 0.0
+  mode: recorded
+  trajectory: catalog/commonroad/ITA_CarpiCentro-3_3_T-1/obstacles/cr369.jsonl
+- id: cr371
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 486.705
+    y: -743.0487
+    heading: -1.9479
+  v: 0.0332
+  mode: recorded
+  trajectory: catalog/commonroad/ITA_CarpiCentro-3_3_T-1/obstacles/cr371.jsonl
+expect:
+  goal: true
+  collisions: 0
+  violations: 0
+  off_lanelet: 0
+verdict:
+  exerciser: skip
+  sumo:
+    status: world
+    since:
+      worlds: 13b7dac
+      catalog: ef793dc
+    record: contact
+    note: contact

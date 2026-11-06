@@ -1,0 +1,166 @@
+card: 2
+set: regression
+scenario: BEL_Zwevegem-3_1_T-1
+title: CommonRoad BEL_Zwevegem-3_1_T-1 (recorded / scenario-factory)
+source:
+  suite: commonroad
+  type: recorded/scenario-factory
+  code: /bigdata/datasets/commonroad/scenarios/scenarios/recorded/scenario-factory/BEL_Zwevegem-3_1_T-1.xml
+  pin: commonroad-scenarios 2416dc27faf3ee36b6799f42712da72a34a2c8fd
+  license: CommonRoad scenarios, BSD 3-Clause License, Copyright (c) 2019 Technical University of Munich
+  tags:
+  - critical
+  - intersection
+  - simulated
+patches: []
+tags:
+- cyclist
+- junction-priority
+- right-before-left
+- route-following
+- speed-limit
+exercises: the family on CommonRoad's planning problem
+map:
+  net: catalog/commonroad/BEL_Zwevegem-3_1_T-1/BEL_Zwevegem-3_1_T-1.net.xml
+  data: catalog/commonroad/BEL_Zwevegem-3_1_T-1/cr.json
+  route_note: 'a time-only goal: the ego drives on'
+dt: 0.1
+ticks: 1500
+ego:
+  v: 7.492
+  at:
+    lane: '38463_0'
+    s: 59.83
+  route:
+  - '38463'
+  - '38188'
+  - '38558'
+  goal:
+    time:
+    - 3.3
+    - 3.3
+exerciser:
+  skip: 'a CommonRoad map: the exerciser has no net of its own'
+actors:
+- id: cr30
+  kind: truck
+  length: 7.5
+  width: 2.6
+  at:
+    x: -724.5145
+    y: -432.4988
+    heading: -1.2439
+  v: 1.3368
+  mode: recorded
+  trajectory: catalog/commonroad/BEL_Zwevegem-3_1_T-1/obstacles/cr30.jsonl
+- id: cr33
+  kind: car
+  length: 5.0
+  width: 1.9822
+  at:
+    x: -728.0156
+    y: -422.0316
+    heading: -1.2527
+  v: 0.4203
+  mode: recorded
+  trajectory: catalog/commonroad/BEL_Zwevegem-3_1_T-1/obstacles/cr33.jsonl
+- id: cr37
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: -734.1726
+    y: -403.1094
+    heading: -1.2576
+  v: 0.2194
+  mode: recorded
+  trajectory: catalog/commonroad/BEL_Zwevegem-3_1_T-1/obstacles/cr37.jsonl
+- id: cr310
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: -740.8139
+    y: -438.9612
+    heading: 0.366
+  v: 1.7724
+  mode: recorded
+  trajectory: catalog/commonroad/BEL_Zwevegem-3_1_T-1/obstacles/cr310.jsonl
+- id: cr324
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: -712.963
+    y: -407.1648
+    heading: 5.0239
+  v: 1.2225
+  mode: recorded
+  trajectory: catalog/commonroad/BEL_Zwevegem-3_1_T-1/obstacles/cr324.jsonl
+- id: cr325
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: -723.3474
+    y: -425.0065
+    heading: 1.8972
+  v: 9.4422
+  mode: recorded
+  trajectory: catalog/commonroad/BEL_Zwevegem-3_1_T-1/obstacles/cr325.jsonl
+- id: cr329
+  kind: bicycle
+  length: 2.0
+  width: 0.68
+  at:
+    x: -716.3501
+    y: -401.2497
+    heading: -1.2581
+  v: 0.4112
+  mode: recorded
+  trajectory: catalog/commonroad/BEL_Zwevegem-3_1_T-1/obstacles/cr329.jsonl
+- id: cr331
+  kind: car
+  length: 5.0
+  width: 1.8625
+  at:
+    x: -718.0327
+    y: -440.5569
+    heading: 1.903
+  v: 8.2609
+  mode: recorded
+  trajectory: catalog/commonroad/BEL_Zwevegem-3_1_T-1/obstacles/cr331.jsonl
+- id: cr336
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: -719.1533
+    y: -387.9086
+    heading: -1.1689
+  v: 0.9167
+  mode: recorded
+  trajectory: catalog/commonroad/BEL_Zwevegem-3_1_T-1/obstacles/cr336.jsonl
+- id: cr340
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: -706.804
+    y: -474.0102
+    heading: 1.8929
+  v: 7.5356
+  mode: recorded
+  trajectory: catalog/commonroad/BEL_Zwevegem-3_1_T-1/obstacles/cr340.jsonl
+expect:
+  goal: true
+  collisions: 0
+  violations: 0
+  off_lanelet: 0
+verdict:
+  exerciser: skip
+  sumo:
+    status: pass
+    since:
+      worlds: 13b7dac
+      catalog: ef793dc

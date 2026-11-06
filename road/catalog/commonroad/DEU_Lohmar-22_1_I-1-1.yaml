@@ -1,0 +1,190 @@
+card: 2
+set: regression
+scenario: DEU_Lohmar-22_1_I-1-1
+title: CommonRoad DEU_Lohmar-22_1_I-1-1 (interactive / SUMO)
+source:
+  suite: commonroad
+  type: interactive/SUMO
+  code: /bigdata/datasets/commonroad/scenarios/scenarios/interactive/SUMO/DEU_Lohmar-22_1_I-1-1/DEU_Lohmar-22_1_I-1-1.cr.xml
+  pin: commonroad-interactive-scenarios 749e342013cc069980039fa91ba587f62993aaaf
+  license: CommonRoad interactive scenarios, BSD 3-Clause License, Copyright (c) 2023 Technical University of Munich
+  tags:
+  - critical
+  - intersection
+  - simulated
+patches: []
+tags:
+- cyclist
+- junction-priority
+- right-before-left
+- route-following
+- speed-limit
+exercises: the family on CommonRoad's planning problem
+map:
+  net: catalog/commonroad/DEU_Lohmar-22_1_I-1-1/DEU_Lohmar-22_1_I-1-1.net.xml
+  data: catalog/commonroad/DEU_Lohmar-22_1_I-1-1/cr.json
+dt: 0.1
+ticks: 1500
+ego:
+  v: 0.67
+  at:
+    lane: '249_0'
+    s: 14.98
+  route:
+  - '249'
+  - '172'
+  - '244'
+  goal:
+    region:
+      lanelets:
+      - 244
+    time:
+    - 9.9
+    - 10.0
+exerciser:
+  skip: 'a CommonRoad map: the exerciser has no net of its own'
+actors:
+- id: cr312
+  kind: car
+  length: 4.4089
+  width: 1.8179
+  at:
+    x: -130.8738
+    y: 98.4042
+    heading: 1.5044
+  v: 17.1646
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Lohmar-22_1_I-1-1/obstacles/cr312.jsonl
+- id: cr313
+  kind: bicycle
+  length: 1.294
+  width: 0.4035
+  at:
+    x: -139.4026
+    y: 71.8623
+    heading: -1.741
+  v: 6.8752
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Lohmar-22_1_I-1-1/obstacles/cr313.jsonl
+- id: cr324
+  kind: bicycle
+  length: 1.2
+  width: 0.5602
+  at:
+    x: -128.7845
+    y: 55.7114
+    heading: -3.6806
+  v: 0.0
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Lohmar-22_1_I-1-1/obstacles/cr324.jsonl
+- id: cr326
+  kind: car
+  length: 4.427
+  width: 1.6126
+  at:
+    x: -135.6149
+    y: 51.9066
+    heading: 0.2924
+  v: 7.4346
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Lohmar-22_1_I-1-1/obstacles/cr326.jsonl
+- id: cr328
+  kind: truck
+  length: 11.8225
+  width: 2.3517
+  at:
+    x: -125.3111
+    y: 51.1723
+    heading: -3.6924
+  v: 0.0
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Lohmar-22_1_I-1-1/obstacles/cr328.jsonl
+- id: cr330
+  kind: car
+  length: 4.3245
+  width: 1.9252
+  at:
+    x: -169.794
+    y: 30.5097
+    heading: -0.6845
+  v: 0.3887
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Lohmar-22_1_I-1-1/obstacles/cr330.jsonl
+- id: cr332
+  kind: car
+  length: 4.2
+  width: 1.6113
+  at:
+    x: -116.1988
+    y: 45.4694
+    heading: -3.8667
+  v: 0.3809
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Lohmar-22_1_I-1-1/obstacles/cr332.jsonl
+- id: cr333
+  kind: car
+  length: 4.2393
+  width: 1.708
+  at:
+    x: -142.6794
+    y: 38.2951
+    heading: 1.2051
+  v: 8.2144
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Lohmar-22_1_I-1-1/obstacles/cr333.jsonl
+- id: cr335
+  kind: car
+  length: 4.2071
+  width: 1.7783
+  at:
+    x: -111.3175
+    y: 39.4031
+    heading: 2.0552
+  v: 1.1989
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Lohmar-22_1_I-1-1/obstacles/cr335.jsonl
+- id: cr336
+  kind: car
+  length: 4.2
+  width: 1.7186
+  at:
+    x: -156.5014
+    y: 20.2316
+    heading: 1.3091
+  v: 4.3069
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Lohmar-22_1_I-1-1/obstacles/cr336.jsonl
+- id: cr337
+  kind: car
+  length: 4.6039
+  width: 1.6282
+  at:
+    x: -109.6309
+    y: 31.8094
+    heading: 1.3401
+  v: 1.2764
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Lohmar-22_1_I-1-1/obstacles/cr337.jsonl
+- id: cr338
+  kind: car
+  length: 2.5
+  width: 0.4087
+  at:
+    x: -163.3105
+    y: 16.2777
+    heading: 0.3184
+  v: 0.0004
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Lohmar-22_1_I-1-1/obstacles/cr338.jsonl
+expect:
+  goal: true
+  collisions: 0
+  violations: 0
+  off_lanelet: 0
+verdict:
+  exerciser: skip
+  sumo:
+    status: pass
+    since:
+      worlds: 13b7dac
+      catalog: ef793dc

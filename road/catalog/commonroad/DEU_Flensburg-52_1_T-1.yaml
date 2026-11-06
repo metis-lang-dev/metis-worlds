@@ -1,0 +1,357 @@
+card: 2
+set: working
+scenario: DEU_Flensburg-52_1_T-1
+title: CommonRoad DEU_Flensburg-52_1_T-1 (recorded / SUMO)
+source:
+  suite: commonroad
+  type: recorded/SUMO
+  code: /bigdata/datasets/commonroad/scenarios/scenarios/recorded/SUMO/DEU_Flensburg-52_1_T-1.xml
+  pin: commonroad-scenarios 2416dc27faf3ee36b6799f42712da72a34a2c8fd
+  license: CommonRoad scenarios, BSD 3-Clause License, Copyright (c) 2019 Technical University of Munich
+  tags:
+  - critical
+  - intersection
+  - simulated
+patches: []
+tags:
+- cyclist
+- following
+- junction-priority
+- right-before-left
+- route-following
+- speed-limit
+exercises: 'the family on CommonRoad''s planning problem: the harvest''s mechanism 3691f55f (contact:behind)'
+map:
+  net: catalog/commonroad/DEU_Flensburg-52_1_T-1/DEU_Flensburg-52_1_T-1.net.xml
+  data: catalog/commonroad/DEU_Flensburg-52_1_T-1/cr.json
+dt: 0.1
+ticks: 1500
+ego:
+  v: 7.06
+  at:
+    lane: '757_0'
+    s: 1.87
+  route:
+  - '757'
+  - '218'
+  goal:
+    region:
+      lanelets:
+      - 218
+    time:
+    - 9.9
+    - 10.0
+exerciser:
+  skip: 'a CommonRoad map: the exerciser has no net of its own'
+actors:
+- id: cr31
+  kind: car
+  length: 4.2631
+  width: 1.7452
+  at:
+    x: 511.3576
+    y: -466.4077
+    heading: -1.6195
+  v: 0.0
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Flensburg-52_1_T-1/obstacles/cr31.jsonl
+- id: cr35
+  kind: car
+  length: 4.2
+  width: 1.815
+  at:
+    x: 511.468
+    y: -459.4346
+    heading: -1.6195
+  v: 0.0
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Flensburg-52_1_T-1/obstacles/cr35.jsonl
+- id: cr36
+  kind: car
+  length: 5.0
+  width: 1.7673
+  at:
+    x: 511.8249
+    y: -452.1067
+    heading: -1.6195
+  v: 0.0
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Flensburg-52_1_T-1/obstacles/cr36.jsonl
+- id: cr37
+  kind: car
+  length: 4.2
+  width: 1.6115
+  at:
+    x: 477.018
+    y: -523.9074
+    heading: -3.4165
+  v: 0.0
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Flensburg-52_1_T-1/obstacles/cr37.jsonl
+- id: cr38
+  kind: truck
+  length: 7.5
+  width: 2.4808
+  at:
+    x: 512.3108
+    y: -443.105
+    heading: -1.6321
+  v: 0.0004
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Flensburg-52_1_T-1/obstacles/cr38.jsonl
+- id: cr311
+  kind: car
+  length: 2.4557
+  width: 0.4788
+  at:
+    x: 509.5816
+    y: -467.226
+    heading: -1.6195
+  v: 0.0
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Flensburg-52_1_T-1/obstacles/cr311.jsonl
+- id: cr313
+  kind: car
+  length: 4.4561
+  width: 1.8414
+  at:
+    x: 487.9533
+    y: -526.9922
+    heading: -3.4166
+  v: 3.5601
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Flensburg-52_1_T-1/obstacles/cr313.jsonl
+- id: cr314
+  kind: bicycle
+  length: 1.3252
+  width: 0.4947
+  at:
+    x: 507.6309
+    y: -510.9259
+    heading: -1.6136
+  v: 6.9205
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Flensburg-52_1_T-1/obstacles/cr314.jsonl
+- id: cr315
+  kind: car
+  length: 4.5286
+  width: 1.8936
+  at:
+    x: 405.9896
+    y: -482.9344
+    heading: 1.2958
+  v: 10.759
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Flensburg-52_1_T-1/obstacles/cr315.jsonl
+- id: cr316
+  kind: car
+  length: 4.2
+  width: 1.8773
+  at:
+    x: 512.8827
+    y: -434.419
+    heading: -1.6403
+  v: 0.003
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Flensburg-52_1_T-1/obstacles/cr316.jsonl
+- id: cr317
+  kind: car
+  length: 4.9535
+  width: 1.8511
+  at:
+    x: 513.7963
+    y: -427.1535
+    heading: -1.7198
+  v: 0.0163
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Flensburg-52_1_T-1/obstacles/cr317.jsonl
+- id: cr318
+  kind: car
+  length: 4.2491
+  width: 1.7782
+  at:
+    x: 501.8313
+    y: -530.8032
+    heading: -3.3683
+  v: 5.6061
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Flensburg-52_1_T-1/obstacles/cr318.jsonl
+- id: cr319
+  kind: car
+  length: 4.5269
+  width: 1.6717
+  at:
+    x: 402.7423
+    y: -499.4217
+    heading: -4.4219
+  v: 9.7142
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Flensburg-52_1_T-1/obstacles/cr319.jsonl
+- id: cr320
+  kind: car
+  length: 4.2
+  width: 1.8841
+  at:
+    x: 513.7661
+    y: -419.8424
+    heading: -1.3246
+  v: 0.0722
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Flensburg-52_1_T-1/obstacles/cr320.jsonl
+- id: cr321
+  kind: bicycle
+  length: 2.0
+  width: 0.4998
+  at:
+    x: 440.3415
+    y: -511.5983
+    heading: -3.4298
+  v: 6.9116
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Flensburg-52_1_T-1/obstacles/cr321.jsonl
+- id: cr322
+  kind: car
+  length: 4.9655
+  width: 1.8896
+  at:
+    x: 509.3855
+    y: -511.9893
+    heading: -1.6136
+  v: 12.367
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Flensburg-52_1_T-1/obstacles/cr322.jsonl
+- id: cr324
+  kind: car
+  length: 4.2419
+  width: 1.7961
+  at:
+    x: 509.7156
+    y: -497.6056
+    heading: -1.6112
+  v: 11.4599
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Flensburg-52_1_T-1/obstacles/cr324.jsonl
+- id: cr326
+  kind: car
+  length: 4.5808
+  width: 1.6872
+  at:
+    x: 510.2947
+    y: -478.6108
+    heading: -1.512
+  v: 6.8494
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Flensburg-52_1_T-1/obstacles/cr326.jsonl
+- id: cr327
+  kind: truck
+  length: 6.7
+  width: 2.5175
+  at:
+    x: 451.5099
+    y: -516.4832
+    heading: -3.4298
+  v: 8.1127
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Flensburg-52_1_T-1/obstacles/cr327.jsonl
+- id: cr329
+  kind: car
+  length: 5.0
+  width: 1.8108
+  at:
+    x: 499.272
+    y: -471.268
+    heading: -0.2389
+  v: 7.0625
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Flensburg-52_1_T-1/obstacles/cr329.jsonl
+- id: cr331
+  kind: car
+  length: 4.2
+  width: 1.8621
+  at:
+    x: 463.8471
+    y: -518.8299
+    heading: -2.8441
+  v: 7.6317
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Flensburg-52_1_T-1/obstacles/cr331.jsonl
+- id: cr332
+  kind: car
+  length: 2.316
+  width: 0.4667
+  at:
+    x: 494.7861
+    y: -468.6258
+    heading: -0.2361
+  v: 12.9037
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Flensburg-52_1_T-1/obstacles/cr332.jsonl
+- id: cr335
+  kind: truck
+  length: 11.6
+  width: 2.4453
+  at:
+    x: 466.6566
+    y: -463.3244
+    heading: -0.2389
+  v: 7.1744
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Flensburg-52_1_T-1/obstacles/cr335.jsonl
+- id: cr337
+  kind: car
+  length: 5.0
+  width: 1.8994
+  at:
+    x: 463.7981
+    y: -498.9666
+    heading: -0.2974
+  v: 6.6456
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Flensburg-52_1_T-1/obstacles/cr337.jsonl
+- id: cr338
+  kind: car
+  length: 4.7624
+  width: 1.8761
+  at:
+    x: 449.7421
+    y: -459.2069
+    heading: -0.2387
+  v: 5.6781
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Flensburg-52_1_T-1/obstacles/cr338.jsonl
+- id: cr339
+  kind: car
+  length: 1.7465
+  width: 0.5407
+  at:
+    x: 453.6972
+    y: -496.2109
+    heading: -0.259
+  v: 4.2835
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Flensburg-52_1_T-1/obstacles/cr339.jsonl
+- id: cr341
+  kind: car
+  length: 4.7637
+  width: 1.7577
+  at:
+    x: 440.6056
+    y: -456.9833
+    heading: -0.2387
+  v: 2.9613
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Flensburg-52_1_T-1/obstacles/cr341.jsonl
+expect:
+  goal: true
+  collisions: 0
+  violations: 0
+  off_lanelet: 0
+verdict:
+  exerciser: skip
+  sumo:
+    status: world
+    since:
+      worlds: 13b7dac
+      catalog: ef793dc
+    record: contact
+    note: contact

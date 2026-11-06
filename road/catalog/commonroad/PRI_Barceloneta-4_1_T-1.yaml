@@ -1,0 +1,135 @@
+card: 2
+set: regression
+scenario: PRI_Barceloneta-4_1_T-1
+title: CommonRoad PRI_Barceloneta-4_1_T-1 (recorded / scenario-factory)
+source:
+  suite: commonroad
+  type: recorded/scenario-factory
+  code: /bigdata/datasets/commonroad/scenarios/scenarios/recorded/scenario-factory/PRI_Barceloneta-4_1_T-1.xml
+  pin: commonroad-scenarios 2416dc27faf3ee36b6799f42712da72a34a2c8fd
+  license: CommonRoad scenarios, BSD 3-Clause License, Copyright (c) 2019 Technical University of Munich
+  tags:
+  - critical
+  - intersection
+  - simulated
+patches: []
+tags:
+- cyclist
+- junction-priority
+- right-before-left
+- route-following
+- speed-limit
+exercises: the family on CommonRoad's planning problem
+map:
+  net: catalog/commonroad/PRI_Barceloneta-4_1_T-1/PRI_Barceloneta-4_1_T-1.net.xml
+  data: catalog/commonroad/PRI_Barceloneta-4_1_T-1/cr.json
+  route_note: 'a time-only goal: the ego drives on'
+dt: 0.1
+ticks: 1500
+ego:
+  v: 11.249
+  at:
+    lane: '20188_0'
+    s: 0.0
+  route:
+  - '20188'
+  - '20185'
+  - '20182'
+  - '19810'
+  - '19704'
+  goal:
+    time:
+    - 3.3
+    - 3.3
+exerciser:
+  skip: 'a CommonRoad map: the exerciser has no net of its own'
+actors:
+- id: cr33
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: -171.104
+    y: 569.7165
+    heading: -2.3418
+  v: 0.0
+  mode: recorded
+  trajectory: catalog/commonroad/PRI_Barceloneta-4_1_T-1/obstacles/cr33.jsonl
+- id: cr34
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: -113.6065
+    y: 510.3301
+    heading: 1.5414
+  v: 0.0
+  mode: recorded
+  trajectory: catalog/commonroad/PRI_Barceloneta-4_1_T-1/obstacles/cr34.jsonl
+- id: cr35
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: -113.8273
+    y: 502.8311
+    heading: 1.5414
+  v: 0.0
+  mode: recorded
+  trajectory: catalog/commonroad/PRI_Barceloneta-4_1_T-1/obstacles/cr35.jsonl
+- id: cr310
+  kind: bicycle
+  length: 1.9976
+  width: 0.68
+  at:
+    x: -93.4788
+    y: 532.8026
+    heading: 2.9608
+  v: 8.3869
+  mode: recorded
+  trajectory: catalog/commonroad/PRI_Barceloneta-4_1_T-1/obstacles/cr310.jsonl
+- id: cr311
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: -198.475
+    y: 548.6673
+    heading: -0.1885
+  v: 0.0
+  mode: recorded
+  trajectory: catalog/commonroad/PRI_Barceloneta-4_1_T-1/obstacles/cr311.jsonl
+- id: cr327
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: -90.7612
+    y: 542.3039
+    heading: 4.4876
+  v: 2.9234
+  mode: recorded
+  trajectory: catalog/commonroad/PRI_Barceloneta-4_1_T-1/obstacles/cr327.jsonl
+- id: cr331
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: -146.3491
+    y: 538.7436
+    heading: -0.2017
+  v: 4.053
+  mode: recorded
+  trajectory: catalog/commonroad/PRI_Barceloneta-4_1_T-1/obstacles/cr331.jsonl
+expect:
+  goal: true
+  collisions: 0
+  violations: 0
+  off_lanelet: 0
+verdict:
+  exerciser: skip
+  sumo:
+    status: pass
+    since:
+      worlds: 13b7dac
+      catalog: ef793dc

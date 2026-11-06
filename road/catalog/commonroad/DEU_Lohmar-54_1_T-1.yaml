@@ -1,0 +1,346 @@
+card: 2
+set: working
+scenario: DEU_Lohmar-54_1_T-1
+title: CommonRoad DEU_Lohmar-54_1_T-1 (recorded / SUMO)
+source:
+  suite: commonroad
+  type: recorded/SUMO
+  code: /bigdata/datasets/commonroad/scenarios/scenarios/recorded/SUMO/DEU_Lohmar-54_1_T-1.xml
+  pin: commonroad-scenarios 2416dc27faf3ee36b6799f42712da72a34a2c8fd
+  license: CommonRoad scenarios, BSD 3-Clause License, Copyright (c) 2019 Technical University of Munich
+  tags:
+  - critical
+  - intersection
+  - simulated
+patches: []
+tags:
+- cyclist
+- following
+- junction-priority
+- right-before-left
+- route-following
+- speed-limit
+exercises: 'the family on CommonRoad''s planning problem: the harvest''s mechanism 3691f55f (contact:behind)'
+map:
+  net: catalog/commonroad/DEU_Lohmar-54_1_T-1/DEU_Lohmar-54_1_T-1.net.xml
+  data: catalog/commonroad/DEU_Lohmar-54_1_T-1/cr.json
+dt: 0.1
+ticks: 1500
+ego:
+  v: 4.144
+  at:
+    lane: '79_0'
+    s: 60.86
+  route:
+  - '79'
+  - '298'
+  goal:
+    region:
+      lanelets:
+      - 298
+    time:
+    - 9.9
+    - 10.0
+exerciser:
+  skip: 'a CommonRoad map: the exerciser has no net of its own'
+actors:
+- id: cr34
+  kind: car
+  length: 4.425
+  width: 1.9516
+  at:
+    x: 216.2348
+    y: -694.7294
+    heading: -4.602
+  v: 0.0
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Lohmar-54_1_T-1/obstacles/cr34.jsonl
+- id: cr35
+  kind: car
+  length: 4.8098
+  width: 1.9135
+  at:
+    x: 217.0189
+    y: -701.8062
+    heading: -4.602
+  v: 0.0
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Lohmar-54_1_T-1/obstacles/cr35.jsonl
+- id: cr36
+  kind: car
+  length: 4.4499
+  width: 1.6897
+  at:
+    x: 213.9993
+    y: -706.3748
+    heading: -1.4663
+  v: 10.5894
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Lohmar-54_1_T-1/obstacles/cr36.jsonl
+- id: cr37
+  kind: truck
+  length: 7.5
+  width: 2.3315
+  at:
+    x: 217.0813
+    y: -681.2566
+    heading: -2.9807
+  v: 4.8336
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Lohmar-54_1_T-1/obstacles/cr37.jsonl
+- id: cr311
+  kind: car
+  length: 4.7713
+  width: 1.7779
+  at:
+    x: 209.8764
+    y: -777.282
+    heading: 0.0491
+  v: 0.0
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Lohmar-54_1_T-1/obstacles/cr311.jsonl
+- id: cr312
+  kind: car
+  length: 4.3923
+  width: 1.8168
+  at:
+    x: 239.638
+    y: -677.5837
+    heading: -2.9798
+  v: 3.4261
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Lohmar-54_1_T-1/obstacles/cr312.jsonl
+- id: cr314
+  kind: car
+  length: 2.5
+  width: 0.5361
+  at:
+    x: 248.0806
+    y: -676.2059
+    heading: -2.9798
+  v: 2.451
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Lohmar-54_1_T-1/obstacles/cr314.jsonl
+- id: cr315
+  kind: bicycle
+  length: 1.2
+  width: 0.5183
+  at:
+    x: 224.1957
+    y: -784.0351
+    heading: -4.6424
+  v: 0.0
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Lohmar-54_1_T-1/obstacles/cr315.jsonl
+- id: cr317
+  kind: car
+  length: 4.7163
+  width: 1.7877
+  at:
+    x: 222.0884
+    y: -785.9452
+    heading: -4.6424
+  v: 0.0
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Lohmar-54_1_T-1/obstacles/cr317.jsonl
+- id: cr318
+  kind: car
+  length: 4.2
+  width: 1.8643
+  at:
+    x: 202.8995
+    y: -777.6247
+    heading: 0.0491
+  v: 0.0
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Lohmar-54_1_T-1/obstacles/cr318.jsonl
+- id: cr319
+  kind: car
+  length: 4.9308
+  width: 1.6808
+  at:
+    x: 195.8429
+    y: -777.9711
+    heading: 0.049
+  v: 0.0
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Lohmar-54_1_T-1/obstacles/cr319.jsonl
+- id: cr320
+  kind: car
+  length: 5.0
+  width: 1.8478
+  at:
+    x: 256.0145
+    y: -674.9111
+    heading: -2.9798
+  v: 1.8679
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Lohmar-54_1_T-1/obstacles/cr320.jsonl
+- id: cr321
+  kind: car
+  length: 5.0
+  width: 1.8855
+  at:
+    x: 223.3462
+    y: -793.2339
+    heading: -4.6424
+  v: 0.0
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Lohmar-54_1_T-1/obstacles/cr321.jsonl
+- id: cr322
+  kind: bicycle
+  length: 1.2
+  width: 0.5986
+  at:
+    x: 261.1125
+    y: -672.6097
+    heading: -2.9798
+  v: 1.1553
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Lohmar-54_1_T-1/obstacles/cr322.jsonl
+- id: cr323
+  kind: car
+  length: 4.8801
+  width: 1.8427
+  at:
+    x: 223.8666
+    y: -800.6563
+    heading: -4.6423
+  v: 0.0
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Lohmar-54_1_T-1/obstacles/cr323.jsonl
+- id: cr325
+  kind: car
+  length: 4.4405
+  width: 1.9041
+  at:
+    x: 188.6661
+    y: -778.321
+    heading: 0.0486
+  v: 0.0
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Lohmar-54_1_T-1/obstacles/cr325.jsonl
+- id: cr326
+  kind: car
+  length: 1.7
+  width: 0.7299
+  at:
+    x: 209.6913
+    y: -773.7773
+    heading: -3.0866
+  v: 5.4595
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Lohmar-54_1_T-1/obstacles/cr326.jsonl
+- id: cr327
+  kind: car
+  length: 5.0
+  width: 1.8636
+  at:
+    x: 267.2341
+    y: -673.2805
+    heading: -2.9689
+  v: 1.9026
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Lohmar-54_1_T-1/obstacles/cr327.jsonl
+- id: cr328
+  kind: car
+  length: 4.2
+  width: 1.7496
+  at:
+    x: 224.3605
+    y: -807.6796
+    heading: -4.6421
+  v: 0.0
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Lohmar-54_1_T-1/obstacles/cr328.jsonl
+- id: cr330
+  kind: car
+  length: 4.6731
+  width: 1.7275
+  at:
+    x: 181.618
+    y: -778.6637
+    heading: 0.0486
+  v: 0.0
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Lohmar-54_1_T-1/obstacles/cr330.jsonl
+- id: cr331
+  kind: car
+  length: 4.4824
+  width: 1.7779
+  at:
+    x: 275.1194
+    y: -671.8687
+    heading: -2.9461
+  v: 0.7828
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Lohmar-54_1_T-1/obstacles/cr331.jsonl
+- id: cr332
+  kind: truck
+  length: 11.9244
+  width: 2.4911
+  at:
+    x: 217.4767
+    y: -753.2431
+    heading: -1.521
+  v: 11.6912
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Lohmar-54_1_T-1/obstacles/cr332.jsonl
+- id: cr333
+  kind: car
+  length: 4.2
+  width: 1.7688
+  at:
+    x: 224.831
+    y: -814.3638
+    heading: -4.6421
+  v: 0.0002
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Lohmar-54_1_T-1/obstacles/cr333.jsonl
+- id: cr334
+  kind: car
+  length: 4.2
+  width: 1.6677
+  at:
+    x: 216.3199
+    y: -732.3188
+    heading: -1.499
+  v: 11.1495
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Lohmar-54_1_T-1/obstacles/cr334.jsonl
+- id: cr335
+  kind: car
+  length: 4.3441
+  width: 1.7735
+  at:
+    x: 282.2723
+    y: -670.8152
+    heading: -2.9842
+  v: 0.2606
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Lohmar-54_1_T-1/obstacles/cr335.jsonl
+- id: cr336
+  kind: car
+  length: 4.2
+  width: 1.7466
+  at:
+    x: 190.8831
+    y: -689.0637
+    heading: 0.1619
+  v: 14.6803
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Lohmar-54_1_T-1/obstacles/cr336.jsonl
+expect:
+  goal: true
+  collisions: 0
+  violations: 0
+  off_lanelet: 0
+verdict:
+  exerciser: skip
+  sumo:
+    status: world
+    since:
+      worlds: 13b7dac
+      catalog: ef793dc
+    record: contact
+    note: contact

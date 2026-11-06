@@ -1,0 +1,167 @@
+card: 2
+set: working
+scenario: DEU_BadEssen-2_1_T-1
+title: CommonRoad DEU_BadEssen-2_1_T-1 (recorded / scenario-factory)
+source:
+  suite: commonroad
+  type: recorded/scenario-factory
+  code: /bigdata/datasets/commonroad/scenarios/scenarios/recorded/scenario-factory/DEU_BadEssen-2_1_T-1.xml
+  pin: commonroad-scenarios 2416dc27faf3ee36b6799f42712da72a34a2c8fd
+  license: CommonRoad scenarios, BSD 3-Clause License, Copyright (c) 2019 Technical University of Munich
+  tags:
+  - critical
+  - intersection
+  - simulated
+patches: []
+tags:
+- following
+- junction-priority
+- right-before-left
+- route-following
+- speed-limit
+exercises: 'the family on CommonRoad''s planning problem: the harvest''s mechanism 3691f55f (contact:behind)'
+map:
+  net: catalog/commonroad/DEU_BadEssen-2_1_T-1/DEU_BadEssen-2_1_T-1.net.xml
+  data: catalog/commonroad/DEU_BadEssen-2_1_T-1/cr.json
+  route_note: 'a time-only goal: the ego drives on'
+dt: 0.1
+ticks: 1500
+ego:
+  v: 3.144
+  at:
+    lane: '21967_0'
+    s: 14.79
+  route:
+  - '21967'
+  - '22053'
+  goal:
+    time:
+    - 3.3
+    - 3.3
+exerciser:
+  skip: 'a CommonRoad map: the exerciser has no net of its own'
+actors:
+- id: cr33
+  kind: car
+  length: 2.5
+  width: 0.7307
+  at:
+    x: 980.3498
+    y: -151.7203
+    heading: -0.3207
+  v: 0.6721
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_BadEssen-2_1_T-1/obstacles/cr33.jsonl
+- id: cr34
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 942.9952
+    y: -140.6702
+    heading: -0.1982
+  v: 1.4257
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_BadEssen-2_1_T-1/obstacles/cr34.jsonl
+- id: cr39
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 988.0583
+    y: -154.2387
+    heading: 2.8214
+  v: 0.0304
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_BadEssen-2_1_T-1/obstacles/cr39.jsonl
+- id: cr312
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 971.3641
+    y: -152.1172
+    heading: -0.391
+  v: 8.4685
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_BadEssen-2_1_T-1/obstacles/cr312.jsonl
+- id: cr316
+  kind: car
+  length: 4.9075
+  width: 2.0
+  at:
+    x: 958.6069
+    y: -141.4023
+    heading: 1.3157
+  v: 0.5557
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_BadEssen-2_1_T-1/obstacles/cr316.jsonl
+- id: cr318
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 953.9422
+    y: -160.9937
+    heading: 1.1112
+  v: 5.0685
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_BadEssen-2_1_T-1/obstacles/cr318.jsonl
+- id: cr319
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 956.0327
+    y: -132.3627
+    heading: -2.1289
+  v: 1.4715
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_BadEssen-2_1_T-1/obstacles/cr319.jsonl
+- id: cr320
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 962.109
+    y: -113.2335
+    heading: -1.8204
+  v: 1.3998
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_BadEssen-2_1_T-1/obstacles/cr320.jsonl
+- id: cr321
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 950.7369
+    y: -170.9964
+    heading: 1.3045
+  v: 3.7938
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_BadEssen-2_1_T-1/obstacles/cr321.jsonl
+- id: cr323
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 965.3728
+    y: -93.6853
+    heading: -1.5759
+  v: 1.8524
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_BadEssen-2_1_T-1/obstacles/cr323.jsonl
+expect:
+  goal: true
+  collisions: 0
+  violations: 0
+  off_lanelet: 0
+verdict:
+  exerciser: skip
+  sumo:
+    status: world
+    since:
+      worlds: 13b7dac
+      catalog: ef793dc
+    record: contact
+    note: contact

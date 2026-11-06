@@ -1,0 +1,637 @@
+card: 2
+set: regression
+scenario: CHN_Sha-6_9_I-1-1
+title: CommonRoad CHN_Sha-6_9_I-1-1 (interactive / SUMO)
+source:
+  suite: commonroad
+  type: interactive/SUMO
+  code: /bigdata/datasets/commonroad/scenarios/scenarios/interactive/SUMO/CHN_Sha-6_9_I-1-1/CHN_Sha-6_9_I-1-1.cr.xml
+  pin: commonroad-interactive-scenarios 749e342013cc069980039fa91ba587f62993aaaf
+  license: CommonRoad interactive scenarios, BSD 3-Clause License, Copyright (c) 2023 Technical University of Munich
+  tags:
+  - comfort
+  - intersection
+  - urban
+patches: []
+tags:
+- junction-priority
+- route-following
+- speed-limit
+exercises: the family on CommonRoad's planning problem
+map:
+  net: catalog/commonroad/CHN_Sha-6_9_I-1-1/CHN_Sha-6_9_I-1-1.net.xml
+  data: catalog/commonroad/CHN_Sha-6_9_I-1-1/cr.json
+dt: 0.1
+ticks: 1500
+ego:
+  v: 8.125
+  at:
+    lane: '468_0'
+    s: 17.25
+  route:
+  - '468'
+  goal:
+    region:
+      lanelets:
+      - 468
+    time:
+    - 16.5
+    - 16.5
+exerciser:
+  skip: 'a CommonRoad map: the exerciser has no net of its own'
+actors:
+- id: cr32
+  kind: car
+  length: 5.0
+  width: 1.8
+  at:
+    x: 9.5903
+    y: 15.6285
+    heading: 0.9888
+  v: 4.4043
+  mode: recorded
+  trajectory: catalog/commonroad/CHN_Sha-6_9_I-1-1/obstacles/cr32.jsonl
+- id: cr33
+  kind: car
+  length: 5.0
+  width: 1.8
+  at:
+    x: 13.669
+    y: 26.563
+    heading: 1.0195
+  v: 4.8096
+  mode: recorded
+  trajectory: catalog/commonroad/CHN_Sha-6_9_I-1-1/obstacles/cr33.jsonl
+- id: cr35
+  kind: car
+  length: 5.0
+  width: 1.8
+  at:
+    x: -39.145
+    y: 72.7532
+    heading: -0.5092
+  v: 9.6579
+  mode: recorded
+  trajectory: catalog/commonroad/CHN_Sha-6_9_I-1-1/obstacles/cr35.jsonl
+- id: cr36
+  kind: car
+  length: 5.0
+  width: 1.8
+  at:
+    x: 66.627
+    y: 97.7161
+    heading: 0.9926
+  v: 17.8146
+  mode: recorded
+  trajectory: catalog/commonroad/CHN_Sha-6_9_I-1-1/obstacles/cr36.jsonl
+- id: cr37
+  kind: car
+  length: 5.0
+  width: 1.8
+  at:
+    x: 31.1989
+    y: 34.3501
+    heading: -3.8238
+  v: 0.0
+  mode: recorded
+  trajectory: catalog/commonroad/CHN_Sha-6_9_I-1-1/obstacles/cr37.jsonl
+- id: cr38
+  kind: car
+  length: 5.0
+  width: 1.8
+  at:
+    x: 9.031
+    y: 45.8531
+    heading: -0.5092
+  v: 2.7404
+  mode: recorded
+  trajectory: catalog/commonroad/CHN_Sha-6_9_I-1-1/obstacles/cr38.jsonl
+- id: cr39
+  kind: car
+  length: 5.0
+  width: 1.8
+  at:
+    x: -5.7182
+    y: 54.0887
+    heading: -0.5092
+  v: 6.3986
+  mode: recorded
+  trajectory: catalog/commonroad/CHN_Sha-6_9_I-1-1/obstacles/cr39.jsonl
+- id: cr310
+  kind: car
+  length: 5.0
+  width: 1.8
+  at:
+    x: 24.5486
+    y: 52.6852
+    heading: -2.0825
+  v: 0.0
+  mode: recorded
+  trajectory: catalog/commonroad/CHN_Sha-6_9_I-1-1/obstacles/cr310.jsonl
+- id: cr311
+  kind: car
+  length: 5.0
+  width: 1.8
+  at:
+    x: -22.0334
+    y: 63.1986
+    heading: -0.5092
+  v: 8.3597
+  mode: recorded
+  trajectory: catalog/commonroad/CHN_Sha-6_9_I-1-1/obstacles/cr311.jsonl
+- id: cr312
+  kind: car
+  length: 5.0
+  width: 1.8
+  at:
+    x: -97.8326
+    y: 108.3839
+    heading: -3.6508
+  v: 11.536
+  mode: recorded
+  trajectory: catalog/commonroad/CHN_Sha-6_9_I-1-1/obstacles/cr312.jsonl
+- id: cr313
+  kind: car
+  length: 5.0
+  width: 1.8
+  at:
+    x: 27.3723
+    y: 59.6917
+    heading: -2.196
+  v: 0.0017
+  mode: recorded
+  trajectory: catalog/commonroad/CHN_Sha-6_9_I-1-1/obstacles/cr313.jsonl
+- id: cr314
+  kind: car
+  length: 5.0
+  width: 1.8
+  at:
+    x: 29.6178
+    y: 58.5383
+    heading: -2.1997
+  v: 0.1197
+  mode: recorded
+  trajectory: catalog/commonroad/CHN_Sha-6_9_I-1-1/obstacles/cr314.jsonl
+- id: cr315
+  kind: car
+  length: 5.0
+  width: 1.8
+  at:
+    x: 18.5311
+    y: 37.115
+    heading: 1.3993
+  v: 5.5824
+  mode: recorded
+  trajectory: catalog/commonroad/CHN_Sha-6_9_I-1-1/obstacles/cr315.jsonl
+- id: cr316
+  kind: car
+  length: 5.0
+  width: 1.8
+  at:
+    x: -48.3866
+    y: 80.7747
+    heading: -3.6508
+  v: 12.1907
+  mode: recorded
+  trajectory: catalog/commonroad/CHN_Sha-6_9_I-1-1/obstacles/cr316.jsonl
+- id: cr317
+  kind: car
+  length: 5.0
+  width: 1.8
+  at:
+    x: 32.0591
+    y: 65.86
+    heading: -2.2528
+  v: 0.2783
+  mode: recorded
+  trajectory: catalog/commonroad/CHN_Sha-6_9_I-1-1/obstacles/cr317.jsonl
+- id: cr318
+  kind: car
+  length: 5.0
+  width: 1.8
+  at:
+    x: 108.2445
+    y: -37.4525
+    heading: -0.7191
+  v: 12.9076
+  mode: recorded
+  trajectory: catalog/commonroad/CHN_Sha-6_9_I-1-1/obstacles/cr318.jsonl
+- id: cr319
+  kind: car
+  length: 5.0
+  width: 1.8
+  at:
+    x: 2.653
+    y: 5.553
+    heading: 0.9624
+  v: 4.5613
+  mode: recorded
+  trajectory: catalog/commonroad/CHN_Sha-6_9_I-1-1/obstacles/cr319.jsonl
+- id: cr320
+  kind: car
+  length: 5.0
+  width: 1.8
+  at:
+    x: 37.5387
+    y: 72.3867
+    heading: -2.2794
+  v: 1.0012
+  mode: recorded
+  trajectory: catalog/commonroad/CHN_Sha-6_9_I-1-1/obstacles/cr320.jsonl
+- id: cr321
+  kind: car
+  length: 5.0
+  width: 1.8
+  at:
+    x: -66.0131
+    y: 87.7555
+    heading: -0.5092
+  v: 12.1454
+  mode: recorded
+  trajectory: catalog/commonroad/CHN_Sha-6_9_I-1-1/obstacles/cr321.jsonl
+- id: cr322
+  kind: car
+  length: 5.0
+  width: 1.8
+  at:
+    x: 37.1924
+    y: 29.37
+    heading: -3.8584
+  v: 0.3226
+  mode: recorded
+  trajectory: catalog/commonroad/CHN_Sha-6_9_I-1-1/obstacles/cr322.jsonl
+- id: cr323
+  kind: car
+  length: 5.0
+  width: 1.8
+  at:
+    x: 44.0879
+    y: 79.1715
+    heading: -2.3
+  v: 1.7649
+  mode: recorded
+  trajectory: catalog/commonroad/CHN_Sha-6_9_I-1-1/obstacles/cr323.jsonl
+- id: cr324
+  kind: car
+  length: 5.0
+  width: 1.8
+  at:
+    x: -4.9952
+    y: -4.9748
+    heading: 0.9361
+  v: 4.8672
+  mode: recorded
+  trajectory: catalog/commonroad/CHN_Sha-6_9_I-1-1/obstacles/cr324.jsonl
+- id: cr325
+  kind: car
+  length: 5.0
+  width: 1.8
+  at:
+    x: -83.369
+    y: 97.4466
+    heading: -0.5092
+  v: 12.0892
+  mode: recorded
+  trajectory: catalog/commonroad/CHN_Sha-6_9_I-1-1/obstacles/cr325.jsonl
+- id: cr326
+  kind: car
+  length: 5.0
+  width: 1.8
+  at:
+    x: 44.0968
+    y: 23.2749
+    heading: -3.8727
+  v: 1.5651
+  mode: recorded
+  trajectory: catalog/commonroad/CHN_Sha-6_9_I-1-1/obstacles/cr326.jsonl
+- id: cr327
+  kind: car
+  length: 5.0
+  width: 1.8
+  at:
+    x: -100.6425
+    y: 107.0916
+    heading: -0.5092
+  v: 12.2315
+  mode: recorded
+  trajectory: catalog/commonroad/CHN_Sha-6_9_I-1-1/obstacles/cr327.jsonl
+- id: cr328
+  kind: car
+  length: 5.0
+  width: 1.8
+  at:
+    x: -15.1261
+    y: -15.0614
+    heading: 0.928
+  v: 5.5242
+  mode: recorded
+  trajectory: catalog/commonroad/CHN_Sha-6_9_I-1-1/obstacles/cr328.jsonl
+- id: cr329
+  kind: car
+  length: 5.0
+  width: 1.8
+  at:
+    x: 50.5224
+    y: 87.0134
+    heading: -2.2527
+  v: 2.3765
+  mode: recorded
+  trajectory: catalog/commonroad/CHN_Sha-6_9_I-1-1/obstacles/cr329.jsonl
+- id: cr330
+  kind: car
+  length: 5.0
+  width: 1.8
+  at:
+    x: 52.464
+    y: 15.502
+    heading: -3.8951
+  v: 3.2714
+  mode: recorded
+  trajectory: catalog/commonroad/CHN_Sha-6_9_I-1-1/obstacles/cr330.jsonl
+- id: cr331
+  kind: car
+  length: 5.0
+  width: 1.8
+  at:
+    x: -121.0468
+    y: 118.4824
+    heading: -0.5092
+  v: 11.3444
+  mode: recorded
+  trajectory: catalog/commonroad/CHN_Sha-6_9_I-1-1/obstacles/cr331.jsonl
+- id: cr332
+  kind: car
+  length: 5.0
+  width: 1.8
+  at:
+    x: -23.6436
+    y: -27.0482
+    heading: 0.9424
+  v: 6.2187
+  mode: recorded
+  trajectory: catalog/commonroad/CHN_Sha-6_9_I-1-1/obstacles/cr332.jsonl
+- id: cr333
+  kind: car
+  length: 5.0
+  width: 1.8
+  at:
+    x: 57.2235
+    y: 95.3235
+    heading: -2.1973
+  v: 2.9472
+  mode: recorded
+  trajectory: catalog/commonroad/CHN_Sha-6_9_I-1-1/obstacles/cr333.jsonl
+- id: cr334
+  kind: car
+  length: 5.0
+  width: 1.8
+  at:
+    x: 62.1893
+    y: 6.5157
+    heading: -3.8748
+  v: 4.6743
+  mode: recorded
+  trajectory: catalog/commonroad/CHN_Sha-6_9_I-1-1/obstacles/cr334.jsonl
+- id: cr335
+  kind: car
+  length: 5.0
+  width: 1.8
+  at:
+    x: -137.8388
+    y: 127.8564
+    heading: -0.5092
+  v: 11.3653
+  mode: recorded
+  trajectory: catalog/commonroad/CHN_Sha-6_9_I-1-1/obstacles/cr335.jsonl
+- id: cr336
+  kind: car
+  length: 5.0
+  width: 1.8
+  at:
+    x: -31.6492
+    y: -39.9167
+    heading: 0.9191
+  v: 6.8654
+  mode: recorded
+  trajectory: catalog/commonroad/CHN_Sha-6_9_I-1-1/obstacles/cr336.jsonl
+- id: cr337
+  kind: car
+  length: 5.0
+  width: 1.8
+  at:
+    x: 64.6771
+    y: 104.0029
+    heading: -2.1187
+  v: 3.2094
+  mode: recorded
+  trajectory: catalog/commonroad/CHN_Sha-6_9_I-1-1/obstacles/cr337.jsonl
+- id: cr338
+  kind: car
+  length: 5.0
+  width: 1.8
+  at:
+    x: 74.2636
+    y: -4.3457
+    heading: -3.8704
+  v: 6.6283
+  mode: recorded
+  trajectory: catalog/commonroad/CHN_Sha-6_9_I-1-1/obstacles/cr338.jsonl
+- id: cr339
+  kind: car
+  length: 5.0
+  width: 1.8
+  at:
+    x: -154.7523
+    y: 137.2983
+    heading: -0.5092
+  v: 11.4885
+  mode: recorded
+  trajectory: catalog/commonroad/CHN_Sha-6_9_I-1-1/obstacles/cr339.jsonl
+- id: cr340
+  kind: car
+  length: 5.0
+  width: 1.8
+  at:
+    x: -41.9831
+    y: -51.6304
+    heading: 0.9537
+  v: 7.3923
+  mode: recorded
+  trajectory: catalog/commonroad/CHN_Sha-6_9_I-1-1/obstacles/cr340.jsonl
+- id: cr341
+  kind: car
+  length: 5.0
+  width: 1.8
+  at:
+    x: 69.48
+    y: 114.1748
+    heading: -2.1104
+  v: 3.4585
+  mode: recorded
+  trajectory: catalog/commonroad/CHN_Sha-6_9_I-1-1/obstacles/cr341.jsonl
+- id: cr342
+  kind: car
+  length: 5.0
+  width: 1.8
+  at:
+    x: 90.2876
+    y: -18.4064
+    heading: -3.8607
+  v: 9.3107
+  mode: recorded
+  trajectory: catalog/commonroad/CHN_Sha-6_9_I-1-1/obstacles/cr342.jsonl
+- id: cr343
+  kind: car
+  length: 5.0
+  width: 1.8
+  at:
+    x: -171.2872
+    y: 146.5288
+    heading: -0.5092
+  v: 11.3332
+  mode: recorded
+  trajectory: catalog/commonroad/CHN_Sha-6_9_I-1-1/obstacles/cr343.jsonl
+- id: cr344
+  kind: car
+  length: 5.0
+  width: 1.8
+  at:
+    x: -50.2415
+    y: -64.322
+    heading: 0.9201
+  v: 7.4272
+  mode: recorded
+  trajectory: catalog/commonroad/CHN_Sha-6_9_I-1-1/obstacles/cr344.jsonl
+- id: cr345
+  kind: car
+  length: 5.0
+  width: 1.8
+  at:
+    x: -187.2568
+    y: 155.4438
+    heading: -0.5092
+  v: 11.0612
+  mode: recorded
+  trajectory: catalog/commonroad/CHN_Sha-6_9_I-1-1/obstacles/cr345.jsonl
+- id: cr346
+  kind: car
+  length: 5.0
+  width: 1.8
+  at:
+    x: 74.9
+    y: 123.6802
+    heading: -2.0406
+  v: 3.3742
+  mode: recorded
+  trajectory: catalog/commonroad/CHN_Sha-6_9_I-1-1/obstacles/cr346.jsonl
+- id: cr347
+  kind: car
+  length: 5.0
+  width: 1.8
+  at:
+    x: -59.2912
+    y: -75.2799
+    heading: 0.9418
+  v: 7.2086
+  mode: recorded
+  trajectory: catalog/commonroad/CHN_Sha-6_9_I-1-1/obstacles/cr347.jsonl
+- id: cr348
+  kind: car
+  length: 5.0
+  width: 1.8
+  at:
+    x: 103.0588
+    y: -29.5873
+    heading: -3.8607
+  v: 9.4185
+  mode: recorded
+  trajectory: catalog/commonroad/CHN_Sha-6_9_I-1-1/obstacles/cr348.jsonl
+- id: cr350
+  kind: car
+  length: 5.0
+  width: 1.8
+  at:
+    x: -66.0957
+    y: -85.6028
+    heading: 0.9511
+  v: 5.9363
+  mode: recorded
+  trajectory: catalog/commonroad/CHN_Sha-6_9_I-1-1/obstacles/cr350.jsonl
+- id: cr351
+  kind: car
+  length: 5.0
+  width: 1.8
+  at:
+    x: 113.5271
+    y: -38.752
+    heading: -3.8607
+  v: 6.3245
+  mode: recorded
+  trajectory: catalog/commonroad/CHN_Sha-6_9_I-1-1/obstacles/cr351.jsonl
+- id: cr352
+  kind: car
+  length: 5.0
+  width: 1.8
+  at:
+    x: 79.7497
+    y: 132.7168
+    heading: -2.0115
+  v: 0.2651
+  mode: recorded
+  trajectory: catalog/commonroad/CHN_Sha-6_9_I-1-1/obstacles/cr352.jsonl
+- id: cr353
+  kind: car
+  length: 5.0
+  width: 1.8
+  at:
+    x: 77.1202
+    y: 132.9961
+    heading: -2.0117
+  v: 2.3419
+  mode: recorded
+  trajectory: catalog/commonroad/CHN_Sha-6_9_I-1-1/obstacles/cr353.jsonl
+- id: cr354
+  kind: car
+  length: 5.0
+  width: 1.8
+  at:
+    x: -212.3878
+    y: 169.473
+    heading: -0.5092
+  v: 2.7595
+  mode: recorded
+  trajectory: catalog/commonroad/CHN_Sha-6_9_I-1-1/obstacles/cr354.jsonl
+- id: cr355
+  kind: car
+  length: 5.0
+  width: 1.8
+  at:
+    x: -72.1136
+    y: -93.8777
+    heading: 0.9539
+  v: 1.9118
+  mode: recorded
+  trajectory: catalog/commonroad/CHN_Sha-6_9_I-1-1/obstacles/cr355.jsonl
+- id: cr356
+  kind: car
+  length: 5.0
+  width: 1.8
+  at:
+    x: 119.8144
+    y: -44.2565
+    heading: -3.8607
+  v: 3.2189
+  mode: recorded
+  trajectory: catalog/commonroad/CHN_Sha-6_9_I-1-1/obstacles/cr356.jsonl
+expect:
+  goal: true
+  collisions: 0
+  violations: 0
+  off_lanelet: 0
+verdict:
+  exerciser: skip
+  sumo:
+    status: pass
+    since:
+      worlds: 13b7dac
+      catalog: ef793dc

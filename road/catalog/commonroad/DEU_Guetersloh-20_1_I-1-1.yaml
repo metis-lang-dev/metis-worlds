@@ -1,0 +1,165 @@
+card: 2
+set: regression
+scenario: DEU_Guetersloh-20_1_I-1-1
+title: CommonRoad DEU_Guetersloh-20_1_I-1-1 (interactive / scenario-factory)
+source:
+  suite: commonroad
+  type: interactive/scenario-factory
+  code: /bigdata/datasets/commonroad/scenarios/scenarios/interactive/scenario-factory/DEU_Guetersloh-20_1_I-1-1/DEU_Guetersloh-20_1_I-1-1.cr.xml
+  pin: commonroad-interactive-scenarios 749e342013cc069980039fa91ba587f62993aaaf
+  license: CommonRoad interactive scenarios, BSD 3-Clause License, Copyright (c) 2023 Technical University of Munich
+  tags:
+  - critical
+  - intersection
+  - simulated
+patches: []
+tags:
+- junction-priority
+- right-before-left
+- route-following
+- speed-limit
+exercises: the family on CommonRoad's planning problem
+map:
+  net: catalog/commonroad/DEU_Guetersloh-20_1_I-1-1/DEU_Guetersloh-20_1_I-1-1.net.xml
+  data: catalog/commonroad/DEU_Guetersloh-20_1_I-1-1/cr.json
+  route_note: 'a time-only goal: the ego drives on'
+dt: 0.1
+ticks: 1500
+ego:
+  v: 8.696
+  at:
+    lane: '72812_0'
+    s: 57.49
+  route:
+  - '72812'
+  - '76560'
+  - '72578'
+  goal:
+    time:
+    - 3.3
+    - 3.3
+exerciser:
+  skip: 'a CommonRoad map: the exerciser has no net of its own'
+actors:
+- id: cr30
+  kind: truck
+  length: 7.5
+  width: 2.6
+  at:
+    x: 948.2854
+    y: 133.5986
+    heading: -4.0093
+  v: 0.0
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Guetersloh-20_1_I-1-1/obstacles/cr30.jsonl
+- id: cr32
+  kind: car
+  length: 5.0
+  width: 1.9559
+  at:
+    x: 925.7274
+    y: 193.6606
+    heading: -1.9402
+  v: 0.0
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Guetersloh-20_1_I-1-1/obstacles/cr32.jsonl
+- id: cr38
+  kind: car
+  length: 5.0
+  width: 1.8517
+  at:
+    x: 923.0191
+    y: 186.6655
+    heading: -1.9402
+  v: 0.0
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Guetersloh-20_1_I-1-1/obstacles/cr38.jsonl
+- id: cr39
+  kind: car
+  length: 4.8262
+  width: 2.0
+  at:
+    x: 953.8879
+    y: 126.9893
+    heading: -4.0093
+  v: 0.0
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Guetersloh-20_1_I-1-1/obstacles/cr39.jsonl
+- id: cr315
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 922.9255
+    y: 178.0693
+    heading: 1.0675
+  v: 4.8837
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Guetersloh-20_1_I-1-1/obstacles/cr315.jsonl
+- id: cr317
+  kind: car
+  length: 4.287
+  width: 2.0
+  at:
+    x: 906.9016
+    y: 170.0103
+    heading: -0.2175
+  v: 6.5284
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Guetersloh-20_1_I-1-1/obstacles/cr317.jsonl
+- id: cr320
+  kind: truck
+  length: 7.5
+  width: 2.6
+  at:
+    x: 896.1391
+    y: 175.8034
+    heading: -0.6796
+  v: 5.2499
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Guetersloh-20_1_I-1-1/obstacles/cr320.jsonl
+- id: cr324
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 876.3842
+    y: 190.5176
+    heading: -0.6181
+  v: 8.0819
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Guetersloh-20_1_I-1-1/obstacles/cr324.jsonl
+- id: cr325
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 853.9898
+    y: 205.878
+    heading: -0.5999
+  v: 7.5929
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Guetersloh-20_1_I-1-1/obstacles/cr325.jsonl
+- id: cr326
+  kind: car
+  length: 4.5741
+  width: 2.0
+  at:
+    x: 844.7782
+    y: 212.1849
+    heading: -0.6018
+  v: 4.4927
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Guetersloh-20_1_I-1-1/obstacles/cr326.jsonl
+expect:
+  goal: true
+  collisions: 0
+  violations: 0
+  off_lanelet: 0
+verdict:
+  exerciser: skip
+  sumo:
+    status: pass
+    since:
+      worlds: 13b7dac
+      catalog: ef793dc

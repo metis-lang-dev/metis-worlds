@@ -1,0 +1,171 @@
+card: 2
+set: working
+scenario: DEU_Muehlhausen-11_1_T-1
+title: CommonRoad DEU_Muehlhausen-11_1_T-1 (recorded / scenario-factory)
+source:
+  suite: commonroad
+  type: recorded/scenario-factory
+  code: /bigdata/datasets/commonroad/scenarios/scenarios/recorded/scenario-factory/DEU_Muehlhausen-11_1_T-1.xml
+  pin: commonroad-scenarios 2416dc27faf3ee36b6799f42712da72a34a2c8fd
+  license: CommonRoad scenarios, BSD 3-Clause License, Copyright (c) 2019 Technical University of Munich
+  tags:
+  - critical
+  - intersection
+  - simulated
+patches: []
+tags:
+- cyclist
+- following
+- junction-priority
+- right-before-left
+- route-following
+- speed-limit
+exercises: 'the family on CommonRoad''s planning problem: the harvest''s mechanism 3691f55f (contact:behind)'
+map:
+  net: catalog/commonroad/DEU_Muehlhausen-11_1_T-1/DEU_Muehlhausen-11_1_T-1.net.xml
+  data: catalog/commonroad/DEU_Muehlhausen-11_1_T-1/cr.json
+  route_note: 'a time-only goal: the ego drives on'
+dt: 0.1
+ticks: 1500
+ego:
+  v: 1.707
+  at:
+    lane: '4660_0'
+    s: 51.86
+  route:
+  - '4660'
+  - '4662'
+  - '4682'
+  - '4847'
+  - '4754'
+  goal:
+    time:
+    - 3.3
+    - 3.3
+exerciser:
+  skip: 'a CommonRoad map: the exerciser has no net of its own'
+actors:
+- id: cr33
+  kind: car
+  length: 2.5
+  width: 0.5054
+  at:
+    x: -249.7872
+    y: -363.557
+    heading: -0.5826
+  v: 1.9999
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Muehlhausen-11_1_T-1/obstacles/cr33.jsonl
+- id: cr35
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: -237.9131
+    y: -326.5776
+    heading: -2.1804
+  v: 0.8277
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Muehlhausen-11_1_T-1/obstacles/cr35.jsonl
+- id: cr38
+  kind: car
+  length: 4.5043
+  width: 2.0
+  at:
+    x: -266.3076
+    y: -352.3459
+    heading: -0.6013
+  v: 0.0
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Muehlhausen-11_1_T-1/obstacles/cr38.jsonl
+- id: cr310
+  kind: car
+  length: 4.1949
+  width: 2.0
+  at:
+    x: -245.3054
+    y: -347.3009
+    heading: -3.7539
+  v: 7.1165
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Muehlhausen-11_1_T-1/obstacles/cr310.jsonl
+- id: cr311
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: -233.2183
+    y: -355.7872
+    heading: 2.5295
+  v: 4.3325
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Muehlhausen-11_1_T-1/obstacles/cr311.jsonl
+- id: cr312
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: -272.2965
+    y: -348.1912
+    heading: -0.6166
+  v: 0.0253
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Muehlhausen-11_1_T-1/obstacles/cr312.jsonl
+- id: cr318
+  kind: bicycle
+  length: 2.0
+  width: 0.68
+  at:
+    x: -230.5806
+    y: -313.6237
+    heading: -2.1799
+  v: 1.1823
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Muehlhausen-11_1_T-1/obstacles/cr318.jsonl
+- id: cr324
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: -233.531
+    y: -321.6121
+    heading: -2.1803
+  v: 0.2653
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Muehlhausen-11_1_T-1/obstacles/cr324.jsonl
+- id: cr328
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: -222.8677
+    y: -305.4708
+    heading: -2.1804
+  v: 1.0219
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Muehlhausen-11_1_T-1/obstacles/cr328.jsonl
+- id: cr332
+  kind: car
+  length: 5.0
+  width: 1.7456
+  at:
+    x: -211.8464
+    y: -289.3571
+    heading: -2.1855
+  v: 3.5928
+  mode: recorded
+  trajectory: catalog/commonroad/DEU_Muehlhausen-11_1_T-1/obstacles/cr332.jsonl
+expect:
+  goal: true
+  collisions: 0
+  violations: 0
+  off_lanelet: 0
+verdict:
+  exerciser: skip
+  sumo:
+    status: world
+    since:
+      worlds: 13b7dac
+      catalog: ef793dc
+    record: contact
+    note: contact

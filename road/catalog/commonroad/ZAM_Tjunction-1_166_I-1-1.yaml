@@ -1,0 +1,118 @@
+card: 2
+set: working
+scenario: ZAM_Tjunction-1_166_I-1-1
+title: CommonRoad ZAM_Tjunction-1_166_I-1-1 (interactive / hand-crafted)
+source:
+  suite: commonroad
+  type: interactive/hand-crafted
+  code: /bigdata/datasets/commonroad/scenarios/scenarios/interactive/hand-crafted/ZAM_Tjunction-1_166_I-1-1/ZAM_Tjunction-1_166_I-1-1.cr.xml
+  pin: commonroad-interactive-scenarios 749e342013cc069980039fa91ba587f62993aaaf
+  license: CommonRoad interactive scenarios, BSD 3-Clause License, Copyright (c) 2023 Technical University of Munich
+  tags:
+  - intersection
+  - oncoming_traffic
+  - turn_left
+  - two_lane
+  - urban
+patches: []
+tags:
+- junction-priority
+- oncoming-pass
+- route-following
+- speed-limit
+- turning-left
+exercises: the family on CommonRoad's planning problem
+map:
+  net: catalog/commonroad/ZAM_Tjunction-1_166_I-1-1/ZAM_Tjunction-1_166_I-1-1.net.xml
+  data: catalog/commonroad/ZAM_Tjunction-1_166_I-1-1/cr.json
+dt: 0.1
+ticks: 1500
+ego:
+  v: 4.13
+  at:
+    lane: '50195_0'
+    s: 124.19
+  route:
+  - '50195'
+  - '50203'
+  goal:
+    region:
+      lanelets:
+      - 50203
+    time:
+    - 14.6
+    - 14.7
+    v:
+    - -3.8703
+    - 9.1297
+exerciser:
+  skip: 'a CommonRoad map: the exerciser has no net of its own'
+actors:
+- id: cr1
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 40.1091
+    y: -1.5231
+    heading: 2.9402
+  v: 5.5322
+  mode: recorded
+  trajectory: catalog/commonroad/ZAM_Tjunction-1_166_I-1-1/obstacles/cr1.jsonl
+- id: cr2
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: -21.4135
+    y: -0.1611
+    heading: 0.0691
+  v: 1.7922
+  mode: recorded
+  trajectory: catalog/commonroad/ZAM_Tjunction-1_166_I-1-1/obstacles/cr2.jsonl
+- id: cr4
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 4.7388
+    y: 44.667
+    heading: -1.2499
+  v: 2.4352
+  mode: recorded
+  trajectory: catalog/commonroad/ZAM_Tjunction-1_166_I-1-1/obstacles/cr4.jsonl
+- id: cr5
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 7.2847
+    y: 37.0829
+    heading: -1.242
+  v: 3.1908
+  mode: recorded
+  trajectory: catalog/commonroad/ZAM_Tjunction-1_166_I-1-1/obstacles/cr5.jsonl
+- id: cr7
+  kind: car
+  length: 5.0
+  width: 2.0
+  at:
+    x: 47.9468
+    y: -3.1265
+    heading: 2.941
+  v: 1.2517
+  mode: recorded
+  trajectory: catalog/commonroad/ZAM_Tjunction-1_166_I-1-1/obstacles/cr7.jsonl
+expect:
+  goal: true
+  collisions: 0
+  violations: 0
+  off_lanelet: 0
+verdict:
+  exerciser: skip
+  sumo:
+    status: soft
+    since:
+      worlds: 13b7dac
+      catalog: ef793dc
+    note: goal:window
