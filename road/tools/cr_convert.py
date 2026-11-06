@@ -261,7 +261,8 @@ def foe_gaps(net_xml, near=0.5):
     lines come within NEAR m while neither link is the other's foe in the junction's request rows (the converter's foe
     table lost the conflict). Never siblings (both from one approach lane) nor a merge (both into one outgoing lane):
     those are rightly not foes. intLanes lists a junction's internal lanes by link index; a request row's foes reads right
-    to left. → [[lane_a, lane_b, a_from, a_to, b_from, b_to], ...] sorted (the links' approach and outgoing lanes)."""
+    to left. → [{"lanes": [a, b], "from": [from_a, from_b], "to": [to_a, to_b]}, ...] sorted (cr_triage-12's shape: the
+links' approach and outgoing lanes)."""
     import xml.etree.ElementTree as ET
     shapes, junctions, link = {}, [], {}
     for _, el in ET.iterparse(net_xml, events=("start",)):
@@ -284,8 +285,8 @@ def foe_gaps(net_xml, near=0.5):
                 sa, sb = shapes.get(lanes[a]) or [], shapes.get(lanes[b]) or []
                 if any(_seg_dist(p, q, r, t) <= near for p, q in zip(sa, sa[1:]) for r, t in zip(sb, sb[1:])):
                     x, y = sorted([(lanes[a], la), (lanes[b], lb)])
-                    out.append([x[0], y[0], x[1][0], x[1][1], y[1][0], y[1][1]])
-    return sorted(out)
+                    out.append({"lanes": [x[0], y[0]], "from": [x[1][0], y[1][0]], "to": [x[1][1], y[1][1]]})
+    return sorted(out, key=lambda g: g["lanes"])
 
 
 def net_offset(net_xml):

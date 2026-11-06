@@ -123,7 +123,7 @@ NET = """<net>
 def test_l3_a_crossing_with_no_foe_relation_is_a_foe_gap(tmp_path):
     p = tmp_path / "x.net.xml"
     p.write_text(NET)
-    assert C.foe_gaps(str(p)) == [[":J_0_0", ":J_1_0", "a_0", "c_0", "b_0", "d_0"]]   # J: they cross, no foe; K: foes
+    assert C.foe_gaps(str(p)) == [{"lanes": [":J_0_0", ":J_1_0"], "from": ["a_0", "b_0"], "to": ["c_0", "d_0"]}]   # J: they cross, no foe; K: foes
     sib = NET.replace('<lane id=":J_2_0" shape="20,0 30,0"/>', '<lane id=":J_2_0" shape="0,0 10,-10"/>')
     p.write_text(sib)                                              # :J_2_0 now touches :J_0_0, but both from a_0: siblings
-    assert C.foe_gaps(str(p)) == [[":J_0_0", ":J_1_0", "a_0", "c_0", "b_0", "d_0"]]
+    assert C.foe_gaps(str(p)) == [{"lanes": [":J_0_0", ":J_1_0"], "from": ["a_0", "b_0"], "to": ["c_0", "d_0"]}]
