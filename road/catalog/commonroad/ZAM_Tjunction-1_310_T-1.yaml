@@ -1,0 +1,75 @@
+card: 2
+scenario: ZAM_Tjunction-1_310_T-1
+title: a T-junction left turn whose goal window opens after the route's end (the run-end rule's case)
+source:
+  suite: commonroad
+  type: ZAM_Tjunction-1_310_T-1
+  set: recorded
+  code: scenarios/scenarios/recorded/hand-crafted/ZAM_Tjunction-1_310_T-1.xml
+  pin: commonroad-scenarios 2416dc27faf3
+  license: CommonRoad scenarios, BSD 3-Clause License, Copyright (c) Technical University of Munich (TUM CPS); see NOTICE
+  tags:
+  - intersection
+  - oncoming_traffic
+  - turn_left
+  - two_lane
+  - urban
+patches: []
+tags:
+- junction-priority
+- turning-left
+- route-following
+exercises: planner route_lane, change_route; the run-end hold
+map:
+  net: catalog/commonroad/ZAM_Tjunction-1_310_T-1/ZAM_Tjunction-1_310_T-1.net.xml
+  data: catalog/commonroad/ZAM_Tjunction-1_310_T-1/cr.json
+dt: 0.1
+ticks: 1500
+ego:
+  v: 3.4414
+  at:
+    x: -26.132
+    y: -0.5317
+    heading: 0.0843
+  goal:
+    lanelets:
+    - 50209
+    - 50215
+    time:
+    - 146.0
+    - 147.0
+    v:
+    - -4.5586
+    - 8.4414
+    region: 'data: planning[0].goals[0].polygons'
+actors:
+- id: cr1
+  kind: car
+  mode: recorded
+  trajectory: 'data: obstacles[id=1]'
+- id: cr2
+  kind: car
+  mode: recorded
+  trajectory: 'data: obstacles[id=2]'
+- id: cr4
+  kind: car
+  mode: recorded
+  trajectory: 'data: obstacles[id=4]'
+- id: cr5
+  kind: car
+  mode: recorded
+  trajectory: 'data: obstacles[id=5]'
+- id: cr7
+  kind: car
+  mode: recorded
+  trajectory: 'data: obstacles[id=7]'
+expect:
+  goal: true
+  collisions: 0
+  violations: 0
+  off_lanelet: 0
+verdict:
+  status: pass
+  since:
+    worlds: e083e4c
+    catalog: ef793dc

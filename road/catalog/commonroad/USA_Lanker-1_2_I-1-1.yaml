@@ -1,0 +1,225 @@
+card: 2
+scenario: USA_Lanker-1_2_I-1-1
+title: an NGSIM Lankershim start inside the intersection (the junction-start case)
+source:
+  suite: commonroad
+  type: USA_Lanker-1_2_I-1-1
+  set: interactive
+  code: scenarios/scenarios/interactive/NGSIM/Lankershim/USA_Lanker-1_2_I-1-1/USA_Lanker-1_2_I-1-1.cr.xml
+  pin: commonroad-interactive-scenarios 749e342013cc
+  license: CommonRoad scenarios, BSD 3-Clause License, Copyright (c) Technical University of Munich (TUM CPS); see NOTICE
+  tags:
+  - comfort
+  - intersection
+  - multi_lane
+  - oncoming_traffic
+  - speed_limit
+  - turn_left
+  - urban
+patches: []
+tags:
+- junction-priority
+- route-following
+exercises: planner route_lane; the start on the lane leading in
+map:
+  net: catalog/commonroad/USA_Lanker-1_2_I-1-1/USA_Lanker-1_2_I-1-1.net.xml
+  data: catalog/commonroad/USA_Lanker-1_2_I-1-1/cr.json
+dt: 0.1
+ticks: 1500
+ego:
+  v: 5.8461
+  at:
+    x: 0.0
+    y: 0.0
+    heading: -2.0334
+  goal:
+    time:
+    - 44.0
+    - 54.0
+    v:
+    - 5.9794
+    - 11.9794
+    heading:
+    - -0.5839
+    - -0.4094
+    region: 'data: planning[0].goals[0].polygons'
+actors:
+- id: cr1314
+  kind: car
+  mode: recorded
+  trajectory: 'data: obstacles[id=1314]'
+- id: cr1316
+  kind: car
+  mode: recorded
+  trajectory: 'data: obstacles[id=1316]'
+- id: cr1329
+  kind: car
+  mode: recorded
+  trajectory: 'data: obstacles[id=1329]'
+- id: cr1332
+  kind: car
+  mode: recorded
+  trajectory: 'data: obstacles[id=1332]'
+- id: cr1408
+  kind: car
+  mode: recorded
+  trajectory: 'data: obstacles[id=1408]'
+- id: cr1432
+  kind: car
+  mode: recorded
+  trajectory: 'data: obstacles[id=1432]'
+- id: cr1434
+  kind: car
+  mode: recorded
+  trajectory: 'data: obstacles[id=1434]'
+- id: cr1437
+  kind: car
+  mode: recorded
+  trajectory: 'data: obstacles[id=1437]'
+- id: cr1443
+  kind: car
+  mode: recorded
+  trajectory: 'data: obstacles[id=1443]'
+- id: cr1458
+  kind: car
+  mode: recorded
+  trajectory: 'data: obstacles[id=1458]'
+- id: cr1463
+  kind: car
+  mode: recorded
+  trajectory: 'data: obstacles[id=1463]'
+- id: cr1479
+  kind: car
+  mode: recorded
+  trajectory: 'data: obstacles[id=1479]'
+- id: cr1485
+  kind: car
+  mode: recorded
+  trajectory: 'data: obstacles[id=1485]'
+- id: cr1487
+  kind: car
+  mode: recorded
+  trajectory: 'data: obstacles[id=1487]'
+- id: cr1489
+  kind: car
+  mode: recorded
+  trajectory: 'data: obstacles[id=1489]'
+- id: cr1492
+  kind: car
+  mode: recorded
+  trajectory: 'data: obstacles[id=1492]'
+- id: cr1494
+  kind: car
+  mode: recorded
+  trajectory: 'data: obstacles[id=1494]'
+- id: cr1495
+  kind: car
+  mode: recorded
+  trajectory: 'data: obstacles[id=1495]'
+- id: cr1496
+  kind: car
+  mode: recorded
+  trajectory: 'data: obstacles[id=1496]'
+- id: cr1497
+  kind: car
+  mode: recorded
+  trajectory: 'data: obstacles[id=1497]'
+- id: cr1501
+  kind: car
+  mode: recorded
+  trajectory: 'data: obstacles[id=1501]'
+- id: cr1504
+  kind: car
+  mode: recorded
+  trajectory: 'data: obstacles[id=1504]'
+- id: cr1505
+  kind: car
+  mode: recorded
+  trajectory: 'data: obstacles[id=1505]'
+- id: cr1508
+  kind: car
+  mode: recorded
+  trajectory: 'data: obstacles[id=1508]'
+- id: cr1509
+  kind: car
+  mode: recorded
+  trajectory: 'data: obstacles[id=1509]'
+- id: cr1513
+  kind: car
+  mode: recorded
+  trajectory: 'data: obstacles[id=1513]'
+- id: cr1515
+  kind: car
+  mode: recorded
+  trajectory: 'data: obstacles[id=1515]'
+- id: cr1519
+  kind: car
+  mode: recorded
+  trajectory: 'data: obstacles[id=1519]'
+- id: cr1520
+  kind: car
+  mode: recorded
+  trajectory: 'data: obstacles[id=1520]'
+- id: cr1526
+  kind: car
+  mode: recorded
+  trajectory: 'data: obstacles[id=1526]'
+- id: cr1529
+  kind: car
+  mode: recorded
+  trajectory: 'data: obstacles[id=1529]'
+- id: cr1535
+  kind: car
+  mode: recorded
+  trajectory: 'data: obstacles[id=1535]'
+- id: cr1542
+  kind: car
+  mode: recorded
+  trajectory: 'data: obstacles[id=1542]'
+- id: cr1546
+  kind: car
+  mode: recorded
+  trajectory: 'data: obstacles[id=1546]'
+- id: cr1547
+  kind: car
+  mode: recorded
+  trajectory: 'data: obstacles[id=1547]'
+- id: cr1549
+  kind: car
+  mode: recorded
+  trajectory: 'data: obstacles[id=1549]'
+- id: cr1553
+  kind: car
+  mode: recorded
+  trajectory: 'data: obstacles[id=1553]'
+- id: cr1554
+  kind: car
+  mode: recorded
+  trajectory: 'data: obstacles[id=1554]'
+- id: cr1555
+  kind: car
+  mode: recorded
+  trajectory: 'data: obstacles[id=1555]'
+- id: cr1562
+  kind: car
+  mode: recorded
+  trajectory: 'data: obstacles[id=1562]'
+- id: cr1563
+  kind: car
+  mode: recorded
+  trajectory: 'data: obstacles[id=1563]'
+- id: cr11429
+  kind: car
+  mode: recorded
+  trajectory: 'data: obstacles[id=11429]'
+expect:
+  goal: true
+  collisions: 0
+  violations: 0
+  off_lanelet: 0
+verdict:
+  status: world
+  since:
+    worlds: e083e4c
+    catalog: ef793dc
+  note: 'the contact with cr1314 at the run''s start (k <= 10): the initial state'

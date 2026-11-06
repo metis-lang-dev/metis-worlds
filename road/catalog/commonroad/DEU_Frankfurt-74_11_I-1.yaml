@@ -1,0 +1,260 @@
+card: 2
+scenario: DEU_Frankfurt-74_11_I-1
+title: interactive Frankfurt traffic driven by SUMO from its initial states (the frozen-obstacle case)
+source:
+  suite: commonroad
+  type: DEU_Frankfurt-74_11_I-1
+  set: interactive
+  code: scenarios/scenarios/interactive/SUMO/DEU_Frankfurt-74_11_I-1/DEU_Frankfurt-74_11_I-1.cr.xml
+  pin: commonroad-interactive-scenarios 749e342013cc
+  license: CommonRoad scenarios, BSD 3-Clause License, Copyright (c) Technical University of Munich (TUM CPS); see NOTICE
+  tags:
+  - highway
+patches: []
+tags:
+- following
+- lane-keeping
+- route-following
+exercises: responder brake_lon, planner keep_lead
+map:
+  net: catalog/commonroad/DEU_Frankfurt-74_11_I-1/DEU_Frankfurt-74_11_I-1.net.xml
+  data: catalog/commonroad/DEU_Frankfurt-74_11_I-1/cr.json
+dt: 0.1
+ticks: 1500
+ego:
+  v: 25.3617
+  at:
+    x: 471735.7318
+    y: 5545069.8738
+    heading: -0.1787
+  goal:
+    lanelets:
+    - 964
+    time:
+    - 199.0
+    - 200.0
+    region: 'data: planning[0].goals[0].polygons'
+actors:
+- id: cr30094
+  kind: car
+  mode: model
+  trajectory: 'data: obstacles[id=30094]'
+- id: cr30095
+  kind: car
+  mode: model
+  trajectory: 'data: obstacles[id=30095]'
+- id: cr30096
+  kind: car
+  mode: model
+  trajectory: 'data: obstacles[id=30096]'
+- id: cr30097
+  kind: car
+  mode: model
+  trajectory: 'data: obstacles[id=30097]'
+- id: cr30098
+  kind: car
+  mode: model
+  trajectory: 'data: obstacles[id=30098]'
+- id: cr30099
+  kind: car
+  mode: model
+  trajectory: 'data: obstacles[id=30099]'
+- id: cr30100
+  kind: car
+  mode: model
+  trajectory: 'data: obstacles[id=30100]'
+- id: cr30101
+  kind: car
+  mode: model
+  trajectory: 'data: obstacles[id=30101]'
+- id: cr30102
+  kind: car
+  mode: model
+  trajectory: 'data: obstacles[id=30102]'
+- id: cr30103
+  kind: car
+  mode: model
+  trajectory: 'data: obstacles[id=30103]'
+- id: cr30104
+  kind: car
+  mode: model
+  trajectory: 'data: obstacles[id=30104]'
+- id: cr30105
+  kind: car
+  mode: model
+  trajectory: 'data: obstacles[id=30105]'
+- id: cr30106
+  kind: car
+  mode: model
+  trajectory: 'data: obstacles[id=30106]'
+- id: cr30107
+  kind: car
+  mode: model
+  trajectory: 'data: obstacles[id=30107]'
+- id: cr30108
+  kind: car
+  mode: model
+  trajectory: 'data: obstacles[id=30108]'
+- id: cr30109
+  kind: car
+  mode: model
+  trajectory: 'data: obstacles[id=30109]'
+- id: cr30110
+  kind: car
+  mode: model
+  trajectory: 'data: obstacles[id=30110]'
+- id: cr30111
+  kind: car
+  mode: model
+  trajectory: 'data: obstacles[id=30111]'
+- id: cr30112
+  kind: car
+  mode: model
+  trajectory: 'data: obstacles[id=30112]'
+- id: cr30113
+  kind: car
+  mode: model
+  trajectory: 'data: obstacles[id=30113]'
+- id: cr30114
+  kind: car
+  mode: model
+  trajectory: 'data: obstacles[id=30114]'
+- id: cr30115
+  kind: car
+  mode: model
+  trajectory: 'data: obstacles[id=30115]'
+- id: cr30116
+  kind: car
+  mode: model
+  trajectory: 'data: obstacles[id=30116]'
+- id: cr30117
+  kind: car
+  mode: model
+  trajectory: 'data: obstacles[id=30117]'
+- id: cr30118
+  kind: car
+  mode: model
+  trajectory: 'data: obstacles[id=30118]'
+- id: cr30119
+  kind: car
+  mode: model
+  trajectory: 'data: obstacles[id=30119]'
+- id: cr30120
+  kind: car
+  mode: model
+  trajectory: 'data: obstacles[id=30120]'
+- id: cr30121
+  kind: car
+  mode: model
+  trajectory: 'data: obstacles[id=30121]'
+- id: cr30122
+  kind: car
+  mode: model
+  trajectory: 'data: obstacles[id=30122]'
+- id: cr30123
+  kind: car
+  mode: model
+  trajectory: 'data: obstacles[id=30123]'
+- id: cr30124
+  kind: car
+  mode: model
+  trajectory: 'data: obstacles[id=30124]'
+- id: cr30125
+  kind: car
+  mode: model
+  trajectory: 'data: obstacles[id=30125]'
+- id: cr30126
+  kind: car
+  mode: model
+  trajectory: 'data: obstacles[id=30126]'
+- id: cr30127
+  kind: car
+  mode: model
+  trajectory: 'data: obstacles[id=30127]'
+- id: cr30128
+  kind: car
+  mode: model
+  trajectory: 'data: obstacles[id=30128]'
+- id: cr30129
+  kind: car
+  mode: model
+  trajectory: 'data: obstacles[id=30129]'
+- id: cr30130
+  kind: car
+  mode: model
+  trajectory: 'data: obstacles[id=30130]'
+- id: cr30131
+  kind: car
+  mode: model
+  trajectory: 'data: obstacles[id=30131]'
+- id: cr30132
+  kind: car
+  mode: model
+  trajectory: 'data: obstacles[id=30132]'
+- id: cr30133
+  kind: car
+  mode: model
+  trajectory: 'data: obstacles[id=30133]'
+- id: cr30134
+  kind: car
+  mode: model
+  trajectory: 'data: obstacles[id=30134]'
+- id: cr30135
+  kind: car
+  mode: model
+  trajectory: 'data: obstacles[id=30135]'
+- id: cr30136
+  kind: car
+  mode: model
+  trajectory: 'data: obstacles[id=30136]'
+- id: cr30137
+  kind: car
+  mode: model
+  trajectory: 'data: obstacles[id=30137]'
+- id: cr30138
+  kind: car
+  mode: model
+  trajectory: 'data: obstacles[id=30138]'
+- id: cr30139
+  kind: car
+  mode: model
+  trajectory: 'data: obstacles[id=30139]'
+- id: cr30140
+  kind: car
+  mode: model
+  trajectory: 'data: obstacles[id=30140]'
+- id: cr30141
+  kind: car
+  mode: model
+  trajectory: 'data: obstacles[id=30141]'
+- id: cr30142
+  kind: car
+  mode: model
+  trajectory: 'data: obstacles[id=30142]'
+- id: cr30143
+  kind: car
+  mode: model
+  trajectory: 'data: obstacles[id=30143]'
+- id: cr30144
+  kind: car
+  mode: model
+  trajectory: 'data: obstacles[id=30144]'
+- id: cr30145
+  kind: car
+  mode: model
+  trajectory: 'data: obstacles[id=30145]'
+- id: cr30146
+  kind: car
+  mode: model
+  trajectory: 'data: obstacles[id=30146]'
+expect:
+  goal: true
+  collisions: 0
+  violations: 0
+  off_lanelet: 0
+verdict:
+  status: fail
+  since:
+    worlds: e083e4c
+    catalog: ef793dc
+  note: contact

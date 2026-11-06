@@ -115,6 +115,17 @@ def cmd_plan(a):
         rows = [r for r in rows if r.get("set") == a.set]
     if a.source:
         rows = [r for r in rows if r.get("source") in set(a.source.split(","))]
+    if a.cards:                                          # scenario_run's batch: the jobs are cards, not the index's rows
+        import re                                        # no yaml here: the launcher runs on the system's python
+        root = ROAD / "catalog"
+        paths = [p for d in a.cards.split(",") for p in (sorted(Path(d).rglob("*.yaml")) if Path(d).is_dir() else [Path(d)])]
+        rows = []
+        for p in paths:
+            p = p.resolve()
+            cid = str(p.relative_to(root).with_suffix("")) if root in p.parents else p.stem
+            m = re.search(r"^\s+suite:\s*(\S+)", p.read_text(), re.M)
+            rows.append({"id": cid, "card": str(p), "set": "card", "source": m.group(1) if m else None})
+        n_index = len(rows)
     mine = [r for r in rows if owner(r["id"], hosts) == me]
     if a.limit:
         mine = mine[:a.limit]
@@ -122,6 +133,7 @@ def cmd_plan(a):
     queued = skipped = 0
     for r in mine:
         sid = r["id"]
+        sid = sid.replace("/", "__")                     # a card's id is its catalog path: one file name
         if (h / "rows" / (sid + ".json")).exists() or (h / "running" / (sid + ".json")).exists() \
                 or (h / "queue" / (sid + ".json")).exists():
             skipped += 1
@@ -340,8 +352,39 @@ def make_record(row, h, run_dir):
     return rid
 
 
+def run_card_job(h, path, job, seed, timeout):
+    """A card's job (scenario_run's batch mode): scenario_run.py run CARD on SUMO; its row (with the standing) is the row."""
+    sid = job["id"].replace("/", "__")
+    run_dir = h / "runs" / sid
+    if run_dir.exists():
+        shutil.rmtree(run_dir)
+    run_dir.mkdir(parents=True)
+    cmd = [agent_py(), str(ROAD / "tools" / "scenario_run.py"), "run", job["card"], "--host", "sumo", "--seed", str(seed),
+           "--out", str(run_dir), "--trace", str(run_dir / "trace")]
+    started, t0 = now(), time.time()
+    try:
+        p = subprocess.run(cmd, cwd=str(WORLDS), env=env(), capture_output=True, text=True, timeout=timeout)
+        row = last_json(p.stdout) if p.returncode == 0 else None
+        err = p.stderr
+    except subprocess.TimeoutExpired as x:
+        row, err = None, "timeout"
+    (run_dir / "stderr.txt").write_text((err or "")[-20000:])
+    if row is None:
+        row = {"id": sid, "card": job["card"], "error": {"kind": "timeout" if err == "timeout" else "crash", "line": last_line(err or ""),
+                                                        "trace": [l for l in (err or "").splitlines() if l.strip()][-5:]}}
+    row.update(started=started, ended=now(), wall_s=round(time.time() - t0, 1), host=HOST, pin=pin(), worlds=worlds_commit())
+    write(h / "rows" / (sid + ".json"), row)
+    if (row.get("standing") or {}).get("status") == "pass":
+        shutil.rmtree(run_dir, ignore_errors=True)
+    path.replace(h / "done" / path.name)
+    path.with_suffix(".pid").unlink(missing_ok=True)
+    return dict(row, failed=row.get("failed") or [], error=row.get("error"))
+
+
 def run_job(h, path, seed, ticks, timeout):
     job = json.loads(path.read_text())
+    if job.get("card"):
+        return run_card_job(h, path, job, seed, timeout)
     sid = job["id"]
     run_dir = h / "runs" / sid
     if run_dir.exists():
@@ -475,7 +518,7 @@ def main():
     sub = ap.add_subparsers(dest="cmd", required=True)
     p = sub.add_parser("plan")
     p.add_argument("--hosts", required=True)
-    for o in ("--set", "--source", "--ids", "--host"):
+    for o in ("--set", "--source", "--ids", "--host", "--cards"):
         p.add_argument(o)
     p.add_argument("--limit", type=int, default=0)
     w = sub.add_parser("work")
