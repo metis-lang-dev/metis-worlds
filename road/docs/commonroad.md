@@ -2,7 +2,7 @@
 
 The road world runs CommonRoad scenarios FROM A CHECKOUT, outside every repo (`$COMMONROAD_ROOT`), as CARLA's big towns
 are built and kept untracked. Nothing of CommonRoad's (a scenario file, a converted net, a route, a picture) is
-committed to any repo here, ever: the checkout is outside, the conversion cache is `road/maps/cr/` (git-ignored), and
+committed to any repo here, ever: the checkout is outside, the conversion cache is `../.worlds/cr-cache/` (COMMONROAD_CACHE, outside every repo), and
 only the pins (below, in `road/setup-commonroad.sh`) and this note are tracked.
 
 ## The repositories and their pins
@@ -22,7 +22,7 @@ Symposium 2017, pp. 719-726.
 Once: `road/setup-commonroad.sh` (the checkouts at their pins, the conversion venv). Then, headless, from metis-worlds (the Live's venv
 is metis-agent's; METIS_HOME the road family at road/domains/catalog.pin):
 
-    road/.venv-cr/bin/python road/tools/cr_convert.py ZAM_Tjunction-1_100_T-1      # into road/maps/cr/ (optional: a run converts on demand)
+    road/.venv-cr/bin/python road/tools/cr_convert.py ZAM_Tjunction-1_100_T-1      # into ../.worlds/cr-cache/ (optional: a run converts on demand)
     METIS_HOME=<metis-catalog>/domains/road ../metis-agent/py/.venv/bin/python road/experiments/road_tree.py cr:ZAM_Tjunction-1_100_T-1 1 --world sumo --ticks 1200 --out /tmp/cr --trace /tmp/cr/t
 
 The run's summary is the last line (`director.cr`: the measures below). On the page (road/demo.sh), the Traffic dock's COMMONROAD SCENARIO
@@ -67,10 +67,10 @@ no Python 3.12 wheel). The venv converts; the Live reads only the cache's files.
 `sumocr` 2024.1 (the brief's) has no map converter: it reads a scenario that ships its SUMO files; the converter moved to
 `commonroad-sumo`. `commonroad-scenario-designer` (0.8.5) has one too but is GPL-3.0 and pulls PyQt6: not used.
 
-## The cache and its interface: `road/maps/cr/<id>/` (git-ignored)
+## The cache and its interface: `../.worlds/cr-cache/<id>/` (COMMONROAD_CACHE; outside road/, whose catalog walk it slowed)
 
 `road/.venv-cr/bin/python road/tools/cr_convert.py <id>` writes `<id>.net.xml`, `<id>.sumo.cfg` and `cr.json`, and keeps them while the
-scenario file's sha256 and the version match (`--force` converts again); `--index` writes `road/maps/cr/index.json` (a row per scenario
+scenario file's sha256 and the version match (`--force` converts again); `--index` writes `../.worlds/cr-cache/index.json` (a row per scenario
 of the checkout: id, set, source, path, country, map, tags, dt) for the page's picker. `road/world/cr_world.py` (the `cr:<id>` kind,
 under `sumo_world.SumoWorld`) reads them; a scenario not yet in the cache is converted once by running the tool.
 

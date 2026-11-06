@@ -234,7 +234,7 @@ class RoadHost:
                 raise ValueError("the road's page says run:SCENARIO:SEED, crfind:QUERY, play, pause, speed:X, mark:N:start, mark:N:stop or watching, not %r" % line)
 
     def cr_find(self, query):
-        """The Traffic dock's CommonRoad picker (commonroad-world step 3): the checkout's index (road/maps/cr/index.json, made by
+        """The Traffic dock's CommonRoad picker (commonroad-world step 3): the checkout's index (../.worlds/cr-cache/index.json, made by
         road/setup-commonroad.sh) filtered by every word of QUERY (in the id, country, map, set, source or tags), the first CR_LIST
         rows as a world/cr_list frame, each with whether its conversion is cached (a cached one starts at once)."""
         import cr_world

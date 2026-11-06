@@ -4,7 +4,7 @@
 #   road/setup-commonroad.sh            the two repositories at their pins into $COMMONROAD_ROOT, the conversion venv, the counts
 #
 # COMMONROAD_ROOT (default /bigdata/datasets/commonroad): outside every repo, as CARLA's big towns. Nothing of CommonRoad's is
-# committed here: the checkouts are there, the conversion cache is road/maps/cr/ (git-ignored), the venv road/.venv-cr
+# committed here: the checkouts are there, the conversion cache is ../.worlds/cr-cache/ (COMMONROAD_CACHE, outside every repo), the venv road/.venv-cr
 # (git-ignored). The terms (BSD 3-Clause, TUM CPS) and the pins: road/docs/commonroad.md.
 # The conversion venv: commonroad-io + commonroad-sumo (its cr2sumo map converter; sumocr 2024.1 has none) at their pins, its own (their pins clash with the Live's venv: numpy, Pillow,
 # libsumo); it converts a scenario into the cache and the Live reads only the cache's files (cr_world.py).
@@ -55,4 +55,4 @@ for part in ("scenarios", "interactive"):
     by = collections.Counter(p.stem.split("_")[0] for p in files)
     print("%s: %d scenario files; by country: %s" % (part, len(files), ", ".join("%s %d" % kv for kv in by.most_common())))
 EOF
-"$VENV/bin/python" "$HERE/tools/cr_convert.py" --index --root "$ROOT"     # the page's picker reads road/maps/cr/index.json
+"$VENV/bin/python" "$HERE/tools/cr_convert.py" --index --root "$ROOT"     # the page's picker reads ../.worlds/cr-cache/index.json

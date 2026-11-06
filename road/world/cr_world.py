@@ -4,7 +4,7 @@
     scenario name: cr:ID          e.g. cr:ZAM_Tjunction-1_100_T-1
     build(name, work, seed) → (net, routes, script, director)     sumo_world.SCENARIOS' contract, plus the director
 
-The Live's venv never imports CommonRoad: it reads the CACHE (road/maps/cr/ID/: the SUMO net and cr.json, the interface,
+The Live's venv never imports CommonRoad: it reads the CACHE (../.worlds/cr-cache/ID/: the SUMO net and cr.json, the interface,
 version CR_JSON_VERSION), which road/tools/cr_convert.py writes in the conversion venv (road/.venv-cr); a scenario not yet
 in the cache is converted once, here, by running that tool (COMMONROAD_CONVERT_PY, default road/.venv-cr/bin/python).
 
@@ -29,7 +29,9 @@ from pathlib import Path
 CR_JSON_VERSION = 3
 MIN_ROUTE_M = 5.0                                      # a route shorter than this is no route to the goal
 ROAD = Path(__file__).resolve().parents[1]
-CACHE = Path(os.environ.get("COMMONROAD_CACHE", str(ROAD / "maps" / "cr")))
+# outside road/ (the workspace's .worlds/cr-cache): the Live walks its catalog root, road/, about 10 times a tick, and a cache of
+# the whole catalog under it made a tick 1.6 s (cr-harvest s-f4e297da)
+CACHE = Path(os.environ.get("COMMONROAD_CACHE", str(ROAD.parents[1] / ".worlds" / "cr-cache")))
 CONVERT = ROAD / "tools" / "cr_convert.py"
 EGO = "ego"
 EGO_HEADING_DEG = 45.0       # the ego's lane: the nearest within this of its heading

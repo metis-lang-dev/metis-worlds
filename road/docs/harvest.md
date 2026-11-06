@@ -1,6 +1,6 @@
 # The CommonRoad harvest: the catalog in batch (commonroad-world s-9b7591fb, step 3b)
 
-Every scenario of the index (road/maps/cr/index.json, `cr_convert.py --index`) run once, headless, by the road tree
+Every scenario of the index (../.worlds/cr-cache/index.json, `cr_convert.py --index`) run once, headless, by the road tree
 (`road/experiments/road_tree.py cr:ID SEED --world sumo`) on the family at `road/domains/catalog.pin`; ONE row per
 scenario, a surprise record per failure; no agent in the loop per scenario. Hosts share no filesystem: each host
 works its own slice under its own `/bigdata/work/harvest/`, and `pull` brings a host's rows and records to taycann.

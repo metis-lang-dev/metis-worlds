@@ -8,7 +8,7 @@ never in the Live's: the Live reads only what this writes.
 
 ID: a scenario id (ZAM_Tjunction-1_100_T-1), found under $COMMONROAD_ROOT (default /bigdata/datasets/commonroad): a recorded
 scenario's file (scenarios/scenarios/recorded/**/ID.xml) or an interactive scenario's folder (…/interactive/**/ID/ID.cr.xml).
-Writes CACHE/ID/ (CACHE default road/maps/cr, git-ignored):
+Writes CACHE/ID/ (CACHE default ../.worlds/cr-cache, outside every repo):
 - ID.net.xml, ID.sumo.cfg: commonroad-sumo's cr2sumo map converter over the lanelet network, through the system's netconvert
   (the speed limits the scenario's own: overwrite_speed_limit None);
 - cr.json (CR_JSON_VERSION): the interface the Live reads, CommonRoad's facts only, in the scenario's frame (the net's
@@ -27,7 +27,9 @@ from pathlib import Path
 CR_JSON_VERSION = 3
 ROAD = Path(__file__).resolve().parents[1]
 ROOT = Path(os.environ.get("COMMONROAD_ROOT", "/bigdata/datasets/commonroad"))
-CACHE = Path(os.environ.get("COMMONROAD_CACHE", str(ROAD / "maps" / "cr")))
+# outside road/ (the workspace's .worlds/cr-cache): the Live walks its catalog root, road/, about 10 times a tick, and a cache of
+# the whole catalog under it made a tick 1.6 s (cr-harvest s-f4e297da)
+CACHE = Path(os.environ.get("COMMONROAD_CACHE", str(ROAD.parents[1] / ".worlds" / "cr-cache")))
 SKIP = (".net.xml", ".rou.xml", ".add.xml", ".cr.xml", ".sumo.cfg", ".nod.xml", ".edg.xml", ".con.xml", ".tll.xml", ".typ.xml")
 
 
