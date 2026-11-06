@@ -99,3 +99,25 @@ def test_c_a_file_reusing_an_id_is_read_with_the_check_off():
     assert lenient and len(calls) == 2
     with pytest.raises(ValueError):                              # the check is back after the read
         sc._mark_object_id_as_used(0)
+
+
+NET = """<net>
+  <edge id=":J_0" function="internal"><lane id=":J_0_0" shape="0,0 10,10"/></edge>
+  <edge id=":J_1" function="internal"><lane id=":J_1_0" shape="0,10 10,0"/></edge>
+  <edge id=":J_2" function="internal"><lane id=":J_2_0" shape="20,0 30,0"/></edge>
+  <junction id="J" type="priority" intLanes=":J_0_0 :J_1_0 :J_2_0">
+    <request index="0" response="000" foes="000"/>
+    <request index="1" response="000" foes="000"/>
+    <request index="2" response="000" foes="000"/>
+  </junction>
+  <junction id="K" type="priority" intLanes=":J_0_0 :J_1_0">
+    <request index="0" response="00" foes="10"/>
+    <request index="1" response="01" foes="01"/>
+  </junction>
+</net>"""
+
+
+def test_l3_a_crossing_with_no_foe_relation_is_a_foe_gap(tmp_path):
+    p = tmp_path / "x.net.xml"
+    p.write_text(NET)
+    assert C.foe_gaps(str(p)) == [[":J_0_0", ":J_1_0"]]               # J: they cross, no foe; K: foes, no gap; :J_2_0 apart

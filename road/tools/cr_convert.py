@@ -212,6 +212,47 @@ def right_before_left(out_dir, net, doc):
     return js
 
 
+def _seg_dist(p, q, r, t):
+    """The distance between segments pq and rt (0 when they cross)."""
+    def cross(o, a, b):
+        return (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0])
+    d1, d2, d3, d4 = cross(r, t, p), cross(r, t, q), cross(p, q, r), cross(p, q, t)
+    if ((d1 > 0) != (d2 > 0)) and ((d3 > 0) != (d4 > 0)):
+        return 0.0
+
+    def pt(a, b, c):
+        dx, dy = c[0] - b[0], c[1] - b[1]
+        L = dx * dx + dy * dy
+        u = 0.0 if L == 0 else max(0.0, min(1.0, ((a[0] - b[0]) * dx + (a[1] - b[1]) * dy) / L))
+        return math.hypot(a[0] - b[0] - u * dx, a[1] - b[1] - u * dy)
+    return min(pt(p, r, t), pt(q, r, t), pt(r, p, q), pt(t, p, q))
+
+
+def foe_gaps(net_xml, near=0.5):
+    """The junctions' FOE GAPS (ruling L3 (W), cr-harvest s-f4e297da): pairs of internal lanes of one junction whose centre
+    lines come within NEAR m while neither link is the other's foe in the junction's request rows (the converter's foe
+    table lost the conflict). intLanes lists a junction's internal lanes by link index; a request row's foes reads
+    right to left. → [[lane_a, lane_b], ...] sorted."""
+    import xml.etree.ElementTree as ET
+    shapes, junctions = {}, []
+    for _, el in ET.iterparse(net_xml, events=("start",)):
+        if el.tag == "lane" and el.get("id", "").startswith(":"):
+            shapes[el.get("id")] = [tuple(float(v) for v in xy.split(",")[:2]) for xy in el.get("shape", "").split()]
+        elif el.tag == "junction" and el.get("type") != "internal":
+            junctions.append((el.get("intLanes", "").split(), el))
+    out = []
+    for lanes, j in junctions:
+        foes = {int(r.get("index")): r.get("foes", "")[::-1] for r in j.findall("request")}
+        for a in range(len(lanes)):
+            for b in range(a + 1, len(lanes)):
+                if "1" in (foes.get(a, "")[b:b + 1], foes.get(b, "")[a:a + 1]):
+                    continue
+                sa, sb = shapes.get(lanes[a]) or [], shapes.get(lanes[b]) or []
+                if any(_seg_dist(p, q, r, t) <= near for p, q in zip(sa, sa[1:]) for r, t in zip(sb, sb[1:])):
+                    out.append(sorted([lanes[a], lanes[b]]))
+    return sorted(out)
+
+
 def net_offset(net_xml):
     import xml.etree.ElementTree as ET
     for _, el in ET.iterparse(net_xml, events=("start",)):
@@ -322,6 +363,7 @@ def _convert(src, sid, cache, force):
            "lanelet_edge": {str(k): str(v) for k, v in conv.lanelet_id2edge_id.items()},
            "lanelet_lane": {str(k): str(v) for k, v in conv.lanelet_id2lane_id.items()}}
     doc["right_before_left"] = right_before_left(out, net, doc)       # the scenario's priority, not the converter's
+    doc["foe_gaps"] = foe_gaps(str(out / net))                          # on the final net (after the priority patch)
     meta.write_text(json.dumps(doc))
     return out
 

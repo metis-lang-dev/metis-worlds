@@ -547,7 +547,8 @@ class Director:
                                                                             if w else None for w in windows],
                        "contact": bool(self.contacts), "contacts": self.contacts[:10], "off_lanelet_ticks": self.off_ticks,
                        "off_lanelet_m": round(self.off_m, 1), "off_lanelet_first_t": self.off_first_t, "cost": None, "goal_edge": self.pl["goal_edge"], "route_note": self.pl["route_note"],
-                       "obstacles": len(self.obstacles), "played": len(self.added), "errors": self.errors[:5]}}
+                       "obstacles": len(self.obstacles), "played": len(self.added), "errors": self.errors[:5],
+                       "foe_gaps": self.doc.get("foe_gaps")}}
 
 
 def _in(v, iv):
