@@ -83,6 +83,11 @@ def new_world(run):
     if run.get("world") == "sumo":
         import sumo_host
         return sumo_host.Loop(run)
+    if str(run.get("scenario", "")).startswith("ix:"):          # the level-k intersection (road/intersection, LEVELK.md §5)
+        sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "intersection"))
+        import intersection
+        return intersection.IntersectionWorld(run["scenario"][3:], int(run.get("seed", 1)),
+                                              sensor_range=float((run.get("sensor") or {}).get("range", road_world.SENSOR_RANGE)))
     return road_world.RoadWorld(run.get("scenario", "cruise"), int(run.get("seed", 1)),
                                 sensor_range=float((run.get("sensor") or {}).get("range", road_world.SENSOR_RANGE)),
                                 levelk=bool(run.get("levelk")))

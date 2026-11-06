@@ -1,0 +1,26 @@
+card: 2
+scenario: ix-crossing-gap
+title: crossing between two cars from the right that have the way, a car from the left that should wait; the others level-k drivers
+source:
+  suite: ours
+  type: levelk-intersection
+  code: road/intersection/intersection.py
+  pin: metis-worlds road/intersection (levelk-intersection s-5be9291b step 3)
+  license: "metis-worlds, ours"
+patches: []
+tags: [junction-priority, right-before-left]
+exercises: "planner yield_zone (the two from the right) and the gap between them; the car from the left yields to the ego by rule, a level-0 one does not"
+map: {world: intersection}
+dt: 0.1
+ticks: 600
+ego: {path: W_E, s: 35.0, v: 6.0}
+exerciser: {dest: route end}
+params:
+  level: {value: l1, range: [l0, l2], default: l1, variants: [l0, l1, l2], drives: "actors.*.level"}
+actors:
+  - {id: right1, kind: car, mode: model, driver: levelk, path: S_N, s: 40.0, v: 11.1}
+  - {id: right2, kind: car, mode: model, driver: levelk, path: S_N, s: 2.0, v: 11.1}
+  - {id: left, kind: car, mode: model, driver: levelk, path: N_S, s: 28.0, v: 9.0}
+expect: {arrived: true, collisions: 0, violations: 0, deadlock: false}
+verdict:
+  sumo: {status: skip, note: "the level-k intersection plays on the exerciser only (SUMO later, LEVELK.md §5)"}

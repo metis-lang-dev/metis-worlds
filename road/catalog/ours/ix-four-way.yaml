@@ -1,0 +1,26 @@
+card: 2
+scenario: ix-four-way
+title: four cars reach an unsignalised four-way crossing at once, right-before-left in a circle, the others level-k drivers
+source:
+  suite: ours
+  type: levelk-intersection
+  code: road/intersection/intersection.py
+  pin: metis-worlds road/intersection (levelk-intersection s-5be9291b step 3)
+  license: "metis-worlds, ours"
+patches: []
+tags: [junction-priority, right-before-left]
+exercises: "planner yield_zone under by_rule (the car from the right); by_game when the car from the right yields to its own right"
+map: {world: intersection}
+dt: 0.1
+ticks: 600
+ego: {path: S_N, s: 35.0, v: 8.0}
+exerciser: {dest: route end}
+params:
+  level: {value: l1, range: [l0, l2], default: l1, variants: [l0, l1, l2], drives: "actors.*.level"}
+actors:
+  - {id: east, kind: car, mode: model, driver: levelk, path: E_W, s: 35.0, v: 8.0}
+  - {id: north, kind: car, mode: model, driver: levelk, path: N_S, s: 35.0, v: 8.0}
+  - {id: west, kind: car, mode: model, driver: levelk, path: W_E, s: 35.0, v: 8.0}
+expect: {arrived: true, collisions: 0, violations: 0, deadlock: false}
+verdict:
+  sumo: {status: skip, note: "the level-k intersection plays on the exerciser only (SUMO later, LEVELK.md §5)"}

@@ -73,6 +73,11 @@ def on_net(card):
     return bool((card.get("map") or {}).get("net"))
 
 
+def on_world(card):
+    """A card on one of our own small worlds (`map: {world: intersection}`, road/intersection): the exerciser plays it."""
+    return bool((card.get("map") or {}).get("world"))
+
+
 def cards_in(paths):
     out = []
     for a in paths:
@@ -143,9 +148,34 @@ def run_net(card, host, seed, out, trace):
     return row
 
 
+def run_world(card, host, seed, out, trace):
+    """A card on our level-k intersection (road/intersection): `ix:NAME:LEVEL` per variant (the others' level, params.level),
+    road_tree's run on the exerciser; the WORST variant decides (as a town card's sites), every variant's measures beside."""
+    if host != "exerciser":
+        raise SystemExit("scenario_run: %s plays on the exerciser only" % card["scenario"])
+    sys.path.insert(0, str(ROAD / "intersection"))
+    import intersection as I
+    sc = _mod("scenarios", ROAD / "experiments" / "scenarios.py")
+    rt = sc.road_tree()
+    rows = []
+    for lv in I.levels_of(card):
+        name = "ix:%s:%s" % (card["scenario"], lv)
+        res = rt.run(name, seed, Path(out) / "runs", ticks=int(card.get("ticks") or 600), trace=trace)
+        rows.append({"card": card_id(card), "host": host, "seed": seed, "run": name, "level": lv, "fails": I.check(card, res),
+                     "arrived": res.get("arrived"), "collisions": res.get("collisions"),
+                     "collision_events": res.get("collision_events"), "violations": res.get("violations"),
+                     "deadlock_s": res.get("deadlock_s"), "delay": res.get("delay"), "drivers": res.get("drivers"),
+                     "others_contacts": res.get("others_contacts"), "summary": res})
+    worst = dict(max(rows, key=lambda r: len(r["fails"]) > 0))
+    worst["fails"] = ["%s: %s" % (r["level"], f) for r in rows for f in r["fails"]]
+    worst["levels"] = {r["level"]: {k: r[k] for k in ("fails", "arrived", "collision_events", "deadlock_s", "delay", "drivers")}
+                       for r in rows}
+    return worst
+
+
 def run(card, host="exerciser", seed=1, out=None, trace=None):
     out = out or tempfile.mkdtemp(prefix="scenario-run-")
-    row = (run_net if on_net(card) else run_town)(card, host, seed, out, trace)
+    row = (run_net if on_net(card) else run_world if on_world(card) else run_town)(card, host, seed, out, trace)
     row["standing"] = standing(card, row, trace)
     return row
 
@@ -432,6 +462,10 @@ def cmd_index(a):
         c = load(path)
         if on_net(c):
             runs = ["cr:" + card_file(c, c["map"]["net"]).parent.name]
+        elif on_world(c):
+            sys.path.insert(0, str(ROAD / "intersection"))
+            import intersection as I
+            runs = ["ix:%s:%s" % (c["scenario"], lv) for lv in I.levels_of(c)]
         else:
             try:
                 runs = town_runs(c, "sumo")
@@ -440,7 +474,8 @@ def cmd_index(a):
             runs = ["card:" + r for r in runs]
         rows.append({"id": card_id(c), "scenario": c.get("scenario"), "source": (c.get("source") or {}).get("suite"),
                      "tags": c.get("tags") or [], "verdict": {h: expected(c, h) for h in HOSTS if expected(c, h)},
-                     "map": (c.get("map") or {}).get("town") or (c.get("map") or {}).get("net"), "run": runs[0], "runs": runs})
+                     "map": (c.get("map") or {}).get("town") or (c.get("map") or {}).get("net") or (c.get("map") or {}).get("world"),
+                     "run": runs[0], "runs": runs})
     (Path(a.dir) / "index.json").write_text(json.dumps({"cards": rows}, indent=1) + "\n")
     print("index: %d cards" % len(rows))
 

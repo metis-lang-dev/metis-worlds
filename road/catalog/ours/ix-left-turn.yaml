@@ -1,0 +1,24 @@
+card: 2
+scenario: ix-left-turn
+title: the unprotected left turn against one oncoming car, the other a level-k driver
+source:
+  suite: ours
+  type: levelk-intersection
+  code: road/intersection/intersection.py
+  pin: metis-worlds road/intersection (levelk-intersection s-5be9291b step 3)
+  license: "metis-worlds, ours"
+patches: []
+tags: [junction-priority, turning-left]
+exercises: "planner yield_zone under by_rule (the oncoming car has the way); yield_game_* / go_game_* where it hesitates (by_game)"
+map: {world: intersection}
+dt: 0.1
+ticks: 500
+ego: {path: S_W, s: 30.0, v: 8.0}
+exerciser: {dest: route end}
+params:
+  level: {value: l1, range: [l0, l2], default: l1, variants: [l0, l1, l2], drives: "actors.*.level"}
+actors:
+  - {id: onc, kind: car, mode: model, driver: levelk, path: N_S, s: 12.0, v: 11.1}
+expect: {arrived: true, collisions: 0, violations: 0, deadlock: false}
+verdict:
+  sumo: {status: skip, note: "the level-k intersection plays on the exerciser only (SUMO later, LEVELK.md §5)"}
