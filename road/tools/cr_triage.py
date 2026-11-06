@@ -170,6 +170,11 @@ def kind_one(row):
         if not rec.get("window") and rec.get("k") is None:            # a worker's record without a window: the run's end
             rec = dict(rec, window=tail_window(tr))
             out["window"] = rec["window"]
+        kc = first_contact_tick(tr)                                   # SUMO's contact, which CommonRoad's box test need not share
+        w = rec.get("window")
+        if kc is not None and w and not (w[0] <= kc <= w[1]):         # the architect's ruling (2026-11-06): widen to it
+            rec = dict(rec, window=[min(w[0], kc), max(w[1], kc)])
+            out["window"] = rec["window"]
         named = named_things(tr, rec.get("window") or [rec.get("k"), rec.get("k")])
         if named:                                                     # the world names what it saw (spec 20 §4 reads the words)
             rec = dict(rec, words=" ".join([rec.get("words") or rec.get("reading") or ""] + named))
@@ -189,6 +194,13 @@ def kind_one(row):
                 atoms=sorted({o["missing"].split("(")[0] for o in near}),
                 ground=sorted({"%s ⟵ %s" % (o["ground"], o["missing"]) for o in near})[:12],
                 missing_columns=(t.get("evidence") or {}).get("missing") or [])
+
+
+def first_contact_tick(tr):
+    """The first tick of the truth column with the ego in contact, or None."""
+    from metis import surprise_kind as SK
+    rows, _ = SK.read_truth(tr)
+    return next((k for k in sorted(rows or {}) if (rows[k].get("ego") or {}).get("contact")), None)
 
 
 def contact_side(tr):

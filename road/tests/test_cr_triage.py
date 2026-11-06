@@ -252,3 +252,11 @@ def test_the_named_things_fall_back_to_the_runs_first_contact_then_the_nearest_o
 def test_a_goal_edge_with_no_route_to_it_is_the_worlds():
     nr = {"director": {"cr": {"goal_edge": "205", "route_note": "no way from 114 to the goal's edge 205"}}}
     assert T.measure(row("n", "1", failed=["goal"], ticks=300, summary=nr)) == "error:world"
+
+
+def test_the_first_contact_tick_of_the_truth(tmp_path):
+    tr = tmp_path / "tr"
+    tr.mkdir()
+    rows = [{"truth": 1}, {"k": 3, "ego": {"contact": []}, "things": []}, {"k": 8, "ego": {"contact": ["cr2"]}, "things": []}]
+    (tr / "truth.jsonl").write_text("".join(json.dumps(r) + "\n" for r in rows))
+    assert T.first_contact_tick(tr) == 8 and T.first_contact_tick(tmp_path / "none") is None
