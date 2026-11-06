@@ -297,3 +297,14 @@ def test_a_partner_jumping_across_lanes_is_the_worlds(tmp_path):
     assert T.lane_jumping(tr, "P")
     (tr / "truth.jsonl").write_text("".join(json.dumps(dict(r, things=[dict(x, lane=":j_8") for x in r.get("things", [])]) if "k" in r else r) + "\n" for r in rows))
     assert not T.lane_jumping(tr, "P")
+
+
+def test_the_ego_standing_when_hit_is_the_worlds(tmp_path):
+    tr = tmp_path / "w"
+    tr.mkdir()
+    rows = [{"truth": 1}, {"k": 30, "ego": {"lane": "a", "s": 4.0, "v": 0.0, "contact": ["P"]}, "things": [{"id": "P", "lane": "a", "s": 8.0, "v": 3.0}]}]
+    (tr / "truth.jsonl").write_text("".join(json.dumps(r) + "\n" for r in rows))
+    assert T.ego_standing(tr)
+    rows[1]["ego"]["v"] = 2.0
+    (tr / "truth.jsonl").write_text("".join(json.dumps(r) + "\n" for r in rows))
+    assert not T.ego_standing(tr)

@@ -173,6 +173,8 @@ def kind_one(row):
         if lane_jumping(tr, partner):                                # the architect's ruling (2026-11-06): the playback's
             return dict(out, kind="world", why="%s jumped across lanes (>= %d flips in the %d ticks before the contact): a played "
                         "obstacle remapped each tick inside a junction, no track holds it" % (partner, JUMP_FLIPS, FOLLOW_TICKS))
+        if row.get("set") == "recorded" and ego_standing(tr):       # ruling W (2026-11-06): the other's duty
+            return dict(out, kind="world", why="the ego stood (v < %.1f m/s) when %s hit it on a recorded trajectory" % (STAND_V, partner))
         if side == "initial":                                        # ruling B (b): the scenario starts in or at contact
             return dict(out, kind="world", why="the contact with %s at the run's start (k <= %d): the initial state" % (partner, INITIAL_K))
     try:
@@ -271,6 +273,17 @@ def lane_jumping(tr, pid):
     lanes = [x.get("lane") for j in range(max(0, kc - FOLLOW_TICKS), kc + 1) if j in rows
              for x in rows[j].get("things") or () if x.get("id") == pid and x.get("lane")]
     return sum(1 for a, b in zip(lanes, lanes[1:]) if a != b) >= JUMP_FLIPS
+
+
+STAND_V = 0.1                                   # m/s: the ego standing at its first contact
+
+
+def ego_standing(tr):
+    """The ego's speed at the truth's first contact tick under STAND_V."""
+    from metis import surprise_kind as SK
+    rows, _ = SK.read_truth(tr)
+    kc = first_contact_tick(tr)
+    return kc is not None and (rows[kc].get("ego") or {}).get("v") is not None and rows[kc]["ego"]["v"] < STAND_V
 
 
 INITIAL_K = 10                                  # ticks: a contact this early is the scenario's initial state (1 s)
