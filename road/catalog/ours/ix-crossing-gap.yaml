@@ -30,6 +30,7 @@ verdict:
       §5)
   exerciser:
     status: fail
+    record: 20261107T000323-debffe
     since:
       worlds: 4895a98
       catalog: 915eae9
