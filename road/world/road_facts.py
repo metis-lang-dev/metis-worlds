@@ -426,7 +426,7 @@ def facts(lm, ego, v, movers, sit, changing=None, dest=None, turn=None, lights=N
     """SPEEDS {mover id: v}: the movers' speeds (the lead's for lead_slow). LEFT_FROM (side, age s): the side the
     ego's last lane change left, and how long ago. PACE: a target speed under the limit; above it by PACE_BAND the ego is above_target (the
     planner's soft brake). GAME: a semantic_world.levelk.Game to state levelk.llp's atoms at the next zone (levelk_facts);
-    None, the default: none are stated and the law is today's."""
+    None, the default: by_rule(nextzone) alone wherever a zone is ahead, and the law is the rule's."""
     ego.route = ego.route or [ego.lane]
     home = oncoming_home(lm, ego)
     if home is not None:                       # passing on the oncoming lane: the projection in the ego's heading (heading_frame)
@@ -602,7 +602,11 @@ def facts(lm, ego, v, movers, sit, changing=None, dest=None, turn=None, lights=N
                 elif a - NEAR_WALK <= w.s <= b:
                     out["crossing(vru1,near)"] = 1
                 break
+    # the zone_game family (levelk.llp; yield_zone and keep_cross read by_rule): by_rule(nextzone) on every tick a zone is
+    # ahead, the game off or on; by_game only where the game says so (levelk_facts)
     if game is not None and zr["nextzone"]:
         out.update(levelk_facts(game, pairs))
+    elif zr["nextzone"] or any(a.startswith("zone_at(nextzone,") and a != "zone_at(nextzone,none)" for a in out):
+        out["by_rule(nextzone)"] = 1
     out["now"] = 1
     return out, roles, fold, states

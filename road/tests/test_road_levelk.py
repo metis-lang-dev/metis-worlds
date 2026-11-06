@@ -7,7 +7,7 @@ WORLD = Path(__file__).resolve().parents[1] / "world"
 sys.path.insert(0, str(WORLD))
 import road_world  # noqa: E402
 
-GAME = ("crosser(", "myopic(", "ego_myopic(", "reply(", "ego_reply(", "level_belief(", "believed(", "by_game(", "by_rule(")
+GAME = ("crosser(", "myopic(", "ego_myopic(", "reply(", "ego_reply(", "level_belief(", "believed(", "by_game(")
 
 
 def ticks(levelk, n=120):
@@ -19,9 +19,20 @@ def ticks(levelk, n=120):
     return out
 
 
-def test_off_by_default_no_game_atoms():
+def test_off_by_default_no_game_atoms_and_by_rule_at_every_zone():
+    """The law gates yield_zone and keep_cross by by_rule(nextzone): with the game off it is stated on every tick a zone is
+    ahead (the architect's host contract, levelk step 1), and nothing of the game is."""
     assert not road_world.RoadWorld("junction", seed=1).game
-    assert not [a for f in ticks(False) for a in f if a.startswith(GAME)]
+    fs = ticks(False)
+    assert not [a for f in fs for a in f if a.startswith(GAME)]
+    zoned = [f for f in fs if any(a.startswith("zone_at(nextzone,") and a != "zone_at(nextzone,none)" for a in f)]
+    assert zoned and all("by_rule(nextzone)" in f for f in zoned)
+
+
+def test_with_the_game_on_every_zone_tick_has_one_reading():
+    fs = ticks(True)
+    zoned = [f for f in fs if any(a.startswith("zone_at(nextzone,") and a != "zone_at(nextzone,none)" for a in f)]
+    assert zoned and all(("by_rule(nextzone)" in f) != ("by_game(nextzone)" in f) for f in zoned)
 
 
 def test_the_crosser_who_keeps_coming_turns_the_zone_by_game():
