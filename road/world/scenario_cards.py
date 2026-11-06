@@ -37,7 +37,8 @@ TAG_VOCABULARY = ("following", "lane-keeping", "lane-change", "overtaking", "onc
                   "pedestrian-crossing", "cyclist", "emergency-vehicle", "parking", "obstacle-static", "route-following", "speed-limit",
                   "visibility", "highway-ramp")
 MODES = ("scripted", "recorded", "model")
-STATUS = ("pass", "soft", "fail", "world")
+STATUS = ("pass", "soft", "fail", "world", "skip")
+HOSTS = ("exerciser", "sumo")                  # the verdict is per host (road/docs/SCENARIO-CARD.md §6b)
 SITE_REF = re.compile(r"S(\d+)\.(\d+)")      # a site from another LB1 scenario's poses: "S1.157" = Scenario1's #157
 
 # the exerciser's road (road_world.road()): the ego's lane and start, the zones a card's `at` names

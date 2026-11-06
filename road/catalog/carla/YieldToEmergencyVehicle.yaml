@@ -30,4 +30,6 @@ actors:   # SUMO's bluelight device; the infraction: held behind the ego (within
 infractions: {scenario: [yield_emergency_vehicle]}   # LB 2.0's YieldToEmergencyVehicleTest (the director's emergency_lb)
 # expect's emergency_held_s is OURS (held within 30 m below 90 % of its allowed speed, red waits out), not the LB test
 expect: {arrived: true, collisions: 0, violations: 0, emergency_held_s: 5.0}
-verdict: {status: pass, since: {worlds: 13b7dac, catalog: ef793dc}, note: "SUMO as the source: all 1 sites meet expect (DS 100); measured by hand at the migration (scenario-catalog step 4)"}
+verdict:
+  exerciser: {status: skip, note: "the exerciser's movers do not follow a car ahead: a vehicle from behind would drive through the ego"}
+  sumo: {status: pass, since: {worlds: 13b7dac, catalog: ef793dc}, note: "as the source: all 1 sites meet expect (DS 100); measured by hand at the migration (scenario-catalog step 4)"}

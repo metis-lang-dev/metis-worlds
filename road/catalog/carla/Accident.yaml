@@ -19,4 +19,6 @@ actors:   # police at distance, the first crashed car +10 m, the second +6 m (ro
   - {id: crash2, kind: car, mode: scripted, at: {ahead: 136, lane: 0}, v: 0.0, moving: false}
 infractions: {scenario: [scenario_timeout: 240]}
 expect: {arrived: true, collisions: 0, violations: 0}
-verdict: {status: pass, since: {worlds: 13b7dac, catalog: ef793dc}, note: "SUMO as the source: all 2 sites meet expect (DS 100); measured by hand at the migration (scenario-catalog step 4)"}
+verdict:
+  exerciser: {status: pass, since: {worlds: 13b7dac, catalog: ef793dc}, note: "as the source: expect met (DS 100); measured by hand at the migration"}
+  sumo: {status: pass, since: {worlds: 13b7dac, catalog: ef793dc}, note: "as the source: all 2 sites meet expect (DS 100); measured by hand at the migration (scenario-catalog step 4)"}

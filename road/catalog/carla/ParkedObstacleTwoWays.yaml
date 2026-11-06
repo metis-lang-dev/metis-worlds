@@ -29,4 +29,6 @@ actors:
     script: [{when: trigger, after: 5.0, flow: true}]
 infractions: {scenario: [scenario_timeout: 240]}
 expect: {arrived: true, collisions: 0, violations: 0}
-verdict: {status: pass, since: {worlds: 13b7dac, catalog: ef793dc}, note: "SUMO as the source: all 4 sites meet expect (DS 100); measured by hand at the migration (scenario-catalog step 4)"}
+verdict:
+  exerciser: {status: skip, note: "the exerciser has no oncoming lane"}
+  sumo: {status: pass, since: {worlds: 13b7dac, catalog: ef793dc}, note: "as the source: all 4 sites meet expect (DS 100); measured by hand at the migration (scenario-catalog step 4)"}

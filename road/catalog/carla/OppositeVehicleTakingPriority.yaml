@@ -34,4 +34,6 @@ actors:   # still at the side road's start; it crosses at 16.7 m/s from when the
     script: [{when: trigger, go: true, speed: 16.7}]
 infractions: {scenario: []}
 expect: {arrived: true, collisions: 0, violations: 0}
-verdict: {status: pass, since: {worlds: 13b7dac, catalog: ef793dc}, note: "SUMO as the source: all 16 sites meet expect (DS 100); measured by hand at the migration (scenario-catalog step 4)"}
+verdict:
+  exerciser: {status: pass, since: {worlds: 13b7dac, catalog: ef793dc}, note: "as the source: expect met (DS 100); measured by hand at the migration"}
+  sumo: {status: pass, since: {worlds: 13b7dac, catalog: ef793dc}, note: "as the source: all 16 sites meet expect (DS 100); measured by hand at the migration (scenario-catalog step 4)"}

@@ -32,9 +32,12 @@ def test_every_card_has_its_source_its_license_and_a_place():
         assert c.get("sites", {}).get("towns") and c["map"]["town"] in c["sites"]["towns"], n
         assert c["tags"] and set(c["tags"]) <= set(C.TAG_VOCABULARY), n
         assert c["patches"] == [] and all(a["mode"] in C.MODES for a in c["actors"]), n
-        v = c["verdict"]
-        assert v["status"] in C.STATUS and v["since"]["worlds"] and v["since"]["catalog"], n
-        assert (v["status"] != "fail") or v.get("record") or v.get("note"), n
+        assert set(c["verdict"]) == set(C.HOSTS), n                                 # one verdict per host (§6b)
+        for host, v in c["verdict"].items():
+            assert v["status"] in C.STATUS, (n, host)
+            assert v["status"] == "skip" or (v["since"]["worlds"] and v["since"]["catalog"]), (n, host)
+            assert (v["status"] != "fail") or v.get("record"), (n, host)
+        assert (c["verdict"]["exerciser"]["status"] == "skip") == bool((c.get("exerciser") or {}).get("skip")), n
     assert (C.SITES.parent / "LICENSE").read_text().startswith("The trigger poses in this directory are CARLA's data")
 
 

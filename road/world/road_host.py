@@ -234,6 +234,14 @@ class RoadHost:
                 raise ValueError("the road's page says run:SCENARIO:SEED, crfind:QUERY, play, pause, speed:X, mark:N:start, mark:N:stop or watching, not %r" % line)
 
     def catalog_rows(self):
+        def one_word(v):                                            # §6b: a card's one-word standing is SUMO's when present, else the exerciser's
+            v = v or {}
+            if "status" in v:
+                return v["status"]
+            for host in ("sumo", "exerciser"):
+                if (v.get(host) or {}).get("status") not in (None, "skip"):
+                    return v[host]["status"]
+            return None
         """The scenario catalog's rows (road/docs/SCENARIO-CARD.md §7): road/catalog/index.json when the runner wrote it, else built
         from the cards (road/catalog/<source>/*.yaml) as they are. Each row: id, source, set "catalog", tags, verdict, map, and `run`,
         the scenario the page starts: a CARLA card at its first site on its town, a CommonRoad one as cr:ID."""
@@ -258,7 +266,7 @@ class RoadHost:
             else:
                 continue
             rows.append({"id": c["scenario"], "set": "catalog", "source": f.parent.name, "tags": c.get("tags") or [],
-                         "verdict": (c.get("verdict") or {}).get("status"), "map": town or (c.get("map") or {}).get("net"), "run": run,
+                         "verdict": one_word(c.get("verdict")), "map": town or (c.get("map") or {}).get("net"), "run": run,
                          "country": "", "cached": True})
         return rows
 

@@ -31,4 +31,6 @@ actors:   # the blocker at 28 m, the adversary at 35 m on the side (here the rig
     script: [{when: trigger, v: 5.6}, {when: trigger, after: 1.5, lane: 1}]
 infractions: {scenario: []}
 expect: {arrived: true, collisions: 0, violations: 0}
-verdict: {status: pass, since: {worlds: 13b7dac, catalog: ef793dc}, note: "SUMO as the source: all 4 sites meet expect (DS 100); measured by hand at the migration (scenario-catalog step 4)"}
+verdict:
+  exerciser: {status: pass, since: {worlds: 13b7dac, catalog: ef793dc}, note: "as the source: expect met (DS 100); measured by hand at the migration"}
+  sumo: {status: pass, since: {worlds: 13b7dac, catalog: ef793dc}, note: "as the source: all 4 sites meet expect (DS 100); measured by hand at the migration (scenario-catalog step 4)"}
