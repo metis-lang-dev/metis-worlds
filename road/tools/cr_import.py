@@ -231,7 +231,7 @@ def card(sid, cache, out=CATALOG, row=None, cluster=None, checkout=CHECKOUT, for
         c["map"]["route_note"] = pl["route_note"]
     v = verdict_of(row, cluster)
     if v:
-        c["verdict"] = {"sumo": v}                           # per host (spec §6b): the harvest ran on SUMO; the exerciser cannot play it
+        c["verdict"] = {"exerciser": "skip", "sumo": v}     # per host (spec §6b): the harvest ran on SUMO; the exerciser cannot play it
     import yaml
     path = Path(out) / ("%s.yaml" % sid)
     path.write_text(yaml.safe_dump(c, sort_keys=False, allow_unicode=True, width=140))

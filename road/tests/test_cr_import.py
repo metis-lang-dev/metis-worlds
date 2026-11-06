@@ -112,4 +112,4 @@ def test_the_verdict_is_per_host_sumo_only(tmp_path):
     import yaml
     row = {"id": IDS[0], "worlds": "13b7dac", "pin": "ef793dc", "error": None, "failed": []}
     c = yaml.safe_load(I.card(IDS[0], _cache(), tmp_path, row=row).read_text())
-    assert c["verdict"] == {"sumo": {"status": "pass", "since": {"worlds": "13b7dac", "catalog": "ef793dc"}}}
+    assert c["verdict"] == {"exerciser": "skip", "sumo": {"status": "pass", "since": {"worlds": "13b7dac", "catalog": "ef793dc"}}}
