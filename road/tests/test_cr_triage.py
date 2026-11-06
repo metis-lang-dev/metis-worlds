@@ -343,3 +343,20 @@ def test_a_cut_in_partner_entering_behind_the_egos_front_is_the_follower():
     assert T.behind_at_entry(rows, "P", 8)                                         # the first shared tick: behind
     rows[9]["things"][0]["s"] = 9.0
     assert not T.behind_at_entry(rows, "P", 8)                                     # ahead of the ego's front: the lead
+
+
+def test_a_near_miss_reading_an_empty_role_is_dropped():
+    o = {"rule": "yield_walker", "ground": "yield_walker[W=near,C=at]", "missing": "crossing(vru1,near)", "fired_at": []}
+    assert not T.near_miss(o, {"yield_walker"}, bound={"lead", "a1"})            # no walker near: no near miss
+    assert T.near_miss(o, {"yield_walker"}, bound={"lead", "vru1"})
+    assert T.near_miss(o, {"yield_walker"}, bound=None)                          # no truth: as before
+
+
+def test_a_contact_across_a_foe_gap_is_the_converters(tmp_path):
+    tr = tmp_path / "tr"
+    tr.mkdir()
+    rows = [{"truth": 1}, {"k": 30, "ego": {"lane": ":50_4_0", "s": 11.0, "v": 5.0, "contact": ["P"]},
+                           "things": [{"id": "P", "lane": ":50_5_0", "s": 10.0, "v": 4.0}]}]
+    (tr / "truth.jsonl").write_text("".join(json.dumps(r) + "\n" for r in rows))
+    row_ = {"summary": {"director": {"cr": {"foe_gaps": [[":50_5_0", ":50_4_0"]]}}}}
+    assert T.foe_gap(row_, tr) and not T.foe_gap({"summary": {}}, tr)

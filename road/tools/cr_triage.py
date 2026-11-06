@@ -173,6 +173,9 @@ def kind_one(row):
         if lane_jumping(tr, partner):                                # the architect's ruling (2026-11-06): the playback's
             return dict(out, kind="world", why="%s jumped across lanes (>= %d flips in the %d ticks before the contact): a played "
                         "obstacle remapped each tick inside a junction, no track holds it" % (partner, JUMP_FLIPS, FOLLOW_TICKS))
+        if foe_gap(row, tr):                                            # ruling L3 (W): the converted net's foe table
+            return dict(out, kind="world", why="the ego's and %s's internal lanes intersect with no foe relation between their links "
+                        "(cr_world's foe_gaps): the net's junction logic never pairs them" % partner)
         if row.get("set") == "recorded" and cut_in_met(tr, partner):  # ruling L2 (i): the cut-in escalation did what it could
             return dict(out, kind="world", why="%s cut in ahead of the ego (lead under %d ticks before the contact) and the fold "
                         "asked brake_max in that second" % (partner, CUTIN_TICKS))
@@ -205,7 +208,8 @@ def kind_one(row):
         commands = set((MT.read(str(tr))[0].header or {}).get("commands") or ())
     except Exception:                                       # noqa: BLE001 — no header: every rule counts
         commands = set()
-    near = [o for o in law.get("one_guard_away") or () if near_miss(o, commands)]
+    bound = bound_roles(tr, rec.get("window"))
+    near = [o for o in law.get("one_guard_away") or () if near_miss(o, commands, bound)]
     fired = sorted({_base(n) for n in law.get("commands_fired") or ()})
     return dict(out, kind=t.get("kind"), also=t.get("also") or [], fired=fired, rules=sorted({o["rule"] for o in near}),
                 atoms=sorted({o["missing"].split("(")[0] for o in near}),
@@ -281,6 +285,23 @@ def lane_jumping(tr, pid):
 
 
 CUTIN_TICKS = 10                                # a lead bound this shortly before the contact cut in (1 s)
+
+
+def foe_gap(row, tr):
+    """At the truth's first contact, the ego's lane and its partner's are a pair of cr_world's foe_gaps (summary.director.cr.foe_gaps:
+    internal lanes of one junction whose centre lines intersect, neither link the other's foe): the converter's, not the law's."""
+    from metis import surprise_kind as SK
+    gaps = {frozenset(g) for g in (_cr(row).get("foe_gaps") or ()) if len(g) == 2}
+    if not gaps:
+        return False
+    rows, _ = SK.read_truth(tr)
+    kc = first_contact_tick(tr)
+    if kc is None:
+        return False
+    ego = rows[kc].get("ego") or {}
+    pid = sorted(ego.get("contact") or [])[0]
+    th = next((x for x in rows[kc].get("things") or () if x.get("id") == pid), None)
+    return th is not None and frozenset((ego.get("lane"), th.get("lane"))) in gaps
 
 
 def world_log(tr):
@@ -443,14 +464,32 @@ def _base(name):
     return str(name).split("(")[0].split("@")[0].split("[")[0]
 
 
-def near_miss(o, commands):
+ROLE_RE = __import__("re").compile(r"^(lead|follower|leadleft|leadright|followleft|followright|a\d+|vru\d+)$")
+
+
+def bound_roles(tr, window):
+    """The roles some body of the truth column holds inside WINDOW (None without a truth or a window: no filter)."""
+    from metis import surprise_kind as SK
+    rows, _ = SK.read_truth(tr)
+    if not rows or not window:
+        return None
+    return {x.get("role") for k in rows if window[0] <= k <= window[1] for x in rows[k].get("things") or () if x.get("role")}
+
+
+def near_miss(o, commands, bound=None):
     """A one-guard-away row that says something: a COMMAND rule (no protocol rule: drive, arrive, cancel, released) that did not
-    fire in the window, short of an atom that is not one of the host's exclusive classes."""
+    fire in the window, short of an atom that is not one of the host's exclusive classes, nor one that reads a role no body holds in
+    the window (yield_walker short of crossing(vru1, near) with no walker near: opus's finding E, the architect's word)."""
     if commands and o["rule"] not in commands:
         return False
     if o.get("fired_at"):
         return False
-    return o["missing"].split("(")[0] not in EXCLUSIVE
+    missing = o["missing"]
+    if bound is not None and "(" in missing:
+        args = [a.strip() for a in missing[missing.index("(") + 1:missing.rindex(")")].split(",")]
+        if any(ROLE_RE.match(a) and a not in bound for a in args):
+            return False
+    return missing.split("(")[0] not in EXCLUSIVE
 
 
 def kinds(round_dir, todo, jobs=1, kinder=kind_one):
