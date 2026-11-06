@@ -94,3 +94,20 @@ def test_the_catalogs_cards_carry_their_notice_and_verdict():
         assert (d / "NOTICE").is_file() and "BSD" in (d / "NOTICE").read_text(), p
         assert R.card_file(c, c["map"]["net"]).is_file() and R.card_file(c, c["map"]["data"]).is_file(), p
         assert R.expected(c, "sumo") in ("pass", "soft", "fail", "world"), p
+
+
+def test_list_in_chunks(tmp_path, capsys):
+    for i in range(5):
+        p = tmp_path / ("C%d.yaml" % i)
+        p.write_text(yaml.safe_dump({"scenario": "C%d" % i, "map": {"net": "x/x.net.xml"}, "verdict": {"sumo": {"status": "pass"}}}))
+
+    class A:
+        cards, host, chunks = [str(tmp_path)], "sumo", 2
+    monkey = R.WORLDS
+    R.WORLDS = tmp_path
+    try:
+        R.cmd_list(A)
+    finally:
+        R.WORLDS = monkey
+    groups = json.loads(capsys.readouterr().out)
+    assert [len(g.split()) for g in groups] == [3, 2] and sorted(" ".join(groups).split()) == ["C%d.yaml" % i for i in range(5)]

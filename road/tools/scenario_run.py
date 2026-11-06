@@ -8,7 +8,7 @@ its standing (pass | soft | fail | world) and compared with the card's `verdict`
     road/tools/scenario_run.py batch plan|work|launch|status|pull|recover …  cr_batch over cards (jobs carry the card's path)
     road/tools/scenario_run.py index [DIR]                                  road/catalog/index.json (id, source, tags, verdict, map)
     road/tools/scenario_run.py coverage [DIR] [--host H]                    tags x standings from the verdicts (CI's coverage)
-    road/tools/scenario_run.py list [DIR] [--host sumo]                     the cards a host plays, JSON (CI's matrix)
+    road/tools/scenario_run.py list [DIR] [--host sumo] [--chunks N]        the cards a host plays, JSON (CI's matrix; N groups)
 
 Two kinds of card, one row: a card on a town (the CARLA cards: map.town / sites, played as road_tree's `card:NAME`, measured by
 scenario_cards.check as road/experiments/scenarios.py does) and a card on a stored net (map.net + map.data: played as `cr:ID`
@@ -342,6 +342,9 @@ def cmd_list(a):
         if a.host == "sumo" and not on_net(c) and not (c.get("sites") or {}).get("towns"):
             continue
         out.append(str(Path(path).resolve().relative_to(WORLDS)))
+    if a.chunks:                                           # CI's matrix in groups: one job checks a group (step 5, batched)
+        n = max(1, min(a.chunks, len(out)))
+        out = [" ".join(out[i::n]) for i in range(n)] if out else []
     print(json.dumps(out))
 
 
@@ -387,6 +390,7 @@ def main(argv=None):
     ls = sub.add_parser("list")
     ls.add_argument("cards", nargs="*", default=[str(CATALOG)])
     ls.add_argument("--host", default="sumo", choices=list(HOSTS))
+    ls.add_argument("--chunks", type=int, default=0, help="N groups of cards, round-robin, each a space-separated string")
     ix = sub.add_parser("index")
     ix.add_argument("dir", nargs="?", default=str(CATALOG))
     a = ap.parse_args(argv)
