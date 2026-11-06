@@ -22,5 +22,14 @@ actors:
   - {id: north, kind: car, mode: model, driver: levelk, path: N_S, s: 35.0, v: 8.0}
   - {id: west, kind: car, mode: model, driver: levelk, path: W_E, s: 35.0, v: 8.0}
 expect: {arrived: true, collisions: 0, violations: 0, deadlock: false}
+set: regression                # SCENARIO-CARD §6c: regression iff every played host is at pass (the first verdict)
 verdict:
-  sumo: {status: skip, note: "the level-k intersection plays on the exerciser only (SUMO later, LEVELK.md §5)"}
+  sumo:
+    status: skip
+    note: the level-k intersection plays on the exerciser only (SUMO later, LEVELK.md
+      §5)
+  exerciser:
+    status: pass
+    since:
+      worlds: 4895a98
+      catalog: 915eae9
