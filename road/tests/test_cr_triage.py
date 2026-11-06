@@ -166,8 +166,8 @@ def test_a_machine_record_is_about_its_contact_partner_else_its_bound_things(tmp
 def test_a_contact_from_behind_on_a_recording_is_the_worlds_the_rest_the_laws(tmp_path):
     def truth(tr, partner_lane, partner_s):
         rows = [{"truth": 1, "cannot": []},
-                {"k": 3, "ego": {"lane": "a", "s": 20.0, "contact": []}, "things": [{"id": "cr9", "lane": partner_lane, "s": partner_s - 2}]},
-                {"k": 4, "ego": {"lane": "a", "s": 21.0, "contact": ["cr9"]}, "things": [{"id": "cr9", "lane": partner_lane, "s": partner_s}]}]
+                {"k": 13, "ego": {"lane": "a", "s": 20.0, "contact": []}, "things": [{"id": "cr9", "lane": partner_lane, "s": partner_s - 2}]},
+                {"k": 14, "ego": {"lane": "a", "s": 21.0, "contact": ["cr9"]}, "things": [{"id": "cr9", "lane": partner_lane, "s": partner_s}]}]
         (tr / "truth.jsonl").write_text("".join(json.dumps(r) + "\n" for r in rows))
     d = make_round(tmp_path, "p4", {"taycann": [row("R-1", "1", failed=["contact"]), row("F-1", "2", failed=["contact"]),
                                                 row("S-1", "3", failed=["contact"]), row("I-1", "4", failed=["contact"], set="interactive")]})
@@ -260,3 +260,16 @@ def test_the_first_contact_tick_of_the_truth(tmp_path):
     rows = [{"truth": 1}, {"k": 3, "ego": {"contact": []}, "things": []}, {"k": 8, "ego": {"contact": ["cr2"]}, "things": []}]
     (tr / "truth.jsonl").write_text("".join(json.dumps(r) + "\n" for r in rows))
     assert T.first_contact_tick(tr) == 8 and T.first_contact_tick(tmp_path / "none") is None
+
+
+def test_ruling_b_a_follower_or_an_initial_contact_is_the_worlds(tmp_path):
+    def write(tr, rows):
+        tr.mkdir(parents=True)
+        (tr / "truth.jsonl").write_text("".join(json.dumps(r) + "\n" for r in [{"truth": 1}] + rows))
+    write(tmp_path / "f", [{"k": 20, "ego": {"lane": ":j_1", "s": 1.0, "contact": []}, "things": [{"id": "c1", "lane": "a", "s": 9.0, "role": "follower"}]},
+                           {"k": 40, "ego": {"lane": ":j_1", "s": 3.0, "contact": ["c1"]}, "things": [{"id": "c1", "lane": ":j_2", "s": 2.0, "role": None}]}])
+    write(tmp_path / "i", [{"k": 2, "ego": {"lane": "a", "s": 5.0, "contact": ["c2"]}, "things": [{"id": "c2", "lane": "a", "s": 9.0, "role": "lead"}]}])
+    write(tmp_path / "s", [{"k": 40, "ego": {"lane": "a", "s": 5.0, "contact": ["c3"]}, "things": [{"id": "c3", "lane": "b", "s": 9.0, "role": "a1"}]}])
+    assert T.contact_side(tmp_path / "f") == ("behind", "c1")             # a follower turning onto a sibling lane
+    assert T.contact_side(tmp_path / "i") == ("initial", "c2")
+    assert T.contact_side(tmp_path / "s") == ("side", "c3")               # the law's

@@ -165,6 +165,10 @@ def kind_one(row):
         out.update(partner=side, partner_id=partner)
         if side == "behind" and row.get("set") == "recorded":     # the architect's ruling (2026-11-05): the recording rear-ends us
             return dict(out, kind="world", why="%s hit the ego from behind on a recorded trajectory, which does not react" % partner)
+        if side == "behind":                                         # ruling B (a), 2026-11-06: a follower's contact, any set
+            return dict(out, kind="world", why="%s, the ego's follower before the contact, hit it from behind" % partner)
+        if side == "initial":                                        # ruling B (b): the scenario starts in or at contact
+            return dict(out, kind="world", why="the contact with %s at the run's start (k <= %d): the initial state" % (partner, INITIAL_K))
     try:
         from metis import surprise_kind as SK
         if not rec.get("window") and rec.get("k") is None:            # a worker's record without a window: the run's end
@@ -215,11 +219,22 @@ def contact_side(tr):
         if not hit:
             continue
         pid = sorted(hit)[0]
+        if k <= INITIAL_K:                              # the scenario starts in or at contact (ruling B (b))
+            return "initial", pid
+        was = {next((x.get("role") for x in rows[j].get("things") or () if x.get("id") == pid), None)
+               for j in range(max(0, k - FOLLOW_TICKS), k + 1) if j in rows}
+        if was & FOLLOW_ROLES:                          # from behind across lanes or a junction (ruling B (a))
+            return "behind", pid
         th = next((x for x in rows[k].get("things") or () if x.get("id") == pid), None)
         if th is None or th.get("lane") != ego.get("lane") or th.get("s") is None or ego.get("s") is None:
             return "side", pid
         return ("behind" if th["s"] < ego["s"] else "front"), pid
     return None, None
+
+
+INITIAL_K = 10                                  # ticks: a contact this early is the scenario's initial state (1 s)
+FOLLOW_TICKS = 30                               # ticks before the contact a partner bound as a follower makes it "behind"
+FOLLOW_ROLES = {"follower", "followleft", "followright"}
 
 
 ROLE_ORDER = ("lead", "follower", "leadleft", "leadright", "followleft", "followright")
