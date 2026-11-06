@@ -104,3 +104,12 @@ def test_three_cards_from_the_cache(tmp_path):
 def test_a_card_already_in_the_catalog_is_kept(tmp_path):
     (tmp_path / "X.yaml").write_text("card: 2\nscenario: X\n# hand-made\n")
     assert I.card("X", tmp_path / "nocache", tmp_path).read_text().endswith("# hand-made\n")   # never read the cache, never overwritten
+
+
+@pytest.mark.skipif(not all((_cache() / i / "cr.json").is_file() for i in IDS[:1]), reason="the CommonRoad conversion cache lacks the id")
+def test_the_verdict_is_per_host_sumo_only(tmp_path):
+    pytest.importorskip("sumolib")
+    import yaml
+    row = {"id": IDS[0], "worlds": "13b7dac", "pin": "ef793dc", "error": None, "failed": []}
+    c = yaml.safe_load(I.card(IDS[0], _cache(), tmp_path, row=row).read_text())
+    assert c["verdict"] == {"sumo": {"status": "pass", "since": {"worlds": "13b7dac", "catalog": "ef793dc"}}}

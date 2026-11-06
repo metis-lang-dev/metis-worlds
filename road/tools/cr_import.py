@@ -16,8 +16,9 @@ per step), and NOTICE (the CommonRoad repository's BSD-3 license text, verbatim:
   one-state obstacle (SUMO's to drive: cr-harvest-4), static for a static one; kind from CommonRoad's type.
 - tags (§5's vocabulary only): from the scene (intersections, signs, lights, right_before_left, the obstacles' kinds, the
   scenario's tags) and from the harvest's mechanism (the cluster the row falls in); patches [] (a person adds to it, §4).
-- verdict: from the harvest's row of the id in ROUND (pass | soft | fail | world), with since {worlds, catalog} from the row;
-  absent when no round is given or the id has no row there (the runner writes it otherwise, §6).
+- verdict: per host (§6b): sumo from the harvest's row of the id in ROUND (pass | soft | fail | world), with since {worlds,
+  catalog} from the row; absent when no round is given or the id has no row there (the runner writes it otherwise, §6); no
+  exerciser entry (it cannot play a CommonRoad map).
 
 The SELECTION over a triaged round (cr_triage's clusters.json + rows): one card per cluster (its representative; no-record
 clusters out), then a stratified sample over (country, map type) of the rest: every stratum at least one, the remainder in
@@ -230,7 +231,7 @@ def card(sid, cache, out=CATALOG, row=None, cluster=None, checkout=CHECKOUT, for
         c["map"]["route_note"] = pl["route_note"]
     v = verdict_of(row, cluster)
     if v:
-        c["verdict"] = v
+        c["verdict"] = {"sumo": v}                           # per host (spec §6b): the harvest ran on SUMO; the exerciser cannot play it
     import yaml
     path = Path(out) / ("%s.yaml" % sid)
     path.write_text(yaml.safe_dump(c, sort_keys=False, allow_unicode=True, width=140))
