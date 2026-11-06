@@ -253,8 +253,10 @@ expect:
   violations: 0
   off_lanelet: 0
 verdict:
-  status: fail
-  since:
-    worlds: e083e4c
-    catalog: ef793dc
-  note: contact
+  exerciser: skip
+  sumo:
+    status: fail
+    since:
+      worlds: e083e4c
+      catalog: ef793dc
+    note: contact

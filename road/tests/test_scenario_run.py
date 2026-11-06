@@ -53,22 +53,30 @@ def test_the_standing_of_a_town_card(tmp_path):
 def test_the_verdict_is_written_in_place_and_read_back(tmp_path, monkeypatch):
     c = net_card(tmp_path, verdict={"status": "pass", "since": {"worlds": "0000000", "catalog": "0000000"}}, title="kept")
     monkeypatch.setattr(R, "since", lambda: {"worlds": "abc1234", "catalog": "def5678"})
-    R.write_verdict(c, {"status": "soft", "why": "the window missed"})
+    R.write_verdict(c, {"status": "soft", "why": "the window missed"}, "sumo")
     back = R.load(c["_path"])
-    assert back["title"] == "kept" and back["verdict"] == {"status": "soft", "since": {"worlds": "abc1234", "catalog": "def5678"},
-                                                          "note": "the window missed"}
-    assert R.expected(back) == "soft"
+    assert back["title"] == "kept" and back["verdict"] == {"sumo": {"status": "soft", "since": {"worlds": "abc1234", "catalog": "def5678"},
+                                                                   "note": "the window missed"}}
+    assert R.expected(back) == "soft" and R.expected(back, "exerciser") is None
+    R.write_verdict(back, {"status": "pass"}, "exerciser")              # one host's entry kept beside the other's
+    both = R.load(c["_path"])
+    assert R.expected(both, "sumo") == "soft" and R.expected(both, "exerciser") == "pass"
+
+
+def test_a_host_may_be_skipped(tmp_path):
+    c = net_card(tmp_path, verdict={"exerciser": "skip", "sumo": {"status": "fail"}})
+    assert R.skipped(c, "exerciser") and not R.skipped(c, "sumo") and R.expected(c, "sumo") == "fail"
 
 
 def test_the_index(tmp_path):
-    net_card(tmp_path, tags=["following"], source={"suite": "commonroad"}, verdict={"status": "fail"})
+    net_card(tmp_path, tags=["following"], source={"suite": "commonroad"}, verdict={"sumo": {"status": "fail"}})
 
     class A:
         dir = str(tmp_path)
     R.cmd_index(A)
     rows = json.loads((tmp_path / "index.json").read_text())["cards"]
     assert rows == [{"id": "ZAM_X-1_1_T-1", "scenario": "ZAM_X-1_1_T-1", "source": "commonroad", "tags": ["following"],
-                     "verdict": "fail", "map": "x/x.net.xml"}]
+                     "verdict": {"sumo": "fail"}, "map": "x/x.net.xml", "run": "cr:x", "runs": ["cr:x"]}]
 
 
 def test_the_catalogs_cards_carry_their_notice_and_verdict():
@@ -77,4 +85,4 @@ def test_the_catalogs_cards_carry_their_notice_and_verdict():
         d = R.card_file(c, c["map"]["net"]).parent
         assert (d / "NOTICE").is_file() and "BSD" in (d / "NOTICE").read_text(), p
         assert R.card_file(c, c["map"]["net"]).is_file() and R.card_file(c, c["map"]["data"]).is_file(), p
-        assert R.expected(c) in ("pass", "soft", "fail", "world"), p
+        assert R.expected(c, "sumo") in ("pass", "soft", "fail", "world"), p

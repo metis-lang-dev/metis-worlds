@@ -80,25 +80,38 @@ def cards_in(paths):
 
 # ── one run ──
 
+def town_runs(card, host):
+    """The runs of a card on a town (SCENARIO-CARD §6b (2)): the exerciser's `card:NAME`; on SUMO every site of the card's one
+    `map.town` (else its sites' first town), `card:NAME@TOWN#SITE`."""
+    import scenario_cards as C
+    name = card["scenario"]
+    if host != "sumo":
+        return [name]
+    towns = (card.get("sites") or {}).get("towns") or {}
+    town = (card.get("map") or {}).get("town") or (sorted(towns)[0] if towns else None)
+    if town is None:
+        raise SystemExit("scenario_run: %s has no SUMO site" % name)
+    return ["%s@%s#%s" % (name, town, p["i"]) for p in C.sites(C.load(name), town)]
+
+
 def run_town(card, host, seed, out, trace):
-    """A card on a town: road_tree's `card:NAME` (its first site on SUMO), measured as scenarios.py's row."""
+    """A card on a town: road_tree's `card:NAME` per run (town_runs), measured as scenarios.py's row; on SUMO the WORST site
+    decides (§6b (2)): the row is that site's, every site's fails beside it."""
     import scenario_cards as C
     sc = _mod("scenarios", ROAD / "experiments" / "scenarios.py")
     rt = sc.road_tree()
-    name = card["scenario"]
-    if host == "sumo":
-        towns = (card.get("sites") or {}).get("towns") or {}
-        town = sorted(towns)[0] if towns else None
-        if town is None:
-            raise SystemExit("scenario_run: %s has no SUMO site" % name)
-        name = "%s@%s#%s" % (name, town, C.sites(C.load(card["scenario"]), town)[0]["i"])
     c = C.load(card["scenario"])
-    res = rt.run("card:" + name, seed, Path(out) / "runs", ticks=sc.ticks_of(c, host), world_kind=host if host == "sumo" else None,
-                 trace=trace)
-    r = sc.row(c, name, res)
-    return {"card": card_id(card), "host": host, "seed": seed, "run": name, "fails": r["fails"], "arrived": r["arrived"],
-            "collisions": r["collisions"], "collision_events": r["collision_events"], "violations": r["violations"],
-            "lb": r["lb"], "rc": r["rc"], "ds": r["ds"], "summary": res}
+    rows = []
+    for name in town_runs(card, host):
+        res = rt.run("card:" + name, seed, Path(out) / "runs", ticks=sc.ticks_of(c, host), world_kind=host if host == "sumo" else None,
+                     trace=trace)
+        r = sc.row(c, name, res)
+        rows.append({"card": card_id(card), "host": host, "seed": seed, "run": name, "fails": r["fails"], "arrived": r["arrived"],
+                     "collisions": r["collisions"], "collision_events": r["collision_events"], "violations": r["violations"],
+                     "lb": r["lb"], "rc": r["rc"], "ds": r["ds"], "summary": res})
+    worst = max(rows, key=lambda r: len(r["fails"]) > 0)
+    worst["sites"] = {r["run"]: r["fails"] for r in rows}
+    return worst
 
 
 def run_net(card, host, seed, out, trace):
@@ -190,8 +203,9 @@ def since():
     return {"worlds": head, "catalog": (ROAD / "domains" / "catalog.pin").read_text().strip()[:7]}
 
 
-def write_verdict(card, st):
-    """The card's verdict block, rewritten in place (the rest of the file as the author wrote it)."""
+def write_verdict(card, st, host):
+    """The card's verdict block, rewritten in place (the rest of the file as the author wrote it): HOST's entry set, the other
+    hosts' kept (SCENARIO-CARD §6b (1): verdict: {exerciser: {...}, sumo: {...}})."""
     import yaml
     p = Path(card["_path"])
     lines = p.read_text().splitlines()
@@ -204,16 +218,39 @@ def write_verdict(card, st):
             continue
         skip = False
         out.append(ln)
-    v = {"status": st["status"], "since": since()}
+    e = {"status": st["status"], "since": since()}
     if st.get("why"):
-        v["note"] = st["why"][:200]
+        e["note"] = st["why"][:200]
+    old = card.get("verdict")
+    v = {h: x for h, x in old.items() if h in HOSTS} if isinstance(old, dict) else {}
+    v[host] = e
     out.append(yaml.safe_dump({"verdict": v}, sort_keys=False, allow_unicode=True).rstrip())
     p.write_text("\n".join(out) + "\n")
 
 
-def expected(card):
+HOSTS = ("exerciser", "sumo")
+
+
+def entry(card, host):
+    """The card's verdict entry for HOST: a dict, the word "skip" (or {skip: why}), or None. A v2 verdict of one entry
+    (status at the top) is read as the host's it was measured on: the card's sumo for a stored net, else the exerciser."""
     v = card.get("verdict")
-    return v.get("status") if isinstance(v, dict) else None
+    if not isinstance(v, dict):
+        return None
+    if "status" in v:
+        return v if host == ("sumo" if on_net(card) else "exerciser") else None
+    return v.get(host)
+
+
+def skipped(card, host):
+    e = entry(card, host)
+    return e == "skip" or (isinstance(e, dict) and "skip" in e)
+
+
+def expected(card, host=None):
+    host = host or ("sumo" if on_net(card) else "exerciser")
+    e = entry(card, host)
+    return e.get("status") if isinstance(e, dict) else None
 
 
 # ── commands ──
@@ -232,11 +269,11 @@ def cmd_check(a):
     for path in cards_in(a.cards):
         card = load(path)
         h = host_of(card, a.host)
-        if not on_net(card) and h == "exerciser" and (card.get("exerciser") or {}).get("skip"):
+        if skipped(card, h) or (not on_net(card) and h == "exerciser" and (card.get("exerciser") or {}).get("skip")):
             continue
         trace = tempfile.mkdtemp(prefix="scenario-trace-") if on_net(card) else None
         row = run(card, h, a.seed, a.out, trace)
-        st, exp = row["standing"], expected(card)
+        st, exp = row["standing"], expected(card, h)
         if exp and st["status"] != exp:
             moved += 1
         lines.append("| %s | %s | %s | %s%s | %s |" % (card_id(card), h, exp or "(none)", st["status"],
@@ -252,8 +289,10 @@ def cmd_verdict(a):
         card = load(path)
         h = host_of(card, a.host)
         trace = tempfile.mkdtemp(prefix="scenario-trace-") if on_net(card) else None
+        if skipped(card, h):
+            continue
         st = run(card, h, a.seed, a.out, trace)["standing"]
-        write_verdict(card, st)
+        write_verdict(card, st, h)
         print("%s %s %s" % (card_id(card), st["status"], st.get("why") or ""))
 
 
@@ -261,8 +300,17 @@ def cmd_index(a):
     rows = []
     for path in cards_in([a.dir]):
         c = load(path)
+        if on_net(c):
+            runs = ["cr:" + card_file(c, c["map"]["net"]).parent.name]
+        else:
+            try:
+                runs = town_runs(c, "sumo")
+            except (SystemExit, Exception):                  # noqa: BLE001 — a card with no SUMO site: the exerciser's run
+                runs = [c.get("scenario")]
+            runs = ["card:" + r for r in runs]
         rows.append({"id": card_id(c), "scenario": c.get("scenario"), "source": (c.get("source") or {}).get("suite"),
-                     "tags": c.get("tags") or [], "verdict": expected(c), "map": (c.get("map") or {}).get("town") or (c.get("map") or {}).get("net")})
+                     "tags": c.get("tags") or [], "verdict": {h: expected(c, h) for h in HOSTS if expected(c, h)},
+                     "map": (c.get("map") or {}).get("town") or (c.get("map") or {}).get("net"), "run": runs[0], "runs": runs})
     (Path(a.dir) / "index.json").write_text(json.dumps({"cards": rows}, indent=1) + "\n")
     print("index: %d cards" % len(rows))
 

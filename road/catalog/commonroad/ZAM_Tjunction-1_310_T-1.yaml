@@ -69,7 +69,9 @@ expect:
   violations: 0
   off_lanelet: 0
 verdict:
-  status: pass
-  since:
-    worlds: e083e4c
-    catalog: ef793dc
+  exerciser: skip
+  sumo:
+    status: pass
+    since:
+      worlds: e083e4c
+      catalog: ef793dc

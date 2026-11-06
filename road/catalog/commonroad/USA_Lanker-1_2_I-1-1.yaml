@@ -218,8 +218,10 @@ expect:
   violations: 0
   off_lanelet: 0
 verdict:
-  status: world
-  since:
-    worlds: e083e4c
-    catalog: ef793dc
-  note: 'the contact with cr1314 at the run''s start (k <= 10): the initial state'
+  exerciser: skip
+  sumo:
+    status: world
+    since:
+      worlds: e083e4c
+      catalog: ef793dc
+    note: 'the contact with cr1314 at the run''s start (k <= 10): the initial state'
