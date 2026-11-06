@@ -129,7 +129,7 @@ judged = pytest.mark.skipif(not hasattr(__import__("metis_agent.trace", fromlist
 AGAIN = """
 stage safety {
   %% The same reading, another name.
-  yield_again [dyn] : $busy * $tick__grant(planner, controls) * $zone_at(nextzone, C) * $closing_in(C) * $zprio(nextzone, P) * $yields_to(P) * $conflict(nextzone) * $zbusy(nextzone) * now -o ().
+  yield_again [dyn] : $busy * $tick__grant(planner, controls) * $by_rule(nextzone) * $zone_at(nextzone, C) * $closing_in(C) * $zprio(nextzone, P) * $yields_to(P) * $conflict(nextzone) * $zbusy(nextzone) * now -o ().
 }
 """
 BESIDE = """
