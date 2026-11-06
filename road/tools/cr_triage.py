@@ -81,7 +81,9 @@ def measure(row):
         if m in failed:
             if m == "goal":                          # the architect's ruling (2026-11-05): the place never reached is the failure;
                 g = row.get("goal") or {}             # reached and the window missed is SOFT (the family never meets CommonRoad's windows)
-                return SOFT if g.get("position_t") is not None else "goal:position"
+                if time_only(row) or g.get("position_t") is not None:
+                    return SOFT                       # a time-only goal has no place: its goal is soft only (2026-11-06)
+                return "goal:position"
             return m
     return failed[0] if failed else None
 
@@ -89,12 +91,24 @@ def measure(row):
 SHORT_TICKS = 5                              # a run this short "arrived" on a route of a metre: no result
 
 
+TIME_ONLY = "a time-only goal"                   # cr_world's route note for a goal state with no position (cr-harvest-3)
+
+
+def _cr(row):
+    return ((row.get("summary") or {}).get("director") or {}).get("cr") or {}
+
+
+def time_only(row):
+    """A CommonRoad goal of time, speed and heading only, no region: the ego drives on (the architect's ruling, 2026-11-06)."""
+    return str(_cr(row).get("route_note") or "").startswith(TIME_ONLY)
+
+
 def no_goal(row):
-    """The world could not pose the scenario: cr_world found no goal edge (cr2sumo merges lanelets into edges cr_world cannot map
-    by name), or the run ended within SHORT_TICKS (the ego "arrived" at tick 1 on a 1 m route). Counted as error:world, never a
-    failure of the family's, until the converter's fix reruns them (the architect's ruling)."""
-    cr = ((row.get("summary") or {}).get("director") or {}).get("cr") or {}
-    if "goal_edge" in cr and cr["goal_edge"] is None:
+    """The world could not pose the scenario: a goal WITH a region for which cr_world found no goal edge, or a run that ended
+    within SHORT_TICKS (the ego "arrived" on a 1 m route). Counted as error:world, never a failure of the family's (the
+    architect's rulings, 2026-11-05 and -06)."""
+    cr = _cr(row)
+    if "goal_edge" in cr and cr["goal_edge"] is None and not time_only(row):
         return True
     return row.get("ticks") is not None and row["ticks"] <= SHORT_TICKS
 
@@ -262,9 +276,10 @@ def kinds(round_dir, todo, jobs=1, kinder=kind_one):
             out[r["id"]] = {"kind": None, "member": None, "rules": [], "atoms": [], "why": "no record"}
             continue
         f = cache / ("%s.json" % _safe(r["id"]))
-        if f.is_file():
-            out[r["id"]] = json.loads(f.read_text())
-        else:
+        hit = json.loads(f.read_text()) if f.is_file() else None
+        if hit is not None and hit.get("record") in (None, r.get("record_id")):
+            out[r["id"]] = hit
+        else:                                              # never cached, or the row was rerun under a new record
             fresh.append(r)
     if jobs > 1 and len(fresh) > 1:
         from multiprocessing import Pool
@@ -348,11 +363,43 @@ def run(round_dir, jobs=1, kinder=kind_one, write=True):
                "by_kind": _count(c["kind"] or "no record" for c in cl),
                "by_measure": _count(measure(r) for r in failed),
                "structural_new": sum(1 for c in cl if c["kind"] in STRUCTURAL)}
-    out = {"summary": summary, "clusters": cl, "curve": cv}
+    out = {"summary": summary, "clusters": cl, "curve": cv, "provenance": provenance(all_rows),
+           "curve_by_set": {g: curve(rs_, cl_of(rs_, ks)) for g, rs_ in groups(all_rows).items()}}
     if write:
         Path(round_dir, "clusters.json").write_text(json.dumps(out, indent=1, default=str) + "\n")
         Path(round_dir, "triage.md").write_text(render(out))
     return out
+
+
+def group_of(row):
+    return "%s/%s" % (row.get("set") or "?", row.get("source") or "?")
+
+
+def groups(all_rows):
+    out = {}
+    for r in all_rows:
+        out.setdefault(group_of(r), []).append(r)
+    return dict(sorted(out.items()))
+
+
+def cl_of(rs_, ks):
+    """The clusters of the rows RS_ alone (their first appearance within them)."""
+    return clusters(rs_, ks)
+
+
+def outcome(row):
+    m = measure(row)
+    return "pass" if m is None else "soft" if soft(m) else "error" if m.startswith("error") else "fail"
+
+
+def provenance(all_rows):
+    """{set/source: {pass, soft, fail, error, rows}}: where the failures come from (the architect's provenance reading)."""
+    out = {}
+    for r in all_rows:
+        g = out.setdefault(group_of(r), {"rows": 0, "pass": 0, "soft": 0, "fail": 0, "error": 0})
+        g["rows"] += 1
+        g[outcome(r)] += 1
+    return dict(sorted(out.items(), key=lambda kv: -kv[1]["rows"]))
 
 
 def _count(xs):
@@ -376,6 +423,14 @@ def render(out):
             c["id"], c["count"], c["kind"] or "—", c["member"] or "—", c["measure"], ", ".join(c.get("fired") or ()) or "—",
             ", ".join(c["rules"]) or "—",
             ", ".join(c["atoms"]) or "—", c["representative"]["id"]))
+    lines += ["", "## By provenance (set / source)", "", "| set / source | rows | pass | soft | fail | error | pass % |", "|---|---|---|---|---|---|---|"]
+    for g, v in (out.get("provenance") or {}).items():
+        lines.append("| %s | %d | %d | %d | %d | %d | %.0f |" % (g, v["rows"], v["pass"], v["soft"], v["fail"], v["error"],
+                                                              100.0 * v["pass"] / v["rows"] if v["rows"] else 0.0))
+    if out.get("curve_by_set"):
+        lines += ["", "## The curve per set (new clusters per 100 of the set's own rows)", "", "| set / source | per 100 | total |", "|---|---|---|"]
+        for g, cv_ in out["curve_by_set"].items():
+            lines.append("| %s | %s | %d |" % (g, ", ".join(str(sum(p["new"].values())) for p in cv_) or "—", cv_[-1]["total"] if cv_ else 0))
     lines += ["", "## The curve (new clusters per 100 scenarios, in run order)", "", "| scenarios | new | by kind | total |",
               "|---|---|---|---|"]
     for p in out["curve"]:

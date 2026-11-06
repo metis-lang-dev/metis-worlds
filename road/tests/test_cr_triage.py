@@ -199,3 +199,35 @@ def test_a_scenario_the_world_could_not_pose_is_an_error_of_the_worlds():
     assert T.measure(cr("e12", 300)) == "goal:position"
     assert T.measure(cr(None, 300, failed=())) == "error:world"               # even a pass
     assert T.measure(row("y", "1", failed=["goal"])) == "goal:position"        # no summary (older rows): as before
+
+
+def test_a_time_only_goal_is_soft_only_and_the_provenance_table_counts_by_set(tmp_path):
+    """The architect's ruling (2026-11-06): a time-only goal (cr_world's route note) has no place: its goal is soft, never
+    goal:position nor error:world; a region goal with no edge stays error:world; the provenance table counts by set/source."""
+    to = {"director": {"cr": {"goal_edge": "e9", "route_note": "a time-only goal: the ego drives on"}}}
+    no_edge = {"director": {"cr": {"goal_edge": None, "route_note": None}}}
+    assert T.measure(row("t", "1", failed=["goal"], ticks=300, summary=to)) == T.SOFT
+    assert T.measure(row("t", "1", failed=["goal", "contact"], ticks=300, summary=to)) == "contact"
+    assert T.measure(row("r", "1", failed=["goal"], ticks=300, summary=no_edge)) == "error:world"
+    d = make_round(tmp_path, "p6", {"taycann": [row("A", "1", ticks=300, summary=to), row("B", "2", failed=["goal"], ticks=300, summary=to),
+                                                row("C", "3", failed=["contact"], ticks=300, source="NGSIM")]})
+    out = T.run(d, kinder=kinder({"C": LATE}))
+    assert out["provenance"]["recorded/hand-crafted"] == {"rows": 2, "pass": 1, "soft": 1, "fail": 0, "error": 0}
+    assert out["provenance"]["recorded/NGSIM"]["fail"] == 1 and "## By provenance" in (d / "triage.md").read_text()
+
+
+def test_a_rerun_row_is_triaged_again(tmp_path):
+    d = make_round(tmp_path, "p7", {"taycann": [row("A-1", "1", failed=["contact"])]})
+    calls = []
+
+    def k(r):
+        calls.append(r["record_id"])
+        return kinder({"A-1": LATE})(r)
+    T.run(d, kinder=k)
+    f = d / "taycann" / "rows" / "A-1.json"
+    r = json.loads(f.read_text())
+    r["record_id"] = "rec-A-1-rerun"
+    f.write_text(json.dumps(r))
+    (d / "taycann" / "records" / "rec-A-1.json").rename(d / "taycann" / "records" / "rec-A-1-rerun.json")
+    T.run(d, kinder=k)
+    assert calls == ["rec-A-1", "rec-A-1-rerun"]
