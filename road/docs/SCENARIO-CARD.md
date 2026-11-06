@@ -92,6 +92,17 @@ CI (step 5) runs every card on the exerciser per push, and the SUMO cards nightl
 - **The catalog's index** (`road/catalog/index.json`, written by `scenario_run.py index`) carries per row: `id`, `source`, `tags`, `verdict` (per host), `map`, and `run`: the run spec the host starts (`card:NAME@TOWN#SITE` for a CARLA card, `cr:ID` for a CommonRoad card), so the page's picker starts a row without deriving it.
 - **Layout wins over paths**: the runner reads `road/catalog/<source>/` (§7); `road/scenarios/` is gone once the ten cards move.
 
+## 6c. Two sets: regression and working (the user's proposal, 2026-11-06)
+
+The catalog is split in two sets, the card's `set` field: `regression` | `working`.
+
+- **The regression set** is the clean run CI relies on: every host the card plays stands at `pass` (or `skip`). The per-push exerciser job and the nightly SUMO job run it and FAIL on any card not at pass. Nothing else fails CI. A regression card's verdict block is the proof of the pass (`since`, the pin), and a law change that breaks one is a regression by definition.
+- **The working set** is most of the catalog: the imported CommonRoad cards with their measured fail/soft/world verdicts, the ScenarioRunner cards that fail, every card an agent is working. The nightly runs it too and posts the TABLE (per card: the verdict on file, the measured standing, moved or not) without failing: a move here is information, not a red run. Its rows at `pass` are the promotion candidates and the nightly lists them.
+- **Promotion** is an agent's branch: the card's verdict re-measured at the new pin (`scenario_run.py verdict`), `set: regression`, the record id that explains the move in the branch's message; CI's regression job then enforces it forever. Demotion (a regression card that a law change must break, and the user accepts it) is the same move backwards, with its reason in `patches`-style prose in `verdict.<host>.note`, and is the architect's ruling.
+- **The working set is the agents' queue**: dedicated agents take a cluster of working cards (one mechanism), find the gap, write the law through the judge, re-measure, promote. The coverage table (§6) prints per regulation group two numbers: regression cards (proven) and working cards (exercised), so the law's proven ground and its frontier are both visible.
+- **Defaults**: `scenario_run.py verdict` sets `set: regression` when every played host is at pass and `set: working` otherwise, at the card's first verdict only; later moves of `set` are deliberate (a flaky card stays working by hand; the field is never flipped by a run). The importer writes the default. A card without the field is `working`.
+- **The runner**: `list --set regression|working`, `check` enforces that a regression card's verdicts are all pass/skip (a card that says regression and fail is a format error), `coverage` prints both columns.
+
 ## 6a. Answers to the runner's open points (george's design note, steps/runner-design-george.md)
 
 - **The end condition** is §3's four rules, read from the card: `ticks` (outer bound), `ego.goal` (reached; or window end + 30 s for a region goal; a time-only goal ends at its window's end), `exerciser.dest` / the route's end (arrival, only once no window is open). Nothing else ends a run; a crash is an `error` row.
