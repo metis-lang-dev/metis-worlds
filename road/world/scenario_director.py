@@ -208,7 +208,8 @@ def place(card, town, site, direction=None):
         run += e.getLength()
     free = edge.getLength() - pos
     # the card's main distance clipped to the free run (nina's review), every actor moved by the same amount
-    aheads = [a["at"].get("ahead", 0.0) for a in card.get("actors") or [] if "ahead" in a.get("at", {})]
+    aheads = [a["at"].get("ahead", 0.0) for a in card.get("actors") or [] if "ahead" in a.get("at", {})
+              and a.get("kind") != "pedestrian"]                 # a walker crosses where the source says: never clipped as an obstacle
     clip = "distance" in (card.get("params") or {})          # an obstacle's distance; traffic ahead may pass a junction
     shift = min(0.0, (free - FREE_MARGIN_M) - min(aheads)) if aheads and clip else 0.0
     actors = []
@@ -242,7 +243,9 @@ def place(card, town, site, direction=None):
                     continue                                 # a flow's car past the road's end: the flow is the cars that fit
                 raise
         else:
-            s = pos + float(at.get("ahead", 0.0)) + shift - float(at.get("behind", 0.0))
+            if at.get("junction") == "entry":                    # the crossing at the junction's entry: BEFORE m short of the site's edge's end
+                at = dict(at, ahead=max(1.0, free - float(at.get("before", 1.0))))
+            s = pos + float(at.get("ahead", 0.0)) + (0.0 if a.get("kind") == "pedestrian" else shift) - float(at.get("behind", 0.0))
             way, ri = list(route), 0
             while s < 0:                                     # behind the site: back over plain continuations (fit)
                 prev = _plain_prev(way[0])
@@ -443,7 +446,7 @@ def build(name, work, seed=1, n=0, **_):
                 % (EGO, e["lane"], e["pos"], e["v"], " ".join(e["route"])))
     for a in pl["actors"]:
         pa = a["place"]
-        if pa.get("spawn"):
+        if pa.get("spawn") or a.get("kind") == "pedestrian":           # a walker is a host-side body (walkers.py), no SUMO vehicle
             continue
         vt = "emergency_t" if a.get("kind") == "emergency" else "actor_t"
         length = float(a.get("length", C.KIND[a.get("kind", "car")][1]))
@@ -468,7 +471,12 @@ class Director:
         self.rng = random.Random(seed)
         self.flows = {}                                                    # a flow actor: {on, n, last, gap, at}
         self.armed, self.queue, self.started, self.spawned = [], [], set(), set()
+        import walkers as W
+        self.walkers = W.Walkers(net_of(placed["town"]), [a for a in placed["actors"] if a.get("kind") == "pedestrian"]) \
+            if placed.get("town") and any(a.get("kind") == "pedestrian" for a in placed["actors"]) else None
         for a in placed["actors"]:
+            if a.get("kind") == "pedestrian":                                 # walkers.py arms, starts and walks it
+                continue
             for st in a.get("script") or []:
                 when = st.get("when")
                 steps = [(k, st[k]) for k in ("go", "speed", "v", "brake", "lane", "flow") if k in st]
@@ -621,6 +629,8 @@ class Director:
         if EGO not in ids:
             return
         ego_v = c.vehicle.getSpeed(EGO)
+        if self.walkers is not None:
+            self.walkers.tick(t, lambda e, p: self._dist(c, e, p), ego_v)
         d = self.odometer(c)                         # sumo_world's: a carry's metres along the route lane
         lane = c.vehicle.getLaneID(EGO)
         if not lane.startswith(":") and self.pl.get("town"):       # LB's outside_route_lanes: off Driving and Parking lanes
@@ -763,6 +773,24 @@ class Director:
             c.vehicle.remove(other)
             self.removed.append((round(t, 2), other))
 
+    # ── the host-side walkers' faces (walkers.py): the lane map, the truth, the contacts ──
+    def extend_lanemap(self, lanemap):
+        if self.walkers is not None:
+            self.walkers.extend(lanemap)
+
+    def extra_truth(self):
+        return self.walkers.truth() if self.walkers is not None else {}
+
+    def walker_contacts(self, c, t):
+        """The walkers the ego's body touches this step (SUMO cannot see a host-side body)."""
+        if self.walkers is None or EGO not in c.vehicle.getIDList():
+            return []
+        x, y = c.vehicle.getPosition(EGO)
+        h = math.radians(90.0 - c.vehicle.getAngle(EGO))
+        L = c.vehicle.getLength(EGO)
+        ego = {"x": x - 0.5 * L * math.cos(h), "y": y - 0.5 * L * math.sin(h), "heading": h, "length": L, "width": c.vehicle.getWidth(EGO)}
+        return self.walkers.touching(ego, t)
+
     def report(self):
         """What the run's table reads: the steps fired and the triggers (with the ego's TTA to the junction at firing),
         the ones never fired, the route completion, LB 2.0's emergency test and our held seconds, the removals."""
@@ -773,6 +801,8 @@ class Director:
                 lb[a["id"]] = {"near": None, "end": None, "status": None, "failure": True}
         length = max(1.0, self.pl["ego"].get("len", 1.0))
         return {"fired": self.fired, "triggered": self.triggered,
+                "walkers": self.walkers.report() if self.walkers is not None else None,
+                "walker_contacts": self.walkers.contacts if self.walkers is not None else [],
                 "unfired": sorted({a["id"] for a, *_ in self.armed} | {a["id"] for _, a, _ in self.queue}),
                 "rc": round(min(100.0, 100.0 * self.driven / length), 1), "outside_m": round(self.outside_m, 1),
                 "outside_pct": round(100.0 * self.outside_m / self.driven, 2) if self.driven > 0 else 0.0, "driven_m": round(self.driven, 1), "route_m": length,

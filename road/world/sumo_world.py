@@ -315,6 +315,13 @@ class SumoWorld:
                     rec["xy"] = tuple(round(v, 2) for v in c.vehicle.getPosition(EGO))     # CARLA's 5 m radius
                 if self.director is not None:
                     self.director.on_collision(c, k.victim if k.collider == EGO else k.collider, self.t)
+        if self.director is not None and hasattr(self.director, "walker_contacts"):
+            for other in self.director.walker_contacts(c, self.t):     # SUMO's check cannot see a host-side walker: its box against the ego's
+                rec = {"t": self.t, "collider": EGO, "victim": other, "type": "pedestrian"}
+                if EGO in c.vehicle.getIDList():
+                    rec["xy"] = tuple(round(v, 2) for v in c.vehicle.getPosition(EGO))
+                self.collisions.append(rec)
+                self.ego_collisions += 1
         on = EGO in c.vehicle.getIDList()
         if on and not self.ego_seen:
             self.ego_seen = True
@@ -357,6 +364,8 @@ class SumoWorld:
             p = self._pose(c.person, pid, vehicle=False)
             p.update(vclass="pedestrian", index=0, type="pedestrian")
             out[pid] = p
+        if self.director is not None and hasattr(self.director, "extra_truth"):
+            out.update(self.director.extra_truth())             # the host-side walkers (walkers.py): poses SUMO's cars do not see
         return out
 
     # ── the person's word on the ego's way ──

@@ -1,0 +1,31 @@
+card: 2
+scenario: ParkingCrossingPedestrian
+title: a walker steps out in front of a parked car and crosses the road at 2 m/s as the ego comes
+source: {suite: lb2, type: ParkingCrossingPedestrian, code: srunner/scenarios/object_crash_vehicle.py:388, pin: scenario_runner v0.9.16 94ff3b8af752, license: "CARLA scenario_runner, MIT License, Copyright (c) 2018 CARLA", portable: true, portable_as: PORTABLE-WALKER}
+patches:
+  - {what: "the walker", from: "a CARLA walker beside the parked car, half its length + 0.5 m in front of its centre (:497-503)", to: "a host-side body on a virtual crosswalk from 1.5 m beyond the road's edge there (world/walkers.py)", why: "no SUMO person can walk on our nets (nina's walker check); the architect's ruling (scenario-catalog step 4)", by: opus, date: 2026-11-06}
+tags: [pedestrian-crossing, parking, visibility]
+exercises: "responder brake_lon on the walker (vru1); planner brake_unseen (the parked car hides the roadside in front of it); mid-block, no yield_walker"
+map: {town: Town03}
+sites: {lb1: Scenario1, towns: {Town03: [19, 91, 95, 96]}}   # ParkingCutIn's: Town03's real parking lanes, the parked car on the parking _0
+sumo: {start_s: 0.1, at: {blocker: {ahead: 48}, walker: {ahead: 50.75}}}   # as ParkingCutIn: the ego from its edge's start, settled at cruise
+dt: 0.1
+ticks: 1200
+ego: {v: 11.1}
+exerciser: {skip: "the exerciser's crosswalk w_0 is a zebra (the walker's priority) and has no parked car before it: a mid-block crossing in front of a parked car is SUMO's"}
+params:
+  distance: {value: 48, range: [30, 80], default: 12}   # the parked car `distance` m past the trigger point (:425; the route files 30-80): no variants (the walker is placed from it)
+actors:
+  - {id: blocker, kind: car, mode: scripted, at: {ahead: 48, lane: -1}, v: 0.0, moving: false}   # hand brake on (:495), on the parking lane
+  - id: walker
+    kind: pedestrian
+    mode: scripted
+    at: {ahead: 50.75, side: right}       # the car's half length 2.25 + 0.5 m in front of it (:497); from the right (:425 direction 'right')
+    crossing_angle: 0                     # :426, the route files -2..15
+    v: 0.0
+    moving: false
+    # InTimeToArrivalToLocation 2.15 s (+0.1 per 5 degrees, :430-431) OR within 6 m of the collision point (:419)
+    trigger: {tta: 2.15, dist: 6.0, at: crosswalk}
+    script: [{when: trigger, go: true, v: 2.0}]     # 2.0 m/s (:418)
+infractions: {scenario: []}
+expect: {arrived: true, collisions: 0, violations: 0}

@@ -1,0 +1,49 @@
+card: 2
+scenario: PedestrianCrossing
+title: three walkers cross the road at the junction's entry from the right as the ego comes
+source: {suite: lb2, type: PedestrianCrossing, code: srunner/scenarios/pedestrian_crossing.py:42, pin: scenario_runner v0.9.16 94ff3b8af752, license: "CARLA scenario_runner, MIT License, Copyright (c) 2018 CARLA", portable: true, portable_as: PORTABLE-WALKER}
+patches:
+  - {what: "the walkers", from: "three CARLA walkers on the right sidewalk at the crosswalk before the junction (:69-73, :120-131)", to: "three host-side bodies, each on its own virtual crosswalk with the walkers' priority (world/walkers.py, crossing: zebra)", why: "our nets have no sidewalk and no crossing (nina's walker check); the architect's ruling (scenario-catalog step 4)", by: opus, date: 2026-11-06}
+  - {what: "the walkers' speeds and idle times", from: "drawn per run, uniform 1.3-2.0 m/s and 0-1.5 s (:75-77)", to: "fixed: 1.3, 1.65, 2.0 m/s after 0, 0.75, 1.5 s", why: "a card's run is deterministic per seed; the draw's range ends and its middle", by: opus, date: 2026-11-06}
+tags: [pedestrian-crossing, junction-priority]
+exercises: "planner yield_walker (crossing(vru1, near | on) at the junction's entry, the walkers' priority); responder brake_lon on a walker (vru1)"
+map: {town: Town03}
+sites: {lb1: Scenario10, towns: {Town03: [1, 2, 3, 4]}}    # straight approaches to junction 730 (OVTP's sites): the crosswalk at their entry
+sumo: {back: 60}     # the S10 poses sit within the trigger's 12 m of the junction: the ego starts 60 m before (OVTP's `back`), so it arrives as the source's ego does
+dt: 0.1
+ticks: 1200
+ego: {v: 11.1}
+exerciser: {dest: 400.0}     # the exerciser's crosswalk w_0 at s 250, a zebra (the walkers' priority)
+params:
+  tta: {value: 3.5, range: [3.5, 3.5], default: 3.5, drives: actors.walker1.trigger.tta, threshold: 2.0, safe: above}
+  # InTimeToArrivalToLocation 3.5 s OR within 12 m (:64-65, :175-178) of the collision point, the last metre before the junction (:109-118)
+actors:
+  - id: walker1
+    kind: pedestrian
+    mode: scripted
+    at: {junction: entry, before: 1.0, side: right}
+    crossing: zebra
+    v: 0.0
+    moving: false
+    trigger: {tta: 3.5, dist: 12.0, at: crosswalk}
+    script: [{when: trigger, go: true, v: 1.3}]
+  - id: walker2
+    kind: pedestrian
+    mode: scripted
+    at: {junction: entry, before: 2.5, side: right}
+    crossing: zebra
+    v: 0.0
+    moving: false
+    trigger: {tta: 3.5, dist: 12.0, at: crosswalk}
+    script: [{when: trigger, after: 0.75, go: true, v: 1.65}]
+  - id: walker3
+    kind: pedestrian
+    mode: scripted
+    at: {junction: entry, before: 1.6, side: right}
+    crossing: zebra
+    v: 0.0
+    moving: false
+    trigger: {tta: 3.5, dist: 12.0, at: crosswalk}
+    script: [{when: trigger, after: 1.5, go: true, v: 2.0}]
+infractions: {scenario: []}
+expect: {arrived: true, collisions: 0, violations: 0}

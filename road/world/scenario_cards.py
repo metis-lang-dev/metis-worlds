@@ -45,7 +45,7 @@ SITE_REF = re.compile(r"S(\d+)\.(\d+)")      # a site from another LB1 scenario'
 EGO_LANE, EGO_S = 1, 20.0
 AT = {"junction": 400.0, "crosswalk": 250.0}
 KIND = {"car": ("passenger", 4.5, 1.8), "emergency": ("passenger", 5.0, 2.0), "static": ("passenger", 4.5, 1.8),
-        "bicycle": ("bicycle", 1.8, 0.7), "walker": ("pedestrian", 0.5, 0.5), "truck": ("truck", 12.0, 2.5)}
+        "bicycle": ("bicycle", 1.8, 0.7), "walker": ("pedestrian", 0.5, 0.5), "pedestrian": ("pedestrian", 0.5, 0.5), "truck": ("truck", 12.0, 2.5)}
 
 # the Leaderboard 2.0's penalties (leaderboard a87a3419 utils/statistics_manager.py, nina's step 1 §d)
 PENALTY = {"collisions_pedestrian": 0.50, "collisions_vehicle": 0.60, "collisions_layout": 0.65, "red_light": 0.70,
@@ -139,6 +139,8 @@ def exerciser(name):
             at = a["at"]
             if at.get("road") == "side":
                 lane, s = "c_0", float(at.get("s", 5.0))
+            elif a.get("kind") == "pedestrian":                  # a walker crosses on the exerciser's crosswalk w_0 (road_world._walker)
+                lane, s = "w_0", 0.0
             else:
                 lane = _lane(at.get("lane", 0))
                 s = ego_s + float(at.get("ahead", 0.0)) - float(at.get("behind", 0.0))

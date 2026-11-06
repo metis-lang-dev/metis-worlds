@@ -1,0 +1,32 @@
+card: 2
+scenario: DynamicObjectCrossing
+title: a walker steps out from the roadside and crosses the road mid-block at 2 m/s as the ego comes
+source: {suite: lb2, type: DynamicObjectCrossing, code: srunner/scenarios/object_crash_vehicle.py:141, pin: scenario_runner v0.9.16 94ff3b8af752, license: "CARLA scenario_runner, MIT License, Copyright (c) 2018 CARLA", portable: true, portable_as: PORTABLE-WALKER}
+patches:
+  - {what: "the blocker (static.prop.vendingmachine, :188)", from: "a prop 1.5 m beyond the road's edge on the sidewalk, the walker behind it (:257)", to: "none", why: "our nets have no sidewalk (nina's walker check); on a lane it would block the ego's lane, which the source never does", by: opus, date: 2026-11-06}
+  - {what: "the walker", from: "a CARLA walker on the sidewalk, 1.2 m off it (:274)", to: "a host-side body on a virtual crosswalk 1.5 m beyond the road's edge (world/walkers.py)", why: "no SUMO person can walk on our nets; the architect's ruling (scenario-catalog step 4)", by: opus, date: 2026-11-06}
+tags: [pedestrian-crossing]
+exercises: "responder brake_lon on the walker (vru1); mid-block, so no priority and no yield_walker (the source's jaywalker); with no blocker, brake_unseen is not exercised"
+map: {town: Town03}
+sites: {lb1: Scenario3, towns: {Town03: [0, 1, 2, 3], Town01: [0, 1], Town02: [0, 1]}}
+dt: 0.1
+ticks: 1200
+ego: {v: 11.1}
+exerciser: {skip: "the exerciser's crosswalk w_0 is a zebra (the walker's priority: a walker waiting at its curb holds the ego, and the source's trigger, the ego's TTA to the crossing, never fires): a mid-block crossing is SUMO's"}
+params:
+  distance: {value: 40, range: [15, 113], default: 12, drives: actors.walker.at.ahead, threshold: 15.0, safe: above}
+  # the crossing point `distance` m past the trigger point (:187, :231): the class default 12, the Leaderboard route files 15-113 (value 40);
+  # threshold: the ego.s stop from 11.1 m/s at the responder.s brake_min 4 m/s² takes 15 m (the class default 12 is inside it)
+actors:
+  - id: walker
+    kind: pedestrian
+    mode: scripted
+    at: {ahead: 40, side: right}            # the source's direction 'right' (:191): from the right roadside across
+    crossing_angle: 0                       # :178, the route files -4..20
+    v: 0.0
+    moving: false
+    # InTimeToArrivalToLocation 2.1 s (+0.1 per 5 degrees of angle, :179-180) OR within 6 m of the collision point (:181)
+    trigger: {tta: 2.1, dist: 6.0, at: crosswalk}
+    script: [{when: trigger, go: true, v: 2.0}]   # 2.0 m/s (:177) across the whole road (:327)
+infractions: {scenario: []}
+expect: {arrived: true, collisions: 0, violations: 0}

@@ -83,6 +83,8 @@ class Loop:
         self.scenario, self.seed, self.ego_id = level.get("scenario", "straight"), int(level.get("seed", 1)), EGO
         self.world = SumoWorld(self.scenario, work, seed=self.seed, traci=traci, **args)
         self.lanemap = lanemap_of(self.world.net)
+        if hasattr(getattr(self.world, "director", None), "extend_lanemap"):
+            self.world.director.extend_lanemap(self.lanemap)       # the host-side walkers' virtual crosswalks (walkers.py), this run's copy
         sen = level.get("sensor", {})
         self.perc = Perception(self.lanemap, Sensor(range=sen.get("range", SENSOR_RANGE), miss=sen.get("miss", 0.0),
                                                     seed=int(level.get("seed", 1))), dt=self.world.dt)
