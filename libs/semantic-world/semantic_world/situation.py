@@ -616,7 +616,10 @@ def respond(p, dangerous, before, xbefore=None, escalated=False):
     # brake_min while that keeps the ego behind it, brake_max while only that does (ESCALATED holds it), and brake_max still
     # when neither does: a rear-end it cannot avoid is met at the hardest braking
     lead = p.type == "same_dir" and p.lon == "in_front" and p.lat == "overlap"
-    if lead and (escalated or not stops_behind(p.ego, p.obj, p.d_lon, p.ego.brake_min)):
+    # the ZIPPER (cr-harvest, Hennigsdorf-18_1): a lead whose rear has not cleared the ego's front (d_lon 0: side by side along the
+    # way, a merge of parallel lanes) is not behind it whatever dv says: brake_max (ESCALATED holds it) until the gap opens; the one
+    # whose front is behind yields
+    if lead and (escalated or p.d_lon <= 0.0 or not stops_behind(p.ego, p.obj, p.d_lon, p.ego.brake_min)):
         lon = "brake_max"
     if before is None:                                          # appeared dangerous: brake everything; same dir and
         if p.type == "same_dir" and p.lat == "overlap":         # overlapping laterally: as if long-safe before, so

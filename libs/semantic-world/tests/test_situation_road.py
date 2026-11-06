@@ -226,3 +226,24 @@ def test_the_harvests_yielder_geometry_asks_brake_max_where_brake_min_entered():
     enters it, brake_max (6.0 + 1) stops short: the fold asks brake_max, where it asked brake_min and the ego was hit at 1.9 m/s."""
     s = Situation().check([xpair("xing_obj_prio", 11.3, 21.3, 3.0, 13.0, ego_v=9.8)])[0]
     assert s.dangerous and s.resp_lon == "brake_max"
+
+# -- the ZIPPER (cr-harvest s-f4e297da, L2: Hennigsdorf-18_1) ------------------------------------------------------------
+
+def lead_pair(d_lon, ego_v, lead_v):
+    return Pair("z:same_dir", "same_dir", "in_front", "overlap", d_lon, 0.0, Dynamics(vmin=ego_v, vmax=ego_v, **CAR),
+                Dynamics(vmin=lead_v, vmax=lead_v, **CAR), role="lead")
+
+
+def test_a_lead_whose_rear_has_not_cleared_the_egos_front_asks_brake_max_whatever_dv_says():
+    """Hennigsdorf-18_1: the lead merged from a parallel internal lane, its rear beside the ego's front (d_lon 0), faster (7.5
+    against 6.0 m/s): brake_max, where the fold asked brake_min (stops_behind holds for a faster lead) and the two touched."""
+    sit = Situation()
+    s = sit.check([lead_pair(0.0, 6.0, 7.5)])[0]
+    assert s.dangerous and s.resp_lon == "brake_max"
+    s = sit.check([lead_pair(0.4, 6.0, 7.5)])[0]                       # the gap opening, still under the floor: held
+    assert s.dangerous and s.resp_lon == "brake_max"
+
+
+def test_a_faster_lead_with_a_gap_stays_at_brake_min():
+    s = Situation().check([lead_pair(2.0, 6.0, 7.5)])[0]
+    assert not s.dangerous or s.resp_lon in ("none", "brake_min")
