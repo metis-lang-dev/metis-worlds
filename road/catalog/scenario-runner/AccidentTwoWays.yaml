@@ -1,0 +1,36 @@
+card: 2
+scenario: AccidentTwoWays
+title: a police car and two crashed cars block the ego's only lane; pass them through the oncoming lane against a flow
+source: {suite: lb2, type: AccidentTwoWays, code: srunner/scenarios/route_obstacles.py:245, pin: scenario_runner v0.9.16 94ff3b8af752, license: "CARLA scenario_runner, MIT License, Copyright (c) 2018 CARLA", portable: true}
+patches: []
+tags: [obstacle-static, oncoming-pass]
+exercises: "planner change_oncoming (a standing obstacle in the only lane, the oncoming lane clear for the whole pass), change_home back (nina's road-gap-sumo); the flow's gaps decide when"
+map: {town: Town01}
+sites: {lb1: Scenario1, towns: {Town01: [0, 1], Town02: [0, 1]}}   # ParkedObstacleTwoWays': one lane each way, 150-220 m free (nina's review)
+dt: 0.1
+ticks: 2600
+ego: {v: 11.1}
+exerciser: {skip: "the exerciser has no oncoming lane"}
+params:
+  distance: {value: 90, range: [60, 170], default: 120, drives: actors.police.at.ahead, threshold: 32.0, safe: above}
+  # Accident's default 120 (route_obstacles.py:79), the route files 60-170: 90 fits the towns' free run; the crashed cars +10, +6 (:69-70)
+actors:
+  - {id: police, kind: car, mode: scripted, at: {ahead: 90, lane: 0}, v: 0.0, moving: false}
+  - {id: crash1, kind: car, mode: scripted, at: {ahead: 100, lane: 0}, v: 0.0, moving: false}
+  - {id: crash2, kind: car, mode: scripted, at: {ahead: 106, lane: 0}, v: 0.0, moving: false}
+  # the source's OppositeActorFlow (atomic_behaviors.py:3541-3701, :260-298): started when the ego is within 50 m of the first
+  # obstacle, then 5 s idle; its source 1.5 x the limit (km/h) + 30 m = 105 m beyond the last obstacle, on the oncoming lane;
+  # continuous, each gap drawn from `frequency` [from, to] (the default [20, 100]); 11.1 m/s (the flows' 50 km/h cap)
+  - id: oncoming
+    kind: car
+    mode: scripted
+    at: {ahead: 105, beyond: crash2, opposite: true}
+    v: 11.1
+    flow: {gap: [20.0, 100.0]}
+    trigger: {near: police, dist: 50.0}
+    script: [{when: trigger, after: 5.0, flow: true}]
+infractions: {scenario: [scenario_timeout: 240]}
+expect: {arrived: true, collisions: 0, violations: 0}
+verdict:
+  exerciser: {status: skip, note: "the exerciser has no oncoming lane (exerciser.skip)"}
+  sumo: {status: fail, since: {worlds: 5a3a813, catalog: ef793dc}, record: 20261106T174258-e816b2, note: "as the source: 3 of 4 sites meet expect; Town01#1 arrives with one violation at tick 84 (an oncoming car during the pass, no response); measured by hand"}

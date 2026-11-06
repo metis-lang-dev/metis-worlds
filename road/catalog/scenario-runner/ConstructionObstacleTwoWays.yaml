@@ -1,0 +1,34 @@
+card: 2
+scenario: ConstructionObstacleTwoWays
+title: road works close the ego's only lane; pass them through the oncoming lane against a flow
+source: {suite: lb2, type: ConstructionObstacleTwoWays, code: srunner/scenarios/construction_crash_vehicle.py:270, pin: scenario_runner v0.9.16 94ff3b8af752, license: "CARLA scenario_runner, MIT License, Copyright (c) 2018 CARLA", portable: true}
+patches: []
+tags: [obstacle-static, oncoming-pass]
+exercises: "planner change_oncoming past the works (a static body in the only lane), change_home back; the flow's gaps decide when"
+map: {town: Town01}
+sites: {lb1: Scenario1, towns: {Town01: [0, 1], Town02: [0, 1]}}
+dt: 0.1
+ticks: 2600
+ego: {v: 11.1}
+exerciser: {skip: "the exerciser has no oncoming lane"}
+params:
+  distance: {value: 90, range: [65, 300], default: 100, drives: actors.works.at.ahead, threshold: 32.0, safe: above}
+  # ConstructionObstacle's default 100 (construction_crash_vehicle.py), the route files 65-300: 90 fits the towns' free run
+actors:   # the props as one static body over the closed lane (ConstructionObstacle's card)
+  - {id: works, kind: static, mode: scripted, at: {ahead: 90, lane: 0}, length: 8.0, width: 3.0, v: 0.0, moving: false}
+  # the source's OppositeActorFlow (atomic_behaviors.py:3541-3701, the base class's trigger 30 m, Idle 5 s): started when the ego is within 30 m of the first
+  # obstacle, then 5 s idle; its source 1.5 x the limit (km/h) + 30 m = 105 m beyond the last obstacle, on the oncoming lane;
+  # continuous, each gap drawn from `frequency` [from, to] (the default [20, 100]); 11.1 m/s (the flows' 50 km/h cap)
+  - id: oncoming
+    kind: car
+    mode: scripted
+    at: {ahead: 105, beyond: works, opposite: true}
+    v: 11.1
+    flow: {gap: [20.0, 100.0]}
+    trigger: {near: works, dist: 30.0}
+    script: [{when: trigger, after: 5.0, flow: true}]
+infractions: {scenario: [scenario_timeout: 240]}
+expect: {arrived: true, collisions: 0, violations: 0}
+verdict:
+  exerciser: {status: skip, note: "the exerciser has no oncoming lane (exerciser.skip)"}
+  sumo: {status: pass, since: {worlds: 5a3a813, catalog: ef793dc}, note: "as the source: all 4 sites meet expect (DS 100: change_oncoming and back); measured by hand"}

@@ -1,0 +1,36 @@
+card: 2
+scenario: HazardAtSideLaneTwoWays
+title: two bicycles ride slowly at the right edge of the ego's only lane; overtake them through the oncoming lane against traffic
+source: {suite: lb2, type: HazardAtSideLaneTwoWays, code: srunner/scenarios/route_obstacles.py:699, pin: scenario_runner v0.9.16 94ff3b8af752, license: "CARLA scenario_runner, MIT License, Copyright (c) 2018 CARLA", portable: true}
+patches:
+  - {what: "the bicycles' lateral place", from: "0.55 x half the lane's width toward its right edge (route_obstacles.py:583)", to: "the lane's centre", why: "our SUMO runs without the sublane model (nina's triage row 12)", by: opus, date: 2026-11-06}
+tags: [cyclist, oncoming-pass, overtaking]
+exercises: "none: a gap (overtaking a MOVING slow lead through the oncoming lane: change_oncoming asks a standing lead); the family should follow the bicycles"
+map: {town: Town01}
+sites: {lb1: Scenario1, towns: {Town01: [0, 1], Town02: [0, 1]}}
+dt: 0.1
+ticks: 2600
+ego: {v: 11.1}
+exerciser: {skip: "the exerciser has no oncoming lane"}
+params:
+  distance: {value: 90, range: [40, 135], default: 100, drives: actors.bike1.at.ahead, threshold: 32.0, safe: above}
+  bicycle_speed: {value: 2.78, range: [1.39, 4.17], default: 2.78}   # 10 km/h (:550), the route files 5-15 km/h
+actors:   # two bicycles 9 m apart (:546), at 10 km/h for bicycle_drive_distance 50 m (:551), then they stop
+  - {id: bike1, kind: bicycle, mode: scripted, at: {ahead: 90, lane: 0}, v: 0.0, trigger: {near: bike1, dist: 50.0}, script: [{when: trigger, v: 2.78}, {when: {traveled: 50.0}, v: 0.0}]}
+  - {id: bike2, kind: bicycle, mode: scripted, at: {ahead: 99, lane: 0}, v: 0.0, trigger: {near: bike1, dist: 50.0}, script: [{when: trigger, v: 2.78}, {when: {traveled: 50.0}, v: 0.0}]}
+  # the source's OppositeActorFlow (atomic_behaviors.py:3541-3701, the base class's trigger 50 m, Idle 5 s): started when the ego is within 50 m of the first
+  # obstacle, then 5 s idle; its source 1.5 x the limit (km/h) + 30 m = 105 m beyond the last obstacle, on the oncoming lane;
+  # continuous, each gap drawn from `frequency` [from, to] (the default [20, 100]); 11.1 m/s (the flows' 50 km/h cap)
+  - id: oncoming
+    kind: car
+    mode: scripted
+    at: {ahead: 105, beyond: bike2, opposite: true}
+    v: 11.1
+    flow: {gap: [20.0, 100.0]}
+    trigger: {near: bike2, dist: 50.0}
+    script: [{when: trigger, after: 5.0, flow: true}]
+infractions: {scenario: [scenario_timeout: 240]}
+expect: {arrived: true, collisions: 0, violations: 0}
+verdict:
+  exerciser: {status: skip, note: "the exerciser has no oncoming lane (exerciser.skip)"}
+  sumo: {status: fail, since: {worlds: 5a3a813, catalog: ef793dc}, record: 20261106T174258-f7d29b, note: "as the source: no site arrives in 260 s (overtaking a moving slow lead through the oncoming lane: the stated gap); Town02#1 also collides with the oncoming flow at 51.8 s (record f7d29c); measured by hand"}
