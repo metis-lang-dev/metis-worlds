@@ -273,3 +273,15 @@ def test_ruling_b_a_follower_or_an_initial_contact_is_the_worlds(tmp_path):
     assert T.contact_side(tmp_path / "f") == ("behind", "c1")             # a follower turning onto a sibling lane
     assert T.contact_side(tmp_path / "i") == ("initial", "c2")
     assert T.contact_side(tmp_path / "s") == ("side", "c3")               # the law's
+
+
+def test_a_partner_standing_while_reported_moving_is_the_worlds(tmp_path):
+    def write(tr, moving):
+        tr.mkdir(parents=True)
+        rows = [{"truth": 1}] + [{"k": k, "ego": {"lane": "a", "s": 30.0 + k, "contact": ["L"] if k == 40 else []},
+                                  "things": [{"id": "L", "lane": "a", "s": 80.0 + (k if moving else 0), "v": 24.0, "role": "lead"}]}
+                                 for k in range(12, 41)]
+        (tr / "truth.jsonl").write_text("".join(json.dumps(r) + "\n" for r in rows))
+    write(tmp_path / "frozen", False)
+    write(tmp_path / "moving", True)
+    assert T.frozen_partner(tmp_path / "frozen", "L") and not T.frozen_partner(tmp_path / "moving", "L")

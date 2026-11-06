@@ -167,6 +167,9 @@ def kind_one(row):
             return dict(out, kind="world", why="%s hit the ego from behind on a recorded trajectory, which does not react" % partner)
         if side == "behind":                                         # ruling B (a), 2026-11-06: a follower's contact, any set
             return dict(out, kind="world", why="%s, the ego's follower before the contact, hit it from behind" % partner)
+        if frozen_partner(tr, partner):                              # the architect's ruling (2026-11-06): the world's
+            return dict(out, kind="world", why="%s stood (its s moved < %.1f m over the %d ticks before the contact) while it was "
+                        "reported moving above %.0f m/s: the fold read a speed the body did not have" % (partner, FROZEN_M, FOLLOW_TICKS, FROZEN_V))
         if side == "initial":                                        # ruling B (b): the scenario starts in or at contact
             return dict(out, kind="world", why="the contact with %s at the run's start (k <= %d): the initial state" % (partner, INITIAL_K))
     try:
@@ -230,6 +233,25 @@ def contact_side(tr):
             return "side", pid
         return ("behind" if th["s"] < ego["s"] else "front"), pid
     return None, None
+
+
+FROZEN_M, FROZEN_V = 0.5, 2.0                   # a partner whose s moved under FROZEN_M while reported above FROZEN_V m/s
+
+
+def frozen_partner(tr, pid):
+    """The contact partner PID stood in the FOLLOW_TICKS before the first contact (its s moved < FROZEN_M on one lane) while the
+    truth reported it moving faster than FROZEN_V: an obstacle the world froze (cr_world's interactive playback)."""
+    from metis import surprise_kind as SK
+    rows, _ = SK.read_truth(tr)
+    kc = first_contact_tick(tr)
+    if kc is None or pid is None:
+        return False
+    seen = [x for j in range(max(0, kc - FOLLOW_TICKS), kc + 1) if j in rows
+            for x in rows[j].get("things") or () if x.get("id") == pid and x.get("s") is not None]
+    if len(seen) < 2 or len({x.get("lane") for x in seen}) != 1:
+        return False
+    ss = [x["s"] for x in seen]
+    return max(ss) - min(ss) < FROZEN_M and min(x.get("v") or 0.0 for x in seen) > FROZEN_V
 
 
 INITIAL_K = 10                                  # ticks: a contact this early is the scenario's initial state (1 s)
