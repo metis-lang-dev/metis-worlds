@@ -13,7 +13,7 @@ dynamics):
   form and stays 0). The weights are host constants (spec 19's rates: fit by notching from the catalog later, never in a rule).
 - the TABLES (the law's vocabulary): myopic(O, M) its best move ignoring the ego's reaction (the ego a standing obstacle where
   it is, Li et al.'s level 0: short of the zone it never enters, inside it it stays); ego_myopic(E) the ego's against a standing
-  O; reply(O, E, M) O's best move if the ego plays E; ego_reply(M, E) the ego's best move if O plays M.
+  O; both pairwise, per crosser (ego_myopic(O, E), ego_reply(O, M, E): the architect's ruling); reply(O, E, M) O's best move if the ego plays E; ego_reply(M, E) the ego's best move if O plays M.
 - the BELIEF over O's level {l0, l1, l2} (spec 16's categorical port), prior PRIOR; each tick O's observed move (from its
   acceleration, OBS_A) updates it with a SOFTMAX likelihood over O's rewards under what that level assumes the ego plays
   (l0: a standing ego, l1: ego_myopic, l2: ego_reply(myopic(O))), temperature TEMP, a floor FLOOR so a driver who changes is followed
@@ -244,14 +244,15 @@ class Game:
 
 
 def facts(role, result):
-    """The law's atoms for a crosser bound to ROLE (levelk.llp's preds), from Game.step's RESULT; the zone's reading is the
-    caller's (one per zone)."""
+    """The law's atoms for a crosser bound to ROLE (levelk.llp's preds), from Game.step's RESULT. The ego's tables are
+    pairwise (the architect's ruling, step 2): ego_myopic(O, E) and ego_reply(O, M, E), the ego's best move against O alone.
+    crosser(nextzone, O) and the zone's reading are the caller's (one per zone)."""
     t, b = result["tables"], result["belief"]
-    out = {"myopic(%s,%s)" % (role, t["myopic"]): 1, "ego_myopic(%s)" % t["ego_myopic"]: 1}
+    out = {"myopic(%s,%s)" % (role, t["myopic"]): 1, "ego_myopic(%s,%s)" % (role, t["ego_myopic"]): 1}
     for e, m in t["reply"].items():
         out["reply(%s,%s,%s)" % (role, e, m)] = 1
     for m, e in t["ego_reply"].items():
-        out["ego_reply(%s,%s)" % (m, e)] = 1
+        out["ego_reply(%s,%s,%s)" % (role, m, e)] = 1
     for k in LEVELS:
         out["level_belief(%s,%s,%s)" % (role, k, quantise(b[k]))] = 1
     out["believed(%s,%s)" % (role, result["believed"])] = 1

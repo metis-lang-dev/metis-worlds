@@ -167,8 +167,9 @@ def test_facts_use_the_drafts_preds():
     g = L.Game()
     out = g.step("p1", pair_at(0.0, 10.0))
     f = L.facts("a1", out)
-    assert "myopic(a1,go)" in f and "ego_myopic(go)" in f
+    assert "myopic(a1,go)" in f and "ego_myopic(a1,go)" in f
     assert {"reply(a1,go,yield)", "reply(a1,hold,yield)", "reply(a1,yield,go)"} <= set(f)
-    assert {"ego_reply(go,yield)", "ego_reply(hold,yield)", "ego_reply(yield,go)"} <= set(f)
+    assert {"ego_reply(a1,go,yield)", "ego_reply(a1,hold,yield)", "ego_reply(a1,yield,go)"} <= set(f)
+    assert not [k for k in f if k.startswith("ego_myopic(") and k.count(",") != 1]
     assert {"level_belief(a1,l0,low)", "level_belief(a1,l1,mid)", "level_belief(a1,l2,low)", "believed(a1,l1)"} <= set(f)
     assert len([k for k in f if k.startswith("level_belief(")]) == 3

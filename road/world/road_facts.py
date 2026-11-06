@@ -392,16 +392,27 @@ def oncoming_clear(lm, ego, v, cap, lead, onc, movers, speeds=None, sight_m=REAC
     return True
 
 
+def is_crosser(p):
+    """A crossing or merging pair's other (a role bound) approaching the zone within its reach and not yet inside it: the
+    game's partner (crosser(zone, obj), the architect's ruling; holder stays the one inside). Its reach: APPROACH, or what it
+    covers over the game's horizon at its cap when that is more."""
+    if not p.type.startswith("xing_") or p.role is None or p.o_enter is None or p.o_enter <= 0.0:
+        return False
+    cap = p.obj.vcap if p.obj.vcap is not None else (p.obj.vmax or 0.0)
+    return p.o_enter <= max(APPROACH, cap * levelk.HORIZON)
+
+
 def levelk_facts(game, pairs):
-    """levelk.llp's atoms (LEVELK.md §2): per bound crosser of the pairs (a crossing pair with a role) its tables and the
-    belief over its level (semantic_world.levelk), and the next zone's reading, by_game(nextzone) when any crosser's is,
-    else by_rule(nextzone). GAME: a levelk.Game, the host's memory across ticks; crossers no longer seen are forgotten."""
+    """levelk.llp's atoms (LEVELK.md §2): per crosser (is_crosser) crosser(nextzone, O), its tables and the belief over its
+    level (semantic_world.levelk), and the next zone's reading, by_game(nextzone) when any crosser's is, else
+    by_rule(nextzone). GAME: a levelk.Game, the host's memory across ticks; crossers no longer crossing are forgotten."""
     out, zone, keep = {}, "by_rule", set()
     for p in pairs:
-        if not p.type.startswith("xing_") or p.role is None or p.o_enter is None:
+        if not is_crosser(p):
             continue
         r = game.step(p.id, p)
         keep.add(p.id)
+        out["crosser(nextzone,%s)" % p.role] = 1
         out.update(levelk.facts(p.role, r))
         if r["zone"] == "by_game":
             zone = "by_game"
