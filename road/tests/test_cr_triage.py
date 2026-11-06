@@ -366,3 +366,7 @@ def test_a_contact_across_a_foe_gap_is_the_converters(tmp_path):
     cross = {"summary": {"director": {"cr": {"foe_gaps": [{"lanes": [":50_5_0", ":50_4_0"], "from": ["77194_0", "77195_0"],
                                                             "to": ["77536_0", "77198_0"]}]}}}}
     assert T.foe_gap(cross, tr)
+    v2 = {"summary": {"director": {"cr": {"foe_gaps": [[":50_5_0", ":50_4_0", "77194_0", "77536_0", "77195_0", "77198_0"]]}}}}
+    assert T.foe_gap(v2, tr)                                                       # george's v2 shape
+    v2_sib = {"summary": {"director": {"cr": {"foe_gaps": [[":50_5_0", ":50_4_0", "77195_0", "77536_0", "77195_0", "77198_0"]]}}}}
+    assert not T.foe_gap(v2_sib, tr)
