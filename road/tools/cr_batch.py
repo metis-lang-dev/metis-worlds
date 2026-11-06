@@ -11,7 +11,7 @@ failure. The commands, the layout, the row and the record: road/docs/harvest.md.
 
 Environment: METIS_AGENT_PY (../metis-agent/py/.venv/bin/python), METIS_HOME (../metis-catalog/domains/road),
 SUMO_VENV (../.worlds/road: its bin, sumo and netconvert, first on PATH, and SUMO_HOME from it when unset),
-COMMONROAD_ROOT (/bigdata/datasets/commonroad), COMMONROAD_HARVEST (/bigdata/work/harvest), CR_TICKS (1500),
+COMMONROAD_ROOT (/bigdata/datasets/commonroad), COMMONROAD_CACHE (../.worlds/cr-cache: never under road/), COMMONROAD_HARVEST (/bigdata/work/harvest), CR_TICKS (1500),
 CR_TIMEOUT (900 s), CR_STOP_AFTER_WINDOW (30: a run stops 30 s after its goal window's end, goal not reached)."""
 import argparse
 import hashlib
@@ -28,7 +28,9 @@ from pathlib import Path
 ROAD = Path(__file__).resolve().parents[1]
 WORLDS = ROAD.parent
 WS = WORLDS.parent
-CACHE = Path(os.environ.get("COMMONROAD_CACHE", str(ROAD / "maps" / "cr")))
+# the cache outside road/: metispy's catalog walk (metis.catalog.manifests.walk, ~10 a tick) reads every directory under
+# road/, and a cache of thousands of scenario dirs there made a tick 1.6 s (164 s for 100 ticks, profiled, 2026-11-06)
+CACHE = Path(os.environ.setdefault("COMMONROAD_CACHE", str(WS / ".worlds" / "cr-cache")))
 HARVEST = Path(os.environ.get("COMMONROAD_HARVEST", "/bigdata/work/harvest"))
 HOST = socket.gethostname().split(".")[0]
 DIRS = ("queue", "running", "done", "rows", "records", "runs", "logs")
@@ -64,6 +66,7 @@ def env():
     e = dict(os.environ)
     e.setdefault("METIS_HOME", str(WS / "metis-catalog" / "domains" / "road"))
     e.setdefault("COMMONROAD_ROOT", "/bigdata/datasets/commonroad")
+    e.setdefault("COMMONROAD_CACHE", str(CACHE))
     venv = Path(os.environ.get("SUMO_VENV", str(WS / ".worlds" / "road")))
     if (venv / "bin").is_dir():                          # a host without apt sumo: the wheel's sumo and netconvert
         e["PATH"] = "%s:%s" % (venv / "bin", e.get("PATH", ""))
