@@ -156,7 +156,10 @@ def test_a_machine_record_is_about_its_contact_partner_else_its_bound_things(tmp
             {"k": 6, "ego": {"lane": "a", "contact": ["cr7"]}, "things": []}]
     (tr / "truth.jsonl").write_text("".join(json.dumps(r) + "\n" for r in rows))
     assert T.named_things(tr, [0, 6]) == ["cr7"]
-    assert T.named_things(tr, [0, 5]) == ["cr1", "cr3"]                  # the near roles first
+    assert T.named_things(tr, [0, 5]) == ["cr7"]                         # the run's first contact, past the window
+    rows[2]["ego"]["contact"] = []
+    (tr / "truth.jsonl").write_text("".join(json.dumps(r) + "\n" for r in rows))
+    assert T.named_things(tr, [0, 5]) == ["cr1", "cr3"]                  # no contact at all: the bound, the near roles first
     assert T.named_things(tmp_path / "none", [0, 5]) == []
 
 
@@ -231,3 +234,21 @@ def test_a_rerun_row_is_triaged_again(tmp_path):
     (d / "taycann" / "records" / "rec-A-1.json").rename(d / "taycann" / "records" / "rec-A-1-rerun.json")
     T.run(d, kinder=k)
     assert calls == ["rec-A-1", "rec-A-1-rerun"]
+
+
+def test_the_named_things_fall_back_to_the_runs_first_contact_then_the_nearest_on_the_lane(tmp_path):
+    tr = tmp_path / "tr"
+    tr.mkdir()
+    rows = [{"truth": 1, "cannot": []},
+            {"k": 5, "ego": {"lane": "a", "s": 10.0, "contact": []}, "things": [{"id": "far", "lane": "a", "s": 60.0}, {"id": "near", "lane": "a", "s": 15.0}]},
+            {"k": 9, "ego": {"lane": "a", "s": 12.0, "contact": ["cr4"]}, "things": []}]
+    (tr / "truth.jsonl").write_text("".join(json.dumps(r) + "\n" for r in rows))
+    assert T.named_things(tr, [0, 5]) == ["cr4"]                       # the run's first contact, outside the window
+    rows[2]["ego"]["contact"] = []
+    (tr / "truth.jsonl").write_text("".join(json.dumps(r) + "\n" for r in rows))
+    assert T.named_things(tr, [0, 5]) == ["near"]                       # nobody bound: the nearest on the ego's lane
+
+
+def test_a_goal_edge_with_no_route_to_it_is_the_worlds():
+    nr = {"director": {"cr": {"goal_edge": "205", "route_note": "no way from 114 to the goal's edge 205"}}}
+    assert T.measure(row("n", "1", failed=["goal"], ticks=300, summary=nr)) == "error:world"

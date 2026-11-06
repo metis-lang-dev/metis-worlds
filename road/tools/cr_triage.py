@@ -91,6 +91,7 @@ def measure(row):
 SHORT_TICKS = 5                              # a run this short "arrived" on a route of a metre: no result
 
 
+NO_ROUTE = "no way from"                        # cr_world's route note: the start does not reach the goal's edge
 TIME_ONLY = "a time-only goal"                   # cr_world's route note for a goal state with no position (cr-harvest-3)
 
 
@@ -109,6 +110,8 @@ def no_goal(row):
     architect's rulings, 2026-11-05 and -06)."""
     cr = _cr(row)
     if "goal_edge" in cr and cr["goal_edge"] is None and not time_only(row):
+        return True
+    if str(cr.get("route_note") or "").startswith(NO_ROUTE):        # a goal edge the converted net does not connect (2026-11-06)
         return True
     return row.get("ticks") is not None and row["ticks"] <= SHORT_TICKS
 
@@ -223,11 +226,20 @@ def named_things(tr, window):
     hit = sorted({c for r in inside for c in ((r.get("ego") or {}).get("contact") or ())})
     if hit:
         return hit
-    if not inside:
+    first = next((sorted(rows[k]["ego"]["contact"]) for k in sorted(rows) if (rows[k].get("ego") or {}).get("contact")), None)
+    if first:                                       # the measure's contact (CommonRoad's boxes) and SUMO's need not share a tick
+        return first[:1]
+    last = inside[-1] if inside else rows[max(k for k in rows if k <= k1)] if any(k <= k1 for k in rows) else None
+    if last is None:
         return []
-    bound = [th for th in inside[-1].get("things") or () if th.get("role")]
+    bound = [th for th in last.get("things") or () if th.get("role")]
     order = {r: i for i, r in enumerate(ROLE_ORDER)}
-    return [th["id"] for th in sorted(bound, key=lambda th: (order.get(th["role"], len(order)), th["id"]))][:3]
+    if bound:
+        return [th["id"] for th in sorted(bound, key=lambda th: (order.get(th["role"], len(order)), th["id"]))][:3]
+    ego = last.get("ego") or {}                     # nobody bound: the nearest body on the ego's lane, else none
+    near = sorted((abs(th["s"] - ego["s"]), th["id"]) for th in last.get("things") or ()
+                  if th.get("lane") == ego.get("lane") and th.get("s") is not None and ego.get("s") is not None)
+    return [near[0][1]] if near else []
 
 
 TAIL = 300                                                   # ticks: the window of a record that names none (30 planner beats)
