@@ -17,6 +17,23 @@ jobs:
       cards: ${{ steps.list.outputs.cards }}
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: metis-lang-dev/metis-lang
+          ref: master
+          path: metis-lang
+      # metisc ONCE, here, for every matrix job: apt on a fresh hosted runner can wait silently on the dpkg lock
+      # (unattended-upgrades at boot) until the job's cap (two jobs of 8dd4c20's run); 10 min bounds it in one place
+      - name: metisc
+        timeout-minutes: 10
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq ocaml-nox
+          make -C metis-lang metisc
+      - uses: actions/upload-artifact@v4
+        with:
+          name: metisc-${{ github.sha }}
+          path: metis-lang/src/metisc
+          retention-days: 1
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -69,10 +86,12 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: metisc
-        run: |
-          sudo apt-get update -qq && sudo apt-get install -y -qq ocaml-nox
-          make -C metis-lang metisc
+      - name: metisc (built once in the cards job)
+        uses: actions/download-artifact@v4
+        with:
+          name: metisc-${{ github.sha }}
+          path: metis-lang/src
+      - run: chmod +x metis-lang/src/metisc && metis-lang/src/metisc --version 2>&1 | head -1 || true
       - name: the Live, SUMO 1.18 (PyPI)
         run: |
           python -m pip install -q pyyaml pytest rtree==1.4.1 eclipse-sumo==1.18.0 traci==1.18.0 sumolib==1.18.0 \
