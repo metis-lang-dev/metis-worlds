@@ -88,6 +88,7 @@ class Loop:
                                                     seed=int(level.get("seed", 1))), dt=self.world.dt)
         self.sit, self.truth_sit = Situation(), Situation()
         self.cmd, self.life = ("keep", None), 0
+        self.first_cmd_tick = None                    # the family's first command: the violation measure starts there (F)
         self.changing = None                          # (side, source lane index, ticks left)
         self.passes = []                              # the carries through the opposite lane: {t, s, into, back: (t, why), end}
         self.proj = {"binding": {}, "facts": {"now": 1}, "fold": None, "states": [], "ego": None}
@@ -116,6 +117,8 @@ class Loop:
 
     def command(self, cmd, life=1):
         self.cmd, self.life = cmd, int(life)
+        if self.first_cmd_tick is None:
+            self.first_cmd_tick = self.tick
 
     def arrived(self):
         """The exerciser's meaning: the ego's s at the destination (else, with none, the ego off the net)."""
@@ -247,7 +250,9 @@ class Loop:
         self._truth_states, self._truth_pairs = states, pairs
         fold = Situation.fold(states, ego.dyn)
         before = getattr(self, "_truth_fold", None)       # the truth as it stood when the command was decided
-        if applied is not None and before is not None:
+        # (F, the architect's ruling): before the family's first command the accel is the initial state's, not a response:
+        # 'accel above the truth response' at ticks 1-5 was that artefact (189 of 335 entries)
+        if applied is not None and before is not None and self.first_cmd_tick is not None:
             a, lane, _ = applied
             hi = restrict.bound(before, ego.dyn)
             if a > hi + 1e-9 and ego.dyn.vmax > 0:           # standing still meets any braking response (road_world's)
@@ -351,7 +356,7 @@ class Loop:
                 "rc": 100.0 if self.arrived() else ((w.director.report()["rc"]) if getattr(w, "director", None) is not None else None),
                 "director": w.director.report() if getattr(w, "director", None) is not None else None,
                 "all_collisions": len(w.collisions), "violations": len(self.violations), "unseen_other_duty": len(self.unseen_duty), "optimistic": len(self.optimistic), "restricted": self.restricted,
-                "latency_truth": self.latency, "first": self.violations[:3],
+                "latency_truth": self.latency, "first": self.violations[:3], "first_cmd_tick": self.first_cmd_tick,
                 "ms": {k: mean(k) for k in ("restrict", "sumo", "perceive", "project", "account")},
                 "vehicles_max": max((m["vehicles"] for m in self.ms), default=0),
                 "undue_brakes": len(self.undue), "passes": self.passes, "rss": dict(rss_card(), sensor_range=self.perc.sensor.range),

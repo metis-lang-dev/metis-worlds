@@ -96,6 +96,32 @@ def trace_config(cfg):
     (d / "config.yaml").write_text(yaml.safe_dump(c, sort_keys=False))
 
 
+HOLD_M = 40.0      # the stop wish is set this far before the route's end while the goal window is still open
+
+
+def director_of(world):
+    return getattr(getattr(world, "world", None), "director", None)
+
+
+def hold(world, shared, margin):
+    """(C), the architect's run-end rule: while a cr: goal's window is open (goal not reached), the ego does not end the run by
+    arriving early: within HOLD_M of its route's end the planner gets the person's stop wish (road_wishes: its own brake to a
+    standstill, kept). → whether the run is held."""
+    d = director_of(world)
+    f = getattr(d, "window_open", None)
+    if not (f and f(margin)):
+        return False
+    ego = getattr(world, "proj", {}).get("ego")
+    dest = getattr(world, "level_dest", None)
+    if ego is not None and dest is not None and dest - ego.s <= HOLD_M:
+        import road_wishes
+        w = shared.setdefault("wish", road_wishes.new())
+        if not w.get("stop"):
+            road_wishes.take(w, "stop")
+            shared["held"] = True
+    return True
+
+
 def window_over(world, margin):
     """--stop-after-window S: a cr: run's director says the goal window ended S s ago with the goal not reached."""
     d = getattr(getattr(world, "world", None), "director", None)
@@ -144,9 +170,14 @@ def run(scenario, seed, out_dir, ticks=1500, world_kind=None, vehicles=None, tra
         trace_config(cfg)
     t0 = time.perf_counter()
     stopped = None
+    shared = road_host.SHARED[key]
     for _ in range(ticks):
         lv.tick()
-        if world.arrived():
+        held = stop_after is not None and hold(world, shared, stop_after)
+        if world.arrived() and not held:
+            break
+        if shared.get("held") and not held:                        # held at the route's end: the goal decided, or its window past
+            stopped = "held"
             break
         if stop_after is not None and window_over(world, stop_after):
             stopped = "window+%g" % stop_after
@@ -157,6 +188,7 @@ def run(scenario, seed, out_dir, ticks=1500, world_kind=None, vehicles=None, tra
     recs = list(lv.journal.recs)
     out = report(world, recs, log, wall)
     out["stopped"] = stopped
+    out["held"] = bool(shared.get("held"))
     close = getattr(world, "close", None)          # one SUMO at a time: the next seed's world opens after this one shuts
     if close:
         close()

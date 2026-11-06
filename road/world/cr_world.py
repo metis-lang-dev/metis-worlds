@@ -505,6 +505,16 @@ class Director:
                 if not self.contacts or self.contacts[-1][1] != o["id"] or t - self.contacts[-1][0] > 1.0:
                     self.contacts.append((round(t, 2), o["id"]))
 
+    def window_open(self, margin):
+        """The run-end rule (cr-harvest s-f4e297da, the architect's (C)): True while the goal is not reached and the run's time
+        is not past the last goal window's end + MARGIN s; a goal without a time window is never held for."""
+        if self.goal_t is not None or self.t_now is None:
+            return False
+        ws = [g.get("time") for g in self.goals]
+        if not ws or any(not w for w in ws):
+            return False
+        return self.t_now <= max((w[1] - self.k0) * self.dt for w in ws) + margin
+
     def window_over(self, margin):
         """The early stop (cr-harvest ruling, 2026-11-05): True when the goal is not reached and the run's time is past the
         last goal window's end + MARGIN s; never before that end, never for a goal without a time window."""

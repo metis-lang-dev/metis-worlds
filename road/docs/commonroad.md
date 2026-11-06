@@ -99,3 +99,13 @@ goal's intervals), `goal_position_t` (the region alone), `goal_window_s` (the wi
 box against each obstacle's recorded box, CommonRoad's own test; SUMO's collisions are the Leaderboard's beside it);
 `off_lanelet_ticks`/`_m` (the centre outside every lanelet's polygon); `cost` null (a scenario file has no cost function: the benchmark
 id carries it); `rc` (the driven metres over the route's) as the cards'.
+
+## A run's end and the world's faults (cr-harvest s-f4e297da, 2026-11-06)
+
+- A run does not end on arrival before its goal's time window closes: within 40 m of the route's end the planner gets the
+  stop wish (road_wishes) and holds; the run ends when the goal is reached (`stopped: held`), or the window's end + 30 s
+  passes (`window+30`). A goal with no time window is never held for.
+- A time-only goal (no region): the ego drives on; the goal is its window, speed and heading.
+- No route from the start's edge to the goal's (the converted net lost the connection: Flensburg, Lohmar):
+  `error: world`, "cr: no route", never the goal measure. So is a route under 5 m to a goal with a region ("cr: no goal edge").
+- The violation measure starts at the family's first command (`first_cmd_tick`): before it the accel is the initial state's.
