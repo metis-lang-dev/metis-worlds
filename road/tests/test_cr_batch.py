@@ -82,3 +82,10 @@ def test_both_contact_ticks():
     assert B.contact_ks(row) == {"cr": 30, "sumo": 34, "sumo_other": "cr7"}
     row["failed"] = ["sumo_collision"]
     assert B.window(row, (1, 500)) == [1, 34]
+
+
+def test_a_timeout_kills_the_whole_group():
+    import time
+    t = time.time()
+    rc, out, err, timed_out = B.run_bounded(["bash", "-c", "sleep 30 & echo started; sleep 30"], ".", None, 1)
+    assert timed_out and rc is None and time.time() - t < 10            # a child holding the pipe no longer hangs the wait

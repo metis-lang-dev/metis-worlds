@@ -193,6 +193,23 @@ def claim(h):
     return None
 
 
+def run_bounded(cmd, cwd, env, timeout):
+    """subprocess.run(capture_output, timeout) in its own process group: on the timeout the whole group is killed (road_tree
+    AND its SUMO), else SUMO keeps the pipes open and the wait never ends. → (rc or None, stdout, stderr, timed_out)."""
+    import signal
+    p = subprocess.Popen(cmd, cwd=cwd, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, start_new_session=True)
+    try:
+        out, err = p.communicate(timeout=timeout)
+        return p.returncode, out, err, False
+    except subprocess.TimeoutExpired:
+        try:
+            os.killpg(p.pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+        out, err = p.communicate()
+        return None, out or "", err or "", True
+
+
 def last_json(text):
     for line in reversed(text.splitlines()):
         line = line.strip()
@@ -362,12 +379,9 @@ def run_card_job(h, path, job, seed, timeout):
     cmd = [agent_py(), str(ROAD / "tools" / "scenario_run.py"), "run", job["card"], "--host", "sumo", "--seed", str(seed),
            "--out", str(run_dir), "--trace", str(run_dir / "trace")]
     started, t0 = now(), time.time()
-    try:
-        p = subprocess.run(cmd, cwd=str(WORLDS), env=env(), capture_output=True, text=True, timeout=timeout)
-        row = last_json(p.stdout) if p.returncode == 0 else None
-        err = p.stderr
-    except subprocess.TimeoutExpired as x:
-        row, err = None, "timeout"
+    rc, out, err, timed_out = run_bounded(cmd, str(WORLDS), env(), timeout)
+    row = last_json(out) if rc == 0 else None
+    err = "timeout" if timed_out else err
     (run_dir / "stderr.txt").write_text((err or "")[-20000:])
     if row is None:
         row = {"id": sid, "card": job["card"], "error": {"kind": "timeout" if err == "timeout" else "crash", "line": last_line(err or ""),
@@ -394,14 +408,7 @@ def run_job(h, path, seed, ticks, timeout):
            "--ticks", str(ticks), "--out", str(run_dir), "--trace", str(run_dir / "trace"),
            "--stop-after-window", os.environ.get("CR_STOP_AFTER_WINDOW", "30")]
     started, t0 = now(), time.time()
-    timed_out, rc = False, None
-    try:
-        p = subprocess.run(cmd, cwd=str(WORLDS), env=env(), capture_output=True, text=True, timeout=timeout)
-        out, err, rc = p.stdout, p.stderr, p.returncode
-    except subprocess.TimeoutExpired as x:
-        timed_out = True
-        out = x.stdout.decode(errors="replace") if isinstance(x.stdout, bytes) else (x.stdout or "")
-        err = x.stderr.decode(errors="replace") if isinstance(x.stderr, bytes) else (x.stderr or "")
+    rc, out, err, timed_out = run_bounded(cmd, str(WORLDS), env(), timeout)
     summ = last_json(out) if rc == 0 else None
     (run_dir / "stderr.txt").write_text(err[-20000:])
     row = make_row(job, h, seed, started, time.time() - t0, summ, err, rc, timed_out)

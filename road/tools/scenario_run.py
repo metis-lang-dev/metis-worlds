@@ -134,11 +134,11 @@ def run_net(card, host, seed, out, trace):
     started = B.now()
     import time
     t0 = time.time()
-    p = subprocess.run(cmd, cwd=str(WORLDS), env=env, capture_output=True, text=True, timeout=int(os.environ.get("CR_TIMEOUT", 900)))
-    summ = B.last_json(p.stdout) if p.returncode == 0 else None
+    rc, out, err, timed_out = B.run_bounded(cmd, str(WORLDS), env, int(os.environ.get("CR_TIMEOUT", 900)))
+    summ = B.last_json(out) if rc == 0 else None
     job = {"id": sid, "set": (card.get("source") or {}).get("set"), "source": (card.get("source") or {}).get("suite"),
            "country": sid.split("_")[0], "tags": card.get("tags") or []}
-    row = B.make_row(job, None, seed, started, time.time() - t0, summ, p.stderr, p.returncode, False)
+    row = B.make_row(job, None, seed, started, time.time() - t0, summ, err, rc, timed_out)
     row.update(card=card_id(card), host=host, run="cr:%s-%d" % (sid, seed))
     return row
 
