@@ -170,6 +170,9 @@ def kind_one(row):
         if frozen_partner(tr, partner):                              # the architect's ruling (2026-11-06): the world's
             return dict(out, kind="world", why="%s stood (its s moved < %.1f m over the %d ticks before the contact) while it was "
                         "reported moving above %.0f m/s: the fold read a speed the body did not have" % (partner, FROZEN_M, FOLLOW_TICKS, FROZEN_V))
+        if lane_jumping(tr, partner):                                # the architect's ruling (2026-11-06): the playback's
+            return dict(out, kind="world", why="%s jumped across lanes (>= %d flips in the %d ticks before the contact): a played "
+                        "obstacle remapped each tick inside a junction, no track holds it" % (partner, JUMP_FLIPS, FOLLOW_TICKS))
         if side == "initial":                                        # ruling B (b): the scenario starts in or at contact
             return dict(out, kind="world", why="the contact with %s at the run's start (k <= %d): the initial state" % (partner, INITIAL_K))
     try:
@@ -252,6 +255,22 @@ def frozen_partner(tr, pid):
         return False
     ss = [x["s"] for x in seen]
     return max(ss) - min(ss) < FROZEN_M and min(x.get("v") or 0.0 for x in seen) > FROZEN_V
+
+
+JUMP_FLIPS = 4                                  # lane changes of the partner in FOLLOW_TICKS: the playback's remapping
+
+
+def lane_jumping(tr, pid):
+    """The contact partner PID changed lanes at least JUMP_FLIPS times in the FOLLOW_TICKS before the first contact: a recorded
+    obstacle moved by moveToXY inside a junction, mapped onto another overlapping internal lane every tick or two."""
+    from metis import surprise_kind as SK
+    rows, _ = SK.read_truth(tr)
+    kc = first_contact_tick(tr)
+    if kc is None or pid is None:
+        return False
+    lanes = [x.get("lane") for j in range(max(0, kc - FOLLOW_TICKS), kc + 1) if j in rows
+             for x in rows[j].get("things") or () if x.get("id") == pid and x.get("lane")]
+    return sum(1 for a, b in zip(lanes, lanes[1:]) if a != b) >= JUMP_FLIPS
 
 
 INITIAL_K = 10                                  # ticks: a contact this early is the scenario's initial state (1 s)

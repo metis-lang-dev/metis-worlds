@@ -285,3 +285,15 @@ def test_a_partner_standing_while_reported_moving_is_the_worlds(tmp_path):
     write(tmp_path / "frozen", False)
     write(tmp_path / "moving", True)
     assert T.frozen_partner(tmp_path / "frozen", "L") and not T.frozen_partner(tmp_path / "moving", "L")
+
+
+def test_a_partner_jumping_across_lanes_is_the_worlds(tmp_path):
+    tr = tmp_path / "j"
+    tr.mkdir()
+    lanes = [":j_2", ":j_11", ":j_1", ":j_4", ":j_10", ":j_8"]
+    rows = [{"truth": 1}] + [{"k": k, "ego": {"lane": ":j_6", "s": 5.0, "contact": ["P"] if k == 40 else []},
+                              "things": [{"id": "P", "lane": lanes[(k // 2) % 6], "s": 10.0, "v": 9.0}]} for k in range(28, 41)]
+    (tr / "truth.jsonl").write_text("".join(json.dumps(r) + "\n" for r in rows))
+    assert T.lane_jumping(tr, "P")
+    (tr / "truth.jsonl").write_text("".join(json.dumps(dict(r, things=[dict(x, lane=":j_8") for x in r.get("things", [])]) if "k" in r else r) + "\n" for r in rows))
+    assert not T.lane_jumping(tr, "P")
