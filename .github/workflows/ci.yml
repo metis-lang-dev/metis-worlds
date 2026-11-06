@@ -58,13 +58,13 @@ jobs:
           python -m pip install -q pyyaml pytest -e ./metispy -e metis-worlds/libs/semantic-world
           python -m pip install -q --no-deps -e metis-agent/py
           cd metis-worlds && METIS_HOME="$GITHUB_WORKSPACE/metis-catalog/domains/road" python -m pytest -q road/tests
-      # scenario-catalog step 5: every card the exerciser plays against its verdict.exerciser; a verdict that moved EITHER
-      # way fails the run (road/docs/SCENARIO-CARD.md §6); the table and the coverage on the run's page
-      - name: the catalog on the exerciser (a moved verdict fails)
+      # scenario-catalog step 5 (SCENARIO-CARD §6c): the REGRESSION set on the exerciser; a regression card not at pass
+      # fails the run (the working set is the nightly's table); the table and the coverage on the run's page
+      - name: the regression set on the exerciser (a card not at pass fails)
         run: |
           cd metis-worlds
           export METIS_HOME="$GITHUB_WORKSPACE/metis-catalog/domains/road"
-          python road/tools/scenario_run.py check road/catalog --host exerciser
+          python road/tools/scenario_run.py check road/catalog --host exerciser --set regression
           python road/tools/scenario_run.py coverage --host exerciser
   # spec 17 §4 (linker s-5908724a step 2): road's composition links to one image (metisc --link: every L-check over
   # the I-checks, the derived director compared with road_director), its hash == road/domains/image.golden.

@@ -29,6 +29,7 @@ actors:   # the props as one static body over the closed lane (ConstructionObsta
     script: [{when: trigger, after: 5.0, flow: true}]
 infractions: {scenario: [scenario_timeout: 240]}
 expect: {arrived: true, collisions: 0, violations: 0}
+set: regression
 verdict:
   exerciser: {status: skip, note: "the exerciser has no oncoming lane (exerciser.skip)"}
   sumo: {status: pass, since: {worlds: 5a3a813, catalog: ef793dc}, note: "as the source: all 4 sites meet expect (DS 100: change_oncoming and back); measured by hand"}

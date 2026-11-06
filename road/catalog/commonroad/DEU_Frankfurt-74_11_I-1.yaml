@@ -253,6 +253,7 @@ expect:
   collisions: 0
   violations: 0
   off_lanelet: 0
+set: working
 verdict:
   exerciser: skip
   sumo:

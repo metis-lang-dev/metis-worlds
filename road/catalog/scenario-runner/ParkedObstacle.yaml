@@ -18,6 +18,7 @@ actors:
   - {id: parked, kind: car, mode: scripted, at: {ahead: 120, lane: 0}, v: 0.0, moving: false}
 infractions: {scenario: [scenario_timeout: 240]}
 expect: {arrived: true, collisions: 0, violations: 0}
+set: regression
 verdict:
   exerciser:
     status: pass

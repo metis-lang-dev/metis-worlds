@@ -30,6 +30,7 @@ actors:   # SUMO's bluelight device; the infraction: held behind the ego (within
 infractions: {scenario: [yield_emergency_vehicle]}   # LB 2.0's YieldToEmergencyVehicleTest (the director's emergency_lb)
 # expect's emergency_held_s is OURS (held within 30 m below 90 % of its allowed speed, red waits out), not the LB test
 expect: {arrived: true, collisions: 0, violations: 0, emergency_held_s: 5.0}
+set: regression
 verdict:
   exerciser:
     status: skip

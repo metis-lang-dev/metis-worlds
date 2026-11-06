@@ -32,6 +32,7 @@ actors:   # 6 stopped cars on the right lane, 11 m apart: 2 behind the cut-in ca
   - {id: q6, kind: car, mode: scripted, at: {ahead: 133, lane: -1}, v: 0.0, moving: false}
 infractions: {scenario: []}
 expect: {arrived: true, collisions: 0, violations: 0}
+set: working
 verdict:
   exerciser:
     status: pass

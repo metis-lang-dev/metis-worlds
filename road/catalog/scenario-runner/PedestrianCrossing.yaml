@@ -47,6 +47,7 @@ actors:
     script: [{when: trigger, after: 1.5, go: true, v: 2.0}]
 infractions: {scenario: []}
 expect: {arrived: true, collisions: 0, violations: 0}
+set: regression
 verdict:
   exerciser:
     status: pass

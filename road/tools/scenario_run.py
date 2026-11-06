@@ -8,7 +8,8 @@ its standing (pass | soft | fail | world) and compared with the card's `verdict`
     road/tools/scenario_run.py batch plan|work|launch|status|pull|recover …  cr_batch over cards (jobs carry the card's path)
     road/tools/scenario_run.py index [DIR]                                  road/catalog/index.json (id, source, tags, verdict, map)
     road/tools/scenario_run.py coverage [DIR] [--host H]                    tags x standings from the verdicts (CI's coverage)
-    road/tools/scenario_run.py list [DIR] [--host sumo] [--chunks N]        the cards a host plays, JSON (CI's matrix; N groups)
+    road/tools/scenario_run.py list [DIR] [--host sumo] [--set S] [--chunks N]  the cards a host plays, JSON (CI's matrix; N groups)
+    road/tools/scenario_run.py sets [DIR]                                   the §6c default set: into every card without one
 
 Two kinds of card, one row: a card on a town (the CARLA cards: map.town / sites, played as road_tree's `card:NAME`, measured by
 scenario_cards.check as road/experiments/scenarios.py does) and a card on a stored net (map.net + map.data: played as `cr:ID`
@@ -249,6 +250,46 @@ def skipped(card, host):
     return e == "skip" or (isinstance(e, dict) and ("skip" in e or e.get("status") == "skip"))
 
 
+SETS = ("regression", "working")
+
+
+def card_set(card):
+    """SCENARIO-CARD §6c: `set: regression | working`; a card without the field is working."""
+    return card.get("set") if card.get("set") in SETS else "working"
+
+
+def played(card):
+    """The hosts the card plays (not skipped) with their verdict status."""
+    return {h: expected(card, h) for h in HOSTS if entry(card, h) is not None and not skipped(card, h)}
+
+
+def default_set(card):
+    """regression iff every host the card plays stands at pass (and it plays at least one), else working (§6c defaults)."""
+    st = played(card)
+    return "regression" if st and all(v == "pass" for v in st.values()) else "working"
+
+
+def format_error(card):
+    """A regression card whose verdicts are not all pass/skip is a format error (§6c)."""
+    if card_set(card) != "regression":
+        return None
+    bad = {h: v for h, v in played(card).items() if v != "pass"}
+    return "set: regression but verdict %s" % ", ".join("%s %s" % kv for kv in sorted(bad.items())) if bad else None
+
+
+def write_set(card, value):
+    """The card's `set:` line, inserted before its verdict block (or at the end) when the card has none."""
+    p = Path(card["_path"])
+    lines = p.read_text().splitlines()
+    if any(l.startswith("set:") for l in lines):
+        return False
+    i = next((k for k, l in enumerate(lines) if l.startswith("verdict:")), len(lines))
+    lines.insert(i, "set: %s" % value)
+    p.write_text("\n".join(lines) + "\n")
+    card["set"] = value
+    return True
+
+
 def expected(card, host=None):
     host = host or ("sumo" if on_net(card) else "exerciser")
     e = entry(card, host)
@@ -267,9 +308,21 @@ def host_of(card, host):
 
 
 def cmd_check(a):
-    moved, lines = 0, ["| card | host | verdict | measured | why |", "|---|---|---|---|---|"]
+    """Every card against its verdict. A REGRESSION card fails the run when its measured standing is not pass, or its
+    verdicts are not all pass/skip (a format error); a WORKING card never fails it: its row is information (§6c), and a
+    working card measured pass is a promotion candidate."""
+    moved, failing, candidates = 0, 0, []
+    lines = ["| card | set | host | verdict | measured | why |", "|---|---|---|---|---|---|"]
     for path in cards_in(a.cards):
         card = load(path)
+        if a.set and card_set(card) != a.set:
+            continue
+        fe = format_error(card)
+        if fe:
+            failing += 1
+            lines.append("| %s | regression | - | - | **FORMAT** | %s |" % (card_id(card), fe))
+            print(lines[-1], flush=True)
+            continue
         if on_net(card) and a.host == "exerciser":            # a stored net plays on SUMO only
             continue
         h = host_of(card, a.host)
@@ -277,18 +330,24 @@ def cmd_check(a):
             continue
         trace = tempfile.mkdtemp(prefix="scenario-trace-") if on_net(card) else None
         row = run(card, h, a.seed, a.out, trace)
-        st, exp = row["standing"], expected(card, h)
-        if exp and st["status"] != exp:
-            moved += 1
-        lines.append("| %s | %s | %s | %s%s | %s |" % (card_id(card), h, exp or "(none)", st["status"],
-                                                       " **MOVED**" if exp and st["status"] != exp else "", (st.get("why") or "")[:120]))
+        st, exp, cs = row["standing"], expected(card, h), card_set(card)
+        mv = bool(exp) and st["status"] != exp
+        moved += mv
+        if cs == "regression" and st["status"] != "pass":
+            failing += 1
+        if cs == "working" and st["status"] == "pass":
+            candidates.append(card_id(card))
+        lines.append("| %s | %s | %s | %s | %s%s | %s |" % (card_id(card), cs, h, exp or "(none)", st["status"],
+                                                            " **MOVED**" if mv else "", (st.get("why") or "")[:120]))
         print(lines[-1], flush=True)
     print("\n".join(lines))
-    print("moved: %d" % moved)
+    print("moved: %d; regression not at pass: %d; promotion candidates (working, measured pass): %s"
+          % (moved, failing, ", ".join(candidates) or "none"))
     if os.environ.get("GITHUB_STEP_SUMMARY"):                  # CI: the table on the run's page
         with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as f:
-            f.write("### scenario_run check (%s): %d moved\n\n%s\n" % (a.host, moved, "\n".join(lines)))
-    sys.exit(1 if moved else 0)
+            f.write("### scenario_run check (%s, %s set): %d moved, %d regression not at pass\n\n%s\n\n**Promotion candidates:** %s\n"
+                    % (a.host, a.set or "every", moved, failing, "\n".join(lines), ", ".join(candidates) or "none"))
+    sys.exit(1 if failing else 0)
 
 
 def cmd_verdict(a):
@@ -300,6 +359,8 @@ def cmd_verdict(a):
             continue
         st = run(card, h, a.seed, a.out, trace)["standing"]
         write_verdict(card, st, h)
+        if "set" not in card:                                  # the default at the card's FIRST verdict, never flipped after
+            write_set(load(path), default_set(load(path)))
         print("%s %s %s" % (card_id(card), st["status"], st.get("why") or ""))
 
 
@@ -315,8 +376,15 @@ def coverage(paths, host=None):
                 if st:
                     table.setdefault(t, {}).setdefault(h, {}).setdefault(st, 0)
                     table[t][h][st] += 1
+    sets = {}
+    for path in cards_in(paths):
+        c = load(path)
+        for t in c.get("tags") or ["(untagged)"]:
+            sets.setdefault(t, {"regression": 0, "working": 0})[card_set(c)] += 1
+    head = ["| tag | regression (proven) | working (exercised) |", "|---|---|---|"]
+    head += ["| %s | %d | %d |" % (t, v["regression"], v["working"]) for t, v in sorted(sets.items())]
     cols = ["pass", "soft", "fail", "world", "skip"]
-    lines = ["| tag | host | " + " | ".join(cols) + " |", "|---|---|" + "---|" * len(cols)]
+    lines = head + ["", "| tag | host | " + " | ".join(cols) + " |", "|---|---|" + "---|" * len(cols)]
     for t in sorted(table):
         for h in hosts:
             if h in table[t]:
@@ -337,7 +405,7 @@ def cmd_list(a):
     out = []
     for path in cards_in(a.cards):
         c = load(path)
-        if skipped(c, a.host) or (a.host == "exerciser" and on_net(c)):
+        if skipped(c, a.host) or (a.host == "exerciser" and on_net(c)) or (a.set and card_set(c) != a.set):
             continue
         if a.host == "sumo" and not on_net(c) and not (c.get("sites") or {}).get("towns"):
             continue
@@ -346,6 +414,16 @@ def cmd_list(a):
         n = max(1, min(a.chunks, len(out)))
         out = [" ".join(out[i::n]) for i in range(n)] if out else []
     print(json.dumps(out))
+
+
+def cmd_sets(a):
+    """Writes the §6c default `set:` into every card that has none, from its verdicts on file (no run)."""
+    for path in cards_in(a.cards):
+        c = load(path)
+        if "set" not in c and played(c):
+            v = default_set(c)
+            write_set(c, v)
+            print("%s %s" % (card_id(c), v))
 
 
 def cmd_index(a):
@@ -384,6 +462,8 @@ def main(argv=None):
         p.add_argument("--out")
         if p is r:
             p.add_argument("--trace")
+        else:
+            p.add_argument("--set", choices=list(SETS))
     cv = sub.add_parser("coverage")
     cv.add_argument("cards", nargs="*", default=[str(CATALOG)])
     cv.add_argument("--host", choices=list(HOSTS))
@@ -391,11 +471,14 @@ def main(argv=None):
     ls.add_argument("cards", nargs="*", default=[str(CATALOG)])
     ls.add_argument("--host", default="sumo", choices=list(HOSTS))
     ls.add_argument("--chunks", type=int, default=0, help="N groups of cards, round-robin, each a space-separated string")
+    ls.add_argument("--set", choices=list(SETS))
+    st_ = sub.add_parser("sets")
+    st_.add_argument("cards", nargs="*", default=[str(CATALOG)])
     ix = sub.add_parser("index")
     ix.add_argument("dir", nargs="?", default=str(CATALOG))
     a = ap.parse_args(argv)
     {"run": cmd_run, "check": cmd_check, "verdict": cmd_verdict, "index": cmd_index, "coverage": cmd_coverage,
-     "list": cmd_list}[a.cmd](a)
+     "list": cmd_list, "sets": cmd_sets}[a.cmd](a)
 
 
 if __name__ == "__main__":

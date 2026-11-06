@@ -29,6 +29,7 @@ actors:
     script: [{when: trigger, go: true, v: 2.0}]     # 2.0 m/s (:418)
 infractions: {scenario: []}
 expect: {arrived: true, collisions: 0, violations: 0}
+set: working
 verdict:
   exerciser:
     status: skip

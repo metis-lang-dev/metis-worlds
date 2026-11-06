@@ -1,5 +1,6 @@
-# scenario-catalog step 5: the catalog on SUMO, nightly and on demand: the cards SUMO plays (`scenario_run.py list --host
-# sumo --chunks 20`) in 20 groups, one job per group checking each of its cards against its verdict.sumo (a line per card); a verdict that moved EITHER way fails the run
+# scenario-catalog step 5: the catalog on SUMO, nightly and on demand, in its two sets (SCENARIO-CARD §6c): the REGRESSION
+# set fails on any card not at pass; the WORKING set never fails and posts its table and the promotion candidates. Each
+# set's cards (`scenario_run.py list --host sumo --set S --chunks 20`) in up to 20 groups, one job per group (a line per card); a verdict that moved EITHER way fails the run
 # (road/docs/SCENARIO-CARD.md §6). SUMO 1.18 from PyPI (eclipse-sumo), as road/setup-sumo.sh's wheel path; the family at
 # road/domains/catalog.pin, metisc built as in ci.yml's road-tests. Panzer keeps the harvest and the law-change reruns.
 name: catalog-sumo
@@ -22,7 +23,15 @@ jobs:
       - id: list
         run: |
           python -m pip install -q pyyaml
-          echo "cards=$(python road/tools/scenario_run.py list road/catalog --host sumo --chunks 20)" >> "$GITHUB_OUTPUT"
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          import json, subprocess
+          jobs = []
+          for st in ("regression", "working"):
+              out = subprocess.run(["python", "road/tools/scenario_run.py", "list", "road/catalog", "--host", "sumo", "--set", st,
+                                    "--chunks", "20"], capture_output=True, text=True, check=True).stdout
+              jobs += [{"set": st, "cards": g} for g in json.loads(out)]
+          print("cards=" + json.dumps(jobs))
+          PY
   sumo:
     needs: cards
     runs-on: ubuntu-24.04
@@ -31,7 +40,7 @@ jobs:
       fail-fast: false
       max-parallel: 20
       matrix:
-        card: ${{ fromJSON(needs.cards.outputs.cards) }}
+        include: ${{ fromJSON(needs.cards.outputs.cards) }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -70,12 +79,12 @@ jobs:
             -e ./metispy -e metis-worlds/libs/semantic-world
           python -m pip install -q --no-deps -e metis-agent/py
           sumo --version | head -1
-      - name: the group's cards against their verdict.sumo
+      - name: the ${{ matrix.set }} set's group against verdict.sumo
         run: |
           cd metis-worlds
           export METIS_HOME="$GITHUB_WORKSPACE/metis-catalog/domains/road" METIS_AGENT_PY="$(which python)" OMP_NUM_THREADS=1
           export SUMO_HOME="$(python -c 'import sumo; print(sumo.SUMO_HOME)')"
-          python road/tools/scenario_run.py check ${{ matrix.card }} --host sumo
+          python road/tools/scenario_run.py check ${{ matrix.cards }} --host sumo --set ${{ matrix.set }}
   coverage:
     needs: sumo
     if: always()

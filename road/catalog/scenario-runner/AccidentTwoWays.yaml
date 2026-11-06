@@ -31,6 +31,7 @@ actors:
     script: [{when: trigger, after: 5.0, flow: true}]
 infractions: {scenario: [scenario_timeout: 240]}
 expect: {arrived: true, collisions: 0, violations: 0}
+set: working
 verdict:
   exerciser: {status: skip, note: "the exerciser has no oncoming lane (exerciser.skip)"}
   sumo: {status: fail, since: {worlds: 5a3a813, catalog: ef793dc}, record: 20261106T174258-e816b2, note: "as the source: 3 of 4 sites meet expect; Town01#1 arrives with one violation at tick 84 (an oncoming car during the pass, no response); measured by hand"}

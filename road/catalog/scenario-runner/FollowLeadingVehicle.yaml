@@ -28,6 +28,7 @@ end: {near: lead, within: 20.0, stand_s: 1.0}   # the source's end (L137-143): t
 # the ego stays behind the stopped lead and does not arrive: the two expectations are one card, not a disagreement
 infractions: {scenario: []}
 expect: {arrived: false, collisions: 0, violations: 0}   # the exerciser: the ego stops behind the stopped lead, no arrival
+set: regression
 verdict:
   exerciser:
     status: pass

@@ -17,6 +17,7 @@ actors:   # the props as one static body over the closed lane (in SUMO: a stoppe
   - {id: works, kind: static, mode: scripted, at: {ahead: 100, lane: 0}, length: 8.0, width: 3.0, v: 0.0, moving: false}
 infractions: {scenario: [scenario_timeout: 240]}
 expect: {arrived: true, collisions: 0, violations: 0}
+set: regression
 verdict:
   exerciser:
     status: pass

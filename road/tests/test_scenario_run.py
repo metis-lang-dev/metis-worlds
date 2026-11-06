@@ -102,7 +102,7 @@ def test_list_in_chunks(tmp_path, capsys):
         p.write_text(yaml.safe_dump({"scenario": "C%d" % i, "map": {"net": "x/x.net.xml"}, "verdict": {"sumo": {"status": "pass"}}}))
 
     class A:
-        cards, host, chunks = [str(tmp_path)], "sumo", 2
+        cards, host, chunks, set = [str(tmp_path)], "sumo", 2, None
     monkey = R.WORLDS
     R.WORLDS = tmp_path
     try:
@@ -111,3 +111,24 @@ def test_list_in_chunks(tmp_path, capsys):
         R.WORLDS = monkey
     groups = json.loads(capsys.readouterr().out)
     assert [len(g.split()) for g in groups] == [3, 2] and sorted(" ".join(groups).split()) == ["C%d.yaml" % i for i in range(5)]
+
+
+def test_the_two_sets(tmp_path):
+    c = net_card(tmp_path, verdict={"exerciser": "skip", "sumo": {"status": "pass"}})
+    assert R.card_set(c) == "working" and R.default_set(c) == "regression"
+    assert R.write_set(c, R.default_set(c)) and R.card_set(R.load(c["_path"])) == "regression"
+    assert not R.write_set(R.load(c["_path"]), "working")              # never flipped once written
+    bad = net_card(tmp_path, set="regression", verdict={"sumo": {"status": "fail"}})
+    assert R.format_error(bad) == "set: regression but verdict sumo fail"
+    w = net_card(tmp_path, verdict={"sumo": {"status": "soft"}})
+    assert R.default_set(w) == "working" and R.format_error(w) is None
+    md = R.coverage([str(tmp_path)])
+    assert "| tag | regression (proven) | working (exercised) |" in md
+
+
+def test_every_regression_card_on_file_is_clean():
+    for p in sorted((ROAD / "catalog").rglob("*.yaml")):
+        if "sites" in p.parts:
+            continue
+        c = R.load(p)
+        assert R.format_error(c) is None, p
