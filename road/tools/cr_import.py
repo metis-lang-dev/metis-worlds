@@ -168,8 +168,11 @@ def verdict_of(row, cluster=None):
 
 
 # ── one card ──
-def card(sid, cache, out=CATALOG, row=None, cluster=None, checkout=CHECKOUT):
-    """Write the card of SID (its cr.json and net from CACHE/<sid>/) under OUT. → the card's path."""
+def card(sid, cache, out=CATALOG, row=None, cluster=None, checkout=CHECKOUT, force=False):
+    """Write the card of SID (its cr.json and net from CACHE/<sid>/) under OUT. → the card's path. A card already there (a
+    hand-made one: george's three) is kept unless FORCE."""
+    if (Path(out) / ("%s.yaml" % sid)).exists() and not force:
+        return Path(out) / ("%s.yaml" % sid)
     import cr_world
     src = Path(cache) / sid
     doc = json.loads((src / "cr.json").read_text())
@@ -186,6 +189,8 @@ def card(sid, cache, out=CATALOG, row=None, cluster=None, checkout=CHECKOUT):
     (d / "obstacles").mkdir(parents=True, exist_ok=True)
     shutil.copy2(net_file, d / net_file.name)
     shutil.copy2(src / "cr.json", d / "cr.json")
+    for cfg in src.glob("*.sumo.cfg"):                      # the runner plays the card with its directory as the conversion cache
+        shutil.copy2(cfg, d / cfg.name)
     notice = Path(checkout) / repo / lic_file
     (d / "NOTICE").write_text(("%s\n%s\n\n" % (LICENSE_LINE[repo], "The scenario and its map, converted to a SUMO net and cr.json; "
                                 "the obstacles as the scenario states them.")) + (notice.read_text() if notice.is_file() else ""))
@@ -220,7 +225,7 @@ def card(sid, cache, out=CATALOG, row=None, cluster=None, checkout=CHECKOUT):
          "dt": dt, "ticks": 1500, "ego": ego,
          "exerciser": {"skip": "a CommonRoad map: the exerciser has no net of its own"},
          "actors": actors_of(doc, bool(doc.get("interactive")), str(rel)),
-         "expect": {"goal": True, "contact": False, "collisions": 0, "violations": 0}}
+         "expect": {"goal": True, "collisions": 0, "violations": 0, "off_lanelet": 0}}
     if pl.get("route_note"):
         c["map"]["route_note"] = pl["route_note"]
     v = verdict_of(row, cluster)
@@ -279,6 +284,7 @@ def main(argv=None):
     c.add_argument("--cache", default=None, help="the conversion cache (default cr_world's)")
     c.add_argument("--round", help="a triaged harvest round: the verdict from its row")
     c.add_argument("--out", default=str(CATALOG))
+    c.add_argument("--force", action="store_true", help="overwrite a card already in the catalog")
     s = sub.add_parser("select")
     s.add_argument("round")
     s.add_argument("--n", type=int, default=200)
@@ -312,7 +318,7 @@ def main(argv=None):
     done, failed = 0, []
     for sid in ids:
         try:
-            card(sid, cache, a.out, rows.get(sid), clus.get(sid))
+            card(sid, cache, a.out, rows.get(sid), clus.get(sid), force=getattr(a, "force", False))
             done += 1
         except Exception as e:                                 # noqa: BLE001 — one scenario never stops the import
             failed.append((sid, str(e).splitlines()[0][:160]))

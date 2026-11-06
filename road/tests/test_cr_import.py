@@ -99,3 +99,8 @@ def test_three_cards_from_the_cache(tmp_path):
         for a in c["actors"]:
             if a["mode"] == "recorded" and a.get("trajectory"):
                 assert (d / "obstacles" / Path(a["trajectory"]).name).is_file()
+
+
+def test_a_card_already_in_the_catalog_is_kept(tmp_path):
+    (tmp_path / "X.yaml").write_text("card: 2\nscenario: X\n# hand-made\n")
+    assert I.card("X", tmp_path / "nocache", tmp_path).read_text().endswith("# hand-made\n")   # never read the cache, never overwritten
