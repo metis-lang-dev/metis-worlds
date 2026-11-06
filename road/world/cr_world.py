@@ -26,7 +26,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-CR_JSON_VERSION = 3
+CR_JSON_VERSION = 4
 MIN_ROUTE_M = 5.0                                      # a route shorter than this is no route to the goal
 ROAD = Path(__file__).resolve().parents[1]
 # outside road/ (the workspace's .worlds/cr-cache): the Live walks its catalog root, road/, about 10 times a tick, and a cache of
@@ -59,7 +59,8 @@ def load(sid, cache=CACHE, convert=True):
             meta.unlink()
         py = os.environ.get("COMMONROAD_CONVERT_PY", str(ROAD / ".venv-cr" / "bin" / "python"))
         if not os.path.exists(py):
-            raise RuntimeError("cr:%s is not in the cache %s and there is no conversion venv at %s: road/setup-commonroad.sh" % (sid, cache, py))
+            raise RuntimeError("cr:%s is %s the cache %s and there is no conversion venv at %s: road/setup-commonroad.sh"
+                               % (sid, "of an older version in" if stale else "not in", cache, py))
         r = subprocess.run([py, str(CONVERT), sid, "--cache", str(cache)], capture_output=True, text=True)
         if r.returncode != 0:
             raise RuntimeError("cr:%s: the conversion failed: %s" % (sid, (r.stderr or r.stdout).strip()[-600:]))
@@ -322,7 +323,21 @@ def build(name, work, seed=1, **_):
     routes = os.path.join(work, "cr_%s.rou.xml" % sid)
     with open(routes, "w") as f:
         f.write("\n".join(rows) + "\n")
-    return net_path, routes, [], Director(doc, pl, net)
+    dr = Director(doc, pl, net)
+    dr.goal_lanes = goal_lanes(net, dr)
+    return net_path, routes, [], dr
+
+
+def goal_lanes(net, dr):
+    """The SUMO lanes the goal regions lie on (each region's centre's nearest normal lane): the lane the route must end on,
+    when the goal is one lane of a multi-lane road (road_facts.route_side: route_lane toward it)."""
+    out = []
+    for p in dr.goal_polys:
+        cx, cy = centroid(p)
+        near = [ln for ln, _ in sorted(net.getNeighboringLanes(cx, cy, 4.0), key=lambda x: x[1]) if not ln.getID().startswith(":")]
+        if near and near[0].getID() not in out:
+            out.append(near[0].getID())
+    return out
 
 
 class Director:

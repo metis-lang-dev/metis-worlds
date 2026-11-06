@@ -74,7 +74,7 @@ scenario file's sha256 and the version match (`--force` converts again); `--inde
 of the checkout: id, set, source, path, country, map, tags, dt) for the page's picker. `road/world/cr_world.py` (the `cr:<id>` kind,
 under `sumo_world.SumoWorld`) reads them; a scenario not yet in the cache is converted once by running the tool.
 
-`cr.json`, version 2 (CommonRoad's facts only, in the scenario's frame; metres, radians from +x, steps of `dt` s):
+`cr.json`, version 4 (CommonRoad's facts only, in the scenario's frame; metres, radians from +x, steps of `dt` s):
 - `version`, `id`, `source` (the file in the checkout), `sha256`, `dt`, `net` (the net's file name), `net_offset` (netconvert's; 0,0 seen),
   `converter` (the two versions, highway mode, country), `tags`, `interactive` (an interactive scenario's `.cr.xml`);
 - `edges`: SUMO edge id → its lanelet ids (the converter's: an edge of a multi-lane road holds several); `edges_missing`: the ids of

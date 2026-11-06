@@ -146,9 +146,9 @@ def test_contact_is_the_boxes_touching_and_off_lanelet_is_the_centre_outside_eve
     assert r["cr"]["off_lanelet_ticks"] == 2 and r["cr"]["off_lanelet_m"] > 1.0 and not r["cr"]["contact"]
 
 
-def test_a_cache_of_another_version_is_refused_in_words(tmp_path):
+def test_a_cache_of_another_version_is_converted_again_or_refused_in_words(tmp_path, monkeypatch):
     d = doc()
-    d["version"] = W.CR_JSON_VERSION + 1
+    d["version"] = W.CR_JSON_VERSION - 1
     (tmp_path / "SYN-1").mkdir()
     (tmp_path / "SYN-1" / "cr.json").write_text(json.dumps(d))
     with pytest.raises(RuntimeError, match="cr_convert.py --force"):

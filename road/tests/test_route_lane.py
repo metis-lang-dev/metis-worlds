@@ -68,3 +68,21 @@ def test_two_lanes_away_still_names_the_first_side():
         Lane("a_2", 120.0, right="a_1", speed=V, edge="a", index=2, succ=["l_0"]),
         Lane("x_0", 200.0, speed=V, edge="x", index=0), Lane("l_0", 200.0, speed=V, edge="l", index=0)])
     assert road_facts.route_side(lm, ego("a_2", 40.0)) == "right"
+
+
+def test_a_goal_on_another_lane_of_its_edge_points_route_lane_toward_it():
+    """A CommonRoad goal region on one lane of a multi-lane road (cr_world's goal_lanes; USA_US101-11_1_T-1: the ego on 14_2,
+    the goal on 14_1): route_lane toward it on the goal's edge; nothing on another edge, on the goal lane, or with no goal."""
+    lm = approach()
+    e = ego("a_2", 40.0, edges=("a", "l"))                      # the route carries on from a_2 (the left turn): no cut-off lane
+    e.goal_lanes = ["a_0"]
+    assert road_facts.goal_side(lm, e) == "right" and "route_lane(right)" in facts(lm, e)
+    e.goal_lanes = ["a_2"]
+    assert road_facts.goal_side(lm, e) is None
+    e.goal_lanes = ["x_1"]
+    assert road_facts.goal_side(lm, e) is None, "the goal is on another edge: the route takes the ego there first"
+    e.goal_lanes = None
+    assert road_facts.goal_side(lm, e) is None and "route_lane(right)" not in facts(lm, e)
+    e = ego(":j_2_0", 2.0)
+    e.goal_lanes = ["a_0"]
+    assert road_facts.goal_side(lm, e) is None

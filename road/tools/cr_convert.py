@@ -10,7 +10,7 @@ ID: a scenario id (ZAM_Tjunction-1_100_T-1), found under $COMMONROAD_ROOT (defau
 scenario's file (scenarios/scenarios/recorded/**/ID.xml) or an interactive scenario's folder (…/interactive/**/ID/ID.cr.xml).
 Writes CACHE/ID/ (CACHE default ../.worlds/cr-cache, outside every repo):
 - ID.net.xml, ID.sumo.cfg: commonroad-sumo's cr2sumo map converter over the lanelet network, through the system's netconvert
-  (the speed limits the scenario's own: overwrite_speed_limit None);
+  (each lane's limit from the scenario's own signs, the edge type's where it has none: speeds());
 - cr.json (CR_JSON_VERSION): the interface the Live reads, CommonRoad's facts only, in the scenario's frame (the net's
   netOffset is written too: 0,0 when netconvert kept the frame) — see road/docs/commonroad.md for the fields.
 Kept while the scenario file's sha256 and CR_JSON_VERSION match (--force converts again). Prints the cache dir.
@@ -24,7 +24,7 @@ import os
 import sys
 from pathlib import Path
 
-CR_JSON_VERSION = 3
+CR_JSON_VERSION = 4
 ROAD = Path(__file__).resolve().parents[1]
 ROOT = Path(os.environ.get("COMMONROAD_ROOT", "/bigdata/datasets/commonroad"))
 # outside road/ (the workspace's .worlds/cr-cache): the Live walks its catalog root, road/, about 10 times a tick, and a cache of
@@ -157,6 +157,34 @@ def planning_rows(pps):
                           "orientation": _interval(getattr(st, "orientation", None))})
         out.append({"id": pid, "initial": state(pp.initial_state), "goals": goals})
     return out
+
+
+def speeds(conv, sc, conf):
+    """Each lane's limit from the scenario's own signs (CommonRoad's TrafficSignInterpreter over its lanelet), none where it has none:
+    then the edge's type gives it in netconvert. commonroad-sumo with overwrite_speed_limit None writes speed 0 on every edge (its
+    sign reading is commented out), which netconvert 1.18 refuses at a junction (`con.vmax > 0`) and uses as a limit elsewhere."""
+    from commonroad.scenario.traffic_sign_interpreter import TrafficSignInterpreter
+    interp = TrafficSignInterpreter(conf.country_id, sc.lanelet_network)
+    for lane_id, lane in conv.lanes.items():
+        try:
+            v = interp.speed_limit(frozenset([conv.lane_id2lanelet_id[lane_id]]))
+        except Exception:                                  # noqa: BLE001 — a sign the interpreter cannot read: the type's limit
+            v = None
+        lane.speed = float(v) if v is not None and math.isfinite(float(v)) and float(v) > 0 else None
+    for edge in conv.edges.values():
+        vs = [l.speed for l in edge.lanes if l.speed]
+        edge.speed = max(vs) if vs else None
+
+
+def sumo_files(conv, sc, conf, out_dir):
+    """commonroad-sumo's create_sumo_files, with the lanes' limits set between the map and the files (speeds)."""
+    conv._convert_map()
+    speeds(conv, sc, conf)
+    project = conv.merge_intermediate_files(conv.write_intermediate_files(out_dir), cleanup=True)
+    if project is None:
+        return None
+    project.write()
+    return project
 
 
 def net_edges(net_xml):
@@ -331,11 +359,11 @@ def _convert(src, sid, cache, force):
     sc, pps, lenient = read_lenient(src)
     from commonroad_sumo.cr2sumo.map_converter.map_converter import CR2SumoMapConverter, CR2SumoMapConverterConfig
     conf = CR2SumoMapConverterConfig.from_scenario(sc)
-    conf.overwrite_speed_limit = None                  # the scenario's own limits, not the converter's 130 km/h everywhere
+    conf.overwrite_speed_limit = None                  # not the converter's 130 km/h everywhere: the scenario's own, set below
     conv = CR2SumoMapConverter(sc, conf)
     lights_dropped = False
     try:
-        made = conv.create_sumo_files(out.resolve())
+        made = sumo_files(conv, sc, conf, out.resolve())
     except ValueError as e:
         # cr2sumo's _create_traffic_lights raises a bare ValueError for a light on a lanelet outside an intersection with
         # no or several successors (44 rows, USA_Lanker-1_16_T-1): converted again without its lights, said in cr.json
@@ -343,7 +371,7 @@ def _convert(src, sid, cache, force):
             raise
         conv = CR2SumoMapConverter(sc, conf)
         conv._create_traffic_lights = lambda: None
-        made, lights_dropped = conv.create_sumo_files(out.resolve()), True
+        made, lights_dropped = sumo_files(conv, sc, conf, out.resolve()), True
     if made is None:
         raise SystemExit("cr_convert: %s: the map converter made no SUMO net" % sid)
     net = produced_net(out, sid)

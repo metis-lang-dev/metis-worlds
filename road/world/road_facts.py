@@ -141,13 +141,31 @@ def route_side(lm, ego):
         return any(lm.lanes[w[-1]].edge == nxt for w in lm.ways(l.id))
     if on(lane):
         return None
+    return toward(lm, lane, on)
+
+
+def toward(lm, lane, good):
+    """The first side (right before left) whose same-direction lanes, walked outward from LANE, reach one GOOD has. → side or None."""
     for side in ("right", "left"):
         cur = lane
         while getattr(cur, side) and not getattr(cur, side + "_opposite", False):
             cur = lm.lanes[getattr(cur, side)]
-            if on(cur):
+            if good(cur):
                 return side
     return None
+
+
+def goal_side(lm, ego):
+    """route_lane(D) toward the goal's lane (a CommonRoad planning problem's goal region on one lane of a multi-lane road: the
+    ego.goal_lanes the cr world gives): on the goal's edge, the ego's lane not one of them, the side whose lanes reach one.
+    Never inside a junction. → side or None (no goal lanes: the cards, the exerciser)."""
+    goals = set(getattr(ego, "goal_lanes", None) or ())
+    lane = lm.lanes.get(ego.lane)
+    if not goals or lane is None or lane.internal or ego.lane in goals:
+        return None
+    if not any(lm.lanes[g].edge == lane.edge for g in goals if g in lm.lanes):
+        return None
+    return toward(lm, lane, lambda l: l.id in goals)
 
 
 LIGHTS = {"G": "green", "g": "green_yield", "y": "amber", "Y": "amber", "r": "red", "u": "red", "s": "red"}
@@ -408,7 +426,7 @@ def facts(lm, ego, v, movers, sit, changing=None, dest=None, turn=None, lights=N
             out["lane_kind(%s,none)" % side] = 1                         # no same-direction lane there
             if getattr(lane, side) and getattr(lane, side + "_opposite"):
                 out["oncoming(%s)" % side] = 1                           # the opposite direction's driving lane (668e45)
-    rs = route_side(lm, ego) if home is None else None
+    rs = (route_side(lm, ego) or goal_side(lm, ego)) if home is None else None    # a lane cut off from the route first, then the goal's lane
     if rs is not None:
         out["route_lane(%s)" % rs] = 1                               # my lane leaves my route; the D lane carries it on (change_route)
     if changing:

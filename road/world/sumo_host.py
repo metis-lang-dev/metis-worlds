@@ -130,6 +130,7 @@ class Loop:
     def perceive_project(self):
         truth = self.world.truth()
         movers, ego = self.perc.step(truth, EGO)
+        ego.goal_lanes = getattr(getattr(self.world, "director", None), "goal_lanes", None)   # a CommonRoad goal's lanes (cr_world): route_lane toward them
         t3 = time.perf_counter()
         lights = self.world.lights()
         f, binding, fold, states = road_facts.facts(self.lanemap, ego, ego.dyn.vmax, movers, self.sit,
