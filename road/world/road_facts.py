@@ -54,6 +54,7 @@ a1..a3, vru1). The facts (every number stays here; the rules read classes):
 - the beat: now (one a tick; the command rules consume it)."""
 from dataclasses import replace
 
+from semantic_world import levelk
 from semantic_world.situation import Situation, safe_same_dir, stated, stop
 from restrict import INCH_MS
 
@@ -391,11 +392,30 @@ def oncoming_clear(lm, ego, v, cap, lead, onc, movers, speeds=None, sight_m=REAC
     return True
 
 
+def levelk_facts(game, pairs, dt=0.1):
+    """levelk.llp's atoms (LEVELK.md §2): per bound crosser of the pairs (a crossing pair with a role) its tables and the
+    belief over its level (semantic_world.levelk), and the next zone's reading, by_game(nextzone) when any crosser's is,
+    else by_rule(nextzone). GAME: a levelk.Game, the host's memory across ticks; crossers no longer seen are forgotten."""
+    out, zone, keep = {}, "by_rule", set()
+    for p in pairs:
+        if not p.type.startswith("xing_") or p.role is None or p.o_enter is None:
+            continue
+        r = game.step(p.id, p, dt)
+        keep.add(p.id)
+        out.update(levelk.facts(p.role, r))
+        if r["zone"] == "by_game":
+            zone = "by_game"
+    game.forget(keep)
+    out["%s(nextzone)" % zone] = 1
+    return out
+
+
 def facts(lm, ego, v, movers, sit, changing=None, dest=None, turn=None, lights=None, speeds=None, left_from=None, pace=None, sight=None, stood=None,
-          standing=None):
+          standing=None, game=None):
     """SPEEDS {mover id: v}: the movers' speeds (the lead's for lead_slow). LEFT_FROM (side, age s): the side the
     ego's last lane change left, and how long ago. PACE: a target speed under the limit; above it by PACE_BAND the ego is above_target (the
-    planner's soft brake)."""
+    planner's soft brake). GAME: a semantic_world.levelk.Game to state levelk.llp's atoms at the next zone (levelk_facts);
+    None, the default: none are stated and the law is today's."""
     ego.route = ego.route or [ego.lane]
     home = oncoming_home(lm, ego)
     if home is not None:                       # passing on the oncoming lane: the projection in the ego's heading (heading_frame)
@@ -571,5 +591,7 @@ def facts(lm, ego, v, movers, sit, changing=None, dest=None, turn=None, lights=N
                 elif a - NEAR_WALK <= w.s <= b:
                     out["crossing(vru1,near)"] = 1
                 break
+    if game is not None and zr["nextzone"]:
+        out.update(levelk_facts(game, pairs))
     out["now"] = 1
     return out, roles, fold, states

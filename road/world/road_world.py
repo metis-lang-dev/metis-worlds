@@ -37,6 +37,7 @@ import random
 from dataclasses import dataclass, field
 
 from semantic_world.lane import Lane, LaneMap, Mover, Zone, dynamics_for
+from semantic_world.levelk import Game
 from semantic_world.situation import Situation
 
 import restrict
@@ -117,7 +118,7 @@ class Ego:
 
 
 class RoadWorld:
-    def __init__(self, scenario="cruise", seed=1, sensor_range=SENSOR_RANGE):
+    def __init__(self, scenario="cruise", seed=1, sensor_range=SENSOR_RANGE, levelk=False):
         self.name, self.seed, self.rng = scenario, seed, random.Random(seed)
         self.sensor_range = float(sensor_range)
         self.t, self.tick = 0.0, 0
@@ -135,6 +136,7 @@ class RoadWorld:
         self.dest = spec.get("dest", 580.0)
         self.s0 = float(e["s"])
         self.sit = Situation()
+        self.game = Game() if levelk else None     # LEVELK.md §2: the game's atoms at the next zone; off until the law's pin
         self.collisions, self.violations, self.restricted, self.log = [], [], 0, []
         self.zone_turn = {"m": None}                # the zipper: the lane the last entrant came from
         self.last_in = {}                           # zone -> movers inside last step
@@ -168,7 +170,7 @@ class RoadWorld:
             self._obs = road_facts.facts(self.map, self.ego.m, self.ego.v, [ag.m for ag in live], self.sit,
                                          changing=self.ego.change_side, dest=self.dest, turn=self.zone_turn,
                                          left_from=(self.ego.left_from[0], self.t - self.ego.left_from[1]) if self.ego.left_from else None,
-                                         speeds={ag.m.id: ag.v for ag in live})
+                                         speeds={ag.m.id: ag.v for ag in live}, game=self.game)
             self._obs_tick = self.tick
         return self._obs
 

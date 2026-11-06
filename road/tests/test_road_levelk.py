@@ -1,0 +1,38 @@
+"""The exerciser's levelk projection (LEVELK.md §2; levelk-intersection s-5be9291b step 2): off by default, on with
+RoadWorld(levelk=True). Run in a python with libs/semantic-world installed (or on PYTHONPATH)."""
+import sys
+from pathlib import Path
+
+WORLD = Path(__file__).resolve().parents[1] / "world"
+sys.path.insert(0, str(WORLD))
+import road_world  # noqa: E402
+
+GAME = ("myopic(", "ego_myopic(", "reply(", "ego_reply(", "level_belief(", "believed(", "by_game(", "by_rule(")
+
+
+def ticks(levelk, n=120):
+    w = road_world.RoadWorld("junction", seed=1, levelk=levelk)
+    out = []
+    for _ in range(n):
+        out.append(dict(w.observe()[0]))
+        w.step()
+    return out
+
+
+def test_off_by_default_no_game_atoms():
+    assert not road_world.RoadWorld("junction", seed=1).game
+    assert not [a for f in ticks(False) for a in f if a.startswith(GAME)]
+
+
+def test_the_crosser_who_keeps_coming_turns_the_zone_by_game():
+    """junction: the main road has the way, the side road's car crosses without yielding (a scripted driver: level 0 in
+    effect). The tables are stated for its role while it is bound; the rule's prediction (it yields) is contradicted tick
+    after tick, the belief finds l0, and the zone turns by_game; by_rule before and after."""
+    fs = ticks(True)
+    bound = [f for f in fs if "believed(a1,l0)" in f or "believed(a1,l1)" in f or "believed(a1,l2)" in f]
+    assert bound and all("myopic(a1,go)" in f or "myopic(a1,hold)" in f or "myopic(a1,yield)" in f for f in bound)
+    assert all(sum(a.startswith("level_belief(a1,") for a in f) == 3 for f in bound)
+    game = [f for f in fs if "by_game(nextzone)" in f]
+    assert game and all("believed(a1,l0)" in f and "level_belief(a1,l0,high)" in f for f in game)
+    assert "by_rule(nextzone)" in fs[0] and "by_rule(nextzone)" in fs[-1]
+    assert not [f for f in fs if "by_game(nextzone)" in f and "by_rule(nextzone)" in f]
