@@ -18,17 +18,18 @@ The host decides `by_game` from the rule's prediction against the observed moves
 Moves on lanes are longitudinal: `type move {go hold yield}` (go: accelerate or keep toward the zone; hold: keep the present speed short of committing; yield: brake to stop before the line). A lane change is the law's own decision, not a move of the game. The host scores each pair of moves over a horizon H (3 s, dt 0.1) with a kinematic rollout and the reward R = w_c·collision + w_s·safe_distance (the RSS distance of the pair, the fold's) + w_p·progress + w_l·lane; the weights are rates in the sense of spec 19 (constants of the host, fit by notching from the catalog later, never tuned in a rule). From the scores the host states, per crosser O:
 
 ```
-pred myopic(obj, move) : planner.        % O's level-0 move: its best move ignoring the ego's reaction
-pred ego_myopic(move) : planner.         % the ego's level-0 move
+pred crosser(zone, obj) : planner.       % O approaches the zone on a crossing or merging lane, not yet inside: the game's partner (holder names the one inside)
+pred myopic(obj, move) : planner.        % O's level-0 move: its best move with the ego STANDING (Li et al.'s level 0: others as static obstacles)
+pred ego_myopic(obj, move) : planner.    % ego_myopic(O, E): the ego's level-0 move against O alone (the game is pairwise)
 pred reply(obj, move, move) : planner.   % reply(O, E, M): O's best move M if the ego plays E (one step)
-pred ego_reply(move, move) : planner.    % ego_reply(M, E): the ego's best move E if O plays M (one step)
+pred ego_reply(obj, move, move) : planner.   % ego_reply(O, M, E): the ego's best move E if O plays M (one step)
 pred level_belief(obj, klevel, blevel) : planner.   % the belief that O reasons at level k, quantised (spec 16 level port)
 pred believed(obj, klevel) : planner.    % the argmax level (one per crosser)
 pred by_rule(zone) : planner.
 pred by_game(zone) : planner.
 family zone_game (by_rule by_game).      % per zone, where a zone is
 ```
-`type klevel {l0 l1 l2}`, `type blevel {low mid high}` (the family's belief levels). The tables are tiny (3×3 per crosser) and the rollout is the semantic world's existing prediction kernel over the pair's lane geometry; the host never states a trajectory, only moves.
+`type klevel {l0 l1 l2}`, `type blevel {low mid high}` (the family's belief levels). The zone's reading `by_rule(nextzone)` is stated EVERY tick wherever a zone is, the game on or off (off = always by_rule): `yield_zone` and `keep_cross` read it since the unit exists. The tables are tiny (3×3 per crosser) and the rollout is the semantic world's existing prediction kernel over the pair's lane geometry; the host never states a trajectory, only moves.
 
 ## 3. The law: the levels as premise chains (the unit `levelk.llp`, the car's and the chair's)
 
@@ -36,31 +37,31 @@ Level k of the other is a chain of k+1 reads over the host's tables; the binding
 
 ```
 % O at level 0 plays M:          $myopic(O, M)
-% O at level 1 plays M:          $ego_myopic(E0) * $reply(O, E0, M)
-% O at level 2 plays M:          $myopic(O, M0) * $ego_reply(M0, E1) * $reply(O, E1, M)
+% O at level 1 plays M:          $ego_myopic(O, E0) * $reply(O, E0, M)
+% O at level 2 plays M:          $myopic(O, M0) * $ego_reply(O, M0, E1) * $reply(O, E1, M)
 ```
 The decision reads the believed level and the move it predicts, in the planner's two stages:
 
 ```
 stage safety {
   %% The zone is nobody's by rule, a car comes, and at the level I believe it is, it keeps coming: I yield.
-  yield_game_l0 [dyn] : $busy * $tick__grant(planner, controls) * $by_game(nextzone) * $zone_at(nextzone, C) * $closing_in(C) * $holder(nextzone, O) * $believed(O, l0) * $myopic(O, go) * now -o ().
-  yield_game_l1 [dyn] : ... * $believed(O, l1) * $ego_myopic(E0) * $reply(O, E0, go) * now -o ().
-  yield_game_l2 [dyn] : ... * $believed(O, l2) * $myopic(O, M0) * $ego_reply(M0, E1) * $reply(O, E1, go) * now -o ().
+  yield_game_l0 [dyn] : $busy * $tick__grant(planner, controls) * $by_game(nextzone) * $zone_at(nextzone, C) * $closing_in(C) * $crosser(nextzone, O) * $believed(O, l0) * $myopic(O, go) * now -o ().
+  yield_game_l1 [dyn] : ... * $believed(O, l1) * $ego_myopic(O, E0) * $reply(O, E0, go) * now -o ().
+  yield_game_l2 [dyn] : ... * $believed(O, l2) * $myopic(O, M0) * $ego_reply(O, M0, E1) * $reply(O, E1, go) * now -o ().
 }
 stage progress {
   %% The zone is nobody's by rule, and at the level I believe it is, the car yields to me: I go on.
-  go_game_l0 [dyn] : $busy * $tick__grant(planner, controls) * $by_game(nextzone) * $holder(nextzone, O) * $believed(O, l0) * $myopic(O, yield) * $below_target * $lead_ok * $accel_ok * go -o ().
+  go_game_l0 [dyn] : $busy * $tick__grant(planner, controls) * $by_game(nextzone) * $crosser(nextzone, O) * $believed(O, l0) * $myopic(O, yield) * $below_target * $lead_ok * $accel_ok * go -o ().
   go_game_l1 / go_game_l2 : the same with the level-1 / level-2 chains ending in yield.
   %% ... it holds: I keep my speed and watch (the present-only bounds keep the stop available).
   keep_game_* : the chains ending in hold, the command keep.
 }
 ```
-Nine rules, three per predicted move, the `%%` lines a person reads. The `yields_to(same)` case of today's `yield_zone` is gated by `by_rule`: the base rule gains `$by_rule(nextzone)` (one base change, the family evolving; derivation by GATING, spec 18), so the two units never fire together. Where the belief is spread (no level above `mid`), the law's default is the rule's: `by_game` is not stated and today's law holds. A second form, when the levels' weights should draw the decision instead of the argmax: the three `go_game_*` rules carry weight ports reading `level_belief` (spec 16 §2, spec 19 §7.3), and the sampler draws proceed/yield in proportion: the expected-reward choice in the mass-action semantics. The first form ships; the second is one manifest change.
+Nine rules, three per predicted move, the `%%` lines a person reads. Today's `yield_zone` and `keep_cross` gain `$by_rule(nextzone)` (the base change, the family evolving; derivation by GATING, spec 18), so the rule's reading and the game's never fire together. Two crossers are two chains: a yield in the safety stage wins over any go; two progress reads compete for the one `go` until the weight form orders them. The unit includes nothing: the member's program brings `planner_domain.llp` (the car through `change.llp`, a chair directly) and `levelk.llp` after it. Step 1 landed as metis-catalog road-levelk 937b79b: 18 cases (nine rules; by_rule ignores the tables ×3; the believed level selects the chain ×3; the l2 chain binds its moves; two crossers ×2), 64 planner cases pass. Where the belief is spread (no level above `mid`), the law's default is the rule's: `by_game` is not stated and today's law holds. A second form, when the levels' weights should draw the decision instead of the argmax: the three `go_game_*` rules carry weight ports reading `level_belief` (spec 16 §2, spec 19 §7.3), and the sampler draws proceed/yield in proportion: the expected-reward choice in the mass-action semantics. The first form ships; the second is one manifest change.
 
 ## 4. The belief and its update (spec 16)
 
-Per crosser, a categorical belief over {l0, l1, l2} (prior 0.2 / 0.6 / 0.2 as the source; a constant of the host). Each tick the host observes O's move (quantised from its acceleration against its myopic/reply predictions) and updates the posterior with a likelihood P(observed move | level) that is a softmax of the level's predicted move with a temperature (the user's improvement A over the source's L1 nearest-model pick): smooth, and a driver that changes behaviour moves the belief within a few ticks. `believed(O, K)` is the argmax; `level_belief(O, K, L)` the quantisation. Behaviour types beyond depth (cooperative, assertive, aggressive: the source's improvement B) are a second categorical port later, separate from the level, as the user's note says.
+Per crosser, a categorical belief over {l0, l1, l2} (prior 0.2 / 0.6 / 0.2 as the source; a constant of the host). Each tick the host observes O's move (quantised from its acceleration against its myopic/reply predictions) and updates the posterior with a likelihood P(observed move | level) that is a softmax of the level's predicted move with a temperature (the user's improvement A over the source's L1 nearest-model pick): smooth, and a driver that changes behaviour moves the belief within a few ticks. `believed(O, K)` is the argmax; `level_belief(O, K, L)` the quantisation, both stated by the host this round; the spec 16 manifest form (`beliefs:` over a weight port, `levels:` from it) lands with the weight form. Step 2 (nina, road-levelk-host): on the two-car left turn every pairing clears except l0×l0 and l2×l0 (contact) and l1×l1 (the level-k deadlock); the believing ego clears against l0, l1 and l2. Behaviour types beyond depth (cooperative, assertive, aggressive: the source's improvement B) are a second categorical port later, separate from the level, as the user's note says.
 
 ## 5. The small world: metis-worlds road/intersection
 
