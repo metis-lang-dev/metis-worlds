@@ -3,6 +3,7 @@ Shalev-Shwartz, Shammah, Shashua, arXiv:1708.06374; ad-rss-lib): vcap in the sta
 leave braking at brake_max, Def 17 case 2 and Def 18's memory at a crossing, the lateral left/right split and the
 per-pair lateral response in facts()."""
 import math
+from pathlib import Path
 
 from semantic_world import situation as S
 from semantic_world.situation import Dynamics, Pair, Situation
@@ -247,3 +248,41 @@ def test_a_lead_whose_rear_has_not_cleared_the_egos_front_asks_brake_max_whateve
 def test_a_faster_lead_with_a_gap_stays_at_brake_min():
     s = Situation().check([lead_pair(2.0, 6.0, 7.5)])[0]
     assert not s.dangerous or s.resp_lon in ("none", "brake_min")
+
+
+# -- the VRU and no-priority crossings escalate (the walker cards: DynamicObjectCrossing / ParkingCrossingPedestrian) -------
+
+def vpair(kind, d_enter, ego_v=14.25, obj_class=None, o_enter=3.0):
+    return Pair("w:" + kind, kind, d_enter=d_enter, d_leave=d_enter + 3.0, o_enter=o_enter, o_leave=o_enter + 3.0,
+                ego=Dynamics(vmin=ego_v, vmax=ego_v, **CAR), obj=Dynamics(vmin=2.0, vmax=2.0, **CAR), role="vru1", obj_class=obj_class)
+
+
+def test_a_mid_block_walker_escalates_brake_min_then_max_and_never_clears():
+    """Records 20261106T162719-f5ad6f / f5ad70 / f5ad71: a walker crossing (xing_same_prio) ahead of the ego at 14.25 m/s; the fold
+    held brake_min to the contact. brake_min stops in 25.4 + 1, brake_max in 12.7 + 1."""
+    s = Situation().check([vpair("xing_same_prio", 40.0, obj_class="pedestrian")])[0]
+    assert not s.dangerous or s.resp_lon == "brake_min"                                 # 26.4 < 40: brake_min stops short
+    sit = Situation()
+    s = sit.check([vpair("xing_same_prio", 20.0, obj_class="pedestrian")])[0]
+    assert s.dangerous and s.resp_lon == "brake_max"                                    # only brake_max does (13.7 < 20)
+    s = sit.check([vpair("xing_same_prio", 10.0, obj_class="pedestrian")])[0]
+    assert s.resp_lon == "brake_max"                                                    # neither does: still, never cleared
+
+
+def test_a_walker_with_the_ego_holding_the_way_is_never_cleared():
+    """xing_ego_prio: a car the ego cannot stop short of is cleared (rule 5's holder); a walker is not: brake_max still."""
+    car = Situation().check([vpair("xing_ego_prio", 10.0, o_enter=0.0)])[0]
+    walker = Situation().check([vpair("xing_ego_prio", 10.0, obj_class="pedestrian", o_enter=0.0)])[0]
+    assert car.resp_lon == "none" and walker.resp_lon == "brake_max"
+
+
+def test_the_lanemaps_crossing_pairs_carry_the_movers_class():
+    from semantic_world.lane import Mover, dynamics_for
+    from semantic_world.net import load_net
+    m = load_net(Path(__file__).parent / "nets" / "cross.net.xml").lanemap()
+    z = next(z for z in m.zones if z.id == "C:8:11")
+    (la, (a0, _)), (lb, (b0, _)) = list(z.lanes.items())
+    ego = Mover("ego", la, max(0.0, a0 - 8.0), dynamics_for("passenger", v=8.0, ego=True), route=[la])
+    w = Mover("w", lb, max(0.0, b0 - 1.0), dynamics_for("pedestrian", v=1.5), vclass="pedestrian")
+    p = next(p for p in m.pairs(ego, [w]) if p.type.startswith("xing"))
+    assert p.obj_class == "pedestrian"

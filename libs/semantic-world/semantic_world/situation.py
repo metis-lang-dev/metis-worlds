@@ -43,6 +43,7 @@ RESP_UNST = ("none", "continue", "drive_away", "brake")                      # t
 SECTORS = 8                                                                  # the drive-away heading's quantisation
 LON = ("in_front", "overlap_front", "overlap", "overlap_back", "at_back")     # the OBJECT relative to the ego
 LAT = ("at_left", "overlap_left", "overlap", "overlap_right", "at_right")
+VRU_CLASSES = ("pedestrian", "bicycle", "wheelchair")   # a crossing with one of these is never cleared: brake_max still (rule 5's escalation)
 RESP_LON = ("none", "brake_min_correct", "brake_min", "brake_max")          # the enum order: the most severe last (brake_max: rule 5
                                                                             # escalated, only the hardest stops the ego short)
 RESP_LAT = ("none", "brake_min")
@@ -163,6 +164,7 @@ class Pair:
     o_enter: float = None
     o_leave: float = None
     role: str = None
+    obj_class: str = None              # the object's vClass when the adapter knows it (a crossing: a walker or a cyclist escalates, VRU)
     bearing: float = None              # unstructured: the heading from the ego to the object (radians, the map's frame)
 
 
@@ -428,7 +430,7 @@ class Situation:
             else:
                 self.away.discard(p.id)
             if dangerous and ((p.type == "xing_ego_prio" and r_lon in ("brake_min", "brake_max"))
-                              or (p.type in ("same_dir", "xing_obj_prio") and r_lon == "brake_max")):
+                              or (p.type in ("same_dir", "xing_obj_prio", "xing_same_prio") and r_lon == "brake_max")):
                 self.escalated.add(p.id)          # held at least that while the pair stays dangerous
             else:
                 self.escalated.discard(p.id)      # safe again, or released (the other stopped; the ego past stopping short)
@@ -589,20 +591,23 @@ def respond(p, dangerous, before, xbefore=None, escalated=False):
     a lead, and a rear-end it cannot avoid is met at the hardest braking."""
     if not dangerous or p.type == "not_relevant":
         return "none", "none"
+    vru = p.obj_class in VRU_CLASSES
     if p.type == "xing_ego_prio":                              # rule 5 from the PRESENT only (the ruling): the blame facts
         stopped = (p.obj.vmax or 0.0) <= 0.0                   # (safe_before / xing_before) stay recorded and never gate it,
         if stopped or not (escalated or (p.o_enter is not None and past_last_stop(p.obj, p.o_enter))):
             return "none", "none"                              # it may still yield (or has stopped): the other brakes
         if ego_stops_short(p.ego, p.d_enter):                  # it has not shown it yields: the ego avoids it if it can,
             return "brake_min", "none"                         # at its proper response while that stops it short,
-        if ego_stops_short_max(p.ego, p.d_enter):
-            return "brake_max", "none"                         # at its hardest while only that does,
-        return "none", "none"                                  # else inside, or past stopping short: clear it, never hold
+        if ego_stops_short_max(p.ego, p.d_enter) or vru:
+            return "brake_max", "none"                         # at its hardest while only that does (a walker or cyclist: still
+        return "none", "none"                                  # when neither does, it is never cleared); else inside, or past
+                                                               # stopping short: clear it, never hold
     if p.type.startswith("xing"):
         case, front = xbefore or (None, None)
         if case == "safe_long" and front is True:
             return "none", "none"
-        if p.type == "xing_obj_prio":                          # the YIELDER, rule 5's symmetry (cr-harvest s-f4e297da, L1):
+        if p.type == "xing_obj_prio" or p.type == "xing_same_prio" or vru:   # the YIELDER, rule 5's symmetry (cr-harvest L1), and
+                                                               # every VRU crossing and no-priority crossing (the walker cards):
             if not escalated and ego_stops_short(p.ego, p.d_enter):
                 return "brake_min", "none"                     # at its proper response while that stops it short of the conflict,
             return "brake_max", "none"                         # at its hardest while only that does (ESCALATED holds it), and at

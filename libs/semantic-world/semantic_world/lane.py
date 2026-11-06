@@ -429,7 +429,7 @@ class LaneMap:
                 key, kind, d_in, d_out, o_in, o_out = hit
                 out.append(Pair("%s:%s:%s" % (o.id, kind, key), kind, "in_front", "overlap", 0.0, 0.0, ego.dyn, o.dyn,
                                 d_enter=max(0.0, d_in), d_leave=max(0.0, d_out),
-                                o_enter=max(0.0, o_in), o_leave=max(0.0, o_out), role=role_of(o)))
+                                o_enter=max(0.0, o_in), o_leave=max(0.0, o_out), role=role_of(o), obj_class=o.vclass))
                 continue
             out.append(Pair("%s:not_relevant" % o.id, "not_relevant", role=role_of(o), ego=ego.dyn, obj=o.dyn))
         return out
