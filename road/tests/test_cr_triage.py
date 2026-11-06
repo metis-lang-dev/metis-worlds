@@ -358,5 +358,11 @@ def test_a_contact_across_a_foe_gap_is_the_converters(tmp_path):
     rows = [{"truth": 1}, {"k": 30, "ego": {"lane": ":50_4_0", "s": 11.0, "v": 5.0, "contact": ["P"]},
                            "things": [{"id": "P", "lane": ":50_5_0", "s": 10.0, "v": 4.0}]}]
     (tr / "truth.jsonl").write_text("".join(json.dumps(r) + "\n" for r in rows))
-    row_ = {"summary": {"director": {"cr": {"foe_gaps": [[":50_5_0", ":50_4_0"]]}}}}
-    assert T.foe_gap(row_, tr) and not T.foe_gap({"summary": {}}, tr)
+    bare = {"summary": {"director": {"cr": {"foe_gaps": [[":50_5_0", ":50_4_0"]]}}}}
+    assert not T.foe_gap(bare, tr) and not T.foe_gap({"summary": {}}, tr)          # no from/to: inert
+    sib = {"summary": {"director": {"cr": {"foe_gaps": [{"lanes": [":50_5_0", ":50_4_0"], "from": ["77195_0", "77195_0"],
+                                                          "to": ["77536_0", "77198_0"]}]}}}}
+    assert not T.foe_gap(sib, tr)                                                  # one approach lane: siblings, the law's
+    cross = {"summary": {"director": {"cr": {"foe_gaps": [{"lanes": [":50_5_0", ":50_4_0"], "from": ["77194_0", "77195_0"],
+                                                            "to": ["77536_0", "77198_0"]}]}}}}
+    assert T.foe_gap(cross, tr)

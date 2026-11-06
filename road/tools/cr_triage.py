@@ -289,9 +289,16 @@ CUTIN_TICKS = 10                                # a lead bound this shortly befo
 
 def foe_gap(row, tr):
     """At the truth's first contact, the ego's lane and its partner's are a pair of cr_world's foe_gaps (summary.director.cr.foe_gaps:
-    internal lanes of one junction whose centre lines intersect, neither link the other's foe): the converter's, not the law's."""
+    internal lanes of one junction whose centre lines intersect, neither link the other's foe): the converter's, not the law's.
+    Only an entry that carries its links' from and to lanes, both distinct (no siblings, no merge), counts (the architect's ruling:
+    until the field carries them the rule is inert): {"lanes": [a, b], "from": [fa, fb], "to": [ta, tb]}."""
     from metis import surprise_kind as SK
-    gaps = {frozenset(g) for g in (_cr(row).get("foe_gaps") or ()) if len(g) == 2}
+    gaps = set()
+    for g in _cr(row).get("foe_gaps") or ():
+        lanes, frm, to = (g.get("lanes"), g.get("from"), g.get("to")) if isinstance(g, dict) else (list(g)[:2], None, None)
+        if not lanes or len(lanes) != 2 or not frm or not to or len(set(frm)) < 2 or len(set(to)) < 2:
+            continue                                # no from/to, or one approach (siblings) / one outgoing lane (a merge): inert
+        gaps.add(frozenset(lanes))
     if not gaps:
         return False
     rows, _ = SK.read_truth(tr)
