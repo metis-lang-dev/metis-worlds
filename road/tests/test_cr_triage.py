@@ -335,3 +335,11 @@ def test_ruling_l2_a_met_cut_in_and_an_unavoidable_start_are_the_worlds(tmp_path
             r["ego"]["v"] = 15.0
     (tr / "truth.jsonl").write_text("".join(json.dumps(r) + "\n" for r in rows))
     assert T.unavoidable_start(tr, "P")                                                # 15 m/s, ~2 m behind a crawling lead
+
+
+def test_a_cut_in_partner_entering_behind_the_egos_front_is_the_follower():
+    rows = {8: {"ego": {"lane": "x", "s": 5.0}, "things": [{"id": "P", "lane": "y", "s": 7.0}]},
+            9: {"ego": {"lane": "a", "s": 6.0}, "things": [{"id": "P", "lane": "a", "s": 4.0}]}}
+    assert T.behind_at_entry(rows, "P", 8)                                         # the first shared tick: behind
+    rows[9]["things"][0]["s"] = 9.0
+    assert not T.behind_at_entry(rows, "P", 8)                                     # ahead of the ego's front: the lead

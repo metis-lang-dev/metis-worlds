@@ -323,8 +323,21 @@ def cut_in_met(tr, pid):
         return False                                # the ego came onto ITS lane (a merge into a standing car): no cut-in
     if not any(x.get("role") for x in before):
         return False                                # never bound before: a convergence with no pair (L3), not a cut-in
+    if behind_at_entry(rows, pid, since):
+        return True                                 # its front behind the ego's as it entered: the follower's duty (RSS: the rear brakes)
     log = world_log(tr)
     return any((log.get(k) or {}).get("resp") == "brake_max" for k in range(max(0, kc - CUTIN_TICKS), kc + 1))
+
+
+def behind_at_entry(rows, pid, since):
+    """At the first tick from SINCE on where PID shares the ego's lane (its entry), its front was behind the ego's: the follower."""
+    for k in sorted(k for k in rows if k >= since):
+        ego = rows[k].get("ego") or {}
+        th = next((x for x in rows[k].get("things") or () if x.get("id") == pid), None)
+        if th is None or th.get("lane") != ego.get("lane") or th.get("s") is None or ego.get("s") is None:
+            continue
+        return th["s"] < ego["s"]
+    return False
 
 
 def unavoidable_start(tr, pid):
