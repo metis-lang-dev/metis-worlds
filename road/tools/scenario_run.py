@@ -7,6 +7,8 @@ its standing (pass | soft | fail | world) and compared with the card's `verdict`
     road/tools/scenario_run.py verdict CARD … [--host H]                   measure and write the card's verdict (with since)
     road/tools/scenario_run.py batch plan|work|launch|status|pull|recover …  cr_batch over cards (jobs carry the card's path)
     road/tools/scenario_run.py index [DIR]                                  road/catalog/index.json (id, source, tags, verdict, map)
+    road/tools/scenario_run.py coverage [DIR] [--host H]                    tags x standings from the verdicts (CI's coverage)
+    road/tools/scenario_run.py list [DIR] [--host sumo]                     the cards a host plays, JSON (CI's matrix)
 
 Two kinds of card, one row: a card on a town (the CARLA cards: map.town / sites, played as road_tree's `card:NAME`, measured by
 scenario_cards.check as road/experiments/scenarios.py does) and a card on a stored net (map.net + map.data: played as `cr:ID`
@@ -244,7 +246,7 @@ def entry(card, host):
 
 def skipped(card, host):
     e = entry(card, host)
-    return e == "skip" or (isinstance(e, dict) and "skip" in e)
+    return e == "skip" or (isinstance(e, dict) and ("skip" in e or e.get("status") == "skip"))
 
 
 def expected(card, host=None):
@@ -268,6 +270,8 @@ def cmd_check(a):
     moved, lines = 0, ["| card | host | verdict | measured | why |", "|---|---|---|---|---|"]
     for path in cards_in(a.cards):
         card = load(path)
+        if on_net(card) and a.host == "exerciser":            # a stored net plays on SUMO only
+            continue
         h = host_of(card, a.host)
         if skipped(card, h) or (not on_net(card) and h == "exerciser" and (card.get("exerciser") or {}).get("skip")):
             continue
@@ -281,6 +285,9 @@ def cmd_check(a):
         print(lines[-1], flush=True)
     print("\n".join(lines))
     print("moved: %d" % moved)
+    if os.environ.get("GITHUB_STEP_SUMMARY"):                  # CI: the table on the run's page
+        with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as f:
+            f.write("### scenario_run check (%s): %d moved\n\n%s\n" % (a.host, moved, "\n".join(lines)))
     sys.exit(1 if moved else 0)
 
 
@@ -294,6 +301,48 @@ def cmd_verdict(a):
         st = run(card, h, a.seed, a.out, trace)["standing"]
         write_verdict(card, st, h)
         print("%s %s %s" % (card_id(card), st["status"], st.get("why") or ""))
+
+
+def coverage(paths, host=None):
+    """The coverage table (SCENARIO-CARD §6, step 5): per regulation group (the card's `tags`), the cards' standings per host
+    from their verdicts. → markdown."""
+    table, hosts = {}, [host] if host else list(HOSTS)
+    for path in cards_in(paths):
+        c = load(path)
+        for t in c.get("tags") or ["(untagged)"]:
+            for h in hosts:
+                st = "skip" if skipped(c, h) else expected(c, h)
+                if st:
+                    table.setdefault(t, {}).setdefault(h, {}).setdefault(st, 0)
+                    table[t][h][st] += 1
+    cols = ["pass", "soft", "fail", "world", "skip"]
+    lines = ["| tag | host | " + " | ".join(cols) + " |", "|---|---|" + "---|" * len(cols)]
+    for t in sorted(table):
+        for h in hosts:
+            if h in table[t]:
+                lines.append("| %s | %s | %s |" % (t, h, " | ".join(str(table[t][h].get(c, 0)) for c in cols)))
+    return "\n".join(lines) + "\n"
+
+
+def cmd_coverage(a):
+    md = coverage(a.cards, a.host)
+    print(md)
+    if os.environ.get("GITHUB_STEP_SUMMARY"):
+        with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as f:
+            f.write("### Coverage\n\n" + md)
+
+
+def cmd_list(a):
+    """The cards a host plays, as a JSON list (CI's matrix)."""
+    out = []
+    for path in cards_in(a.cards):
+        c = load(path)
+        if skipped(c, a.host) or (a.host == "exerciser" and on_net(c)):
+            continue
+        if a.host == "sumo" and not on_net(c) and not (c.get("sites") or {}).get("towns"):
+            continue
+        out.append(str(Path(path).resolve().relative_to(WORLDS)))
+    print(json.dumps(out))
 
 
 def cmd_index(a):
@@ -332,10 +381,17 @@ def main(argv=None):
         p.add_argument("--out")
         if p is r:
             p.add_argument("--trace")
+    cv = sub.add_parser("coverage")
+    cv.add_argument("cards", nargs="*", default=[str(CATALOG)])
+    cv.add_argument("--host", choices=list(HOSTS))
+    ls = sub.add_parser("list")
+    ls.add_argument("cards", nargs="*", default=[str(CATALOG)])
+    ls.add_argument("--host", default="sumo", choices=list(HOSTS))
     ix = sub.add_parser("index")
     ix.add_argument("dir", nargs="?", default=str(CATALOG))
     a = ap.parse_args(argv)
-    {"run": cmd_run, "check": cmd_check, "verdict": cmd_verdict, "index": cmd_index}[a.cmd](a)
+    {"run": cmd_run, "check": cmd_check, "verdict": cmd_verdict, "index": cmd_index, "coverage": cmd_coverage,
+     "list": cmd_list}[a.cmd](a)
 
 
 if __name__ == "__main__":

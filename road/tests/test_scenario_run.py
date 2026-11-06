@@ -66,6 +66,14 @@ def test_the_verdict_is_written_in_place_and_read_back(tmp_path, monkeypatch):
 def test_a_host_may_be_skipped(tmp_path):
     c = net_card(tmp_path, verdict={"exerciser": "skip", "sumo": {"status": "fail"}})
     assert R.skipped(c, "exerciser") and not R.skipped(c, "sumo") and R.expected(c, "sumo") == "fail"
+    c2 = net_card(tmp_path, verdict={"exerciser": {"status": "skip", "note": "why"}, "sumo": {"status": "pass"}})
+    assert R.skipped(c2, "exerciser")
+
+
+def test_coverage_counts_tags_by_host_and_standing(tmp_path):
+    net_card(tmp_path, tags=["following", "cut-in"], verdict={"exerciser": "skip", "sumo": {"status": "fail"}})
+    md = R.coverage([str(tmp_path)])
+    assert "| following | sumo | 0 | 0 | 1 | 0 | 0 |" in md and "| cut-in | exerciser | 0 | 0 | 0 | 0 | 1 |" in md
 
 
 def test_the_index(tmp_path):

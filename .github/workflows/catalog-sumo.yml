@@ -1,0 +1,90 @@
+# scenario-catalog step 5: the catalog on SUMO, nightly and on demand: one job per card (the cards SUMO plays,
+# `scenario_run.py list --host sumo`), each against its verdict.sumo; a verdict that moved EITHER way fails the run
+# (road/docs/SCENARIO-CARD.md §6). SUMO 1.18 from PyPI (eclipse-sumo), as road/setup-sumo.sh's wheel path; the family at
+# road/domains/catalog.pin, metisc built as in ci.yml's road-tests. Panzer keeps the harvest and the law-change reruns.
+name: catalog-sumo
+on:
+  schedule:
+    - cron: "17 1 * * *"
+  workflow_dispatch:
+  push:                                    # a change to this workflow runs it once, so it is tried on its branch before main
+    paths: [".github/workflows/catalog-sumo.yml"]
+jobs:
+  cards:
+    runs-on: ubuntu-24.04
+    outputs:
+      cards: ${{ steps.list.outputs.cards }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - id: list
+        run: |
+          python -m pip install -q pyyaml
+          echo "cards=$(python road/tools/scenario_run.py list road/catalog --host sumo)" >> "$GITHUB_OUTPUT"
+  sumo:
+    needs: cards
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      max-parallel: 20
+      matrix:
+        card: ${{ fromJSON(needs.cards.outputs.cards) }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: metis-worlds
+      - uses: actions/checkout@v4
+        with:
+          repository: metis-lang-dev/metis-lang
+          ref: master
+          path: metis-lang
+      - uses: actions/checkout@v4
+        with:
+          repository: metis-lang-dev/metispy
+          path: metispy
+      - uses: actions/checkout@v4
+        with:
+          repository: metis-lang-dev/metis-agent
+          path: metis-agent
+      - name: the road family's pin
+        id: fam
+        run: echo "catalog=$(tr -d '[:space:]' < metis-worlds/road/domains/catalog.pin)" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v4
+        with:
+          repository: metis-lang-dev/metis-catalog
+          ref: ${{ steps.fam.outputs.catalog }}
+          path: metis-catalog
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: metisc
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq ocaml-nox
+          make -C metis-lang metisc
+      - name: the Live, SUMO 1.18 (PyPI)
+        run: |
+          python -m pip install -q pyyaml pytest rtree==1.4.1 eclipse-sumo==1.18.0 traci==1.18.0 sumolib==1.18.0 \
+            -e ./metispy -e metis-worlds/libs/semantic-world
+          python -m pip install -q --no-deps -e metis-agent/py
+          sumo --version | head -1
+      - name: ${{ matrix.card }} against its verdict.sumo
+        run: |
+          cd metis-worlds
+          export METIS_HOME="$GITHUB_WORKSPACE/metis-catalog/domains/road" METIS_AGENT_PY="$(which python)" OMP_NUM_THREADS=1
+          export SUMO_HOME="$(python -c 'import sumo; print(sumo.SUMO_HOME)')"
+          python road/tools/scenario_run.py check "${{ matrix.card }}" --host sumo
+  coverage:
+    needs: sumo
+    if: always()
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: |
+          python -m pip install -q pyyaml
+          python road/tools/scenario_run.py coverage road/catalog
