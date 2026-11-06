@@ -31,5 +31,13 @@ actors:
 infractions: {scenario: []}
 expect: {arrived: true, collisions: 0, violations: 0}
 verdict:
-  exerciser: {status: skip, note: "its w_0 is a zebra: a mid-block crossing is SUMO's (exerciser.skip)"}
-  sumo: {status: fail, since: {worlds: 91bb99d, catalog: ef793dc}, record: 20261106T162719-f5ad6f, note: "as the source: 7 of 8 sites meet expect; Town03#2 touches the walker at 4.0 s (the responder holds brake_min on xing_same_prio, no escalation); measured by hand"}
+  exerciser:
+    status: skip
+    note: 'its w_0 is a zebra: a mid-block crossing is SUMO''s (exerciser.skip)'
+  sumo:
+    status: fail
+    record: 20261106T162719-f5ad6f
+    since:
+      worlds: '7170744'
+      catalog: ef793dc
+    note: collisions 3 > 0

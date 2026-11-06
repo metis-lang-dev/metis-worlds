@@ -33,5 +33,16 @@ actors:   # 6 stopped cars on the right lane, 11 m apart: 2 behind the cut-in ca
 infractions: {scenario: []}
 expect: {arrived: true, collisions: 0, violations: 0}
 verdict:
-  exerciser: {status: pass, since: {worlds: 13b7dac, catalog: ef793dc}, note: "as the source: expect met (DS 100); measured by hand at the migration"}
-  sumo: {status: fail, since: {worlds: 13b7dac, catalog: ef793dc}, record: 20261105T031542-40f229, note: "as the source: 3 of 4 sites collide with the cut-in car (Town03#49, Town03#127, Town03#135; DS 60/60/60), Town03#42 holds; measured by hand at the migration (scenario-catalog step 4)"}
+  exerciser:
+    status: pass
+    since:
+      worlds: 13b7dac
+      catalog: ef793dc
+    note: 'as the source: expect met (DS 100); measured by hand at the migration'
+  sumo:
+    status: fail
+    record: 20261105T031542-40f229
+    since:
+      worlds: '7170744'
+      catalog: ef793dc
+    note: collisions 1 > 0

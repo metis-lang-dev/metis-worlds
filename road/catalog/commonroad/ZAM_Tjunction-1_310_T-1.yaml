@@ -73,5 +73,5 @@ verdict:
   sumo:
     status: pass
     since:
-      worlds: e083e4c
+      worlds: '7170744'
       catalog: ef793dc

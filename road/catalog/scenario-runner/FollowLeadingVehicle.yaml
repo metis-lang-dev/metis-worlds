@@ -29,5 +29,14 @@ end: {near: lead, within: 20.0, stand_s: 1.0}   # the source's end (L137-143): t
 infractions: {scenario: []}
 expect: {arrived: false, collisions: 0, violations: 0}   # the exerciser: the ego stops behind the stopped lead, no arrival
 verdict:
-  exerciser: {status: pass, since: {worlds: 13b7dac, catalog: ef793dc}, note: "as the source: expect met (DS 100); measured by hand at the migration"}
-  sumo: {status: pass, since: {worlds: 13b7dac, catalog: ef793dc}, note: "as the source: all 8 sites meet expect (DS 100); measured by hand at the migration (scenario-catalog step 4)"}
+  exerciser:
+    status: pass
+    since:
+      worlds: 13b7dac
+      catalog: ef793dc
+    note: 'as the source: expect met (DS 100); measured by hand at the migration'
+  sumo:
+    status: pass
+    since:
+      worlds: '7170744'
+      catalog: ef793dc

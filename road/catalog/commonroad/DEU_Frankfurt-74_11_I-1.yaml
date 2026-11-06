@@ -257,6 +257,6 @@ verdict:
   sumo:
     status: fail
     since:
-      worlds: e083e4c
+      worlds: '7170744'
       catalog: ef793dc
     note: contact

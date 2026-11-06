@@ -48,5 +48,15 @@ actors:
 infractions: {scenario: []}
 expect: {arrived: true, collisions: 0, violations: 0}
 verdict:
-  exerciser: {status: pass, since: {worlds: 91bb99d, catalog: ef793dc}, note: "as the source: expect met (the planner yields at the zebra); measured by hand"}
-  sumo: {status: pass, since: {worlds: 91bb99d, catalog: ef793dc}, note: "as the source: all 4 sites meet expect (the planner yields to the three walkers); measured by hand"}
+  exerciser:
+    status: pass
+    since:
+      worlds: 91bb99d
+      catalog: ef793dc
+    note: 'as the source: expect met (the planner yields at the zebra); measured by
+      hand'
+  sumo:
+    status: pass
+    since:
+      worlds: '7170744'
+      catalog: ef793dc

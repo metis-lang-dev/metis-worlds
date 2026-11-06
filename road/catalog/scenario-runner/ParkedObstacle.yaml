@@ -19,5 +19,14 @@ actors:
 infractions: {scenario: [scenario_timeout: 240]}
 expect: {arrived: true, collisions: 0, violations: 0}
 verdict:
-  exerciser: {status: pass, since: {worlds: 13b7dac, catalog: ef793dc}, note: "as the source: expect met (DS 100); measured by hand at the migration"}
-  sumo: {status: pass, since: {worlds: 13b7dac, catalog: ef793dc}, note: "as the source: all 2 sites meet expect (DS 100); measured by hand at the migration (scenario-catalog step 4)"}
+  exerciser:
+    status: pass
+    since:
+      worlds: 13b7dac
+      catalog: ef793dc
+    note: 'as the source: expect met (DS 100); measured by hand at the migration'
+  sumo:
+    status: pass
+    since:
+      worlds: '7170744'
+      catalog: ef793dc
