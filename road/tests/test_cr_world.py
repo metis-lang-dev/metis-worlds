@@ -217,3 +217,9 @@ def test_the_goal_regions_for_the_view_and_the_live_measures():
     assert dr.goal_polys == [[[180, -2], [200, -2], [200, 2], [180, 2]]]
     drive(dr, c, [(0.1 * k, 140.0 + 1.0 * k, 0.0, 0.0, 10.0) for k in range(0, 45)])
     assert dr.live() == {"goal_t": 4.0, "goal_position_t": 4.0, "window_s": [[4.0, 6.0]], "contacts": 0, "off_lanelet_m": 0.0}
+
+
+def test_a_one_tick_seam_is_not_off_the_lanelets():
+    dr, c = director()
+    r = drive(dr, c, [(0.0, 50.0, 0.0, 0.0, 10.0), (0.1, 51.0, 3.0, 0.0, 10.0), (0.2, 52.0, 0.0, 0.0, 10.0)])
+    assert r["cr"]["off_lanelet_ticks"] == 0 and r["cr"]["off_lanelet_first_t"] is None

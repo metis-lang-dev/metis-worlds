@@ -349,6 +349,7 @@ class Director:
         self.goal_pos_t = self.goal_t = None
         self.t_now = None
         self.off_first_t = None
+        self.off_run, self.off_pending = 0, []
         self.contacts, self.off_ticks, self.off_m, self.driven = [], 0, 0.0, 0.0
         self.last_xy, self.removed, self.errors = None, [], []
 
@@ -470,11 +471,21 @@ class Director:
         if self.last_xy is not None:
             step = math.hypot(xy[0] - self.last_xy[0], xy[1] - self.last_xy[1])
             self.driven += step
-            if self.lanelets and not any(inside(xy, p) for p in self.lanelets):
-                self.off_ticks += 1
-                if self.off_first_t is None:
-                    self.off_first_t = round(t, 2)
-                self.off_m += step
+            off = bool(self.lanelets) and not any(inside(xy, p) for p in self.lanelets)
+            if off:
+                # a single tick outside every polygon is the seam between two lanelets at a junction (Foggia's 2 m), not a
+                # departure: a stretch counts from its second consecutive tick, its first tick with it (the architect's ruling)
+                self.off_run += 1
+                self.off_pending.append((round(t, 2), step))
+                if self.off_run >= 2:
+                    for tp, sp in self.off_pending:
+                        self.off_ticks += 1
+                        self.off_m += sp
+                        if self.off_first_t is None:
+                            self.off_first_t = tp
+                    self.off_pending = []
+            else:
+                self.off_run, self.off_pending = 0, []
         self.last_xy = xy
         for g in self.goals:
             if g["polys"] and not any(inside(xy, p) for p in g["polys"]):
