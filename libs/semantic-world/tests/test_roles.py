@@ -81,3 +81,29 @@ def test_in_a_junction_the_roles_still_bind(m):
     ego = mover(m, "ego", inner, 2.0, route=route, ego=True)
     roles = m.roles(ego, [mover(m, "ahead", "CW_0", 20.0), mover(m, "behind", "EC_0", m.lanes["EC_0"].length - 5.0)])
     assert roles["lead"] == "ahead" and roles["follower"] == "behind"
+
+
+# -- the SIBLING SIDE PAIR (cr-harvest s-f4e297da, L3: DEU_Guetersloh-29_4_T-1, junction 50) -----------------------------
+
+def sibling_map():
+    """Two links leave approach lane A: :j_4_0 straight on, :j_5_0 diverging to the right; their bodies share the first 13 m."""
+    from semantic_world.lane import Lane, LaneMap
+    return LaneMap([Lane("A", 50.0, succ=[":j_4_0", ":j_5_0"], shape=[(0.0, 0.0), (50.0, 0.0)], edge="a"),
+                    Lane(":j_4_0", 20.0, succ=["B"], shape=[(50.0, 0.0), (70.0, 0.0)], internal=True, junction="j"),
+                    Lane(":j_5_0", 20.9, succ=["C"], shape=[(50.0, 0.0), (70.0, -6.0)], internal=True, junction="j"),
+                    Lane("B", 50.0, shape=[(70.0, 0.0), (120.0, 0.0)], edge="b"), Lane("C", 50.0, shape=[(70.0, -6.0), (115.0, -25.0)], edge="c")],
+                   siblings={":j_4_0": [(13.0, [":j_5_0"], 13.0)], ":j_5_0": [(13.0, [":j_4_0"], 13.0)]})
+
+
+def test_a_sibling_mover_beside_the_ego_is_a_same_dir_side_pair_never_unpaired():
+    """Guetersloh-29_4: the partner on the diverging sibling, its front 1 m behind the ego's in the shared stretch: before, no
+    pair (on_way negative, not_relevant); now same_dir, overlapping behind (overlap_back, d_lon 0), at the ego's right."""
+    from semantic_world.lane import Mover, dynamics_for
+    lm = sibling_map()
+    ego = Mover("ego", ":j_4_0", 11.0, dynamics_for("passenger", v=5.0, ego=True), route=[":j_4_0", "B"])
+    o = Mover("cr349", ":j_5_0", 10.0, dynamics_for("passenger", v=4.0))
+    p = lm.pairs(ego, [o])[0]
+    assert (p.type, p.lon, p.lat, p.d_lon) == ("same_dir", "overlap_back", "at_right", 0.0) and 0.0 <= p.d_lat < 1.0
+    ahead = Mover("cr350", ":j_5_0", 13.0, dynamics_for("passenger", v=4.0))           # its front ahead: the lead, as before
+    q = lm.pairs(ego, [ahead])[0]
+    assert (q.type, q.lon) == ("same_dir", "in_front")

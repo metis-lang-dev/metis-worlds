@@ -332,6 +332,30 @@ class LaneMap:
                         return self.ahead(route, s0, rl, at)
         return None
 
+    def on_sibling(self, route, o):
+        """O is on a sibling chain of a ROUTE lane (Net.siblings: the links leaving one approach lane, overlapping at first)."""
+        return any(o.lane in chain for rl in route for _, chain, _ in self.siblings.get(rl, ()))
+
+    def side_of(self, ego, o):
+        """(at_left | at_right, the distance between the two bodies' centres across the ego's heading) of O beside EGO, from the
+        lanes' shapes at their centres; None without shapes."""
+        la, lb = self.lanes[ego.lane], self.lanes[o.lane]
+        if not la.shape or not lb.shape:
+            return None
+        def at(lane, s):
+            pts, s = lane.shape, max(0.0, s)
+            for (x0, y0), (x1, y1) in zip(pts, pts[1:]):
+                seg = math.hypot(x1 - x0, y1 - y0)
+                if s <= seg or (x1, y1) == pts[-1]:
+                    f = 0.0 if seg == 0 else min(1.0, s / seg)
+                    return x0 + f * (x1 - x0), y0 + f * (y1 - y0), math.atan2(y1 - y0, x1 - x0)
+                s -= seg
+            return pts[-1][0], pts[-1][1], 0.0
+        ex, ey, eh = at(la, ego.s - 0.5 * ego.length)
+        ox, oy, _ = at(lb, o.s - 0.5 * o.length)
+        across = -math.sin(eh) * (ox - ex) + math.cos(eh) * (oy - ey)                     # + to the ego's left
+        return ("at_left" if across >= 0 else "at_right"), abs(across)
+
     def lateral(self, a, b):
         """(position, offset) of lane B relative to lane A: at_left / at_right of a neighbour with the distance
         between the lanes' centres, overlap on the same lane (0), None when not neighbours."""
@@ -362,6 +386,15 @@ class LaneMap:
         for o in objects:
             d = self.on_way(route, ego.s, ego.length, o)
             lat, gap = self.lateral(ego.lane, o.lane)
+            if d is not None and d < 0 and lat is None and o.lane != ego.lane and self.on_sibling(route, o):
+                side = self.side_of(ego, o)                                                # beside or behind in the shared
+                if side is not None:                                                       # stretch of diverging links
+                    lat_s, off = side                                                      # (cr-harvest L3, Guetersloh-29_4)
+                    lon = "overlap_back" if -d < ego.length else "at_back"
+                    d_lon = 0.0 if lon == "overlap_back" else -d - ego.length
+                    d_lat = max(0.0, off - 0.5 * (ego.width + o.width))
+                    out.append(Pair("%s:same_dir" % o.id, "same_dir", lon, lat_s, d_lon, d_lat, ego.dyn, o.dyn, role=role_of(o)))
+                    continue
             if d is not None and lat is None and d >= 0:                                   # on a later lane of the way
                 lat = "overlap"
             if o.against and d is not None and lat == "overlap":                          # head-on along the ego's lane
