@@ -284,7 +284,9 @@ def place(doc, net):
         if path:
             route = [e.getID() for e in path]
         else:
-            why = "no way from %s to the goal's edge %s" % (edge.getID(), to.getID())
+            # the converted net has no way to the goal's edge (Flensburg, Lohmar): the net's connectivity, the converter's
+            # fault, never the law's goal measure (the architect's ruling, cr-harvest s-f4e297da)
+            raise RuntimeError("cr: no route from %s to the goal's edge %s" % (edge.getID(), to.getID()))
     elif to is None:
         why = "no edge at the goal region"
     length = sum(net.getEdge(e).getLength() for e in route) - pos
