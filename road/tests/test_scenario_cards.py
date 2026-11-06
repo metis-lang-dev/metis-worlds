@@ -31,7 +31,8 @@ def test_every_card_has_its_source_its_license_and_a_place():
         assert c.get("exercises") and c.get("expect") is not None, n
         assert c.get("sites", {}).get("towns") and c["map"]["town"] in c["sites"]["towns"], n
         assert c["tags"] and set(c["tags"]) <= set(C.TAG_VOCABULARY), n
-        assert c["patches"] == [] and all(a["mode"] in C.MODES for a in c["actors"]), n
+        assert all(a["mode"] in C.MODES for a in c["actors"]), n
+        assert isinstance(c["patches"], list) and all({"what", "from", "to", "why", "by", "date"} <= set(x) for x in c["patches"]), n   # §4
         assert set(c["verdict"]) == set(C.HOSTS), n                                 # one verdict per host (§6b)
         for host, v in c["verdict"].items():
             assert v["status"] in C.STATUS, (n, host)

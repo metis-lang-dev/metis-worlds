@@ -29,3 +29,6 @@ actors:
     script: [{when: trigger, go: true, v: 2.0}]     # 2.0 m/s (:418)
 infractions: {scenario: []}
 expect: {arrived: true, collisions: 0, violations: 0}
+verdict:
+  exerciser: {status: skip, note: "its w_0 is a zebra with no parked car: SUMO's (exerciser.skip)"}
+  sumo: {status: fail, since: {worlds: e7682ad, catalog: ef793dc}, record: 20261106T162719-f5ad70, note: "as the source: #91 and #95 meet expect; #19 and #96 touch the walker at 4.7 s (records f5ad70, f5ad71: brake_min held on xing_same_prio); measured by hand"}
