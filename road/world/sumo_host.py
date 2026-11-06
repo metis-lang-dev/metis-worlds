@@ -62,7 +62,7 @@ def lanemap_of(path):
 UNSEEN_DUTY = "unseen, the other's duty"
 MATCH_M = 6.0                     # the truth column: a bound track and its body on one lane at most this far apart (m)
 CANNOT = ["weather", "rain", "snow", "fog", "night", "animal"]   # the truth's `cannot`: what this world does not hold
-LANE_FACTS = ("own_kind", "adjacent", "lane_kind", "side_", "oncoming", "lead_s", "changing", "settled(", "zone_at", "roomy")    # the log's lane facts (the passes')
+LANE_FACTS = ("own_kind", "adjacent", "lane_kind", "side_", "oncoming", "lead_s", "changing", "settled(", "zone_at", "roomy", "pass_blocked")    # the log's lane facts (the passes')
 
 
 def others_duty(dangerous, states, seen):
@@ -131,12 +131,14 @@ class Loop:
         truth = self.world.truth()
         movers, ego = self.perc.step(truth, EGO)
         ego.goal_lanes = getattr(getattr(self.world, "director", None), "goal_lanes", None)   # a CommonRoad goal's lanes (cr_world): route_lane toward them
+        prev = getattr(self, "standing", {})                 # how long each mover has stood (road_facts' STAND_S: no pass on a flicker)
+        self.standing = {m.id: (prev.get(m.id, 0.0) + self.world.dt if (m.dyn.vmax or 0.0) <= road_facts.STAND_V else 0.0) for m in movers}
         t3 = time.perf_counter()
         lights = self.world.lights()
         f, binding, fold, states = road_facts.facts(self.lanemap, ego, ego.dyn.vmax, movers, self.sit,
                                                     changing=self.changing[0] if self.changing else None,
                                                     dest=self.level_dest, lights=lights,
-                                                    speeds={m.id: m.dyn.vmax for m in movers}, pace=self.pace, sight=self.perc.last.get("sight"), stood=self.stood,
+                                                    speeds={m.id: m.dyn.vmax for m in movers}, pace=self.pace, sight=self.perc.last.get("sight"), stood=self.stood, standing=self.standing,
                                                     left_from=(self.left_from[0], self.t - self.left_from[1])
                                                     if getattr(self, "left_from", None) else None)
         self.proj = {"binding": binding, "facts": f, "fold": fold, "states": states, "ego": ego}
@@ -155,13 +157,19 @@ class Loop:
         idx, target = self.world.conn.vehicle.getLaneIndex(EGO), None
         ticks = int(round(restrict.CHANGE_S / self.world.dt))
         here = self.lanemap.lanes[ego.lane]
+        k = self.world.carry
+        if k is not None and k.get("near_end") and k["to"]:          # the route lane ends beside: back only when it is clear,
+            if "side_clear(right)" in (self.proj.get("facts") or {}):  # else stop short of the end on the oncoming lane
+                lane = "right"
+            else:
+                a = min(a, -d.brake_max) if v > 0 else 0.0
         if self.world.carry is not None:              # passing through the opposite lane: the carry's (sumo_world), its route lane
             if (lane == "abort" and self.changing or lane == "right") and self.world.carry["to"]:   # the ego's right (heading_frame): home
                 self.world.carry_back()
                 self.changing = None if lane == "abort" else ("right", idx, ticks)
                 if lane == "right":
                     self.left_from = ("left", self.t)
-                self.passes[-1]["back"] = (self.t, "abort" if lane == "abort" else "change")
+                self.passes[-1]["back"] = (self.t, "abort" if lane == "abort" else "end" if k and k.get("near_end") else "change")
         elif lane == "abort" and self.changing:
             target, self.changing = self.changing[1], None
         elif lane in ("left", "right") and getattr(here, lane) and getattr(here, lane + "_opposite"):

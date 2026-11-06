@@ -378,3 +378,23 @@ def test_the_truth_column_is_written_beside_the_trace_with_its_header(tmp_path):
     h.road = SimpleNamespace()                                                    # the exerciser: no truth kept
     h.truth_out()
     assert len((tmp_path / "tr" / "truth.jsonl").read_text().splitlines()) == 3
+
+
+
+def test_the_carry_never_returns_blind_at_the_lanes_end():
+    """cr-harvest (Flensburg-10_1): near the route lane's end the carry flags it (near_end) and the host decides; it never runs past
+    the lane's end on the oncoming lane."""
+    w = sumo_world.SumoWorld.__new__(sumo_world.SumoWorld)
+    w.dt, w.carry, w._restore, w.odo_fix, w.ego_seen, w.ego_done = 0.1, None, None, 0.0, True, False
+    calls = []
+    ego = dict(car(190.0, 0.0, speed=10.0, lane="E_0", s=190.0, route=("E",)), roadID="E", distance=0.0)
+    w.conn = SimpleNamespace(vehicle=Dom({"ego": ego}, calls), lane=SimpleNamespace(
+        getShape=lambda l: [(0.0, 0.0), (200.0, 0.0)], getLength=lambda l: 200.0, getWidth=lambda l: 3.2))
+    w.carry_start("W_0")
+    for _ in range(10):
+        w.control(accel=0.0)
+    k = w.carry
+    assert k is not None and k["near_end"] and k["to"] and not k.get("forced")       # flagged, not sent back
+    for _ in range(20):
+        w.control(accel=0.0)
+    assert w.carry["s"] <= 199.5 and w.carry["v"] == 0.0                            # held short of the end

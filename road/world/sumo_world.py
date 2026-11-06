@@ -531,8 +531,9 @@ class SumoWorld:
         k, v = self.carry, self.conn.vehicle
         k["v"] = max(0.0, k["v"] + float(accel or 0.0) * self.dt)
         k["s"] += k["v"] * self.dt
-        if k["to"] and k["s"] + k["v"] * LC_DURATION >= k["len"]:      # the route lane ends: back before it (never expected:
-            k["to"], k["forced"] = 0.0, True                           # the pass is cleared only to end on its lane)
+        k["near_end"] = bool(k["to"]) and k["s"] + k["v"] * LC_DURATION >= k["len"]   # the route lane ends: the host decides
+        if k["s"] > k["len"] - 0.5:                                    # (cr-harvest, Flensburg-10_1: a blind return hit the car)
+            k["s"], k["v"] = k["len"] - 0.5, 0.0                       # never past the lane's end on the oncoming lane
         step = k["W"] * self.dt / LC_DURATION
         k["lat"] = min(k["to"], k["lat"] + step) if k["lat"] < k["to"] else max(k["to"], k["lat"] - step)
         if k["to"] == 0.0 and k["lat"] <= 1e-9:                        # home: on its lane again, the route restored next step

@@ -155,3 +155,24 @@ def test_sumo_perception_keeps_an_emergency_vehicles_class():
     from semantic_world.road import prior
     assert sumo_perceive.belief_class("emergency") == "emergency" and sumo_perceive.belief_class("passenger") == "passenger"
     assert prior("emergency") == prior("passenger")
+
+
+# ── cr-harvest (Flensburg-10_1_T-1): no pass on a flicker, and a pass that cannot complete ──
+def test_lead_standing_needs_the_host_to_have_seen_it_stand_a_second():
+    lm, ego = two_way(), ego_at("f_0", EGO_S, 0.0)
+    parked = [car("parked", "f_0", PARKED_S, 0.0)]
+    out = road_facts.facts(lm, ego, 0.0, parked, Situation(), speeds={"parked": 0.0}, standing={"parked": 0.1})[0]
+    assert "lead_slow" in out and "lead_standing" not in out                      # one tick of standing: no pass yet
+    out = road_facts.facts(lm, ego, 0.0, parked, Situation(), speeds={"parked": 0.0}, standing={"parked": 1.0})[0]
+    assert "lead_standing" in out
+
+
+def test_on_the_oncoming_lane_a_pass_is_blocked_when_the_car_drives_on_or_the_lane_ahead_turns_busy():
+    lm = two_way()
+    ego = ego_at("b_0", 300.0 - (PARKED_S - 2.0), 11.1)                          # beside the car, not past it
+    def blocked(movers, speeds):
+        return "pass_blocked" in road_facts.facts(lm, ego, 11.1, movers, Situation(), speeds=speeds)[0]
+    assert not blocked([car("parked", "f_0", PARKED_S, 0.0)], {"parked": 0.0})      # it stands, the lane is free: go on
+    assert blocked([car("parked", "f_0", PARKED_S, 6.0)], {"parked": 6.0})          # it drives on: no pass to finish
+    onc = car("onc", "b_0", 300.0 - (PARKED_S + 40.0), 11.1)                       # an oncoming car 42 m ahead
+    assert blocked([car("parked", "f_0", PARKED_S, 0.0), onc], {"parked": 0.0, "onc": 11.1})

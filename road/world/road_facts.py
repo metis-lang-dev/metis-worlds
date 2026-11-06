@@ -323,6 +323,33 @@ def lead_standing(lm, lead, movers, speeds=None):
                    and (speeds or {}).get(m.id, m.dyn.vmax or 0.0) <= STAND_V for m in movers)
 
 
+STAND_S = 1.0                     # s: a lead stands this long before it is lead_standing (the host's STANDING; Flensburg-10_1's one tick)
+
+
+def pass_blocked(lm, ego, v, cap, roles, by_id, movers, speeds=None, sight_m=REACH):
+    """In the ego's heading frame on the oncoming lane (side_busy(right): not past the car): the pass cannot complete when the
+    car being passed (leadright, on the route lane ahead) no longer stands, or an oncoming car on the ego's lane ahead leaves no
+    room for the rest of the pass (the oncoming_clear arithmetic over what is left: the gap to the car's front + the ego's length +
+    RETURN_T at the limit)."""
+    lr = by_id.get(roles.get("leadright"))
+    if lr is not None and (speeds or {}).get(lr.id, lr.dyn.vmax or 0.0) > STAND_V:
+        return True                                                      # it drives on: no pass to finish
+    rest = (max(0.0, lr.s - ego.s) if lr is not None else 0.0) + ego.length + RETURN_T * cap
+    T = pass_time(rest, v, cap, ego.dyn.accel or 1.0)
+    rho = ego.dyn.rho or 0.0
+    v_mean = (v + cap) / 2.0
+    for m in movers:
+        if m.lane != ego.lane or m.id == ego.id or not m.against:
+            continue
+        rel = m.s - ego.s                                                # the frame lane runs the ego's way
+        if rel < 0 or rel > sight_m:
+            continue
+        vo = (speeds or {}).get(m.id, m.dyn.vmax or 0.0)
+        if rel < (v_mean + vo) * (T + rho) + (ego.dyn.min_dist or 0.0):
+            return True                                                  # the oncoming lane ahead turned busy
+    return False
+
+
 def pass_time(d, v, cap, accel):
     """The time to drive D metres from V under ACCEL to CAP (then at CAP)."""
     v, cap, accel = max(0.0, v), max(cap, 0.1), max(accel, 0.1)
@@ -364,7 +391,8 @@ def oncoming_clear(lm, ego, v, cap, lead, onc, movers, speeds=None, sight_m=REAC
     return True
 
 
-def facts(lm, ego, v, movers, sit, changing=None, dest=None, turn=None, lights=None, speeds=None, left_from=None, pace=None, sight=None, stood=None):
+def facts(lm, ego, v, movers, sit, changing=None, dest=None, turn=None, lights=None, speeds=None, left_from=None, pace=None, sight=None, stood=None,
+          standing=None):
     """SPEEDS {mover id: v}: the movers' speeds (the lead's for lead_slow). LEFT_FROM (side, age s): the side the
     ego's last lane change left, and how long ago. PACE: a target speed under the limit; above it by PACE_BAND the ego is above_target (the
     planner's soft brake)."""
@@ -446,8 +474,11 @@ def facts(lm, ego, v, movers, sit, changing=None, dest=None, turn=None, lights=N
             out["lead_slow"] = 1
     if "lead_slow" not in out:                     # the pass is change.llp's (change_pass, change_aside); change_reason is a wish's
         out["lead_ok"] = 1
-    if "lead" in roles and "lead_slow" in out and lead_standing(lm, by_id[roles["lead"]], movers, speeds):
-        out["lead_standing"] = 1                   # a standing obstacle, not a queue (668e45)
+    if "lead" in roles and "lead_slow" in out and lead_standing(lm, by_id[roles["lead"]], movers, speeds) and \
+            (standing is None or standing.get(roles["lead"], 0.0) >= STAND_S):
+        out["lead_standing"] = 1                   # a standing obstacle, not a queue (668e45), standing STAND_S (cr-harvest: no flicker)
+    if home is not None and "side_busy(right)" in out and pass_blocked(lm, ego, v, cap, roles, by_id, movers, speeds):
+        out["pass_blocked"] = 1                    # on the oncoming lane, the pass cannot complete (brake_pass_blocked)
     for side in ("left", "right"):
         if "oncoming(%s)" % side in out:
             ok = "lead" in roles and oncoming_clear(lm, ego, v, cap, by_id[roles["lead"]], getattr(lane, side), movers, speeds, sight_m=REACH)
