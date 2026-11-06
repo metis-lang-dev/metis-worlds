@@ -217,11 +217,12 @@ class Game:
     """The host's memory across ticks: per crosser its belief, its last speed and how many ticks its moves contradicted the rule.
     step(key, pair, dt) → the crosser's tables, belief, believed level and the zone's reading, after the tick's observation."""
 
-    def __init__(self, prior=None):
-        self.prior = dict(prior or PRIOR)
+    def __init__(self, prior=None, dt=DT):
+        self.prior, self.dt = dict(prior or PRIOR), float(dt)
         self.belief, self.last_v, self.contra = {}, {}, {}
 
-    def step(self, key, pair, dt=DT):
+    def step(self, key, pair, dt=None):
+        dt = self.dt if dt is None else dt
         ego, other = side_of(pair, True), side_of(pair, False)
         t = tables(ego, other)
         b = self.belief.get(key, dict(self.prior))

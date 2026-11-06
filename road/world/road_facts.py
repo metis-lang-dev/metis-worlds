@@ -392,7 +392,7 @@ def oncoming_clear(lm, ego, v, cap, lead, onc, movers, speeds=None, sight_m=REAC
     return True
 
 
-def levelk_facts(game, pairs, dt=0.1):
+def levelk_facts(game, pairs):
     """levelk.llp's atoms (LEVELK.md §2): per bound crosser of the pairs (a crossing pair with a role) its tables and the
     belief over its level (semantic_world.levelk), and the next zone's reading, by_game(nextzone) when any crosser's is,
     else by_rule(nextzone). GAME: a levelk.Game, the host's memory across ticks; crossers no longer seen are forgotten."""
@@ -400,7 +400,7 @@ def levelk_facts(game, pairs, dt=0.1):
     for p in pairs:
         if not p.type.startswith("xing_") or p.role is None or p.o_enter is None:
             continue
-        r = game.step(p.id, p, dt)
+        r = game.step(p.id, p)
         keep.add(p.id)
         out.update(levelk.facts(p.role, r))
         if r["zone"] == "by_game":
