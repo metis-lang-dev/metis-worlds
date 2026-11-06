@@ -257,6 +257,6 @@ verdict:
   sumo:
     status: fail
     since:
-      worlds: '7170744'
+      worlds: dc24c3d
       catalog: ef793dc
     note: contact

@@ -43,6 +43,6 @@ verdict:
     status: fail
     record: 20261105T031542-40f229
     since:
-      worlds: '7170744'
+      worlds: dc24c3d
       catalog: ef793dc
     note: collisions 1 > 0

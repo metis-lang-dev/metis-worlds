@@ -222,6 +222,6 @@ verdict:
   sumo:
     status: world
     since:
-      worlds: '7170744'
+      worlds: dc24c3d
       catalog: ef793dc
     note: 'the contact with cr1314 at the run''s start (k <= 10): the initial state'

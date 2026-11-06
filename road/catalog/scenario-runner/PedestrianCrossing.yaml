@@ -58,5 +58,5 @@ verdict:
   sumo:
     status: pass
     since:
-      worlds: '7170744'
+      worlds: dc24c3d
       catalog: ef793dc
