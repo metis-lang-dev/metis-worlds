@@ -345,6 +345,9 @@ class Loop:
         return {"seed": w.seed, "ticks": self.tick, "t": self.t, "sumo_t": w.t, "arrived": self.arrived(),
                 "s": round(ego.s, 1) if ego is not None else None, "dest": self.level_dest, "ego_done": w.ego_done, "collisions": w.ego_collisions,
                 "collision_events": collision_events(w.collisions),
+                # the ego's first SUMO collision (t, the other, its type, where): the record's tick beside CommonRoad's box contact
+                "collision_first": next(({k: c.get(k) for k in ("t", "collider", "victim", "type", "xy")} for c in w.collisions
+                                         if EGO in (c["collider"], c["victim"])), None),
                 "rc": 100.0 if self.arrived() else ((w.director.report()["rc"]) if getattr(w, "director", None) is not None else None),
                 "director": w.director.report() if getattr(w, "director", None) is not None else None,
                 "all_collisions": len(w.collisions), "violations": len(self.violations), "unseen_other_duty": len(self.unseen_duty), "optimistic": len(self.optimistic), "restricted": self.restricted,

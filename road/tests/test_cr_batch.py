@@ -73,3 +73,12 @@ def test_record_window_in_trace_ticks():
     assert B.window(row, (1, 200)) == [1, 200]
     row = B.make_row(JOB, None, 1, "s", 1.0, summ(contact=True, contacts=[[3.0, 7]]), "", 0, False)
     assert B.window(row, (1, 500)) == [1, 30]
+
+
+def test_both_contact_ticks():
+    s = summ(contact=True, contacts=[[3.0, 7]])
+    s["collision_first"] = {"t": 3.4, "collider": "ego", "victim": "cr7", "type": "collision", "xy": None}
+    row = B.make_row(JOB, None, 1, "s", 1.0, s, "", 0, False)
+    assert B.contact_ks(row) == {"cr": 30, "sumo": 34, "sumo_other": "cr7"}
+    row["failed"] = ["sumo_collision"]
+    assert B.window(row, (1, 500)) == [1, 34]

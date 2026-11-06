@@ -292,7 +292,18 @@ def _convert(src, sid, cache, force):
     conf = CR2SumoMapConverterConfig.from_scenario(sc)
     conf.overwrite_speed_limit = None                  # the scenario's own limits, not the converter's 130 km/h everywhere
     conv = CR2SumoMapConverter(sc, conf)
-    if conv.create_sumo_files(out.resolve()) is None:
+    lights_dropped = False
+    try:
+        made = conv.create_sumo_files(out.resolve())
+    except ValueError as e:
+        # cr2sumo's _create_traffic_lights raises a bare ValueError for a light on a lanelet outside an intersection with
+        # no or several successors (44 rows, USA_Lanker-1_16_T-1): converted again without its lights, said in cr.json
+        if str(e) or "_create_traffic_lights" not in "".join(__import__("traceback").format_tb(e.__traceback__)):
+            raise
+        conv = CR2SumoMapConverter(sc, conf)
+        conv._create_traffic_lights = lambda: None
+        made, lights_dropped = conv.create_sumo_files(out.resolve()), True
+    if made is None:
         raise SystemExit("cr_convert: %s: the map converter made no SUMO net" % sid)
     net = produced_net(out, sid)
     if net is None:
@@ -305,7 +316,7 @@ def _convert(src, sid, cache, force):
            "lanelets": lanelet_rows(sc.lanelet_network), "signs": sign_rows(sc.lanelet_network),
            "lights": light_rows(sc.lanelet_network), "intersections": intersection_rows(sc.lanelet_network),
            "obstacles": obstacle_rows(sc), "planning": planning_rows(pps), "interactive": src.name.endswith(".cr.xml"),
-           "lenient_ids": lenient,
+           "lenient_ids": lenient, "lights_dropped": lights_dropped,
            # the converter's own lanelet -> edge and -> lane maps (it merges lanelets into edges with new ids): cr_world resolves
            # the ego's start and the goal's lanelets through them, geometry the fallback
            "lanelet_edge": {str(k): str(v) for k, v in conv.lanelet_id2edge_id.items()},

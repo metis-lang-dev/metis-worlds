@@ -290,8 +290,11 @@ def window(row, ks, dt=0.1):
     cr = ((row.get("summary") or {}).get("director") or {}).get("cr") or {}
     end = int(round((row.get("t") or 0) / dt))
     f = row["failed"][0]
-    if f in ("contact", "sumo_collision") and cr.get("contacts"):
-        k1 = int(round(cr["contacts"][0][0] / dt)); k0 = k1 - 50
+    ck = contact_ks(row, dt)
+    if f == "contact" and ck["cr"] is not None:
+        k1 = ck["cr"]; k0 = k1 - 50
+    elif f == "sumo_collision" and (ck["sumo"] is not None or ck["cr"] is not None):
+        k1 = ck["sumo"] if ck["sumo"] is not None else ck["cr"]; k0 = k1 - 50
     elif f == "goal":
         ends = [w[1] for w in (row["goal"] or {}).get("window_s") or [] if w]
         k1 = min(end, int(round(max(ends) / dt))) if ends else end
@@ -304,6 +307,17 @@ def window(row, ks, dt=0.1):
         k0, k1 = max(k0, ks[0]), min(max(k1, ks[0]), ks[1])
     k0 = min(max(0, k0), k1)
     return [k0, k1]
+
+
+def contact_ks(row, dt=0.1):
+    """Both first-contact ticks: CommonRoad's box test (director.cr.contacts) and SUMO's collision (collision_first); None
+    where there is none."""
+    s = row.get("summary") or {}
+    cr = (s.get("director") or {}).get("cr") or {}
+    first = s.get("collision_first") or {}
+    return {"cr": int(round(cr["contacts"][0][0] / dt)) if cr.get("contacts") else None,
+            "sumo": int(round(first["t"] / dt)) if first.get("t") is not None else None,
+            "sumo_other": (first.get("victim") if first.get("collider") == "ego" else first.get("collider")) if first else None}
 
 
 def make_record(row, h, run_dir):
@@ -320,6 +334,8 @@ def make_record(row, h, run_dir):
         if (traces[0] / "config.yaml").exists():
             rec["config"] = rec["trace_path"] + "/config.yaml"
     rec["window"] = window(row, trace_ks(traces[0]) if traces else None)
+    if set(row["failed"]) & {"contact", "sumo_collision"}:
+        rec["contact_k"] = contact_ks(row)                     # both ticks, the architect's (4)
     write(h / "records" / (rid + ".json"), rec)
     return rid
 
