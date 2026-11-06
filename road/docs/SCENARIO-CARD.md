@@ -102,7 +102,7 @@ CI (step 5) runs every card on the exerciser per push, and the SUMO cards nightl
 
 ## 7. Where the cards live
 
-`road/scenarios/` keeps the ten CARLA cards (moving to `road/catalog/carla/` in step 4). `road/catalog/<source>/<id>.yaml` for every imported card, with `road/catalog/<source>/<id>/` beside it for a stored net, data and trajectories, and `NOTICE`. The catalog's `index.json` (id, source, tags, verdict, map) is written by the runner and read by the page's picker (the catalog first, the raw checkout second).
+`road/scenarios/` keeps the ten CARLA cards (moving to `road/catalog/scenario-runner/` in step 4). `road/catalog/<source>/<id>.yaml` for every imported card, with `road/catalog/<source>/<id>/` beside it for a stored net, data and trajectories, and `NOTICE`. The catalog's `index.json` (id, source, tags, verdict, map) is written by the runner and read by the page's picker (the catalog first, the raw checkout second).
 
 ## 8. What a card is not
 

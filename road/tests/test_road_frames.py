@@ -245,6 +245,7 @@ def test_the_picker_lists_the_catalogs_cards_first_and_runs_one_at_its_first_sit
     assert "StaticCutIn" in ids and "ParkingCutIn" in ids
     r = next(r for r in f["rows"] if r["id"] == "StaticCutIn")
     assert r["set"] == "catalog" and r["run"] == "card:StaticCutIn@Town03#42" and "cut-in" in r["tags"]
+    assert r["source"] == "scenario-runner", "the directory is named after the source (CARLA is the simulator)"
     (tmp_path / "index.json").write_text(json.dumps({"version": 4, "rows": [{"id": "ZAM_Cutin-1_1_T-1", "set": "recorded", "source": "hand-crafted",
                                                                              "country": "ZAM", "map": "Cutin", "tags": ["cut-in"]}]}))
     a.world(["crfind:cut-in"])

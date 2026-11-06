@@ -1,4 +1,4 @@
-"""The scene cards (road-scenarios s-e23be780 step 2): the CARLA challenge scenarios as road/catalog/carla/*.yaml. Each card
+"""The scene cards (road-scenarios s-e23be780 step 2): the CARLA challenge scenarios as road/catalog/scenario-runner/*.yaml. Each card
 loads with its source and its license; its sites (CARLA's Leaderboard 1.0 trigger poses) land on a lane of our net by
 CARLA's own co-simulation transform; its variants are the research note's §4b (two clear, three borderline); and the
 road family plays every card on the exerciser as its expectation says (the replay CI runs; SUMO stays out of CI)."""

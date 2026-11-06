@@ -1,4 +1,4 @@
-# road/catalog/carla — the CARLA challenge scenarios as scene cards, v2 (road-scenarios s-e23be780; scenario-catalog s-92e0b650)
+# road/catalog/scenario-runner — the CARLA challenge scenarios (ScenarioRunner / Leaderboard) as scene cards, v2 (road-scenarios s-e23be780; scenario-catalog s-92e0b650)
 
 The user (2026-11-05): "extract scenarios for scenario runner from Carla road challenge … with small adaptations it
 should work on SUMO. We will introduce new road feature together with scenario to test and we reuse road challenge
