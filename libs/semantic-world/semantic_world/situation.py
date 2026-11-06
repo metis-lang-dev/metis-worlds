@@ -428,7 +428,7 @@ class Situation:
             else:
                 self.away.discard(p.id)
             if dangerous and ((p.type == "xing_ego_prio" and r_lon in ("brake_min", "brake_max"))
-                              or (p.type == "same_dir" and r_lon == "brake_max")):
+                              or (p.type in ("same_dir", "xing_obj_prio") and r_lon == "brake_max")):
                 self.escalated.add(p.id)          # held at least that while the pair stays dangerous
             else:
                 self.escalated.discard(p.id)      # safe again, or released (the other stopped; the ego past stopping short)
@@ -580,6 +580,9 @@ def respond(p, dangerous, before, xbefore=None, escalated=False):
     item 1); one was in front at a safe
     distance and it was the ego → none (the front one drives on); otherwise (no time overlap held, the ego was the
     rear one or the non-priority one, or never safe) → brake_min. Lateral: none (a conflict is assumed).
+    The YIELDER at a crossing (xing_obj_prio; cr-harvest L1, rule 5's symmetry): brake_min while that stops the ego short of the
+    conflict's entry (d_enter), brake_max while only that does (ESCALATED holds it), and brake_max still when neither does: the
+    yielder is the one in the wrong, so unlike the holder it never clears the zone; never a brake_min that enters it.
     The two cases read apart (the rule 5 ruling): at a CROSSING the priority holder brakes while braking can still stop it short
     of the zone and clears the zone when neither bound can; BEHIND A LEAD that cut in, it brakes at brake_min while that keeps it
     behind, at brake_max while only that does, and at brake_max still when neither does: "clear the zone" has no meaning behind
@@ -599,7 +602,11 @@ def respond(p, dangerous, before, xbefore=None, escalated=False):
         case, front = xbefore or (None, None)
         if case == "safe_long" and front is True:
             return "none", "none"
-        return "brake_min", "none"
+        if p.type == "xing_obj_prio":                          # the YIELDER, rule 5's symmetry (cr-harvest s-f4e297da, L1):
+            if not escalated and ego_stops_short(p.ego, p.d_enter):
+                return "brake_min", "none"                     # at its proper response while that stops it short of the conflict,
+            return "brake_max", "none"                         # at its hardest while only that does (ESCALATED holds it), and at
+        return "brake_min", "none"                             # its hardest still when neither does: the yielder is in the wrong
     lon = "brake_min_correct" if p.type == "opp_dir" and p.ego_correct else "brake_min"
     if p.type == "same_dir" and p.lon in ("at_back", "overlap_back"):
         lon = "none"                                            # the follower is the object: its response, not ours

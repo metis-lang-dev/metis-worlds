@@ -108,7 +108,8 @@ def test_def_18_able_to_stop_with_priority():
     sit = Situation()
     sit.check([xpair("xing_obj_prio", 30.0, 40.0, 10.0, 20.0)])
     s = sit.check([xpair("xing_obj_prio", 6.0, 16.0, 5.0, 15.0, obj_vmin=0)])[0]
-    assert s.dangerous and s.resp_lon == "brake_min"
+    assert s.dangerous and s.resp_lon == "brake_max"      # no brake stops it short of the conflict 6 m on: the yielder at its
+                                                          # hardest still (cr-harvest L1, rule 5's symmetry)
     # never seen safe: the same answer as with the history above (the rule 5 ruling: the present decides, the memory
     # is the blame's record only)
     s = Situation().check([xpair("xing_ego_prio", 5.0, 15.0, 6.0, 16.0, obj_vmin=0)])[0]
@@ -201,3 +202,27 @@ def test_one_pair_that_stays_or_brakes_holds_a_drive_away():
     stay = Situation().check([standing("xing_obj_prio")])[0]
     f = Situation.fold([go, stay], ego)
     assert "resp_unst" not in f and f["lon_range"][1] == 0.0
+
+
+
+# -- the YIELDER's escalation (cr-harvest s-f4e297da, L1: rule 5's symmetry for xing_obj_prio) ----------------------------
+
+def test_the_yielder_brakes_min_while_that_stops_it_short_then_max_and_holds_it():
+    """brake_min while that stops the ego short of the conflict's entry, brake_max while only that does (ESCALATED holds it),
+    brake_max still when neither does; never a brake_min that enters. At 10 m/s: brake_min stops in 12.5 + 1, brake_max in 6.25 + 1."""
+    s = Situation().check([xpair("xing_obj_prio", 16.0, 26.0, 2.0, 12.0)])[0]
+    assert s.dangerous and s.resp_lon == "brake_min"                                   # 13.5 < 16
+    sit = Situation()
+    s = sit.check([xpair("xing_obj_prio", 10.0, 20.0, 2.0, 12.0)])[0]
+    assert s.dangerous and s.resp_lon == "brake_max"                                   # 7.25 < 10 <= 13.5
+    s = sit.check([xpair("xing_obj_prio", 16.0, 26.0, 2.0, 12.0)])[0]
+    assert s.resp_lon == "brake_max"                                                   # ESCALATED holds it while dangerous
+    s = Situation().check([xpair("xing_obj_prio", 0.0, 10.0, 2.0, 12.0)])[0]
+    assert s.resp_lon == "brake_max"                                                   # inside the conflict: hardest still
+
+
+def test_the_harvests_yielder_geometry_asks_brake_max_where_brake_min_entered():
+    """ARG_Carcarana-10_2_T-1 (the 13): the ego at 9.8 m/s with a priority crosser, the conflict 11.3 m on: brake_min (12.0 + 1)
+    enters it, brake_max (6.0 + 1) stops short: the fold asks brake_max, where it asked brake_min and the ego was hit at 1.9 m/s."""
+    s = Situation().check([xpair("xing_obj_prio", 11.3, 21.3, 3.0, 13.0, ego_v=9.8)])[0]
+    assert s.dangerous and s.resp_lon == "brake_max"
