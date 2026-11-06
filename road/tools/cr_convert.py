@@ -259,15 +259,18 @@ def _seg_dist(p, q, r, t):
 def foe_gaps(net_xml, near=0.5):
     """The junctions' FOE GAPS (ruling L3 (W), cr-harvest s-f4e297da): pairs of internal lanes of one junction whose centre
     lines come within NEAR m while neither link is the other's foe in the junction's request rows (the converter's foe
-    table lost the conflict). intLanes lists a junction's internal lanes by link index; a request row's foes reads
-    right to left. → [[lane_a, lane_b], ...] sorted."""
+    table lost the conflict). Never siblings (both from one approach lane) nor a merge (both into one outgoing lane):
+    those are rightly not foes. intLanes lists a junction's internal lanes by link index; a request row's foes reads right
+    to left. → [[lane_a, lane_b, a_from, a_to, b_from, b_to], ...] sorted (the links' approach and outgoing lanes)."""
     import xml.etree.ElementTree as ET
-    shapes, junctions = {}, []
+    shapes, junctions, link = {}, [], {}
     for _, el in ET.iterparse(net_xml, events=("start",)):
         if el.tag == "lane" and el.get("id", "").startswith(":"):
             shapes[el.get("id")] = [tuple(float(v) for v in xy.split(",")[:2]) for xy in el.get("shape", "").split()]
         elif el.tag == "junction" and el.get("type") != "internal":
             junctions.append((el.get("intLanes", "").split(), el))
+        elif el.tag == "connection" and el.get("via") and not el.get("from", "").startswith(":"):
+            link[el.get("via")] = ("%s_%s" % (el.get("from"), el.get("fromLane")), "%s_%s" % (el.get("to"), el.get("toLane")))
     out = []
     for lanes, j in junctions:
         foes = {int(r.get("index")): r.get("foes", "")[::-1] for r in j.findall("request")}
@@ -275,9 +278,13 @@ def foe_gaps(net_xml, near=0.5):
             for b in range(a + 1, len(lanes)):
                 if "1" in (foes.get(a, "")[b:b + 1], foes.get(b, "")[a:a + 1]):
                     continue
+                la, lb = link.get(lanes[a]), link.get(lanes[b])
+                if la is None or lb is None or la[0] == lb[0] or la[1] == lb[1]:
+                    continue                                 # siblings, a merge, or a link the net does not name
                 sa, sb = shapes.get(lanes[a]) or [], shapes.get(lanes[b]) or []
                 if any(_seg_dist(p, q, r, t) <= near for p, q in zip(sa, sa[1:]) for r, t in zip(sb, sb[1:])):
-                    out.append(sorted([lanes[a], lanes[b]]))
+                    x, y = sorted([(lanes[a], la), (lanes[b], lb)])
+                    out.append([x[0], y[0], x[1][0], x[1][1], y[1][0], y[1][1]])
     return sorted(out)
 
 

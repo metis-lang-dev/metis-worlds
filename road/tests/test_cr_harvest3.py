@@ -105,6 +105,9 @@ NET = """<net>
   <edge id=":J_0" function="internal"><lane id=":J_0_0" shape="0,0 10,10"/></edge>
   <edge id=":J_1" function="internal"><lane id=":J_1_0" shape="0,10 10,0"/></edge>
   <edge id=":J_2" function="internal"><lane id=":J_2_0" shape="20,0 30,0"/></edge>
+  <connection from="a" to="c" fromLane="0" toLane="0" via=":J_0_0"/>
+  <connection from="b" to="d" fromLane="0" toLane="0" via=":J_1_0"/>
+  <connection from="a" to="e" fromLane="0" toLane="0" via=":J_2_0"/>
   <junction id="J" type="priority" intLanes=":J_0_0 :J_1_0 :J_2_0">
     <request index="0" response="000" foes="000"/>
     <request index="1" response="000" foes="000"/>
@@ -120,4 +123,7 @@ NET = """<net>
 def test_l3_a_crossing_with_no_foe_relation_is_a_foe_gap(tmp_path):
     p = tmp_path / "x.net.xml"
     p.write_text(NET)
-    assert C.foe_gaps(str(p)) == [[":J_0_0", ":J_1_0"]]               # J: they cross, no foe; K: foes, no gap; :J_2_0 apart
+    assert C.foe_gaps(str(p)) == [[":J_0_0", ":J_1_0", "a_0", "c_0", "b_0", "d_0"]]   # J: they cross, no foe; K: foes
+    sib = NET.replace('<lane id=":J_2_0" shape="20,0 30,0"/>', '<lane id=":J_2_0" shape="0,0 10,-10"/>')
+    p.write_text(sib)                                              # :J_2_0 now touches :J_0_0, but both from a_0: siblings
+    assert C.foe_gaps(str(p)) == [[":J_0_0", ":J_1_0", "a_0", "c_0", "b_0", "d_0"]]
