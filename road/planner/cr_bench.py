@@ -286,8 +286,81 @@ def drive_sb2023_vlim(cfg, ref_fn, last_step, row, d):
     return drive_sb2023(cfg, ref_fn, last_step, row, d, vlim=True)
 
 
+AGENT_PY = Path(os.environ.get("METIS_AGENT_PY", str(WS / "metis-agent" / "py" / ".venv" / "bin" / "python")))
+CONVERT_PY = Path(os.environ.get("COMMONROAD_CONVERT_PY", str(ROAD / ".venv-cr" / "bin" / "python")))
+CR_CACHE = Path(os.environ.get("COMMONROAD_CACHE", str(WS / ".worlds" / "cr-cache")))
+SUMO_BIN = Path(os.environ.get("SUMO_VENV", str(WS / ".worlds" / "road"))) / "bin"
+
+
+class _ReactiveVehicle(_CentredVehicle):
+    """The composition's executed states are at the centre already; its vehicle is the reactive planner's (id 2)."""
+    id_type_vehicle = 2
+
+
+def cache_for(xml):
+    """The conversion cache of XML: the shared cache for a file of the pinned checkout (its id is unique there), else
+    its own under cr-cache-ext/<the file's directory, hashed> (sb100's 2018b files share ids with the 2020a checkout)."""
+    import hashlib
+    xml = Path(xml).resolve()
+    if str(xml).startswith(str((CR_ROOT / "scenarios").resolve())) or str(xml).startswith(str((CR_ROOT / "interactive").resolve())):
+        return CR_CACHE
+    return CR_CACHE.parent / "cr-cache-ext" / hashlib.sha256(str(xml.parent).encode()).hexdigest()[:12]
+
+
+def drive_composition(cfg, ref_fn, last_step, row, d):
+    """The family's command per beat as the reactive planner's setpoints (deliverable 3): road_tree.py --world crnative
+    (the Live: perceive, belief, facts, fold, restrictor; road/world/cr_native.py), its record.json → the states."""
+    import numpy as np
+    from commonroad_rp.reactive_planner import ReactivePlannerState
+    xml = Path(row["file"])
+    sid = xml.name[:-len(".cr.xml")] if xml.name.endswith(".cr.xml") else xml.stem
+    cache = cache_for(xml)
+    d.mkdir(parents=True, exist_ok=True)
+    env = dict(os.environ, COMMONROAD_CACHE=str(cache), PLANNER_PY=sys.executable, CR_NATIVE_RECORD=str(d / "record.json"),
+               PYTHONPATH=str(REPO / "libs" / "semantic-world"), PATH=str(SUMO_BIN) + os.pathsep + os.environ.get("PATH", ""))
+    if not env.get("METIS_HOME"):
+        row["error"] = True
+        row["reason"] = {"child": "METIS_HOME unset: the family's catalog pin (a detached worktree at road/domains/catalog.pin)"}
+        return [], _ReactiveVehicle()
+    (d / "record.json").unlink(missing_ok=True)
+    with open(d / "live.log", "w") as log:
+        if not (cache / sid / "cr.json").is_file():
+            subprocess.run([str(CONVERT_PY), str(ROAD / "tools" / "cr_convert.py"), str(xml), "--cache", str(cache)],
+                           stdout=log, stderr=subprocess.STDOUT, env=env, timeout=600)
+        k0 = int(cfg.planning_problem.initial_state.time_step)
+        cmd = [str(AGENT_PY), str(ROAD / "experiments" / "road_tree.py"), "cr:" + sid, "1", "--world", "crnative",
+               "--ticks", str(int(last_step) - k0 + 10), "--out", str(d / "live")]
+        try:
+            p = subprocess.run(cmd, cwd=str(AGENT_PY.parents[2]), stdout=subprocess.PIPE, stderr=log, text=True, env=env,
+                               timeout=max(60.0, TIMEOUT - 30))
+        except subprocess.TimeoutExpired:
+            row["error"] = True
+            row["reason"] = {"child": "road_tree timeout after %ds" % max(60, TIMEOUT - 30)}
+            return [], _ReactiveVehicle()
+        log.write(p.stdout or "")
+    summ = next((json.loads(l) for l in reversed((p.stdout or "").splitlines()) if l.startswith("{")), None)
+    f = d / "record.json"
+    if not f.is_file() or summ is None:
+        row["error"] = True
+        row["reason"] = {"child": "road_tree exit %s, no %s (see live.log)" % (p.returncode, "record" if not f.is_file() else "summary")}
+        return [], _ReactiveVehicle()
+    rec = json.loads(f.read_text())
+    ms = [s["ms"] for s in rec.get("solves") or [] if s.get("ms") is not None]
+    row["ms_cycle"] = round(sum(ms) / len(ms), 1) if ms else None
+    row["cycles"] = len(rec.get("solves") or [])
+    row["plan_failures"] = sum(1 for s in rec.get("solves") or [] if not s.get("success"))
+    row["record"] = str(f)
+    row["family"] = {"responder": summ.get("responder_kinds"), "planner": summ.get("planner_kinds"),
+                     "planner_cmds": summ.get("planner_cmds"), "responder_cmds": summ.get("responder_cmds"),
+                     "restricted": summ.get("restricted"), "lane_changes": len(rec.get("lane_changes") or [])}
+    states = [ReactivePlannerState(time_step=int(p_["k"]), position=np.array([p_["x"], p_["y"]]), velocity=p_["v"],
+                                   orientation=p_["phi"], steering_angle=p_.get("delta") or 0.0,
+                                   acceleration=p_.get("a") or 0.0, yaw_rate=0.0) for p_ in rec.get("trajectory") or []]
+    return states, _ReactiveVehicle()
+
+
 PLANNERS = {"reactive": drive_reactive, "stub": drive_stub, "sb2023": drive_sb2023, "sb2023-ca": drive_sb2023_ca,
-            "sb2023-vlim": drive_sb2023_vlim}
+            "sb2023-vlim": drive_sb2023_vlim, "composition": drive_composition}
 
 
 # ---------------------------------------------------------------- the oracle
@@ -486,6 +559,10 @@ HOW = {
     "reactive": "The reference path: the package's create_initial_ref_path (route planner's shortest route), extended %g m back "
                 "and %g m past its end, smoothed by create_coordinate_system; the feasibility count depends on it (the 20 m "
                 "back extension moved DEU_BadEssen-1_3_T-1 from 17 to 1 bad transitions)." % (BACK_M, EXTEND_M),
+    "composition": "The road family's command per beat (road_tree --world crnative: the Live, the belief, the fold, the restrictor; "
+                   "no SUMO process) as the reactive planner's setpoints (iface.setpoints_of: the target speed is the lane's limit, "
+                   "brake lowers it by the restricted deceleration over 1 s, yield stops at the zone line, change sends the sibling's "
+                   "centreline); the restrictor's cap clips the executed speed after the planner; replanned every 3 steps or at a new setpoint.",
     "sb2023": "SB-2023 @ 5434d05 as its main.py calls it: its own decision module (desired_velocity='init'), the "
               "Optimization planner at its defaults, ONE SHOT over the goal window, collision_avoidance off; ms/cycle = "
               "decision + low level; the solution's vehicle FORD_ESCORT (the nearest CommonRoad type to SB's 4.3 x 1.7 m, "
