@@ -78,22 +78,6 @@ def cr_native():
     return m
 
 
-def test_the_oncoming_lane_from_the_lanelet_adjacency(cr_native):
-    lm, doc = two_way()
-    added = cr_native.extend_from_lanelets(lm, doc)
-    a, b = lm.lanes["1000_0"], lm.lanes["1001_0"]
-    assert (a.left, a.left_opposite, b.left, b.left_opposite) == ("1001_0", True, "1000_0", True)
-    assert len(added) == 2
-    assert cr_native.extend_from_lanelets(lm, doc) == []          # idempotent: a set neighbour is kept
-
-
-def test_a_same_direction_neighbour_in_another_edge(cr_native):
-    lm, doc = two_way()
-    doc["lanelets"][0]["adj_left_same"] = True
-    cr_native.extend_from_lanelets(lm, doc)
-    assert lm.lanes["1000_0"].left == "1001_0" and lm.lanes["1000_0"].left_opposite is False
-
-
 def test_matching_by_heading_and_the_preferred_lane(cr_native):
     lm, _ = two_way()
     ix = cr_native.LaneIndex(lm)

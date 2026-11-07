@@ -6,11 +6,9 @@ reactive planner (road/planner/rp_server.py, a child in the planner venv: the Li
     run spec: {"world": "crnative", "scenario": "cr:ID" | "cr:/path/ID.xml", "seed", "work"?, "record"?: PATH}
     road_host.new_world → sumo_host.Loop(run, world=NativeCrWorld)
 
-- The map: the cr-cache's net (cr_world.load: the converter's net + cr.json, as the SUMO host reads it); its lane map
-  (sumo_host.lanemap_of) EXTENDED from cr.json's lanelet adjacency (the director's extend_lanemap, the hook the Loop
-  calls): a lanelet's adj_left / adj_right in another edge becomes the lane's left / right, an opposite one with
-  left_opposite (the converter gives opposite lanelets their own nodes, so the net reader's reverse-edge test misses
-  them: ZAM_Over-1_1's oncoming lane).
+- The map: the scenario's LANELETS, no SUMO conversion (the user's option 1): the JSON road/planner/cr_lanelets.py
+  writes ($CR_LANES_JSON), turned into the LaneMap by cr_lanes.lanemap_from (edges from same-direction neighbours, the
+  oncoming lane as left_opposite, junction lanes, zones); a lane id IS its lanelet id; CommonRoad coordinates (no offset).
 - The obstacles: cr.json's recorded trajectories, net coordinates (+ net_offset), each at its pose of the step,
   present from its first recorded step to its last (a static one throughout). Lane and s by map matching on the lane
   map's shapes (the front bumper's position on the nearest lane within MATCH_HEADING_DEG of its heading).
@@ -157,9 +155,6 @@ class Director:
         self.w = world
         self.goal_lanes = None
 
-    def extend_lanemap(self, lanemap):
-        extend_from_lanelets(lanemap, self.w.doc)
-
     def _windows(self):
         return [g.get("time") for g in self.w.goals]
 
@@ -183,27 +178,6 @@ class Director:
                                    "record": str(w.record_path)}}
 
 
-def extend_from_lanelets(lanemap, doc):
-    """cr.json's lanelet adjacency into the lane map: lanelet → its SUMO lane (lanelet_lane); adj_left / adj_right in
-    another edge set left / right where the net left them empty, an opposite one (adj_*_same False) with *_opposite."""
-    ll = {str(k): v for k, v in (doc.get("lanelet_lane") or {}).items()}
-    added = []
-    for la in doc.get("lanelets") or []:
-        a = ll.get(str(la["id"]))
-        if a not in lanemap.lanes:
-            continue
-        for side in ("left", "right"):
-            other = la.get("adj_" + side)
-            b = ll.get(str(other)) if other is not None else None
-            if b is None or b not in lanemap.lanes or getattr(lanemap.lanes[a], side):
-                continue
-            same = la.get("adj_%s_same" % side)
-            setattr(lanemap.lanes[a], side, b)
-            setattr(lanemap.lanes[a], side + "_opposite", not same)
-            added.append((a, side, b, not same))
-    return added
-
-
 def _inside(pt, poly):
     return cr_world.inside(pt, poly)
 
@@ -212,23 +186,21 @@ class NativeCrWorld:
     """SumoWorld's face for sumo_host.Loop over a CommonRoad scenario with no SUMO process."""
 
     def __init__(self, scenario, work, seed=1, dt=None, traci=None, label=None, record=None, **kw):
-        sid = cr_world.scenario_id(scenario)
-        self.path = None
-        if sid.endswith(".xml"):                       # a path: the cache keys by the file's id
-            self.path, sid = sid, Path(sid).name[:-4]
-        self.doc, self.seed, self.work = cr_world.load(sid), int(seed), Path(work)
-        self.sid = sid
-        cache = Path(os.environ.get("COMMONROAD_CACHE", str(cr_world.CACHE)))
-        self.net = str(cache / sid / self.doc["net"])
+        lanes_json = os.environ.get("CR_LANES_JSON")    # cr_bench writes it (cr_lanelets.export) before the run
+        if not lanes_json or not Path(lanes_json).is_file():
+            raise RuntimeError("cr_native: $CR_LANES_JSON names no lanelet file (road/planner/cr_lanelets.py writes it)")
+        self.doc, self.seed, self.work = json.loads(Path(lanes_json).read_text()), int(seed), Path(work)
+        self.sid = self.doc["id"]
+        self.path = self.doc.get("source")
+        self.net = lanes_json                          # the Loop's lane map comes from self.lanemap (its fallback reads a net)
         self.dt = float(self.doc.get("dt") or 0.1)
-        self.off = tuple(self.doc.get("net_offset") or (0.0, 0.0))
+        self.off = (0.0, 0.0)
         pl = (self.doc.get("planning") or [{}])[0]
         self.k0 = int(pl["initial"]["k"])
         self.goals = pl.get("goals") or []
         self.director = Director(self)
-        import sumo_host
-        lm = sumo_host.lanemap_of(self.net)
-        extend_from_lanelets(lm, self.doc)
+        import cr_lanes
+        lm = cr_lanes.lanemap_from(self.doc)
         self.lanes = LaneIndex(lm)
         self.lanemap = lm
         self.conn = _Conn(self)
@@ -251,16 +223,13 @@ class NativeCrWorld:
                                                                              "seconds": None},
             "steps": [], "lane_changes": [], "stops": [], "solves": [], "times": {}, "trajectory": [],
             "vehicle": None, "failure": None}
-        edges = self.doc.get("edges") or {}
-        self.edge_lanelets = {str(k): v for k, v in edges.items()}
         self.lanelet_poly = {int(la["id"]): cr_world.lanelet_poly(la) for la in self.doc.get("lanelets") or []}
         self.obstacles = self.doc.get("obstacles") or []
         goal_lanes = set()
-        ll = {str(k): v for k, v in (self.doc.get("lanelet_lane") or {}).items()}
         for g in self.goals:
             for la in g.get("lanelets") or []:
-                if ll.get(str(la)):
-                    goal_lanes.add(ll[str(la)])
+                if str(la) in lm.lanes:
+                    goal_lanes.add(str(la))
             for poly in g.get("polygons") or []:
                 cx = sum(p[0] for p in poly) / len(poly) + self.off[0]
                 cy = sum(p[1] for p in poly) / len(poly) + self.off[1]
@@ -600,13 +569,7 @@ class NativeCrWorld:
             return
 
     def _lanelet(self):
-        ln = self.lanemap.lanes.get(self.ego_lane)
-        cands = self.edge_lanelets.get(str(ln.edge), []) if ln is not None else []
-        for lid in cands:
-            poly = self.lanelet_poly.get(int(lid))
-            if poly and _inside((self.ego["x"], self.ego["y"]), poly):
-                return int(lid)
-        return int(cands[0]) if cands else None
+        return int(self.ego_lane) if self.ego_lane is not None and str(self.ego_lane).isdigit() else None
 
     def _log_step(self, sp):
         e = self.ego

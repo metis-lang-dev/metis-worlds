@@ -20,6 +20,7 @@ perceived and projected once. One tick (dt 0.1 s, the SUMO step; road_host's res
                 the OPTIMISTIC accels (a same-direction pair made dangerous by the rear ego's accel: the architect's
                 ruling, its own column); the latency from a truth pair's first dangerous tick to the first braking applied;
                 the ms of each stage."""
+import copy
 import math
 import os
 import pickle
@@ -83,7 +84,8 @@ class Loop:
             args["n"] = int(level["vehicles"])
         self.scenario, self.seed, self.ego_id = level.get("scenario", "straight"), int(level.get("seed", 1)), EGO
         self.world = (world or SumoWorld)(self.scenario, work, seed=self.seed, traci=traci, **args)   # world: cr_native's
-        self.lanemap = lanemap_of(self.world.net)
+        own = getattr(self.world, "lanemap", None)      # cr_native: its lanelet map (cr_lanes), this run's copy
+        self.lanemap = copy.deepcopy(own) if own is not None else lanemap_of(self.world.net)
         if hasattr(getattr(self.world, "director", None), "extend_lanemap"):
             self.world.director.extend_lanemap(self.lanemap)       # the host-side walkers' virtual crosswalks (walkers.py), this run's copy
         sen = level.get("sensor", {})
