@@ -473,18 +473,27 @@ def short_reason(r):
     return json.dumps(x)[:120]
 
 
-def table(rows, title):
+HOW = {
+    "reactive": "The reference path: the package's create_initial_ref_path (route planner's shortest route), extended %g m back "
+                "and %g m past its end, smoothed by create_coordinate_system; the feasibility count depends on it (the 20 m "
+                "back extension moved DEU_BadEssen-1_3_T-1 from 17 to 1 bad transitions)." % (BACK_M, EXTEND_M),
+    "sb2023": "SB-2023 @ 5434d05 as its main.py calls it: its own decision module (desired_velocity='init'), the "
+              "Optimization planner at its defaults, ONE SHOT over the goal window, collision_avoidance off; ms/cycle = "
+              "decision + low level; the solution's vehicle FORD_ESCORT (the nearest CommonRoad type to SB's 4.3 x 1.7 m, "
+              "wheelbase 2.3). Its OCP has no steering-rate bound and zero input weights: the KS check rejects the chatter.",
+}
+HOW["sb2023-ca"] = HOW["sb2023"].replace("collision_avoidance off", "collision_avoidance ON (the one flag)")
+
+
+def table(rows, title, planner="reactive"):
     from collections import Counter
     c = Counter(r["outcome"] for r in rows)
     lines = ["# %s" % title, "",
              "%d scenarios: %s." % (len(rows), ", ".join("%s %d" % (o, c[o]) for o in OUTCOMES if c[o])),
-             "Goal kinds: %s; traffic: %s. The planner is deterministic: one run per row. The reference path: the "
-             "package's create_initial_ref_path (route planner's shortest route), extended %g m back and %g m past its end, "
-             "smoothed by create_coordinate_system; the feasibility count depends on it (the 20 m back extension moved "
-             "DEU_BadEssen-1_3_T-1 from 17 to 1 bad transitions)." % (
+             "Goal kinds: %s; traffic: %s. The planner is deterministic: one run per row. %s" % (
                  ", ".join("%s %d" % kv for kv in sorted(Counter(r.get("goal_kind") or "—" for r in rows).items())),
                  ", ".join("%s %d" % kv for kv in sorted(Counter(r.get("traffic") or "—" for r in rows).items())),
-                 BACK_M, EXTEND_M), "",
+                 HOW.get(planner, "")), "",
              "| id | outcome | goal kind | traffic | goal | collision | offroad | feasible (bad transitions) | cost (JB1) "
              "| ms/cycle | cycles | steps | window | reason |",
              "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|"]
@@ -520,7 +529,7 @@ def batch(lst, jobs=MAX_JOBS, planner="reactive", out=OUT, table_file=None):
     sha = worlds_sha()
     tf = Path(table_file) if table_file else HERE / "tables" / table_name(planner, lst, sha)
     tf.parent.mkdir(parents=True, exist_ok=True)
-    tf.write_text(table(rows, "%s planner baseline over %s at metis-worlds %s" % (planner, Path(lst).name, sha)))
+    tf.write_text(table(rows, "%s over %s at metis-worlds %s" % (planner, Path(lst).name, sha), planner))
     (Path(out) / ("rows-%s.json" % sha)).write_text(json.dumps(rows, indent=1, default=str))
     return rows, tf
 
@@ -538,7 +547,18 @@ def main(argv=None):
     b.add_argument("--planner", default="reactive", choices=sorted(PLANNERS))
     b.add_argument("--out", default=str(OUT))
     b.add_argument("--table")
+    t = sub.add_parser("table")
+    t.add_argument("rows")
+    t.add_argument("list")
+    t.add_argument("--planner", default="reactive", choices=sorted(PLANNERS))
+    t.add_argument("--sha", required=True)
     a = ap.parse_args(argv)
+    if a.cmd == "table":
+        rows = json.loads(Path(a.rows).read_text())
+        tf = HERE / "tables" / table_name(a.planner, a.list, a.sha)
+        tf.write_text(table(rows, "%s over %s at metis-worlds %s" % (a.planner, Path(a.list).name, a.sha), a.planner))
+        print(tf)
+        return 0
     if a.cmd == "run":
         row = run(a.id, a.planner, a.out)
         print(json.dumps({k: row[k] for k in ("id", "outcome", "goal", "collision", "offroad", "feasible", "cost",
