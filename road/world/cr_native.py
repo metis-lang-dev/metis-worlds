@@ -1,7 +1,7 @@
 """cr_native — a CommonRoad scenario in its NATIVE loop, no SUMO process (planner-loop s-0dcc5ed1 step 2, deliverable 3;
 the architect's GO 2026-11-07): `NativeCrWorld` presents SumoWorld's face to sumo_host.Loop, so the road family runs
 through the UNCHANGED Loop (perceive, belief, road_facts, the fold, the restrictor) while the ego is driven by the
-reactive planner (road/planner/rp_server.py, a child in the planner venv: the Live's venv never imports CommonRoad).
+trajectory planner (OUR OCP, road/planner/ocp_server.py, a child in the planner venv: the Live never imports CommonRoad).
 
     run spec: {"world": "crnative", "scenario": "cr:ID" | "cr:/path/ID.xml", "seed", "work"?, "record"?: PATH}
     road_host.new_world → sumo_host.Loop(run, world=NativeCrWorld)
@@ -36,8 +36,9 @@ from sumo_world import EGO
 HERE = Path(__file__).resolve().parent
 ROAD = HERE.parent
 PLANNER_PY = os.environ.get("PLANNER_PY", str(ROAD / ".venv-planner" / "bin" / "python"))
-RP_SERVER = ROAD / "planner" / "rp_server.py"
-REPLAN = 3                     # steps between plans (the reactive planner's replanning_frequency)
+OCP_SERVER = ROAD / "planner" / "ocp_server.py"   # OUR OCP (ocp.py: SB's low-level optimisation), step 3 M3
+REPLAN = 10                    # steps between solves (1 s), besides a new command; each solve: the remaining window
+MIN_HORIZON = 30               # steps a solve covers at least (past the goal's window: 3 s ahead)
 MATCH_HEADING_DEG = 45.0
 MATCH_PAD_M = 6.0
 PATH_AHEAD_M = 250.0           # the length of a lane's centreline sent as a reference path
@@ -217,7 +218,8 @@ class NativeCrWorld:
         rec = record or os.environ.get("CR_NATIVE_RECORD")       # cr_bench --planner composition sets it per run
         self.record_path = Path(rec) if rec else self.work / "record.json"
         self.record = {"record": 1, "planner": "composition", "settings": {
-            "world": "cr_native (no SUMO process)", "planner": "commonroad-reactive-planner 2025.1 via rp_server.py",
+            "world": "cr_native (lanelets, no SUMO)", "planner": "ocp.py (SB's low-level OCP) via ocp_server.py",
+            "reference": "reference.py over the LaneMap from the family's command",
             "mapping": "iface.setpoints_of", "replan_steps": REPLAN, "clip": "v <= v_prev + cap*dt after the planner"},
             "scenario": self.doc.get("source"), "dt": self.dt, "horizon": {"mode": "receding", "steps": None,
                                                                              "seconds": None},
@@ -245,22 +247,23 @@ class NativeCrWorld:
         while True:
             line = self.proc.stdout.readline()
             if not line:
-                raise RuntimeError("cr_native: the planner server ended (see %s)" % (self.work / "rp_server.log"))
+                raise RuntimeError("cr_native: the planner server ended (see %s)" % (self.work / "ocp_server.log"))
             if line.startswith("{"):
                 return json.loads(line)
 
     def start(self):
         self.work.mkdir(parents=True, exist_ok=True)
-        log = open(self.work / "rp_server.log", "w")
-        self.proc = subprocess.Popen([PLANNER_PY, str(RP_SERVER)], stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+        log = open(self.work / "ocp_server.log", "w")
+        self.proc = subprocess.Popen([PLANNER_PY, str(OCP_SERVER)], stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                                      stderr=log, text=True)
         src = self.doc.get("source") or self.path
         r = self._ask({"op": "init", "scenario": src})
         if not r.get("ok"):
             raise RuntimeError("cr_native: the planner server refused the scenario: %s" % r.get("reason"))
-        self.wb_rear = r["wb_rear"]
         self.ego = dict(r["initial"])                  # CommonRoad coordinates, the centre
-        self.record["vehicle"] = {"type": "commonroad vehicle id 2 (the reactive planner's)", "wb_rear": self.wb_rear}
+        veh = r.get("vehicle") or {}
+        self.EGO_L, self.EGO_W = float(veh.get("length", self.EGO_L)), float(veh.get("width", self.EGO_W))
+        self.record["vehicle"] = dict(veh, type="SB's car (ocp.SB_VEHICLE); the oracle's FORD_ESCORT")
         m = self._match_ego()
         self.ego_lane, self.ego_s, self.ego_lat = m
         self.home_lane = self.ego_lane
@@ -407,29 +410,56 @@ class NativeCrWorld:
             acc, last = acc + seg, p
         return self.to_cr(*line[-1])
 
-    def _path_for(self, lane, reverse):
+    def _path_for(self, lane, reverse, ahead=None):
         if lane not in self.lanes.lanes:
             return None
         s0, _, _, _ = self.lanes.project(lane, *self.to_net(self.ego["x"], self.ego["y"]))
         line = self.lanes.centreline(lane, max(0.0, s0 - 5.0) if not reverse else s0 + 5.0, reverse=reverse,
-                                     route=self.ego_route)
+                                     route=self.ego_route, ahead=ahead or PATH_AHEAD_M)
         return [list(self.to_cr(*p)) for p in line] if len(line) >= 2 else None
 
-    def _replan(self, sp, path):
-        msg = {"op": "plan", "state": self.ego, "set": {"desired_v": sp.desired_v, "stop_xy": sp.stop_xy}}
-        if path:
-            msg["set"]["path"] = path
+    def _goal_on(self, path):
+        """The first goal polygon's centre projected on PATH (its s) when it lies within 4 m of it, and the window."""
+        import reference
+        g = self.goals[0] if self.goals else {}
+        polys, w = g.get("polygons") or [], g.get("time")
+        if not polys:
+            return None, None
+        cx = sum(p[0] for p in polys[0]) / len(polys[0])
+        cy = sum(p[1] for p in polys[0]) / len(polys[0])
+        s, off = reference.project(path, (cx, cy))
+        return (s if math.hypot(*off) <= 4.0 else None), w
+
+    def _replan(self, sp):
+        """A solve over the remaining window: the reference (reference.build) along the lane the family's command names
+        (the route lane, the sibling of a change, the oncoming lane of a pass), its speed the setpoints'."""
+        sys.path.insert(0, str(ROAD / "planner"))
+        import reference
+        lane = self.target_lane or self.ego_lane
         t0 = time.perf_counter()
-        r = self._ask(msg)
-        self.record["solves"].append({"k": self.k, "stage": "plan", "status": "ok" if r.get("ok") else "infeasible",
-                                      "success": bool(r.get("ok")), "iterations": None,
-                                      "t_wall_s": round(time.perf_counter() - t0, 3), "ms": r.get("ms"),
-                                      "reason": None if r.get("ok") else r.get("reason")})
+        last = max([int(g["time"][1]) for g in self.goals if g.get("time")] or [self.k + MIN_HORIZON])
+        n = max(MIN_HORIZON, last - self.k) + 1
+        reach = n * self.dt * max(self.ego["v"], self._limit()) + 50.0
+        path = self._path_for(lane, self.reverse and lane == self.target_lane, ahead=max(PATH_AHEAD_M, reach))
+        r = {"ok": False, "status": "no path"}
+        if path:
+            stop_s = reference.project(path, sp.stop_xy)[0] if sp.stop_xy is not None else None
+            goal_s, w = self._goal_on(path)
+            window = None if w is None else ((w[0] - self.k) * self.dt, (w[1] - self.k) * self.dt)
+            target = sp.desired_v if sp.desired_v is not None else self._limit()
+            ref = reference.build(path, (self.ego["x"], self.ego["y"]), self.ego["v"], self.dt, n, target,
+                                  stop_s=stop_s, goal_s=goal_s, window=window)
+            if ref:
+                r = self._ask({"op": "plan", "x0": [self.ego["x"], self.ego["y"], self.ego["v"], self.ego["phi"]],
+                               "k": self.k, "ref": [list(p) for p in ref]})
+                self.record["steps"][-1].update(v_ref=round(ref[min(1, len(ref) - 1)][2], 3))
+        self.record["solves"].append({"k": self.k, "stage": "plan", "status": r.get("status"), "success": bool(r.get("ok")),
+                                      "iterations": r.get("iterations"), "t_wall_s": round(time.perf_counter() - t0, 3),
+                                      "ms": r.get("ms"), "lane": lane, "n": n})
         if r.get("ok") and len(r.get("states") or []) > 1:
             self.plan, self.plan_i = r["states"], 1
             if self.record["horizon"]["steps"] is None:
-                self.record["horizon"].update(steps=len(r["states"]) - 1,
-                                              seconds=round((len(r["states"]) - 1) * self.dt, 2))
+                self.record["horizon"].update(steps=n - 1, seconds=round((n - 1) * self.dt, 2))
         else:
             self.plan_failures += 1
             self.plan, self.plan_i = [], 0
@@ -446,14 +476,10 @@ class NativeCrWorld:
         sp = self._setpoints()
         key = (sp.desired_v and round(sp.desired_v, 1), sp.stop_xy and tuple(round(c, 1) for c in sp.stop_xy),
                self.target_lane, self.reverse)
-        path = None
-        if self.target_lane is not None and self.target_lane != self.ref_lane:
-            path = self._path_for(self.target_lane, self.reverse)
-            self.ref_lane = self.target_lane
-        due = (not self.plan or self.plan_i >= len(self.plan) or path is not None or key != self.last_set
+        due = (not self.plan or self.plan_i >= len(self.plan) or key != self.last_set
                or (self.tick - (self.last_plan_tick or 0)) >= REPLAN)
         if due:
-            self._replan(sp, path)
+            self._replan(sp)
             self.last_plan_tick, self.last_set = self.tick, key
         prev = dict(self.ego)
         if self.plan and self.plan_i < len(self.plan):

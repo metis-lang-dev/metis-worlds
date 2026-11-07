@@ -407,7 +407,58 @@ def drive_ours_parity(cfg, ref_fn, last_step, row, d):
     return states, _CentredVehicle()
 
 
-PLANNERS = {"ours-parity": drive_ours_parity, "reactive": drive_reactive, "stub": drive_stub, "sb2023": drive_sb2023, "sb2023-ca": drive_sb2023_ca,
+def drive_ours(cfg, ref_fn, last_step, row, d):
+    """M3, OUR planner: the road family's command per beat over the LaneMap from the scenario's LANELETS (cr_lanelets →
+    cr_lanes: no SUMO conversion), the reference (reference.py) into OUR OCP (ocp.py, SB's), through road_tree.py --world
+    crnative (the Live: perception, belief, facts, fold, restrictor); SB's vehicle; the record → the states."""
+    import numpy as np
+    from commonroad_rp.reactive_planner import ReactivePlannerState
+    sys.path.insert(0, str(HERE))
+    import cr_lanelets
+    xml = Path(row["file"])
+    sid = xml.name[:-len(".cr.xml")] if xml.name.endswith(".cr.xml") else xml.stem
+    d.mkdir(parents=True, exist_ok=True)
+    lanes = cr_lanelets.export(xml, d / "lanes.json")
+    env = dict(os.environ, CR_LANES_JSON=str(lanes), PLANNER_PY=sys.executable, CR_NATIVE_RECORD=str(d / "record.json"),
+               PYTHONPATH=str(REPO / "libs" / "semantic-world"))
+    if not env.get("METIS_HOME"):
+        row["error"] = True
+        row["reason"] = {"child": "METIS_HOME unset: the family's catalog pin (a detached worktree at road/domains/catalog.pin)"}
+        return [], _CentredVehicle()
+    (d / "record.json").unlink(missing_ok=True)
+    k0 = int(cfg.planning_problem.initial_state.time_step)
+    cmd = [str(AGENT_PY), str(ROAD / "experiments" / "road_tree.py"), "cr:" + sid, "1", "--world", "crnative",
+           "--ticks", str(int(last_step) - k0 + 10), "--out", str(d / "live")]
+    with open(d / "live.log", "w") as log:
+        try:
+            p = subprocess.run(cmd, cwd=str(AGENT_PY.parents[2]), stdout=subprocess.PIPE, stderr=log, text=True, env=env,
+                               timeout=max(60.0, TIMEOUT - 30))
+        except subprocess.TimeoutExpired:
+            row["error"] = True
+            row["reason"] = {"child": "road_tree timeout after %ds" % max(60, TIMEOUT - 30)}
+            return [], _CentredVehicle()
+        log.write(p.stdout or "")
+    summ = next((json.loads(l) for l in reversed((p.stdout or "").splitlines()) if l.startswith("{")), None)
+    f = d / "record.json"
+    if not f.is_file() or summ is None:
+        row["error"] = True
+        row["reason"] = {"child": "road_tree exit %s, no %s (see live.log)" % (p.returncode, "record" if not f.is_file() else "summary")}
+        return [], _CentredVehicle()
+    rec = json.loads(f.read_text())
+    ms = [s_["ms"] for s_ in rec.get("solves") or [] if s_.get("ms") is not None]
+    row["ms_cycle"] = round(sum(ms) / len(ms), 1) if ms else None
+    row["cycles"] = len(rec.get("solves") or [])
+    row["plan_failures"] = sum(1 for s_ in rec.get("solves") or [] if not s_.get("success"))
+    row["record"] = str(f)
+    row["family"] = {"responder": summ.get("responder_kinds"), "planner": summ.get("planner_kinds"),
+                     "restricted": summ.get("restricted"), "lane_changes": len(rec.get("lane_changes") or [])}
+    states = [ReactivePlannerState(time_step=int(q["k"]), position=np.array([q["x"], q["y"]]), velocity=q["v"],
+                                   orientation=q["phi"], steering_angle=q.get("delta") or 0.0,
+                                   acceleration=q.get("a") or 0.0, yaw_rate=0.0) for q in rec.get("trajectory") or []]
+    return states, _CentredVehicle()
+
+
+PLANNERS = {"ours": drive_ours, "ours-parity": drive_ours_parity, "reactive": drive_reactive, "stub": drive_stub, "sb2023": drive_sb2023, "sb2023-ca": drive_sb2023_ca,
             "sb2023-vlim": drive_sb2023_vlim, "composition": drive_composition}
 
 
@@ -616,6 +667,10 @@ HOW = {
               "decision + low level; the solution's vehicle FORD_ESCORT (the nearest CommonRoad type to SB's 4.3 x 1.7 m, "
               "wheelbase 2.3). KS feasibility as measured; footnote: no steering-rate bound, zero input weights.",
 }
+HOW["ours"] = ("OUR planner: the road family's command per beat (road_tree --world crnative over the LaneMap from the "
+               "scenario's lanelets, no SUMO) → the reference (reference.py: the lane the command names, the target speed, "
+               "stops, the window-fitted arrival) → OUR OCP (ocp.py = SB's, parity proven), re-solved over the remaining "
+               "window at a new command or every 1 s; the restrictor's cap clips the executed speed; SB's vehicle.")
 HOW["ours-parity"] = ("OUR OCP (ocp.py: SB's low-level optimisation from its equations, every addition off) on SB's OWN "
                       "reference (the sb2023 column's record), one shot, SB's vehicle: the parity proof of M2.")
 HOW["sb2023-ca"] = HOW["sb2023"].replace("collision_avoidance off", "collision_avoidance ON (the one flag)")
