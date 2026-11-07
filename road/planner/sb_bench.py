@@ -23,8 +23,8 @@ composition writes the same shape, with `command` filled per beat:
   stops        [{from_k, to_k, x, y}]: the runs of steps with v_ref <= 0.1 m/s
   solves       [{k, stage, status, success, iterations, t_wall_s}]: one per solve (one-shot: one)
   times        {decision_s, low_level_s}
-  trajectory   [{k, x, y, v, phi, delta, a}]: the planned states at the vehicle's CENTRE (CommonRoad's convention; SB plans
-               at the rear axle, b = wheelbase/2 behind), delta the steering angle, a the acceleration input
+  trajectory   [{k, x, y, v, phi, delta, a}]: the planned states at the vehicle's CENTRE (CommonRoad's convention; SB
+               plans at the rear axle and returns the centre), delta the steering angle, a the acceleration input
   vehicle      SB's parameters (length, width, wheelbase, b, a_max, s_max)
   failure      null | {stage: decision|low_level, kind: solver|exception, status?, exception?}
 cr_bench.py (the planner venv) turns the trajectory into solution.xml and the oracle's row.json, as for the baseline.
@@ -161,11 +161,12 @@ def run(xml, out, collision_avoidance=False, vlim=False):
         if x is None:
             rec["failure"] = {"stage": stage, "kind": "solver", "status": "no trajectory returned"}
         else:
-            b = param["b"]
+            # lowLevelPlannerOptimization's x is at the CENTRE already (its simulate_trajectory moves it back from the
+            # rear axle); before 2026-11-07 this wrapper shifted it by b again (every SB row 1.15 m ahead)
             for i in range(x.shape[1]):
                 j = min(i, u.shape[1] - 1)
-                rec["trajectory"].append({"k": k0 + i, "x": float(x[0, i] + np.cos(x[3, i]) * b),
-                                          "y": float(x[1, i] + np.sin(x[3, i]) * b), "v": float(x[2, i]),
+                rec["trajectory"].append({"k": k0 + i, "x": float(x[0, i]),
+                                          "y": float(x[1, i]), "v": float(x[2, i]),
                                           "phi": float(x[3, i]), "delta": float(u[1, j]), "a": float(u[0, j])})
     except Exception as e:
         rec["times"].setdefault(stage + "_s", round(time.perf_counter() - t0, 3))
