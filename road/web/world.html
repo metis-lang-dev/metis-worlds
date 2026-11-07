@@ -148,7 +148,12 @@
   #events .ev-w { color: var(--dim); font-size: 11.5px; margin: 2px 0; }
   #events .ev-note { width: 100%; box-sizing: border-box; background: var(--bg); color: var(--fg); border: 1px solid var(--line); font: inherit; padding: 1px 4px; margin-top: 3px; }
   #dock-loop .dbody { display: flex; flex-direction: column; overflow: hidden; padding: 0; }
-  #loopframe { flex: 1 1 auto; min-height: 340px; width: 100%; border: 0; background: var(--bg); }
+  #loopframe { flex: 1 1 auto; min-height: 0; width: 100%; border: 0; background: var(--bg); }   /* the chat scrolls inside its frame */
+  /* the column's height: TOOLS and EVENTS as tall as their content (folded cards are small), at most a share; the loop's chat the rest */
+  #dock-tools.open { flex: 0 1 auto !important; max-height: 40%; }   /* !important: the shell keeps each dock's flex inline */
+  #dock-events.open { flex: 0 1 auto !important; max-height: 30%; }
+  #dock-loop.open { flex: 3 1 0 !important; min-height: 260px; }
+  #right > .dock > .dbody { overflow: auto; }
   #loopstate { color: var(--dim); text-transform: none; letter-spacing: 0; font-size: 11px; }
   .loop-msg { padding: 6px 8px; margin: 0; }
   .loop-msg[hidden] { display: none; }
@@ -200,7 +205,7 @@
         <header><span class="tw">▾</span><span class="tt">HIERARCHY</span><span id="hstate"></span><button class="x" type="button" aria-label="hide the hierarchy">✕</button></header>
         <div class="dbody"><ul id="hlist" tabindex="-1" aria-label="the domains"></ul></div>
       </section>
-      <section class="dock" id="dock-tools" data-dock="tools" tabindex="-1" aria-label="the tools: drive, cars, traffic">
+      <section class="dock" id="dock-tools" data-dock="tools" tabindex="-1" aria-label="the tools: drive, run, cars, traffic">
         <header><span class="tw">▾</span><span class="tt">TOOLS</span><button class="x" type="button" aria-label="hide the tools">✕</button></header>
         <div class="dbody" id="toolcards">
           <details class="fw-sec tool" id="tool-drive" data-tool="drive" open><summary>Drive</summary>
@@ -210,6 +215,11 @@
           <div class="wrow"><button class="chip" data-drive="lane:left" type="button">left lane</button><button class="chip" data-drive="lane:right" type="button">right lane</button></div>
           <div class="ph">SPEED</div>
           <div class="wrow"><button class="chip" data-drive="stop" type="button">stop</button><button class="chip" data-drive="go" type="button">go</button><button class="chip" data-drive="pace:easy" type="button">easy</button><button class="chip" data-drive="pace:normal" type="button">normal</button><button class="chip" data-drive="pace:brisk" type="button">brisk</button></div>
+          </details>
+          <details class="fw-sec tool" id="tool-run" data-tool="run"><summary>Run</summary>
+          <div class="wrow"><button class="chip" id="follow" type="button" aria-pressed="false">follow the ego</button><button class="chip" id="center" type="button">center on the ego</button></div>
+          <div class="ph">THE RUN, AS SUMO HAS IT</div><dl class="kv" id="run-info"></dl>
+          <div class="ph">THE EGO, AS SUMO HAS IT</div><dl class="kv" id="ego"></dl>
           </details>
           <details class="fw-sec tool" id="tool-cars" data-tool="cars"><summary>Cars</summary>
           <div class="ph">SELECTED CAR</div><dl class="kv" id="picked"></dl>
@@ -239,14 +249,6 @@
           </details>
         </div>
       </section>
-      <section class="dock" id="dock-run" data-dock="run" tabindex="-1" aria-label="the run">
-        <header><span class="tw">▾</span><span class="tt">RUN</span><button class="x" type="button" aria-label="hide the run">✕</button></header>
-        <div class="dbody">
-          <div class="wrow"><button class="chip" id="follow" type="button" aria-pressed="false">follow the ego</button><button class="chip" id="center" type="button">center on the ego</button></div>
-          <div class="ph">THE RUN, AS SUMO HAS IT</div><dl class="kv" id="run-info"></dl>
-          <div class="ph">THE EGO, AS SUMO HAS IT</div><dl class="kv" id="ego"></dl>
-        </div>
-      </section>
       <section class="dock" id="dock-events" data-dock="events" tabindex="-1" aria-label="the run's events: your marks and the surprises">
         <header><span class="tw">▾</span><span class="tt">EVENTS</span><button class="x" type="button" aria-label="hide the events">✕</button></header>
         <div class="dbody" id="events"></div>
@@ -268,7 +270,7 @@
         <div class="dbody"><div id="dialogpart"></div></div>
       </section>
     </aside>
-    <nav id="strip"><button type="button" data-strip="talk">Talk</button><button type="button" data-strip="tools">Tools</button><button type="button" data-strip="run">Run</button><button type="button" data-strip="events">Events</button><button type="button" data-strip="loop">Loop</button><button type="button" data-strip="hierarchy">Hierarchy</button><button type="button" data-strip="world">World card</button><button type="button" data-strip="journal">Journal</button><button type="button" data-strip="dialog">Dialog</button></nav>
+    <nav id="strip"><button type="button" data-strip="talk">Talk</button><button type="button" data-strip="tools">Tools</button><button type="button" data-strip="events">Events</button><button type="button" data-strip="loop">Loop</button><button type="button" data-strip="hierarchy">Hierarchy</button><button type="button" data-strip="world">World card</button><button type="button" data-strip="journal">Journal</button><button type="button" data-strip="dialog">Dialog</button></nav>
   </main>
 </div>
 <script type="module">

@@ -2,12 +2,11 @@
 // A mark is a window the person opened and closed (the top bar's button, or "mark" … "end mark, WORDS" by voice); a surprise is a one-off
 // event the page makes itself when the run's collisions or violations rise, and the run stops on it until the person continues. Each
 // event has its window in the trace's k (the host's marks.jsonl row, at_k), so it can be:
-//   narrated   /mark TRACE:MEMBER K0..K1 WORDS for each member, in the pi CHAT (the rules' own words + one-fact-short, 0 USD)
+//   narrated   /narrate TRACE K0..K1 CONTEXT in the pi CHAT: every member in the rules' own words + one-fact-short, the event's context, 0 USD
 //   explained  the question to pi in words (paid, the loop's budget)
 //   sent       /disagree M WORDS (a confusion record, the triage) then /take: pi processes it; the person applies or refuses at the gate
 // The dashboard draws them and moves their edges (mark:N:move:K0:K1). The list is kept in the browser per trace (localStorage).
 
-const MEMBERS = ['planner', 'responder'];                      // the members narrated: who decides the plan, who answers every tick
 const KEY = trace => `roadpage.events.v1:${trace}`;
 const QUIET_TICKS = 20;                                        // a rise within 2 s of the last is the same surprise going on
 const $ = s => document.querySelector(s);
@@ -15,11 +14,11 @@ const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '
 const secs = t => (t == null ? '…' : `${t.toFixed(1)}`);
 
 export class Events {
-  constructor(box, { line, loop, hold, speak, onChange }) {
-    Object.assign(this, { box, line, loop, hold, speak, onChange: onChange || (() => {}) });
+  constructor(box, { line, loop, hold, speak, onChange, context }) {
+    Object.assign(this, { box, line, loop, hold, speak, onChange: onChange || (() => {}), context: context || (() => ({})) });
     this.list = []; this.sel = null; this.trace = null; this.last = null; this.stopOn = true; this.waiting = null;
     this.rise = { c: 0, v: 0, tick: -1e9 };
-    this.pending = [];                                          // narrations asked, their loop marks to come: [{n, member}]
+    this.pending = [];                                          // narrations asked, their loop marks to come: [event number]
     this.draw();
   }
 
@@ -78,12 +77,16 @@ export class Events {
     const e = this.get(n ?? this.sel);
     if (!e || e.open || !e.trace || e.k0 == null) { this.speak(e?.open ? `Event ${e.n} is still open: end it first.` : 'Mark an event first.'); return; }
     this.sel = e.n;
-    const words = (e.note || e.words || `event ${e.n}`).replace(/\s+/g, ' ');
-    for (const m of MEMBERS) {
-      this.pending.push({ n: e.n, member: m });
-      this.loop.say(`/mark ${e.trace}:${m} ${e.k0}..${Math.max(e.k0, e.k1)} ${words}`);
-    }
+    this.pending.push(e.n);
+    this.loop.say(`/narrate ${e.trace} ${e.k0}..${Math.max(e.k0, e.k1)} ${this.said(e)}`);
     e.state = 'narrated'; this.save(); this.draw();
+  }
+
+  said(e) {                                                      // the event's context, as the loop's chat shows it on the narration
+    const c = this.context(), saw = (e.note || (e.kind === 'mark' ? e.words : '') || '').replace(/\s+/g, ' ').trim();
+    const when = e.kind === 'mark' ? `${secs(e.t0)}–${secs(e.t1)} s` : `${secs(e.t0)} s`;
+    return `event ${e.n}, ${e.kind === 'mark' ? 'a mark' : `a ${e.kind}`} at ${when} of the run${c.scenario ? ` on ${c.scenario} seed ${c.seed}` : ''}`
+      + (saw ? `; the tester saw: ${saw}` : '');
   }
 
   explain(n) {
@@ -101,7 +104,7 @@ export class Events {
     if (!e || e.open || !e.trace) { this.speak('Mark an event first.'); return; }
     this.sel = e.n;
     if (!e.loop.length) { e.sendAfter = true; this.narrate(e.n); return; }
-    const m = e.loop.find(x => x.member === 'planner') || e.loop[0];
+    const m = e.loop[e.loop.length - 1];
     this.loop.say(`/disagree ${m.mark} ${(e.note || e.words || `event ${e.n}`).replace(/\s+/g, ' ')}`);
     this.loop.say('/take');
     e.sendAfter = false; e.state = 'sent to pi'; this.save(); this.draw();
@@ -109,10 +112,10 @@ export class Events {
 
   row(r) {                                                       // a row of the CHAT: a mark narrated belongs to the oldest narration asked
     if (r.kind !== 'mark' || !r.mark || !this.pending.length) return;
-    const p = this.pending.shift(), e = this.get(p.n);
+    const e = this.get(this.pending.shift());
     if (!e) return;
-    e.loop = e.loop.filter(x => x.member !== p.member).concat({ member: p.member, mark: r.mark });
-    if (e.sendAfter && !this.pending.some(x => x.n === e.n)) this.send(e.n);
+    e.loop = e.loop.concat({ mark: r.mark });
+    if (e.sendAfter && !this.pending.includes(e.n)) this.send(e.n);
     this.save(); this.draw();
   }
 
