@@ -138,10 +138,11 @@ def goal_last_step(pp):
     return int(max(ends)) if ends else None
 
 
-def drive_reactive(cfg, ref_path, last_step, row):
+def drive_reactive(cfg, ref_fn, last_step, row, d):
     """run_planner's loop (the package's example): plan every replanning_frequency steps, follow the plan between."""
     from commonroad_rp.reactive_planner import ReactivePlanner
     from commonroad_rp.utility.utils_coordinate_system import create_coordinate_system
+    ref_path = ref_fn()
     planner = ReactivePlanner(cfg)
     # the package's coordinate system (spline smoothing + adaptive resampling); set_reference_path(polyline) alone passes
     # clcs 2025.2 no params and fails ('NoneType' has no attribute 'processing_option')
@@ -190,13 +191,13 @@ def drive_reactive(cfg, ref_path, last_step, row):
     return planner.record_state_list, cfg.vehicle
 
 
-def drive_stub(cfg, ref_path, last_step, row):
+def drive_stub(cfg, ref_fn, last_step, row, d):
     """No planner: the initial speed kept along the reference path (tests; checks the bench, not a planner)."""
     import numpy as np
     from commonroad_rp.reactive_planner import ReactivePlannerState
     pp = cfg.planning_problem
     x0 = ReactivePlannerState.create_from_initial_state(pp.initial_state, cfg.vehicle.wheelbase, cfg.vehicle.wb_rear_axle)
-    path = np.asarray(ref_path)
+    path = np.asarray(ref_fn())
     seg = np.linalg.norm(np.diff(path, axis=0), axis=1)
     s_acc = np.concatenate([[0.0], np.cumsum(seg)])
     s0 = float(s_acc[int(np.argmin(np.linalg.norm(path - x0.position, axis=1)))])
@@ -220,7 +221,68 @@ def drive_stub(cfg, ref_path, last_step, row):
     return states, cfg.vehicle
 
 
-PLANNERS = {"reactive": drive_reactive, "stub": drive_stub}
+SB_PY = Path(os.environ.get("SB2023_PY", str(ROAD / ".venv-sb2023" / "bin" / "python")))
+SB_VEHICLE_TYPE = 1    # CommonRoad's FORD_ESCORT (4.298 x 1.674 m, wheelbase 2.391): the nearest to SB's 4.3 x 1.7, 2.3
+
+
+class _CentredVehicle:
+    """SB's states are at the centre already: no shift; the solution's vehicle type is SB_VEHICLE_TYPE."""
+    wb_rear_axle = 0.0
+    id_type_vehicle = SB_VEHICLE_TYPE
+
+
+def drive_sb2023(cfg, ref_fn, last_step, row, d, collision_avoidance=False):
+    """The original SB-2023 planner in its own venv (road/planner/sb_bench.py, Python 3.8): one shot over the goal window;
+    its decision record (d/record.json) becomes the states; its failure a row with the reason. No reference of ours."""
+    import numpy as np
+    from commonroad_rp.reactive_planner import ReactivePlannerState
+    d.mkdir(parents=True, exist_ok=True)
+    (d / "record.json").unlink(missing_ok=True)
+    cmd = [str(SB_PY), str(HERE / "sb_bench.py"), row["file"], str(d)] + (["--collision-avoidance"] if collision_avoidance
+                                                                           else [])
+    with open(d / "sb.log", "w") as log:
+        try:
+            subprocess.run(cmd, stdout=log, stderr=subprocess.STDOUT, timeout=max(60.0, TIMEOUT - 30))
+        except subprocess.TimeoutExpired:
+            row["error"] = True
+            row["reason"] = {"child": "sb_bench timeout after %ds" % max(60, TIMEOUT - 30)}
+            return [], _CentredVehicle()
+    f = d / "record.json"
+    if not f.is_file():
+        row["error"] = True
+        row["reason"] = {"child": "sb_bench wrote no record (see sb.log)"}
+        return [], _CentredVehicle()
+    rec = json.loads(f.read_text())
+    t = rec.get("times") or {}
+    row["ms_decision"] = round(1000 * t["decision_s"], 1) if "decision_s" in t else None
+    row["ms_low_level"] = round(1000 * t["low_level_s"], 1) if "low_level_s" in t else None
+    row["ms_cycle"] = round((row["ms_decision"] or 0) + (row["ms_low_level"] or 0), 1)
+    row["cycles"] = len(rec.get("solves") or []) or 1
+    sol = (rec.get("solves") or [{}])[-1]
+    row["solver"] = {"status": sol.get("status"), "iterations": sol.get("iterations")} if sol else None
+    row["record"] = str(f)
+    fail = rec.get("failure")
+    if fail:
+        last = (fail.get("where") or ["?"])[-1].split(":")[0]
+        if fail.get("kind") == "exception" and last == "sb_bench.py":
+            row["error"] = True                          # the wrapper's own fault, not SB's
+        else:
+            row["infeasible"] = True
+        row["reason"] = {"sb": fail}
+        return [], _CentredVehicle()
+    states = []
+    for p in rec["trajectory"]:
+        st = ReactivePlannerState(time_step=int(p["k"]), position=np.array([p["x"], p["y"]]), velocity=p["v"],
+                                  orientation=p["phi"], steering_angle=p["delta"], acceleration=p["a"], yaw_rate=0.0)
+        states.append(st)
+    return states, _CentredVehicle()
+
+
+def drive_sb2023_ca(cfg, ref_fn, last_step, row, d):
+    return drive_sb2023(cfg, ref_fn, last_step, row, d, collision_avoidance=True)
+
+
+PLANNERS = {"reactive": drive_reactive, "stub": drive_stub, "sb2023": drive_sb2023, "sb2023-ca": drive_sb2023_ca}
 
 
 # ---------------------------------------------------------------- the oracle
@@ -235,7 +297,8 @@ def solution_of(cfg, states, vehicle):
                   velocity=float(s.velocity), orientation=float(s.orientation)) for s in shifted]
     traj = Trajectory(initial_time_step=ks[0].time_step, state_list=ks)
     pps = PlanningProblemSolution(planning_problem_id=cfg.planning_problem.planning_problem_id,
-                                  vehicle_type=VehicleType(cfg.vehicle.id_type_vehicle), vehicle_model=VehicleModel.KS,
+                                  vehicle_type=VehicleType(getattr(vehicle, "id_type_vehicle", cfg.vehicle.id_type_vehicle)),
+                                  vehicle_model=VehicleModel.KS,
                                   cost_function=CostFunction.JB1, trajectory=traj)
     return Solution(cfg.scenario.scenario_id, [pps])
 
@@ -324,8 +387,7 @@ def run(sid, planner="reactive", out=OUT):
         row["traffic"] = "recorded" if scenario.dynamic_obstacles else "none"
         if last is None:
             last = int(pp.initial_state.time_step) + 200
-        ref = reference_path(scenario, pp)
-        states, vehicle = PLANNERS[planner](cfg, ref, last, row)
+        states, vehicle = PLANNERS[planner](cfg, lambda: reference_path(scenario, pp), last, row, d)
         row["steps"] = len(states) - 1
         if len(states) < 2:
             row["reason"] = row["reason"] or {"note": "no step driven"}
@@ -398,6 +460,11 @@ def short_reason(r):
         return x["child"]
     if "checker" in x:
         return "checker: " + x["checker"][:100]
+    if "sb" in x:
+        f = x["sb"]
+        if f.get("kind") == "solver":
+            return "SB %s: IPOPT %s" % (f.get("stage"), f.get("status"))
+        return "SB %s raised %s (%s)" % (f.get("stage"), (f.get("exception") or "")[:90], (f.get("where") or ["?"])[-1])
     if "by_constraint" in x:
         bad = ", ".join("%s %d" % kv for kv in sorted(x["by_constraint"].items(), key=lambda kv: -kv[1]) if kv[1])
         why = "no feasible sample at step %d (cycle %d): %d of %d kinematic [%s], %d collision" % (
@@ -424,7 +491,7 @@ def table(rows, title):
     for r in rows:
         w = r.get("goal_window")
         lines.append("| %s | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s |" % (
-            r["id"], r["outcome"], fmt(r.get("goal_kind")), fmt(r.get("traffic")), fmt(r["goal"]), fmt(r["collision"]), fmt(r["offroad"]), (fmt(r["feasible"]) + (" (%d/%d bad)" % tuple(r["infeasible_transitions"][:2]) if r.get("infeasible_transitions") else "")),
+            Path(r["id"]).stem if r["id"].endswith(".xml") else r["id"], r["outcome"], fmt(r.get("goal_kind")), fmt(r.get("traffic")), fmt(r["goal"]), fmt(r["collision"]), fmt(r["offroad"]), (fmt(r["feasible"]) + (" (%d/%d bad)" % tuple(r["infeasible_transitions"][:2]) if r.get("infeasible_transitions") else "")),
             fmt(r["cost"]), fmt(r["ms_cycle"]), r["cycles"], r["steps"], "%s–%s" % tuple(w) if w else "—",
             short_reason(r).replace("|", "/")))
     return "\n".join(lines) + "\n"
@@ -438,13 +505,20 @@ def worlds_sha():
         return "nopin"
 
 
+def table_name(planner, lst, sha):
+    """tables/<baseline|planner>-<set>-<sha>.md: the reactive planner's table is the baseline."""
+    return "%s-%s-%s.md" % ("baseline" if planner == "reactive" else planner, Path(lst).stem, sha)
+
+
 def batch(lst, jobs=MAX_JOBS, planner="reactive", out=OUT, table_file=None):
     ids = read_list(lst)
+    out = Path(out) / planner / Path(lst).stem          # per planner and set: sb100 shares ids with the 2020a checkout
+    out.mkdir(parents=True, exist_ok=True)
     jobs = max(1, min(int(jobs), MAX_JOBS))
     with ThreadPoolExecutor(max_workers=jobs) as ex:
         rows = list(ex.map(lambda s: child(s, planner, out), ids))
     sha = worlds_sha()
-    tf = Path(table_file) if table_file else HERE / "tables" / ("baseline-%s.md" % sha)
+    tf = Path(table_file) if table_file else HERE / "tables" / table_name(planner, lst, sha)
     tf.parent.mkdir(parents=True, exist_ok=True)
     tf.write_text(table(rows, "%s planner baseline over %s at metis-worlds %s" % (planner, Path(lst).name, sha)))
     (Path(out) / ("rows-%s.json" % sha)).write_text(json.dumps(rows, indent=1, default=str))
