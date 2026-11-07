@@ -76,13 +76,13 @@ class Loop:
     """The world one hierarchy shares: the SUMO process, the perception, the situation memory, the held command, the
     last projection and the accounting."""
 
-    def __init__(self, level, work=None, traci=None):
+    def __init__(self, level, work=None, traci=None, world=None):
         work = work or level.get("work") or tempfile.mkdtemp(prefix="road-sumo-")
         args = dict(level.get("scenario_args", {}))
         if "vehicles" in level:
             args["n"] = int(level["vehicles"])
         self.scenario, self.seed, self.ego_id = level.get("scenario", "straight"), int(level.get("seed", 1)), EGO
-        self.world = SumoWorld(self.scenario, work, seed=self.seed, traci=traci, **args)
+        self.world = (world or SumoWorld)(self.scenario, work, seed=self.seed, traci=traci, **args)   # world: cr_native's
         self.lanemap = lanemap_of(self.world.net)
         if hasattr(getattr(self.world, "director", None), "extend_lanemap"):
             self.world.director.extend_lanemap(self.lanemap)       # the host-side walkers' virtual crosswalks (walkers.py), this run's copy
@@ -156,6 +156,8 @@ class Loop:
         d, v = ego.dyn, ego.dyn.vmax
         gap = self.yield_gap(ego) if cmd[0] == "yield" else None
         a, lane = restrict.restrict(cmd, fold, d, v, changing=self.changing[0] if self.changing else None, yield_gap=gap)
+        if hasattr(self.world, "command"):          # cr_native: the held command as the planner's setpoints, the cap as its clip
+            self.world.command(cmd, a, restrict.bound(fold, d), gap)
         if restrict.capped(cmd, fold, d, v, gap):
             self.restricted += 1
         idx, target = self.world.conn.vehicle.getLaneIndex(EGO), None
