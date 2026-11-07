@@ -9,7 +9,8 @@
 
 const KEY = trace => `roadpage.events.v1:${trace}`;
 const QUIET_TICKS = 20;
-const RING = 6000;                                             // the trace keeps the last 6000 ticks (the demo's trace ring): older windows are gone                                        // a rise within 2 s of the last is the same surprise going on
+const RING = 6000;
+const LEAD = 30;                                               // a surprise is one tick: it is told with the 3 s that led to it                                             // the trace keeps the last 6000 ticks (the demo's trace ring): older windows are gone                                        // a rise within 2 s of the last is the same surprise going on
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 const secs = t => (t == null ? '…' : `${t.toFixed(1)}`);
@@ -81,6 +82,9 @@ export class Events {
     return false;
   }
 
+  // the window told for an event: a mark's own; a surprise's tick with the LEAD ticks before it
+  window(e) { return e.kind === 'mark' ? [e.k0, Math.max(e.k0, e.k1)] : [Math.max(0, e.k0 - LEAD), e.k0]; }
+
   // ── the loop ──
   narrate(n) {
     const e = this.get(n ?? this.sel);
@@ -88,14 +92,15 @@ export class Events {
     if (!e || e.open || !e.trace || e.k0 == null) { this.speak(e?.open ? `Event ${e.n} is still open: end it first.` : 'Mark an event first.'); return; }
     this.sel = e.n;
     this.pending.push(e.n);
-    this.loop.say(`/narrate ${e.trace} ${e.k0}..${Math.max(e.k0, e.k1)} ${this.said(e)}`);
+    const [w0, w1] = this.window(e);
+    this.loop.say(`/narrate ${e.trace} ${w0}..${w1} ${this.said(e)}`);
     e.state = 'narrated'; this.save(); this.draw();
   }
 
   said(e) {                                                      // the event's context, as the loop's chat shows it on the narration
     const c = this.context(), saw = (e.note || (e.kind === 'mark' ? e.words : '') || '').replace(/\s+/g, ' ').trim();
     const when = e.kind === 'mark' ? `${secs(e.t0)}–${secs(e.t1)} s` : `${secs(e.t0)} s`;
-    return `event ${e.n}, ${e.kind === 'mark' ? 'a mark' : `a ${e.kind}`} at ${when} of the run${c.scenario ? ` on ${c.scenario} seed ${c.seed}` : ''}`
+    return `event ${e.n}, ${e.kind === 'mark' ? 'a mark' : `a ${e.kind} (told with the 3 s before it)`} at ${when} of the run${c.scenario ? ` on ${c.scenario} seed ${c.seed}` : ''}`
       + (saw ? `; the tester saw: ${saw}` : '');
   }
 
@@ -105,7 +110,8 @@ export class Events {
     if (!e || e.open || !e.trace) { this.speak('Mark an event first.'); return; }
     this.sel = e.n;
     const what = e.note || e.words;
-    this.loop.say(`Explain event ${e.n} for a road tester: run ${e.trace}, trace window k ${e.k0}..${e.k1} (${secs(e.t0)}–${secs(e.t1)} s of the run)`
+    const [w0, w1] = this.window(e);
+    this.loop.say(`Explain event ${e.n} for a road tester: run ${e.trace}, trace window k ${w0}..${w1} (${e.kind === 'mark' ? `${secs(e.t0)}–${secs(e.t1)} s of the run` : `the 3 s up to the ${e.kind} at ${secs(e.t0)} s`})`
       + `${what ? `, what the tester saw: "${what}"` : ''}. Why did the car act as it did there? Name the rules that decided and the facts they saw, in plain words, briefly.`);
     e.state = 'explained'; this.save(); this.draw();
   }

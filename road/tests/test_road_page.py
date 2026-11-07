@@ -110,7 +110,8 @@ def test_the_dashboard_rolls_6000_ticks_and_moves_events():
     assert "this.o.onMove?.(d.n, k0, k1" in dash and "if (d.moved && (k0 !== d.was[0] || k1 !== d.was[1]))" in dash   # a press is no move and 'data-act="narrate"' in dash and 'data-act="explain"' in dash
     ev = (WEB / "events.js").read_text()
     assert "this.line(`mark:${n}:move:${k0}:${k1}${i0 != null && i1 != null ? `:${i0}:${i1}` : ''}`)" in ev   # the k, and the run's ticks
-    assert "this.loop.say(`/narrate ${e.trace} ${e.k0}..${Math.max(e.k0, e.k1)} ${this.said(e)}`)" in ev   # one line, every member, the context
+    assert "this.loop.say(`/narrate ${e.trace} ${w0}..${w1} ${this.said(e)}`)" in ev   # one line, every member, the context
+    assert "window(e) { return e.kind === 'mark' ? [e.k0, Math.max(e.k0, e.k1)] : [Math.max(0, e.k0 - LEAD), e.k0]; }" in ev   # a surprise with its lead-up
     road = (WEB / "road.js").read_text()
     assert "this.line(`mark:${n}:once:${kind}`)" in road and "if (stop && !this.paused) this.hold(true);" in road
     assert "const RING = 6000;" in ev and "if (e && !this.usable(e)) return;" in ev and ev.count("if (e && !this.usable(e)) return;") == 3   # a window the ring dropped: no loop action
