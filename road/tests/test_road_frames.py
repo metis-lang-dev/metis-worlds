@@ -189,6 +189,27 @@ def test_a_commonroad_id_that_cannot_be_had_is_said_and_the_run_goes_on(monkeypa
     assert any("I cannot run cr:NOPE" in x and "no scenario NOPE" in x for x in a.shared["wish"]["said"])
 
 
+def test_a_run_whose_world_will_not_start_is_said_and_the_run_before_it_starts_again(monkeypatch):
+    """SUMO that never answers (TraCI's retries, then its error): the page told why (world/runfail, and TALK), the run before it
+    started again, never a closed world left under the hosts (2026-11-07: a scenario double clicked left the page silent)."""
+    closed, made = [], []
+    old = SimpleNamespace(close=lambda: closed.append(1), scenario="straight", seed=1, arrived=lambda: False, tick=0, observe=lambda: ({}, {}, {}, []), log=[{}], proj={"ego": None})
+
+    def new_world(run):
+        made.append(run["scenario"])
+        if run["scenario"] == "broken":
+            raise RuntimeError("Could not connect to TraCI server at localhost:41234")
+        return SimpleNamespace(close=lambda: None, scenario=run["scenario"], seed=run["seed"], arrived=lambda: False)
+    monkeypatch.setattr(road_host, "new_world", new_world)
+    a = host(world=old)
+    was = a.run["scenario"]
+    a.world(["run:broken:3"])
+    assert closed == [1] and made == ["broken", was] and a.shared["world"] is not old and a.shared["world"].scenario == was
+    assert a.run["scenario"] == was                                       # what runs is still the run before it
+    assert a.shared["run_out"] == {"ev": "world/runfail", "scenario": "broken", "seed": 3, "why": "Could not connect to TraCI server at localhost:41234"}
+    assert any("I cannot run broken" in x for x in a.shared["wish"]["said"])
+
+
 def test_the_commonroad_picker_finds_by_every_word_and_says_a_missing_index(monkeypatch, tmp_path):
     """crfind:QUERY (commonroad-world step 3): the checkout's index filtered by all the words, a world/cr_list frame; the rows
     say whether the conversion is cached; no index: said."""

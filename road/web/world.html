@@ -22,6 +22,7 @@
   #status[data-state="waiting"] .state { color: var(--cyan); border-color: var(--cyan); }
   #status[data-state="working"] .state { color: var(--green); border-color: #2a5a35; }
   #status[data-state="asking"] .state, #status[data-state="stuck"] .state { color: var(--yellow); border-color: var(--yellow); }
+  #status[data-state="down"] .state { color: var(--red); border-color: var(--red); }
   #status[data-state="done"] .state, #status[data-state="over"] .state { color: var(--purple); border-color: #5a4580; }
   #status .text { color: var(--fg); overflow: hidden; text-overflow: ellipsis; }
   #status .opts { display: inline-flex; gap: 6px; flex: none; }
@@ -151,8 +152,8 @@
   #loopframe { flex: 1 1 auto; min-height: 0; width: 100%; border: 0; background: var(--bg); }   /* the chat scrolls inside its frame */
   /* the column's height: TOOLS and EVENTS as tall as their content (folded cards are small), at most a share; the loop's chat the rest */
   #dock-tools.open { flex: 0 1 auto !important; max-height: 40%; }   /* !important: the shell keeps each dock's flex inline */
-  #dock-events.open { flex: 0 1 auto !important; max-height: 30%; }
-  #dock-loop.open { flex: 3 1 0 !important; min-height: 220px; }
+  #dock-events.open { flex: 0 1 auto !important; max-height: 24%; }
+  #dock-loop.open { flex: 3 1 0 !important; min-height: 320px; }   /* the loop's log readable: a narration is 6-10 lines */
   #dock-talk.open { min-height: 130px; }                                /* the road's own talk keeps its line and its input */
   #dock-world.open { flex: 2 1 0 !important; min-height: 200px; }      /* a scenario's card, readable beside the chat */
   #dock-tools.open { max-height: 36%; }
@@ -177,6 +178,8 @@
   #scenarios .sc-sit { color: var(--dim); font-size: 10.5px; }
   #scenarios .sc-help { color: var(--dim); font-size: 11px; margin: 4px 0 0; }
   .loop-msg[hidden] { display: none; }
+  .sc-msg { margin: 2px 0 4px; font-size: 12px; color: var(--dim, #8a93a3); }
+  .sc-msg.bad { color: var(--red, #e5534b); }
 </style>
 </head>
 <body>
@@ -229,6 +232,7 @@
           <details class="fw-sec tool" id="tool-scenarios" data-tool="scenarios" open><summary>Scenarios</summary>
             <div class="wrow sc-now"><span>running <b id="sc-running">…</b></span><label title="the seed of the next run: the traffic's draw, the same seed the same run">seed <input id="seed" type="number" min="1" value="1"></label>
               <select id="scenario" hidden aria-hidden="true"><option>straight</option></select></div>
+            <p id="sc-msg" class="sc-msg" hidden></p>
             <div id="scenarios"></div>
           </details>
           <details class="fw-sec tool" id="tool-drive" data-tool="drive" open><summary>Drive</summary>

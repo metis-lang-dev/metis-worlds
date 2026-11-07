@@ -333,7 +333,8 @@ async function frame(f) {
   if (f.ev === 'world/summary') { world.map.summary(f); return; }
   if (f.ev === 'world/cr_list') { world.map.crList?.(f); return; }     // the road's CommonRoad picker (road_host.cr_find)
   if (f.ev === 'world/catalog') { scenarios?.catalog(f); return; }       // the SCENARIOS tree's rows (road_host.catalog_tree)
-  if (f.ev === 'world/scard') { showScenario(f); return; }                // a card, whole, into the WORLD CARD
+  if (f.ev === 'world/scard') { showScenario(f); return; }
+  if (f.ev === 'world/runfail') { world.map.runFailed(f); return; }                // a run that did not start: why, in the SCENARIOS card                // a card, whole, into the WORLD CARD
   if (f.ev === 'journal' && f.rec?.kind === 'dlg-world') return;       // the road: the page's own lines (watching, play, speed)
   if (f.ev === 'journal' && f.rec?.kind === 'dlg-relay') relay(f.rec);
   if (f.ev === 'journal' && f.rec) commands(f.rec);
@@ -406,6 +407,16 @@ const agentUrl = q.get('agent') || `${location.protocol === 'https:' ? 'wss' : '
 const hello = b => { b.send({ ev: 'hello', since: 1e15 }); b.send({ ev: 'world', domain: 'responder', atoms: ['watching', 'hello'] }); };   // the road: a page is open
 setInterval(() => send({ ev: 'world', domain: 'responder', atoms: ['watching'] }), 2000);
 const backend = agentUrl ? await live(agentUrl) : null;
+// the road service gone (demo.sh stopped, SUMO died): said at once in the status line and the SCENARIOS card, never a page that only stops moving
+let down = false;
+setInterval(() => {
+  const gone = !backend || !backend.isOpen;
+  if (gone === down) return;
+  down = gone;
+  $('#status').dataset.state = gone ? 'down' : '';
+  if (gone) { $('#sstate').textContent = 'stopped'; $('#stext').textContent = 'the road service is not answering: restart road/demo.sh; this page reloads when it is back'; }
+  world.map.runMsg(gone ? 'the road service stopped: nothing runs until road/demo.sh is started again' : '', gone);
+}, 2000);
 // the shell's docks (the consoles' look): tools the strip shows and hides, each open while shown (fold: false — "go to
 // Talk" lands at once; the DIALOG tool's own FLOOR / STATE / EVENTS sections fold inside it)
 const docks = world.docks = MetisShell.docks({
@@ -486,9 +497,9 @@ for (const d of document.querySelectorAll('#toolcards details')) {
   d.addEventListener('toggle', () => localStorage.setItem(k, d.open ? '1' : '0'));
 }
 function redirect(t, via) {
-  const r = route(t, { loopMark: loop.lastMark, gate: !!loop.gate, paused: world.map.paused && events.waiting != null });
+  const r = route(t, { loopMark: loop.lastMark, gate: !!loop.gate, paused: world.map.paused && events.waiting != null, scenarios: scenarios?.names() });
   if (!r) return false;
-  routed.set(t, r.to === 'page' ? 'events' : 'loop');
+  routed.set(t, r.action === 'scenario' ? 'scenarios' : r.to === 'page' ? 'events' : 'loop');
   panel.core.row({ who: 'person', text: t, channel: 'main' });
   rec('redirect', { text: t, to: r.to, ...(r.line ? { line: r.line } : {}), ...(r.action ? { action: r.action } : {}) });
   if (r.to === 'loop') { docks.set('loop', { shown: true, open: true }); loop.say(r.line, via === 'voice' ? 'heard' : undefined); }
@@ -496,6 +507,7 @@ function redirect(t, via) {
   else if (r.action === 'mark') { if (!world.map.marks.open) world.map.markEdge(); }
   else if (r.action === 'endmark') { if (world.map.marks.open) world.map.markEdge(r.words); }
   else if (r.action === 'continue') world.map.hold(false);
+  else if (r.action === 'scenario') scenarios.pick(r.name, true);
   else events[r.action](r.n);
   return true;
 }

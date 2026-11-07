@@ -116,6 +116,21 @@ export class RoadMap {
     this.crWant = run;
     this.line(`run:${run}:${Math.max(1, Number($('#seed').value) || 1)}`);
     this.hold(false, false);
+    this.runMsg(`starting ${run}…${run.startsWith('cr:') ? ' (a CommonRoad scenario is converted the first time: up to a minute)' : ''}`);
+    clearTimeout(this.runTimer);
+    this.runTimer = setTimeout(() => { if (this.crWant === run) this.runMsg(`${run} has not started after 90 s: the road service may have stopped (see the page's status)`, true); }, 90000);
+  }
+
+  runMsg(text, bad = false) {                               // the SCENARIOS card's line under "running": starting, or why a run could not start
+    const m = $('#sc-msg');
+    if (!m) return;
+    m.textContent = text || ''; m.hidden = !text; m.classList.toggle('bad', bad);
+  }
+
+  runFailed(f) {                                            // world/runfail (road_host.run_failed): the run asked for did not start
+    if (this.crWant === f.scenario) this.crWant = null;
+    clearTimeout(this.runTimer);
+    this.runMsg(`could not run ${f.scenario}: ${f.why}`, true);
   }
 
   hold(on, tell = true) {
@@ -131,7 +146,7 @@ export class RoadMap {
     const names = f.scenarios && f.scenario && !f.scenarios.includes(f.scenario) ? [...f.scenarios, f.scenario] : f.scenarios;   // a cr: run is not in the list: its own option
     if (names && $('#scenario').options.length !== names.length) $('#scenario').replaceChildren(...names.map(s => Object.assign(document.createElement('option'), { textContent: s })));
     $('#sc-running').textContent = f.scenario ? `${f.scenario} · seed ${f.seed}` : '…';
-    if (f.scenario && f.scenario === this.crWant) { $('#t-cr-msg').textContent = `running ${f.scenario}`; this.crWant = null; }
+    if (f.scenario && f.scenario === this.crWant) { $('#t-cr-msg').textContent = `running ${f.scenario}`; this.crWant = null; clearTimeout(this.runTimer); this.runMsg(''); }
     if (document.activeElement !== $('#scenario') && document.activeElement !== $('#seed')) { $('#scenario').value = f.scenario; $('#seed').value = f.seed; }   // what runs, also when a page opens on it
     const key = f.lanes.map(l => l.id).join() + JSON.stringify(f.goal || '');   // the client reads its road once: another road (or goal), another frame
     if (this.frame && key === this.netKey) return;

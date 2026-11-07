@@ -509,6 +509,8 @@ class RoadHost:
             out.append(self.shared.pop("cr_list"))
         if "catalog_out" in self.shared:
             out.append(self.shared.pop("catalog_out"))
+        if "run_out" in self.shared:
+            out.append(self.shared.pop("run_out"))
         w = self.shared.get("wish")
         while w and w["said"]:
             out.append({"ev": "world/message", "text": w["said"].pop(0)})
@@ -521,7 +523,6 @@ class RoadHost:
         """The next run, now: one SUMO at a time. Every host finds the new world at its next reading (world_now). A CommonRoad
         scenario (cr:ID, commonroad-world s-9b7591fb step 3) runs on SUMO, converted into the cache first when it is not there
         (cr_world.load: the conversion venv, a few seconds); one that cannot be had is said, and the run on the page goes on."""
-        said = self.shared.setdefault("wish", road_wishes.new())["said"]
         if str(spec.get("scenario", "")).startswith("cr:"):
             import cr_world
             spec = dict(spec, world="sumo")
@@ -529,17 +530,34 @@ class RoadHost:
             try:
                 cr_world.load(cr_world.scenario_id(spec["scenario"]))
             except Exception as e:                                   # noqa: BLE001 — a bad id or a failed conversion: the person is told
-                said.append("I cannot run %s: %s" % (spec["scenario"], str(e)[:300]))
+                self.run_failed(spec, str(e))
                 return
             took = time.monotonic() - t0
-        close = getattr(self.shared["world"], "close", None)
+        was, old = self.run, self.shared["world"]
+        close = getattr(old, "close", None)
         if close:
             close()
+        try:
+            world = new_world(spec)
+        except Exception as e:                                       # noqa: BLE001 — SUMO that would not start (TraCI's retries): the page is told,
+            self.run_failed(spec, str(e))                            # and the run before it starts again, never a closed world left under the hosts
+            try:
+                self.shared["world"] = new_world(was)
+                self.shared.update(net_due=True)
+            except Exception as e2:                                  # noqa: BLE001
+                self.run_failed(was, "the run before it did not start again either: %s" % e2)
+            return
         self.run = spec
-        self.shared["world"] = new_world(spec)
+        self.shared["world"] = world
         self.shared.update(paused=False, said_arrived=False, wish=road_wishes.new(), net_due=True)
         if str(spec.get("scenario", "")).startswith("cr:") and took > 1.0:
             self.shared["wish"]["said"].append("%s converted into the cache in %.0f s; it runs now." % (spec["scenario"], took))
+
+    def run_failed(self, spec, why):
+        """A run that could not start: said in TALK and in the SCENARIOS card (world/runfail), the page never left waiting in silence."""
+        why = " ".join(str(why).split())[:400] or "no reason given"
+        self.shared.setdefault("wish", road_wishes.new())["said"].append("I cannot run %s: %s" % (spec.get("scenario"), why))
+        self.shared["run_out"] = {"ev": "world/runfail", "scenario": spec.get("scenario"), "seed": spec.get("seed"), "why": why}
 
     def world_now(self):
         """The shared world, if a new run replaced it: the copies start over. → True when it did."""

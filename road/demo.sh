@@ -22,4 +22,9 @@ export METIS_HOME="${METIS_HOME:-$(cd "$WORLDS/.." && pwd)/metis-catalog/domains
 # the pi loop's dock (loop-road-ui): the loop console's URL, METIS_LOOP_URL (default the page's host at :8770, metis-loop/run.sh's port)
 echo "the page: http://$ADDR/world.html${METIS_LOOP_URL:+?loop=$METIS_LOOP_URL}"
 cd "$AGENT/py"
+# CommonRoad (the SCENARIOS tree's CommonRoad branch): its checkout and conversion venv, else every cr: run is refused with the reason
+CR_ROOT="${COMMONROAD_ROOT:-/bigdata/datasets/commonroad}"
+if [ ! -d "$CR_ROOT/scenarios" ] || [ ! -x "$HERE/.venv-cr/bin/python" ]; then
+  echo "CommonRoad: not set up at $CR_ROOT (COMMONROAD_ROOT): its scenarios will not run; COMMONROAD_ROOT=DIR road/setup-commonroad.sh makes it" >&2
+fi
 exec "$AGENT/py/.venv/bin/python" -m metis_agent.service --config "$ROOT/.run/config.yaml" --ui-dir "$HERE/web" --lib-dir "$HERE/web/vendor" --addr "$ADDR"

@@ -49,6 +49,9 @@ CASES = [
     ("send event 2 to the loop", {}, {"to": "page", "action": "send", "n": 2}),
     ("continue", {"paused": True}, {"to": "page", "action": "continue"}),
     ("continue", {}, None),                                           # not waiting on a surprise: the road's
+    ("load DynamicObjectCrossing", {"scenarios": ["Town03", "DynamicObjectCrossing"]}, {"to": "page", "action": "scenario", "name": "DynamicObjectCrossing"}),
+    ("run the scenario town03", {"scenarios": ["Town03"]}, {"to": "page", "action": "scenario", "name": "Town03"}),
+    ("load NoSuchThing", {"scenarios": ["Town03"]}, None),           # not in the tree: the road's (it says it does not know)
 ]
 
 
@@ -115,3 +118,35 @@ def test_the_dashboard_rolls_6000_ticks_and_moves_events():
     road = (WEB / "road.js").read_text()
     assert "this.line(`mark:${n}:once:${kind}`)" in road and "if (stop && !this.paused) this.hold(true);" in road
     assert "const RING = 6000;" in ev and "if (e && !this.usable(e)) return;" in ev and ev.count("if (e && !this.usable(e)) return;") == 3   # a window the ring dropped: no loop action
+
+
+def test_a_run_that_does_not_start_and_a_service_gone_are_said_on_the_page():
+    """2026-11-07 (the user: maps not loaded without a message): why a run did not start, in the SCENARIOS card; the road service gone, in the status."""
+    assert '<p id="sc-msg" class="sc-msg" hidden></p>' in HTML
+    assert "if (f.ev === 'world/runfail') { world.map.runFailed(f); return; }" in WORLD
+    road = (WEB / "road.js").read_text()
+    assert "this.runMsg(`could not run ${f.scenario}: ${f.why}`, true);" in road and "has not started after 90 s" in road
+    assert "const gone = !backend || !backend.isOpen;" in WORLD and "$('#status').dataset.state = gone ? 'down' : '';" in WORLD
+
+
+def test_a_map_far_from_the_origin_is_drawn_about_a_local_one(tmp_path):
+    """CommonRoad's roads keep their UTM metres (x ~ 476000, y ~ 5556000): the 3D client draws in float32, where such a map vanished
+    (the user, 2026-11-07). The shim moves the view's map, its cars and the goal to a local origin; a town near 0,0 is left as it is."""
+    js = tmp_path / "shim.cjs"
+    js.write_text("""const vm = require('vm'), fs = require('fs');
+const ctx = {window: {fetch: () => {}}, addEventListener: () => {}, location: {origin: 'x'}, parent: {}, Response: class {}, Promise, JSON, Math, Number, String, Object, setTimeout};
+vm.createContext(ctx);
+vm.runInContext(fs.readFileSync(process.argv[2], 'utf8') + ';this.localNet = localNet; this.localGoal = localGoal; this.info = info; this.o = () => origin;', ctx);
+const far = {net: {location: {convBoundary: '476338.75,5555928.70,479009.65,5556815.71'}, edge: [{id: 'e', lane: [{id: 'e_0', shape: '476400.00,5556000.50,1.0 476410.00,5556001.50'}]}],
+  junction: [{id: 'j', x: '476340.00', y: '5555930.00', shape: '476340,5555930 476341,5555931'}]}};
+const r = ctx.localNet(far), out = [ctx.o(), r.net.location.convBoundary, r.net.edge[0].lane[0].shape, r.net.junction[0], ctx.localGoal([[[476338, 5555928]]]),
+  ctx.info({x: 476340, y: 5555930, heading: 0, length: 4, width: 2, speed: 1, class: 'p'}).x];
+const near = {net: {location: {convBoundary: '-10,-10,300,300'}, edge: [], junction: []}};
+out.push(ctx.localNet(near) === near, ctx.o());
+process.stdout.write(JSON.stringify(out));""")
+    p = subprocess.run([node(), str(js), str(WEB / "client-shim.js")], capture_output=True, text=True, timeout=60)
+    assert p.returncode == 0, p.stderr
+    o, bound, lane, junction, goal, x, same, o2 = json.loads(p.stdout)
+    assert o == [476338, 5555928] and bound == "0.75,0.70,2671.65,887.71" and lane == "62.00,72.50,1.0 72.00,73.50"
+    assert junction == {"id": "j", "x": "2.00", "y": "2.00", "shape": "2.00,2.00 3.00,3.00"} and goal == [[[0, 0]]] and x == 4
+    assert same is True and o2 == [0, 0]

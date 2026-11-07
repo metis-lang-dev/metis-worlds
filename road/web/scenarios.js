@@ -65,6 +65,17 @@ export class Scenarios {
     this.tree.innerHTML = html || '<p class="empty">nothing found</p>';
   }
 
+  names() { return [...this.towns, ...this.rows.map(r => r.id)]; }
+  pick(name, run) {                                         // by name, as a click (run: as a double click): "load NAME" said or typed
+    if (this.towns.includes(name)) { this.sel = name; if (run) this.run(name); else this.onTown(name); this.draw(); return true; }
+    const r = this.rows.find(x => x.id === name);
+    if (!r) return false;
+    this.sel = r.id; this.onCard(r); this.line(`scard:${r.id}`);
+    if (run) { if (r.runs?.length) this.run(r.runs[0].run); else this.onCard(r, 'it plays on another world, not on this page'); }
+    this.draw();
+    return true;
+  }
+
   click(e, run) {
     const li = e.target.closest('.sc-leaf');
     if (!li) return;

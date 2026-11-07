@@ -3,9 +3,10 @@
 // add a car, the questions to the agent). No model: a keyword table, the words' remainder as WORDS.
 //
 //   route(text, ctx) → null (the road's) | {to: 'loop', line} (a line for the pi CHAT: "/…" at 0 USD, else pi's, paid)
-//                      | {to: 'page', action, n?, words?} (the page's events: mark, endmark, narrate, explain, send, continue)
+//                      | {to: 'page', action, n?, words?} (the page's events: mark, endmark, narrate, explain, send, continue; scenario: run one)
 //                      | {to: 'gate', answer} (the loop's open gate answered)
-//   ctx: {loopMark: the last narrated loop mark number | null, gate: a gate is open, paused: the run waits on a surprise}
+//   ctx: {loopMark: the last narrated loop mark number | null, gate: a gate is open, paused: the run waits on a surprise,
+//         scenarios: the SCENARIOS tree's names (towns and cards): "load NAME" → {to: 'page', action: 'scenario', name}}
 
 const norm = t => String(t ?? '').toLowerCase().replace(/[’']/g, "'").replace(/[.!?]+$/, '').replace(/\s+/g, ' ').trim();
 const rest = (raw, re) => raw.replace(re, '').replace(/[.!?]+$/, '').trim();   // the person's own words, as said
@@ -33,6 +34,11 @@ export const TABLE = [
   [/^(?:loop status|status of the loop)$/, () => ({ to: 'loop', line: '/status' })],
   [/^stop the loop$/, () => ({ to: 'loop', line: '/stop' })],
   [/^(?:continue|go on|resume)(?: the run)?$/, (m, c) => (c.paused ? { to: 'page', action: 'continue' } : null)],
+  // a scenario by its name (the user typed "load DynamicObjectCrossing", 2026-11-07): one the SCENARIOS tree has, else the road's
+  [/^(?:load|run|play|start|open)(?: the)?(?: scenario)? ([a-z0-9][\w.-]*)$/, (m, c) => {
+    const name = (c.scenarios || []).find(s => String(s).toLowerCase() === m[1]);
+    return name ? { to: 'page', action: 'scenario', name } : null;
+  }],
 ];
 
 export function route(text, ctx = {}) {
