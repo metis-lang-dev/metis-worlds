@@ -42,6 +42,37 @@ The scenario's lanelet network → the LaneMap through the exerciser's observati
 
 1. The architect: this design (done with this file); the interface spec: `Command` (the beat's), `Reference` (path, profile, corridor, guess), `Plan` (states, controls, feasible, cost), the oracle's row.
 2. opus: the Python 3.11 venv (the reactive planner's requires_python) with commonroad-io, commonroad-route-planner, commonroad-reactive-planner, commonroad-drivability-checker, commonroad-clcs, all BSD, the licenses listed in the report; `road/planner/cr_bench.py`: a planning problem from the checkout → route → the baseline reactive planner natively → solution → the checker's row; the table over the 192 cards' scenarios; then the family's command as the planner's setpoints (desired velocity, stop position, reference path per lane) = the first long-horizon composition; the baseline's table beside it.
+2b. opus: the SB-2023 ORIGINAL as a bench column (§6.2): its own venv, our wrapper `road/planner/sb_bench.py`, the same oracle row and the decision record per scenario over the same subset. BEFORE step 3: it is the comparison's target and costs a run of existing code.
 3. opus: `road/planner/reference.py` (§2) and `road/planner/ocp.py` (§3) over CasADi + IPOPT; the loop in the native CommonRoad world; the table over the same set; the restrictor as the cap. Tests: the reference on three maps (straight, T-junction, merge); the OCP's feasibility on the reference; the stop constraint; a corridor pinch.
-4. The architect: the ruling on the three tables (baseline, composition, ours): goals reached in their windows, collisions 0 with the recorded obstacles, feasibility, runtime per beat; the paper note (the levels as the certification argument: the law decides inside the safe set, the optimiser realises inside the corridor, the restrictor caps).
+4. The architect: the ruling on the FOUR tables (baseline, composition, SB-2023 original, ours; §6): goals reached in their windows, collisions 0 with the recorded obstacles, feasibility, runtime per beat; the paper note (the levels as the certification argument: the law decides inside the safe set, the optimiser realises inside the corridor, the restrictor caps).
 5. Later subjects: Nav2 (the controller server runs our OCP; the collision monitor is the restrictor), the CARLA host, the chair's corridor.
+
+## 6. The four tables and the comparison (the user's direction, 2026-11-07)
+
+**The user's word (2026-11-07):** the baseline is the original BSD planner's. Next, our planner AND the original SB-2023 planner are added on the same subset, and the work is the comparison SB-2023 → ours: the two share the NLP's shape (§3), so every difference between their rows is the decision layer's (SB's reachability decision module against the road domain's command over the semantic reference). Those differences are the problems the road domain introduces; they are classified first and worked after. The first analysis matters more than speed, and it is the architect's, not delegated.
+
+### 6.1 The tables
+| table | planner | decision layer | status |
+|---|---|---|---|
+| baseline | commonroad-reactive-planner (BSD), native | the package's own (shortest route, initial speed) | DONE: road/planner/tables/baseline-a0f668a.md (subset v2: 25 rows, 15 region goals, 4 reached) |
+| composition | the reactive planner | the family's command as setpoints (§5 step 2, deliverable 3) | next (opus) |
+| SB-2023 original | Kochdumper's MotionPlanner @ 5434d05, low-level `Optimization` | its reachability decision module (steps/sb2023-reading-opus.md §4) | step 2b (opus) |
+| ours | reference.py + ocp.py (§2, §3) | the road domain's command over the LaneMap reference | step 3 (opus) |
+
+The composition is a smoke of the family's command in the native loop (the reactive planner confounds it); the comparison that carries the ruling is SB-2023 vs ours.
+
+### 6.2 The SB-2023 bench column (step 2b)
+- The repository has NO licence (all rights reserved): read, study and RUN on the bench; never copied, never a dependency of anything shipped (road/docs/planner-licenses.md gets its line: "bench column only"). Its linearisation planner pulls cvxopt (GPL): not on our path, and a bench venv anyway (the user, 2026-11-07).
+- A clone outside the tree at the pin (sha recorded with its SOURCE line beside the other downloads under /bigdata/datasets/commonroad/), its own venv (the README's Python 3.8 through uv; commonroad-io 2023.1 and the rest as pinned there), road/.venv-sb2023 git-ignored.
+- Our wrapper `road/planner/sb_bench.py` imports its modules directly (main.py's `bool(sys.argv[2])` never selects the optimiser), runs the decision module + the `Optimization` planner under the repository's defaults (one shot over the goal window; collision_avoidance off), plus one extra column with collision_avoidance on (one flag), and writes the same solution.xml + row.json so cr_bench's oracle produces the same row. Same subset, same defaults rule (§5 step 2 review: no tuned yamls).
+- **The decision record, per scenario, for SB AND for ours** (the comparison's data): the lane(let) sequence per step, the speed profile v(t), the stop points, the steps of the lane changes, the horizon, the solver's status / iterations / time, and the trajectory (solution.xml). The composition records the family's command per beat the same way (lane decisions, pace / yield / stop setpoints), so the decision diff SB vs family can start before ours exists.
+
+### 6.3 The classification (the architect's first pass; refined on the data)
+Per scenario the diff is read in this order, and the first class that explains the row is the row's class:
+- **W world / oracle**: a conversion or checker artefact (time-only goals, lane maps, the step-0 kappa_dot mass, initial contact) → a bench item, not a planner finding.
+- **D decision**: the family's command differs from SB's choice (lane, go / yield, pace). Two sub-kinds: D-law = ours yields or slows where SB drives through AND the oracle's rule monitors side with ours (SB knows only the speed limit) → counted FOR the road domain, not a defect; D-gap = ours decides worse by the oracle (misses the window, blocks, changes lanes needlessly) → a law or world gap, a record of the catalog's kind.
+- **R reference**: the same decision, a different reference (path geometry from the LaneMap vs lanelet centrelines; the speed profile not window-fitted) → a reference.py item.
+- **C corridor**: feasibility or collision from our corridor vs SB's free space → a corridor builder item.
+- **S solver**: the same reference, a different solve (warm start, options, receding vs one shot) → an ocp.py item.
+The four-table analysis (step 4) lists every row with its class and the items per class; D-gap items become briefs for the road domain, the rest planner items. Order: step 2b (SB column) → composition (deliverable 3 + iface) → the architect's decision diff D on SB vs the family (while step 3 runs) → step 3 (ours) → the four-table analysis.
+
