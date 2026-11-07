@@ -359,7 +359,55 @@ def drive_composition(cfg, ref_fn, last_step, row, d):
     return states, _ReactiveVehicle()
 
 
-PLANNERS = {"reactive": drive_reactive, "stub": drive_stub, "sb2023": drive_sb2023, "sb2023-ca": drive_sb2023_ca,
+def drive_ours_parity(cfg, ref_fn, last_step, row, d):
+    """M2's PARITY PROOF: SB's own reference (its record's steps: x_ref, y_ref, v_ref, phi_ref, from the sb2023 column of
+    the same set) into OUR OCP (ocp.py, every addition off), from the planning problem's initial state; SB's vehicle.
+    The row beside SB's tells whether our trajectory planner is SB's: the same outcome, the trajectory within tolerance."""
+    import numpy as np
+    from commonroad_rp.reactive_planner import ReactivePlannerState
+    sys.path.insert(0, str(HERE))
+    import ocp
+    sb_dir = Path(os.environ.get("PARITY_SB_DIR", str(d.parent.parent.parent / "sb2023" / d.parent.name)))
+    f = sb_dir / d.name / "record.json"
+    if not f.is_file():
+        row["error"] = True
+        row["reason"] = {"child": "parity: no SB record at %s (run --planner sb2023 on this set first)" % f}
+        return [], _CentredVehicle()
+    rec = json.loads(f.read_text())
+    steps = rec.get("steps") or []
+    if not steps:
+        row["infeasible"] = True
+        row["reason"] = {"sb": dict(rec.get("failure") or {}, parity="SB gave no reference")}
+        return [], _CentredVehicle()
+    ref = np.array([[s["x_ref"] for s in steps], [s["y_ref"] for s in steps], [s["v_ref"] for s in steps],
+                    [s["phi_ref"] for s in steps]])
+    x0 = cfg.planning_problem.initial_state
+    res = ocp.solve(ref, [float(x0.position[0]), float(x0.position[1]), float(x0.velocity), float(x0.orientation)],
+                    dt=cfg.scenario.dt)
+    row["ms_cycle"], row["cycles"] = round(1000 * res.seconds, 1), 1
+    sb_solve = (rec.get("solves") or [{}])[-1]
+    row["solver"] = {"status": res.status, "iterations": res.iterations,
+                     "sb_status": sb_solve.get("status"), "sb_iterations": sb_solve.get("iterations")}
+    if not res.ok:
+        row["infeasible"] = True
+        row["reason"] = {"sb": {"stage": "low_level", "kind": "solver", "status": res.status}}
+        return [], _CentredVehicle()
+    k0 = int(steps[0]["k"])
+    tr = rec.get("trajectory") or []
+    if tr:
+        dev = [math.hypot(res.x[0, i] - p["x"], res.x[1, i] - p["y"]) for i, p in enumerate(tr[:res.x.shape[1]])]
+        row["parity"] = {"max_dxy_m": round(max(dev), 4), "mean_dxy_m": round(sum(dev) / len(dev), 4)}
+    states = []
+    for i in range(res.x.shape[1]):
+        j = min(i, res.u.shape[1] - 1)
+        states.append(ReactivePlannerState(time_step=k0 + i, position=np.array([res.x[0, i], res.x[1, i]]),
+                                           velocity=float(res.x[2, i]), orientation=float(res.x[3, i]),
+                                           steering_angle=float(res.u[1, j]), acceleration=float(res.u[0, j]),
+                                           yaw_rate=0.0))
+    return states, _CentredVehicle()
+
+
+PLANNERS = {"ours-parity": drive_ours_parity, "reactive": drive_reactive, "stub": drive_stub, "sb2023": drive_sb2023, "sb2023-ca": drive_sb2023_ca,
             "sb2023-vlim": drive_sb2023_vlim, "composition": drive_composition}
 
 
@@ -568,6 +616,8 @@ HOW = {
               "decision + low level; the solution's vehicle FORD_ESCORT (the nearest CommonRoad type to SB's 4.3 x 1.7 m, "
               "wheelbase 2.3). KS feasibility as measured; footnote: no steering-rate bound, zero input weights.",
 }
+HOW["ours-parity"] = ("OUR OCP (ocp.py: SB's low-level optimisation from its equations, every addition off) on SB's OWN "
+                      "reference (the sb2023 column's record), one shot, SB's vehicle: the parity proof of M2.")
 HOW["sb2023-ca"] = HOW["sb2023"].replace("collision_avoidance off", "collision_avoidance ON (the one flag)")
 HOW["sb2023-vlim"] = HOW["sb2023"].replace("as its main.py calls it", "with the decision module's own default").replace(
     "desired_velocity='init'", "desired_velocity='speed_limit', the family's target")
