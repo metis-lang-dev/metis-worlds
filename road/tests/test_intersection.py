@@ -120,3 +120,39 @@ def test_road_host_builds_the_world_from_an_ix_run():
     w = road_host.new_world({"scenario": "ix:ix-four-way:l2", "seed": 1})
     assert isinstance(w, I.IntersectionWorld) and w.level == "l2" and w.game is not None
     assert set(w.level_of) == {"east", "north", "west"} and w.name == "ix:ix-four-way:l2"
+
+
+def test_a_holder_that_restarts_after_the_commitment_is_attributed_the_contact(monkeypatch):
+    """WAIVER RULING 2's world rule: the ego (commanded to go) commits past the standing level-1 holder after rho of visible
+    approach; the holder then starts (forced to level 0): the contacts are the holder's restart after its waiver, kept in the
+    row as collisions_partner, not the ego's (collisions_own 0, check passes). The geometric window is switched off so that
+    the commitment, not the window, releases the ego."""
+    from semantic_world import situation as S
+    monkeypatch.setattr(S, "waiver_window", lambda p, stood: False)
+    w, forced = I.IntersectionWorld("ix-left-turn:l1"), None
+    for _ in range(500):
+        w.command(("accel", None), life=2)
+        w.observe()
+        w.step()
+        if w.committed_at and forced is None:
+            w.level_of["onc"], forced = "l0", w.t
+        if w.arrived():
+            break
+    s = w.summary()
+    assert forced is not None and s["arrived"]
+    assert s["collisions_partner"] > 0 and s["collisions_own"] == 0
+    assert I.check(I.load("ix-left-turn"), s) == []
+
+
+def test_without_a_restart_the_committed_ego_clears_with_no_contact(monkeypatch):
+    from semantic_world import situation as S
+    monkeypatch.setattr(S, "waiver_window", lambda p, stood: False)
+    w = I.IntersectionWorld("ix-left-turn:l1")
+    for _ in range(500):
+        w.command(("accel", None), life=2)
+        w.observe()
+        w.step()
+        if w.arrived():
+            break
+    s = w.summary()
+    assert w.committed_at and s["arrived"] and s["collisions"] == 0 and not s["deadlock"]

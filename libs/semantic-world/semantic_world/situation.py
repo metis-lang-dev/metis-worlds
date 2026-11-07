@@ -165,6 +165,7 @@ class Pair:
     o_leave: float = None
     role: str = None
     obj_class: str = None              # the object's vClass when the adapter knows it (a crossing: a walker or a cyclist escalates, VRU)
+    occluded: bool = False             # the object is not in the ego's sight this cycle (the host's sensor says so): no waiver against it
     bearing: float = None              # unstructured: the heading from the ego to the object (radians, the map's frame)
 
 
@@ -384,7 +385,8 @@ def ego_stops_short(dyn, d_enter):
 class Situation:
     """The per-pair memory across cycles and the fold. One per ego; `check(pairs)` every cycle, in order."""
 
-    def __init__(self, memory=None, xmemory=None, umemory=None):
+    def __init__(self, memory=None, xmemory=None, umemory=None, dt=0.1):
+        self.dt = float(dt)                       # the cycle (s): the waiver's clock
         self.memory = dict(memory or {})          # pair id -> (long safe, lat safe) at its last safe cycle
         self.xmemory = dict(xmemory or {})        # a crossing's id -> (Def 17 case, ego in front) at its last safe cycle
         self.umemory = dict(umemory or {})        # an unstructured pair's id -> the ego's continue set clear, then
@@ -392,6 +394,8 @@ class Situation:
         self.away = set()                         # crossings the ego is driving away through, the other still standing
         self.stood = {}                           # a crossing's id -> cycles its object has stood (the waiver window's)
         self.waived = set()                       # crossings the ego entered in the waiver window (the yielder's bound none)
+        self.approach = {}                        # a crossing's id -> seconds of the ego's visible approach to its standing holder
+        self.committed = set()                    # crossings the ego committed to past the stop short, the holder having waived
 
     def check(self, pairs):
         """→ [State] for PAIRS (the memory updated: rewritten while safe, frozen while dangerous, dropped for pairs
@@ -435,6 +439,26 @@ class Situation:
                 self.waived.add(p.id)
             else:
                 self.waived.discard(p.id)
+            # the two-phase waiver (WAIVER RULING 2): approach under the crawl, commit after WAIVER_RHO of visible approach. The
+            # clock counts the cycles the ego was seen moving (above WAIVER_V) toward the holder while it stood, safe cycles too;
+            # it restarts when the holder moves (today's law then) or the pair is gone
+            if p.type == "xing_obj_prio":
+                if stood >= WAIVER_STOOD:
+                    clock = self.approach.get(p.id, 0.0) + (self.dt if (p.ego.vmax or 0.0) > WAIVER_V else 0.0)
+                else:
+                    clock = 0.0
+                self.approach[p.id] = clock
+            if dangerous and p.id in self.committed:
+                r_lon, r_stand = "none", "none"           # committed: the holder gave the way; clear the zone
+            elif dangerous and p.id not in self.waived and p.type == "xing_obj_prio":
+                phase = waiver_phase(p, stood >= WAIVER_STOOD, self.approach[p.id], self.dt)
+                if phase == "commit":
+                    self.committed.add(p.id)
+                    r_lon, r_stand = "none", "none"
+                elif phase in ("none", "brake_min"):
+                    r_lon = phase
+                    if r_stand == "stay":
+                        r_stand = "none"                  # the approach: the planner moves the ego, the bound keeps the stop
             if r_stand == "drive_away":
                 self.away.add(p.id)               # held once it moves, while the other stands
             else:
@@ -458,6 +482,9 @@ class Situation:
         self.escalated &= seen
         self.away &= seen
         self.waived &= seen
+        self.committed &= seen                    # committed until the pair is gone (the ego has cleared the zone)
+        for k in [k for k in self.approach if k not in seen]:
+            self.approach.pop(k)
         for k in [k for k in self.stood if k not in seen]:
             self.stood.pop(k)
         return out
@@ -585,7 +612,7 @@ def waiver_window(p, stood):
     intends, and the yielder's bound is none. A holder that moves again is read from its present speed, no response time
     (the window holds while the ego still clears before it can arrive, else the yielder's bound as before).
     → True when the window is open."""
-    if p.type != "xing_obj_prio" or p.obj_class in VRU_CLASSES:
+    if p.type != "xing_obj_prio" or p.obj_class in VRU_CLASSES or p.occluded:
         return False
     if None in (p.d_leave, p.o_enter) or p.o_enter <= 0.0:
         return False                                            # the holder at or in the zone: no window
@@ -600,6 +627,37 @@ def waiver_window(p, stood):
     if t_e is None:
         return False                                            # the ego cannot clear (standing, no accel): no window
     return t_h is None or t_e < t_h
+
+
+WAIVER_RHO = 2.0       # s: the visible approach a standing holder is given to object (one rho for all, the architect's ruling)
+WAIVER_V = 0.3         # m/s: the ego visibly moving
+CRAWL_V = 0.5          # m/s: the least approach speed the crawl allows
+
+
+def waiver_phase(p, stood, clock, dt):
+    """The two-phase waiver (levelk-intersection, the architect's WAIVER RULING 2: right of way is given, not taken; a priority
+    holder that stands while the ego visibly enters has given it, and a contact after that is the holder's). At a crossing
+    where the ego yields (xing_obj_prio, never a walker or a cyclist, never an occluded holder) with the holder STOOD:
+    (1) APPROACH: the bound keeps the stop short of the holder's path (the zone's entry, d_enter, plus the floor) available one
+        cycle on, at most at the CRAWL speed that makes the visible approach last WAIVER_RHO before that point is reached:
+        "none" while under it, "brake_min" above it;
+    (2) COMMITMENT: at the point where one more cycle would lose the stop short, "commit" when the ego has been visibly moving
+        (above WAIVER_V) for WAIVER_RHO with the holder standing; else the yielder's bound as before ("hold").
+    CLOCK: the seconds of the ego's visible approach so far. → "none" | "brake_min" | "commit" | "hold"."""
+    if p.type != "xing_obj_prio" or p.obj_class in VRU_CLASSES or p.occluded or not stood:
+        return "hold"
+    if p.d_enter is None or p.d_enter <= 0.0:
+        return "hold"
+    e = p.ego
+    v = e.vmax or 0.0
+    acc = e.accel or 0.0
+    v1 = min(e.vcap, v + acc * dt) if e.vcap is not None else v + acc * dt
+    room = p.d_enter - (e.min_dist or 0.0)                      # the stop short of the holder's path, the floor kept
+    if stop(v1, e.brake_min) + 0.5 * (v + v1) * dt >= room:     # one more cycle at full accel would lose it: the commitment point
+        return "commit" if clock >= WAIVER_RHO else "hold"
+    rem = room - stop(v, e.brake_min)                           # to the commitment point at this speed
+    v_crawl = max(CRAWL_V, rem / max(dt, WAIVER_RHO - clock))
+    return "none" if v <= v_crawl else "brake_min"
 
 
 def respond_standing(p):

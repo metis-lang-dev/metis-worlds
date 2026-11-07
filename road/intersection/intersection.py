@@ -18,7 +18,8 @@ APPROACH of them, at least two, stood with the zones empty) and `deadlock` (≥ 
 its last zone) and `delay` (clear_t − the free run's, the ego alone accelerating to the limit); per driver `level`,
 `believed` (the ego's last believed level of it) and `converged` (ticks of its game until the ego's believed level is its
 true one and stays: None when it never is); `others_contacts` (two drivers in one zone at once: the world's, not the
-family's). A card (road/catalog/ours/*.yaml, `map: {world: intersection}`) places the paths, the cars and the levels."""
+family's); `collisions_partner` (contacts with a holder that moved after the ego committed past it under the waiver: the
+holder's restart, attributed to it, never the ego's fail) and `collisions_own`. A card (road/catalog/ours/*.yaml, `map: {world: intersection}`) places the paths, the cars and the levels."""
 import math
 import sys
 from pathlib import Path
@@ -208,6 +209,8 @@ class IntersectionWorld(RoadWorld):
         self.last_in = {}
         self.stand, self.deadlock_s, self.clear_t, self.others_contacts = 0.0, 0.0, None, 0
         self.believed_log = {}                           # driver id -> [the ego's believed level each tick it is in the game]
+        self.committed_at, self.restarted = {}, set()   # the waiver (situation, WAIVER RULING 2): when the ego committed past a
+                                                         # standing holder, and the holders that moved after it (their restart)
         self.ego_zones = [z for z in self.map.zones if self.ego.m.lane in z.lanes]
         self.ego_last = max((z.lanes[self.ego.m.lane][1] for z in self.ego_zones), default=0.0)
         self._dyn()
@@ -293,7 +296,16 @@ class IntersectionWorld(RoadWorld):
 
     # ── the measures ──
     def step(self):
+        n = len(self.collisions)
         super().step()
+        for pid in self.sit.committed:                   # the ego committed past a standing holder (it gave the way)
+            self.committed_at.setdefault(pid.split(":")[0], self.t)
+        for ag in self.agents:
+            if ag.m.id in self.committed_at and ag.v > STAND_V:
+                self.restarted.add(ag.m.id)              # it moved after the ego committed: the holder's restart after waiver
+        for c in self.collisions[n:]:
+            if c["with"] in self.restarted:
+                c["by"] = "partner: the holder's restart after its waiver"
         e = self.ego.m
         if self.clear_t is None and self.ego_zones and e.s - e.length > self.ego_last:
             self.clear_t = round(self.t, 2)
@@ -354,6 +366,8 @@ class IntersectionWorld(RoadWorld):
                   "deadlock": self.deadlock_s >= DEADLOCK_S, "clear_t": self.clear_t,
                   "delay": None if self.clear_t is None or free is None else round(self.clear_t - free, 2),
                   "others_contacts": self.others_contacts,
+                  "collisions_partner": sum(1 for c in self.collisions if c.get("by")),
+                  "collisions_own": sum(1 for c in self.collisions if not c.get("by")),
                   "drivers": {oid: {"level": lv, "believed": (self.believed_log.get(oid) or [None])[-1],
                                     "game_ticks": len(self.believed_log.get(oid) or []), "converged": self.converged(oid)}
                               for oid, lv in self.level_of.items()}})
@@ -364,9 +378,11 @@ def check(card, summary):
     """The card's expect against one run's summary: [failure, …]."""
     exp = card.get("expect") or {}
     out = []
-    for k in ("collisions", "violations"):
-        if k in exp and summary.get(k, 0) > exp[k]:
-            out.append("%s %s > %s" % (k, summary.get(k), exp[k]))
+    own = summary.get("collisions_own", summary.get("collisions", 0))    # a contact the partner's restart after its waiver made
+    if "collisions" in exp and own > exp["collisions"]:                  # is the partner's: kept in the row, not the ego's fail
+        out.append("collisions %s > %s" % (own, exp["collisions"]))
+    if "violations" in exp and summary.get("violations", 0) > exp["violations"]:
+        out.append("violations %s > %s" % (summary.get("violations"), exp["violations"]))
     if exp.get("arrived") and not summary.get("arrived"):
         out.append("not arrived")
     if exp.get("deadlock") is False and summary.get("deadlock"):

@@ -221,11 +221,12 @@ def test_the_lead_escalates_whatever_its_history():
 from semantic_world.situation import WAIVER_STOOD, waiver_window  # noqa: E402
 
 
-def _waiver_pair(o_enter, o_v=0.0, ego_v=0.0, d_enter=5.0, obj_class=None):
+def _waiver_pair(o_enter, o_v=0.0, ego_v=0.0, d_enter=5.0, obj_class=None, ego_accel=3.5):
     """The left turn's numbers: the ego 5 m before the zone, its rear 14.15 m past it; the holder O_ENTER from its line."""
-    car = dict(accel=3.5, brake_min=4.0, brake_max=8.0, min_dist=1.0, vcap=11.1)
+    car = dict(brake_min=4.0, brake_max=8.0, min_dist=1.0, vcap=11.1)
     return Pair(id="h:xing_obj_prio:z", type="xing_obj_prio", role="a1", obj_class=obj_class,
-                ego=Dynamics(vmin=ego_v, vmax=ego_v, rho=1.0, **car), obj=Dynamics(vmin=o_v, vmax=o_v, rho=2.0, **car),
+                ego=Dynamics(vmin=ego_v, vmax=ego_v, rho=1.0, accel=ego_accel, **car),
+                obj=Dynamics(vmin=o_v, vmax=o_v, rho=2.0, accel=3.5, **car),
                 d_enter=d_enter, d_leave=d_enter + 9.12, o_enter=o_enter, o_leave=o_enter + 9.0)
 
 
@@ -272,3 +273,85 @@ def test_a_moving_holder_is_unchanged():
     p = _waiver_pair(20.0, o_v=8.0, ego_v=4.0)
     st, sit = _bound_over(p, WAIVER_STOOD + 5)
     assert st.dangerous and st.resp_lon in ("brake_min", "brake_max") and not sit.waived
+
+
+# ── the two-phase waiver (the architect's WAIVER RULING 2): approach with the stop short of the holder's path, commit after rho ──
+from semantic_world.situation import WAIVER_RHO  # noqa: E402
+
+
+def drive(o_enter, d_enter, ticks=300, holder_starts=None, occluded=False, obj_class=None, dt=0.1, ego_accel=3.5):
+    """The ego from standstill D_ENTER before the holder's path, the holder standing O_ENTER from its line (from tick
+    HOLDER_STARTS on it accelerates at 3.5 m/s²); the ego accelerates at 3.5 m/s² when the bound is none (the planner's
+    go_game), brakes at brake_min when it is brake_min and harder at brake_max. → (log rows, the Situation)."""
+    sit = Situation(dt=dt)
+    v, s, ov, os_ = 0.0, 0.0, 0.0, 0.0
+    log = []
+    for k in range(ticks):
+        if holder_starts is not None and k >= holder_starts:
+            ov = min(11.1, ov + 3.5 * dt)
+            os_ += ov * dt
+        p = _waiver_pair(o_enter - os_, o_v=ov, ego_v=v, d_enter=d_enter - s, obj_class=obj_class, ego_accel=ego_accel)
+        p.d_leave = d_enter + 9.12 - s
+        p.occluded = occluded
+        st = sit.check([p])[0]
+        r = st.resp_lon if st.dangerous else "none"
+        a = ego_accel if (r == "none" and st.resp_stand != "stay") else (-8.0 if r == "brake_max" else -4.0 if v > 0 else 0.0)
+        if st.resp_stand == "stay":
+            a = min(a, 0.0)
+        v2 = max(0.0, min(11.1, v + a * dt))
+        s += 0.5 * (v + v2) * dt
+        v = v2
+        log.append({"k": k, "v": v, "s": s, "r": r, "committed": p.id in sit.committed, "waived": p.id in sit.waived,
+                    "clock": sit.approach.get(p.id, 0.0), "holder_past": os_ > o_enter + 9.0})
+        if s > d_enter + 9.12:
+            break
+    return log, sit
+
+
+def test_a_holder_at_its_line_the_ego_approaches_and_is_released_short_of_its_path():
+    """The ix-left-turn's numbers: the holder 0.33 m from its line, the ego from standstill 5 m before its path. It creeps in
+    (the approach); once moving, the geometric window opens (it now clears before the standing holder could arrive) or the
+    commitment comes; it is never past the holder's path unreleased, and it clears."""
+    log, _ = drive(0.33, 5.0)
+    first = next(r for r in log if r["committed"] or r["waived"])
+    assert all(r["s"] < 5.0 for r in log if r["k"] < first["k"]) and log[-1]["s"] > 5.0 + 9.12
+
+
+SLOW = dict(ego_accel=1.0)        # an ego the geometric window never releases here: the commitment decides
+
+
+def test_the_commitment_comes_after_rho_of_visible_approach():
+    log, _ = drive(0.33, 5.0, **SLOW)
+    first = next(r for r in log if r["committed"] or r["waived"])
+    assert first["committed"] and not first["waived"]                # the commitment releases it, not the geometric window
+    assert first["k"] * 0.1 >= WAIVER_RHO - 1e-9 and log[-1]["s"] > 5.0 + 9.12
+    assert all(r["s"] < 5.0 for r in log if r["k"] < first["k"])
+
+
+def test_a_holder_that_starts_before_the_commitment_keeps_the_ego_short_of_its_path():
+    """The holder moves at 1 s: today's law, the ego stops short of its path and goes once the holder has passed."""
+    log, _ = drive(0.33, 5.0, holder_starts=10, **SLOW)
+    assert not any(r["committed"] for r in log)
+    assert all(r["s"] < 5.0 for r in log if not r["holder_past"])
+
+
+def test_a_holder_that_starts_after_the_commitment_leaves_the_ego_committed():
+    """The restart after waiver: the bound stays none, the ego clears; the contact (if any) is the holder's (the world rule)."""
+    log, _ = drive(0.33, 5.0, **SLOW)
+    k = next(r["k"] for r in log if r["committed"])
+    log2, _ = drive(0.33, 5.0, holder_starts=k + 1, **SLOW)
+    assert all(r["r"] == "none" for r in log2 if r["k"] > k) and log2[-1]["s"] > 5.0 + 9.12
+
+
+def test_an_ego_at_the_holders_path_crawls_for_rho():
+    """The ego 2.5 m before the holder's path (its floor 1 m): the crawl keeps the visible approach to rho."""
+    log, _ = drive(0.33, 2.5, **SLOW)
+    first = next(r for r in log if r["committed"])
+    assert first["k"] * 0.1 >= WAIVER_RHO - 1e-9
+    assert max(r["v"] for r in log if r["k"] < first["k"]) < 1.5
+
+
+def test_no_waiver_against_an_occluded_holder_or_a_walker():
+    for kw in ({"occluded": True}, {"obj_class": "pedestrian"}):
+        log, _ = drive(0.33, 5.0, ticks=150, **kw)
+        assert not any(r["committed"] or r["waived"] for r in log) and max(r["s"] for r in log) < 5.0
