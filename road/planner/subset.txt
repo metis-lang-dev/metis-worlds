@@ -1,4 +1,5 @@
 # planner-loop s-0dcc5ed1 step 2: the baseline SUBSET (25), the architect's amendment of 2026-11-06.
+# v2 (2026-11-07, the day-1 review's ruling (a)): at least 12 of 25 with REGION goals; the 13 cluster cards and the 3 examples kept.
 # id                         # why (cluster of the ef793dc triage: /bigdata/work/harvest/ef793dc/clusters.json; kind, measure)
 # -- the reactive planner's three example scenarios (ZAM_Over-1_1 and DEU_Test-1_1_T-1 from its repo at 34ee3594, the user's word)
 ZAM_Tjunction-1_42_T-1       # example
@@ -23,9 +24,9 @@ USA_Lanker-1_3_T-1           # 0c42e32a world contact:side (13)
 ESP_Toledo-11_4_T-1          # 89dd6a88 evidential contact (13)
 ITA_CarpiCentro-5_3_T-1      # 9cb5fb14 structural contact (8)
 ESP_Cambre-5_3_I-1-1         # 041d75e1 structural off_lanelet (6); interactive: no recorded traffic
-# -- five regression cards at pass (SUMO), recorded
-BEL_Nivelles-3_2_T-1         # regression pass
-BEL_Wervik-4_1_T-1           # regression pass
-DEU_BadEssen-1_3_T-1         # regression pass
-DEU_Guetersloh-14_1_T-1      # regression pass
-DEU_Meckenheim-3_1_T-1       # regression pass
+# -- five regression cards at pass (SUMO) with REGION goals (v2: each replaces a time-only 3.3 s factory regression row)
+ZAM_Tjunction-1_185_T-1      # regression pass, hand-crafted, region goal (for BEL_Nivelles-3_2_T-1, time-only)
+ZAM_Zip-1_11_T-1             # regression pass, hand-crafted, region goal (for BEL_Wervik-4_1_T-1, time-only)
+USA_US101-3_5_T-1            # regression pass, NGSIM, region goal (for DEU_BadEssen-1_3_T-1, time-only)
+USA_Lanker-2_26_T-1          # regression pass, NGSIM, region goal (for DEU_Guetersloh-14_1_T-1, time-only)
+DEU_Lohmar-33_1_T-1          # regression pass, SUMO-recorded, region goal (for DEU_Meckenheim-3_1_T-1, time-only)

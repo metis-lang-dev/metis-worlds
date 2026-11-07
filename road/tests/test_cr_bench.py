@@ -41,14 +41,15 @@ def test_list_skips_comments_and_keeps_the_id(tmp_path):
 
 
 def test_table_counts_and_reasons():
-    rows = [row(id="A", goal=True, outcome="goal", cost=1.5, ms_cycle=90.0, cycles=3, steps=9, goal_window=[8, 9]),
+    rows = [row(id="A", goal=True, outcome="goal", goal_kind="region", traffic="none", cost=1.5, ms_cycle=90.0, cycles=3, steps=9, goal_window=[8, 9]),
             row(id="B", outcome="infeasible", infeasible=True,
                 reason={"cycle": 2, "time_step": 6, "kinematics": 5, "collision": 1, "samples": 6,
                         "by_constraint": {"kappa": 4, "velocity": 1, "yaw_rate": 0}}),
             row(id="C", outcome="error", reason={"child": "timeout after 900s"})]
     t = B.table(rows, "t")
     assert "3 scenarios: goal 1, infeasible 1, error 1." in t
-    assert "| A | goal | yes | no | no | yes | 1.5 | 90.0 | 3 | 9 | 8–9 |" in t
+    assert "| A | goal | region | none | yes | no | no | yes | 1.5 | 90.0 | 3 | 9 | 8–9 |" in t
+    assert "Goal kinds: region 1, — 2; traffic: none 1, — 2." in t
     assert "no feasible sample at step 6 (cycle 2): 5 of 6 kinematic [kappa 4, velocity 1], 1 collision" in t
     assert "timeout after 900s" in t
 
@@ -98,6 +99,7 @@ def test_stub_run_writes_a_solution_and_its_row(tmp_path):
     assert r["outcome"] == "goal", r
     assert r["goal"] and not r["collision"] and not r["offroad"] and r["feasible"]
     assert r["goal_window"] == [30, 60] and r["steps"] == 60 and r["cost"] is not None
+    assert r["goal_kind"] == "region" and r["traffic"] == "none"
     back = CommonRoadSolutionReader.open(r["solution"])
     assert len(back.planning_problem_solutions[0].trajectory.state_list) == 61
     assert json.loads((tmp_path / "out" / "ZAM_Bench-1_1_T-1" / "row.json").read_text())["outcome"] == "goal"

@@ -79,7 +79,7 @@ def find(sid):
 def blank_row(sid, planner):
     return {"id": sid, "planner": planner, "outcome": "error", "goal": None, "collision": None, "offroad": None,
             "feasible": None, "cost": None, "cost_function": "JB1", "ms_cycle": None, "cycles": 0, "steps": 0,
-            "goal_window": None, "reason": None, "file": None, "solution": None, "seconds": None}
+            "goal_window": None, "goal_kind": None, "traffic": None, "reason": None, "file": None, "solution": None, "seconds": None}
 
 
 def classify(row):
@@ -319,6 +319,9 @@ def run(sid, planner="reactive", out=OUT):
         last = goal_last_step(pp)
         row["goal_window"] = [min(int(s.time_step.start) for s in pp.goal.state_list if getattr(s, "time_step", None)),
                               last] if last is not None else None
+        row["goal_kind"] = "region" if any(getattr(g, "position", None) is not None for g in pp.goal.state_list) \
+            else "time-only"
+        row["traffic"] = "recorded" if scenario.dynamic_obstacles else "none"
         if last is None:
             last = int(pp.initial_state.time_step) + 200
         ref = reference_path(scenario, pp)
@@ -407,13 +410,21 @@ def table(rows, title):
     from collections import Counter
     c = Counter(r["outcome"] for r in rows)
     lines = ["# %s" % title, "",
-             "%d scenarios: %s." % (len(rows), ", ".join("%s %d" % (o, c[o]) for o in OUTCOMES if c[o])), "",
-             "| id | outcome | goal | collision | offroad | feasible | cost (JB1) | ms/cycle | cycles | steps | window | reason |",
-             "|---|---|---|---|---|---|---|---|---|---|---|---|"]
+             "%d scenarios: %s." % (len(rows), ", ".join("%s %d" % (o, c[o]) for o in OUTCOMES if c[o])),
+             "Goal kinds: %s; traffic: %s. The planner is deterministic: one run per row. The reference path: the "
+             "package's create_initial_ref_path (route planner's shortest route), extended %g m back and %g m past its end, "
+             "smoothed by create_coordinate_system; the feasibility count depends on it (the 20 m back extension moved "
+             "DEU_BadEssen-1_3_T-1 from 17 to 1 bad transitions)." % (
+                 ", ".join("%s %d" % kv for kv in sorted(Counter(r.get("goal_kind") or "—" for r in rows).items())),
+                 ", ".join("%s %d" % kv for kv in sorted(Counter(r.get("traffic") or "—" for r in rows).items())),
+                 BACK_M, EXTEND_M), "",
+             "| id | outcome | goal kind | traffic | goal | collision | offroad | feasible (bad transitions) | cost (JB1) "
+             "| ms/cycle | cycles | steps | window | reason |",
+             "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|"]
     for r in rows:
         w = r.get("goal_window")
-        lines.append("| %s | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s |" % (
-            r["id"], r["outcome"], fmt(r["goal"]), fmt(r["collision"]), fmt(r["offroad"]), (fmt(r["feasible"]) + (" (%d/%d bad)" % tuple(r["infeasible_transitions"][:2]) if r.get("infeasible_transitions") else "")),
+        lines.append("| %s | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s |" % (
+            r["id"], r["outcome"], fmt(r.get("goal_kind")), fmt(r.get("traffic")), fmt(r["goal"]), fmt(r["collision"]), fmt(r["offroad"]), (fmt(r["feasible"]) + (" (%d/%d bad)" % tuple(r["infeasible_transitions"][:2]) if r.get("infeasible_transitions") else "")),
             fmt(r["cost"]), fmt(r["ms_cycle"]), r["cycles"], r["steps"], "%s–%s" % tuple(w) if w else "—",
             short_reason(r).replace("|", "/")))
     return "\n".join(lines) + "\n"
