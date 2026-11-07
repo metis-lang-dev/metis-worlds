@@ -8,7 +8,8 @@
 // The dashboard draws them and moves their edges (mark:N:move:K0:K1). The list is kept in the browser per trace (localStorage).
 
 const KEY = trace => `roadpage.events.v1:${trace}`;
-const QUIET_TICKS = 20;                                        // a rise within 2 s of the last is the same surprise going on
+const QUIET_TICKS = 20;
+const RING = 6000;                                             // the trace keeps the last 6000 ticks (the demo's trace ring): older windows are gone                                        // a rise within 2 s of the last is the same surprise going on
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 const secs = t => (t == null ? '…' : `${t.toFixed(1)}`);
@@ -72,9 +73,18 @@ export class Events {
 
   resumed() { this.waiting = null; this.draw(); }
 
+  // an event whose window the trace's ring has dropped: nothing left to narrate, explain or send
+  gone(e) { const k = this.last?.k; return !!(e && k != null && e.trace === this.trace && (e.k1 ?? e.k0) != null && k - (e.k1 ?? e.k0) > RING); }
+  usable(e) {
+    if (!this.gone(e)) return true;
+    this.speak(`Event ${e.n} is older than the trace keeps (the last ten minutes): mark it again when you see it.`);
+    return false;
+  }
+
   // ── the loop ──
   narrate(n) {
     const e = this.get(n ?? this.sel);
+    if (e && !this.usable(e)) return;
     if (!e || e.open || !e.trace || e.k0 == null) { this.speak(e?.open ? `Event ${e.n} is still open: end it first.` : 'Mark an event first.'); return; }
     this.sel = e.n;
     this.pending.push(e.n);
@@ -91,6 +101,7 @@ export class Events {
 
   explain(n) {
     const e = this.get(n ?? this.sel);
+    if (e && !this.usable(e)) return;
     if (!e || e.open || !e.trace) { this.speak('Mark an event first.'); return; }
     this.sel = e.n;
     const what = e.note || e.words;
@@ -101,6 +112,7 @@ export class Events {
 
   send(n) {
     const e = this.get(n ?? this.sel);
+    if (e && !this.usable(e)) return;
     if (!e || e.open || !e.trace) { this.speak('Mark an event first.'); return; }
     this.sel = e.n;
     if (!e.loop.length) { e.sendAfter = true; this.narrate(e.n); return; }
@@ -137,6 +149,7 @@ export class Events {
       <ol class="ev-list">${rows.map(e => `<li class="ev ${e.n === this.sel ? 'sel' : ''} ev-${e.kind === 'mark' ? 'mark' : 'surprise'}" data-n="${e.n}" tabindex="0">
         <div class="ev-h"><b>#${e.n}</b> <span class="ev-kind">${esc(e.kind === 'mark' ? 'mark' : e.kind)}</span>
           <span class="ev-t">${secs(e.t0)}${e.kind === 'mark' ? `–${secs(e.t1)}` : ''} s</span>${e.open ? '<span class="ev-open">open</span>' : ''}${e.state ? `<span class="ev-st">${esc(e.state)}</span>` : ''}
+          ${this.gone(e) ? '<span class="ev-gone" title="the trace keeps the last 6000 ticks (10 min): this window is gone">older than the trace</span>' : ''}
           <span class="ev-acts"><button type="button" class="glyph" data-act="narrate" title="narrate: the rules' own words for this event (free)">¶</button><button type="button" class="glyph" data-act="explain" title="explain: ask pi why the car acted so (paid)">?</button><button type="button" class="glyph" data-act="send" title="send to the pi loop: a record of what you saw, pi proposes a correction, you decide whether to apply it (paid)">⇢</button></span></div>
         ${e.words && e.kind === 'mark' ? `<div class="ev-w">${esc(e.words)}</div>` : ''}
         <input class="ev-note" type="text" placeholder="what you saw (your words go with it)" value="${esc(e.note)}" aria-label="your words for event ${e.n}">

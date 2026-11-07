@@ -106,3 +106,4 @@ def test_the_dashboard_rolls_6000_ticks_and_moves_events():
     assert "this.loop.say(`/narrate ${e.trace} ${e.k0}..${Math.max(e.k0, e.k1)} ${this.said(e)}`)" in ev   # one line, every member, the context
     road = (WEB / "road.js").read_text()
     assert "this.line(`mark:${n}:once:${kind}`)" in road and "if (stop && !this.paused) this.hold(true);" in road
+    assert "const RING = 6000;" in ev and "if (e && !this.usable(e)) return;" in ev and ev.count("if (e && !this.usable(e)) return;") == 3   # a window the ring dropped: no loop action
