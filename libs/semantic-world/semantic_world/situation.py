@@ -390,6 +390,8 @@ class Situation:
         self.umemory = dict(umemory or {})        # an unstructured pair's id -> the ego's continue set clear, then
         self.escalated = set()                    # crossings whose priority holder's response escalated (RSS rule 5)
         self.away = set()                         # crossings the ego is driving away through, the other still standing
+        self.stood = {}                           # a crossing's id -> cycles its object has stood (the waiver window's)
+        self.waived = set()                       # crossings the ego entered in the waiver window (the yielder's bound none)
 
     def check(self, pairs):
         """→ [State] for PAIRS (the memory updated: rewritten while safe, frozen while dangerous, dropped for pairs
@@ -425,6 +427,14 @@ class Situation:
             r_stand = "none"
             if dangerous and p.type.startswith("xing") and (p.obj.vmax or 0.0) <= 0.0 and ((p.ego.vmax or 0.0) <= 0.0 or p.id in self.away):
                 r_stand, r_lon = respond_standing(p), "none"
+            stood = self.stood[p.id] = self.stood.get(p.id, 0) + 1 if (p.obj.vmax or 0.0) <= 0.0 else 0
+            if dangerous and (stood >= WAIVER_STOOD or p.id in self.waived) and waiver_window(p, stood >= WAIVER_STOOD):
+                r_lon = "none"                            # the waiver window: the yielder enters, the holder cannot arrive first
+                if r_stand == "stay":
+                    r_stand = "drive_away"
+                self.waived.add(p.id)
+            else:
+                self.waived.discard(p.id)
             if r_stand == "drive_away":
                 self.away.add(p.id)               # held once it moves, while the other stands
             else:
@@ -447,6 +457,9 @@ class Situation:
             self.xmemory.pop(k)
         self.escalated &= seen
         self.away &= seen
+        self.waived &= seen
+        for k in [k for k in self.stood if k not in seen]:
+            self.stood.pop(k)
         return out
 
     @staticmethod
@@ -558,6 +571,35 @@ class Situation:
                 out["resp_lat_left(%s)" % folded.get("resp_lat_left", "none")] = 1
                 out["resp_lat_right(%s)" % folded.get("resp_lat_right", "none")] = 1
         return out
+
+
+WAIVER_STOOD = 10      # cycles the priority holder must have stood (one planner beat at the exerciser's and SUMO's 0.1 s)
+
+
+def waiver_window(p, stood):
+    """The yielder's WAIVER WINDOW (levelk-intersection step 3, the architect's ruling: present-only, kinematic, belief-free).
+    At a crossing where the ego yields (xing_obj_prio, never a walker or a cyclist), with the priority holder STOOD (it has
+    stood WAIVER_STOOD cycles): it reaches the zone no earlier than its response time plus the time to cover o_enter from
+    standstill at its accel_max (its vcap kept); the ego, from its speed at its own accel (to its vcap), has its rear past the
+    zone (d_leave) plus its floor in t_e. t_e before the holder's earliest arrival: entering is RSS-proper whatever the holder
+    intends, and the yielder's bound is none. A holder that moves again is read from its present speed, no response time
+    (the window holds while the ego still clears before it can arrive, else the yielder's bound as before).
+    → True when the window is open."""
+    if p.type != "xing_obj_prio" or p.obj_class in VRU_CLASSES:
+        return False
+    if None in (p.d_leave, p.o_enter) or p.o_enter <= 0.0:
+        return False                                            # the holder at or in the zone: no window
+    o = p.obj
+    if stood:
+        t_h = time_to(p.o_enter, 0.0, o.accel or 0.0, o.vcap)
+        t_h = None if t_h is None else (o.rho or 0.0) + t_h
+    else:
+        t_h = time_to(p.o_enter, o.vmax or 0.0, o.accel or 0.0, o.vcap)
+    e = p.ego
+    t_e = time_to(max(0.0, p.d_leave) + (e.min_dist or 0.0), e.vmax or 0.0, e.accel or 0.0, e.vcap)
+    if t_e is None:
+        return False                                            # the ego cannot clear (standing, no accel): no window
+    return t_h is None or t_e < t_h
 
 
 def respond_standing(p):

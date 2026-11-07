@@ -215,3 +215,60 @@ def test_the_lead_escalates_whatever_its_history():
     assert s.resp_lon == "brake_max"
     [s] = Situation().check([lead(12.0)])                        # a plain follow brake_min keeps behind: brake_min
     assert s.dangerous and s.resp_lon == "brake_min"
+
+
+# ── the waiver window (levelk-intersection step 3, the architect's ruling): the yielder's bound against a STANDING holder ──
+from semantic_world.situation import WAIVER_STOOD, waiver_window  # noqa: E402
+
+
+def _waiver_pair(o_enter, o_v=0.0, ego_v=0.0, d_enter=5.0, obj_class=None):
+    """The left turn's numbers: the ego 5 m before the zone, its rear 14.15 m past it; the holder O_ENTER from its line."""
+    car = dict(accel=3.5, brake_min=4.0, brake_max=8.0, min_dist=1.0, vcap=11.1)
+    return Pair(id="h:xing_obj_prio:z", type="xing_obj_prio", role="a1", obj_class=obj_class,
+                ego=Dynamics(vmin=ego_v, vmax=ego_v, rho=1.0, **car), obj=Dynamics(vmin=o_v, vmax=o_v, rho=2.0, **car),
+                d_enter=d_enter, d_leave=d_enter + 9.12, o_enter=o_enter, o_leave=o_enter + 9.0)
+
+
+@pytest.mark.parametrize("o_enter,open_", [(0.33, False), (1.0, False), (3.0, True)])
+def test_the_window_against_a_standing_holder_at_three_distances(o_enter, open_):
+    """The ego from standstill needs 2.94 s to clear (its rear past the zone and its floor at 3.5 m/s²); the standing holder
+    arrives no earlier than its 2 s response time + its run from standstill: 2.43 s at 0.33 m (the ix-left-turn's l1 driver),
+    2.76 s at 1 m (closed), 3.31 s at 3 m (open)."""
+    assert waiver_window(_waiver_pair(o_enter), stood=True) is open_
+
+
+def test_the_window_needs_a_holder_that_stood_and_never_a_walker():
+    assert waiver_window(_waiver_pair(3.0), stood=True)
+    assert not waiver_window(_waiver_pair(3.0, obj_class="pedestrian"), stood=True)
+    assert not waiver_window(_waiver_pair(0.0), stood=True)                      # at its line: no window
+    p = _waiver_pair(3.0, o_v=5.0)                                               # a MOVING holder, read without a response time
+    assert not waiver_window(p, stood=False)
+
+
+def _bound_over(p, cycles):
+    sit = Situation()
+    out = None
+    for _ in range(cycles):
+        out = sit.check([p])[0]
+    return out, sit
+
+
+def test_the_window_opens_only_after_the_holder_stood_a_beat():
+    """Both standing, dangerous: before WAIVER_STOOD cycles the yielder stays (respond_standing); from then on it drives away."""
+    p = _waiver_pair(3.0, d_enter=0.5)
+    st, sit = _bound_over(p, WAIVER_STOOD - 1)
+    assert st.dangerous and st.resp_stand == "stay" and p.id not in sit.waived
+    st, sit = _bound_over(p, WAIVER_STOOD)
+    assert st.resp_stand == "drive_away" and st.resp_lon == "none" and p.id in sit.waived
+
+
+def test_a_close_standing_holder_keeps_the_yielder_s_bound():
+    st, sit = _bound_over(_waiver_pair(0.33, d_enter=0.5), WAIVER_STOOD + 5)
+    assert st.resp_stand == "stay" and not sit.waived
+
+
+def test_a_moving_holder_is_unchanged():
+    """The holder coming at 8 m/s, 20 m out, the ego moving 5 m before the zone: rule 5's yielder bound as before."""
+    p = _waiver_pair(20.0, o_v=8.0, ego_v=4.0)
+    st, sit = _bound_over(p, WAIVER_STOOD + 5)
+    assert st.dangerous and st.resp_lon in ("brake_min", "brake_max") and not sit.waived
