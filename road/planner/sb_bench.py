@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """sb_bench.py — the ORIGINAL SB-2023 planner as a bench column (planner-loop s-0dcc5ed1 step 2b; PLANNER.md §6.2).
 
-    road/.venv-sb2023/bin/python road/planner/sb_bench.py SCENARIO_XML OUT_DIR [--collision-avoidance]
+    road/.venv-sb2023/bin/python road/planner/sb_bench.py SCENARIO_XML OUT_DIR [--collision-avoidance] [--vlim]
 
 Kochdumper's MotionPlanner @ 5434d05 (github.com/KochdumperNiklas/MotionPlanner; NO LICENSE, all rights reserved: run and
 read on the bench, never copied, never a dependency; road/docs/planner-licenses.md). The clone lives OUTSIDE the tree
@@ -9,7 +9,8 @@ read on the bench, never copied, never a dependency; road/docs/planner-licenses.
 main.py is not used: its `bool(sys.argv[2])` never selects the optimiser. The run is the README's: the scenario read with
 lanelet_assignment=True, its decision module as main.py calls it (`highLevelPlanner(scenario, planning_problem, param,
 desired_velocity='init')`, every other argument at its default), then `lowLevelPlannerOptimization` at its defaults (one
-shot over the goal window, collision_avoidance off, IPOPT's defaults); --collision-avoidance flips that one flag.
+shot over the goal window, collision_avoidance off, IPOPT's defaults); --collision-avoidance flips that one flag; --vlim
+passes desired_velocity='speed_limit' (the function's own default; the family's target) instead of main.py's 'init'.
 The repository's code is never edited. The wrapper does two things to it: it puts the clone first on sys.path, and it
 replaces the optimiser module's `casadi.Opti` with a subclass that records the solver's stats (status, iterations, wall
 time) and otherwise behaves the same. IPOPT's console output goes to OUT_DIR/ipopt.log.
@@ -109,7 +110,7 @@ def stops(v_ref, xs, ys, k0):
     return out
 
 
-def run(xml, out, collision_avoidance=False):
+def run(xml, out, collision_avoidance=False, vlim=False):
     import numpy as np
     out = Path(out)
     out.mkdir(parents=True, exist_ok=True)
@@ -120,9 +121,10 @@ def run(xml, out, collision_avoidance=False):
     from src.highLevelPlanner import highLevelPlanner
     import src.lowLevelPlannerOptimization as LLO
 
-    rec = {"record": RECORD_VERSION, "planner": "sb2023" + ("-ca" if collision_avoidance else ""),
+    desired = "speed_limit" if vlim else "init"
+    rec = {"record": RECORD_VERSION, "planner": "sb2023" + ("-ca" if collision_avoidance else "") + ("-vlim" if vlim else ""),
            "settings": {"source": "github.com/KochdumperNiklas/MotionPlanner@" + SB_PIN,
-                        "decision": "highLevelPlanner(..., desired_velocity='init'), the rest at its defaults (main.py)",
+                        "decision": "highLevelPlanner(..., desired_velocity=%r), the rest at its defaults" % desired,
                         "low_level": "lowLevelPlannerOptimization defaults; collision_avoidance=%s" % collision_avoidance},
            "scenario": str(xml), "dt": None, "horizon": None, "steps": [], "lane_changes": [], "stops": [],
            "solves": [], "times": {}, "trajectory": [], "vehicle": None, "failure": None}
@@ -140,7 +142,7 @@ def run(xml, out, collision_avoidance=False):
     try:
         with _FdToFile(str(log)):
             # main.py passes the planning problem SET (CommonRoadFileReader's second value) to both stages
-            plan, space, ref = highLevelPlanner(scenario, pp, param, desired_velocity="init")
+            plan, space, ref = highLevelPlanner(scenario, pp, param, desired_velocity=desired)
         t1 = time.perf_counter()
         rec["times"]["decision_s"] = round(t1 - t0, 3)
         ref = np.asarray(ref)
@@ -187,7 +189,7 @@ def main(argv=None):
     if len(args) != 2:
         sys.stderr.write(__doc__.split("\n\n")[1] + "\n")
         return 2
-    rec = run(args[0], args[1], ca)
+    rec = run(args[0], args[1], ca, "--vlim" in argv)
     f = rec["failure"]
     print(json.dumps({"planner": rec["planner"], "steps": len(rec["trajectory"]), "failure": f,
                       "times": rec["times"], "solves": rec["solves"]}))

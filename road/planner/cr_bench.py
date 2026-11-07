@@ -231,15 +231,15 @@ class _CentredVehicle:
     id_type_vehicle = SB_VEHICLE_TYPE
 
 
-def drive_sb2023(cfg, ref_fn, last_step, row, d, collision_avoidance=False):
+def drive_sb2023(cfg, ref_fn, last_step, row, d, collision_avoidance=False, vlim=False):
     """The original SB-2023 planner in its own venv (road/planner/sb_bench.py, Python 3.8): one shot over the goal window;
     its decision record (d/record.json) becomes the states; its failure a row with the reason. No reference of ours."""
     import numpy as np
     from commonroad_rp.reactive_planner import ReactivePlannerState
     d.mkdir(parents=True, exist_ok=True)
     (d / "record.json").unlink(missing_ok=True)
-    cmd = [str(SB_PY), str(HERE / "sb_bench.py"), row["file"], str(d)] + (["--collision-avoidance"] if collision_avoidance
-                                                                           else [])
+    cmd = [str(SB_PY), str(HERE / "sb_bench.py"), row["file"], str(d)] + \
+        (["--collision-avoidance"] if collision_avoidance else []) + (["--vlim"] if vlim else [])
     with open(d / "sb.log", "w") as log:
         try:
             subprocess.run(cmd, stdout=log, stderr=subprocess.STDOUT, timeout=max(60.0, TIMEOUT - 30))
@@ -282,7 +282,12 @@ def drive_sb2023_ca(cfg, ref_fn, last_step, row, d):
     return drive_sb2023(cfg, ref_fn, last_step, row, d, collision_avoidance=True)
 
 
-PLANNERS = {"reactive": drive_reactive, "stub": drive_stub, "sb2023": drive_sb2023, "sb2023-ca": drive_sb2023_ca}
+def drive_sb2023_vlim(cfg, ref_fn, last_step, row, d):
+    return drive_sb2023(cfg, ref_fn, last_step, row, d, vlim=True)
+
+
+PLANNERS = {"reactive": drive_reactive, "stub": drive_stub, "sb2023": drive_sb2023, "sb2023-ca": drive_sb2023_ca,
+            "sb2023-vlim": drive_sb2023_vlim}
 
 
 # ---------------------------------------------------------------- the oracle
@@ -437,6 +442,8 @@ def child(sid, planner, out):
         return json.loads(f.read_text())
     row = blank_row(sid, planner)
     row["reason"] = {"child": "timeout after %ds" % TIMEOUT if rc == "timeout" else "exit %s, no row (see run.log)" % rc}
+    if "_S-" in Path(sid).stem and rc != "timeout":
+        row["reason"]["world"] = SET_BASED
     row["seconds"] = round(time.perf_counter() - t0, 1)
     f.write_text(json.dumps(row, indent=1))
     return row
@@ -456,6 +463,8 @@ def short_reason(r):
     x = r["reason"]
     if "exception" in x and "by_constraint" not in x:
         return x["exception"][:120]
+    if "world" in x:
+        return "world: " + x["world"]
     if "child" in x:
         return x["child"]
     if "checker" in x:
@@ -480,9 +489,12 @@ HOW = {
     "sb2023": "SB-2023 @ 5434d05 as its main.py calls it: its own decision module (desired_velocity='init'), the "
               "Optimization planner at its defaults, ONE SHOT over the goal window, collision_avoidance off; ms/cycle = "
               "decision + low level; the solution's vehicle FORD_ESCORT (the nearest CommonRoad type to SB's 4.3 x 1.7 m, "
-              "wheelbase 2.3). Its OCP has no steering-rate bound and zero input weights: the KS check rejects the chatter.",
+              "wheelbase 2.3). KS feasibility as measured; footnote: no steering-rate bound, zero input weights.",
 }
 HOW["sb2023-ca"] = HOW["sb2023"].replace("collision_avoidance off", "collision_avoidance ON (the one flag)")
+HOW["sb2023-vlim"] = HOW["sb2023"].replace("as its main.py calls it", "with the decision module's own default").replace(
+    "desired_velocity='init'", "desired_velocity='speed_limit', the family's target")
+SET_BASED = "set-based predictions: oracle crash"   # the architect's ruling (c): _S- scenarios stay as error:world
 
 
 def table(rows, title, planner="reactive"):
@@ -499,6 +511,8 @@ def table(rows, title, planner="reactive"):
              "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|"]
     for r in rows:
         w = r.get("goal_window")
+        if r["outcome"] == "error" and (r.get("reason") or {}).get("world"):
+            r = dict(r, outcome="error:world")
         lines.append("| %s | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s |" % (
             Path(r["id"]).stem if r["id"].endswith(".xml") else r["id"], r["outcome"], fmt(r.get("goal_kind")), fmt(r.get("traffic")), fmt(r["goal"]), fmt(r["collision"]), fmt(r["offroad"]), (fmt(r["feasible"]) + (" (%d/%d bad)" % tuple(r["infeasible_transitions"][:2]) if r.get("infeasible_transitions") else "")),
             fmt(r["cost"]), fmt(r["ms_cycle"]), r["cycles"], r["steps"], "%s–%s" % tuple(w) if w else "—",

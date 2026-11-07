@@ -2,6 +2,7 @@
 venv (road/planner/setup-venv.sh), the bench end to end on a built straight-road scenario with the stub planner (no network,
 no dataset) and its solution file written and read back."""
 import importlib.util
+import types
 import json
 from pathlib import Path
 
@@ -143,3 +144,13 @@ def test_sb_record_drives_the_oracle_states(tmp_path, monkeypatch):
     r["file"] = "X.xml"
     states, _ = B.drive_sb2023(None, None, 2, r, d)
     assert states == [] and r["infeasible"] and B.classify(dict(r, collision=False, offroad=False, goal=False)) == "infeasible"
+
+
+def test_a_set_based_crash_reads_error_world(tmp_path, monkeypatch):
+    monkeypatch.setenv("PLANNER_NO_SCOPE", "1")
+    monkeypatch.setattr(B.subprocess, "run", lambda *a, **k: types.SimpleNamespace(returncode=-11))
+    r = B.child("ZAM_HW-1_1_S-1", "sb2023", tmp_path)
+    assert r["outcome"] == "error" and r["reason"]["world"] == B.SET_BASED
+    assert "| ZAM_HW-1_1_S-1 | error:world |" in B.table([r], "t") and "world: set-based predictions" in B.table([r], "t")
+    r = B.child("ZAM_X-1_1_T-1", "sb2023", tmp_path)
+    assert "world" not in r["reason"]
