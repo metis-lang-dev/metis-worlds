@@ -22,6 +22,7 @@
   #status[data-state="waiting"] .state { color: var(--cyan); border-color: var(--cyan); }
   #status[data-state="working"] .state { color: var(--green); border-color: #2a5a35; }
   #status[data-state="asking"] .state, #status[data-state="stuck"] .state { color: var(--yellow); border-color: var(--yellow); }
+  #status[data-state="down"] .state { color: var(--red); border-color: var(--red); }
   #status[data-state="done"] .state, #status[data-state="over"] .state { color: var(--purple); border-color: #5a4580; }
   #status .text { color: var(--fg); overflow: hidden; text-overflow: ellipsis; }
   #status .opts { display: inline-flex; gap: 6px; flex: none; }
@@ -104,14 +105,14 @@
   #runbar { display: inline-flex; gap: 6px; align-items: center; color: var(--dim); }
   #runbar select, #runbar input { background: var(--bg); color: var(--fg); border: 1px solid var(--line); font: inherit; padding: 1px 4px; }
   #runbar input { width: 3.5em; }
-  #dock-traffic select, #dock-traffic input[type=number] { background: var(--bg); color: var(--fg); border: 1px solid var(--line); font: inherit; padding: 1px 4px; }
-  #dock-traffic input[type=number] { width: 4em; }
+  #tool-traffic select, #tool-traffic input[type=number] { background: var(--bg); color: var(--fg); border: 1px solid var(--line); font: inherit; padding: 1px 4px; }
+  #tool-traffic input[type=number] { width: 4em; }
   #t-crq { background: var(--bg); color: var(--fg); border: 1px solid var(--line); font: inherit; padding: 1px 4px; width: 100%; }
   #t-crlist { list-style: none; margin: 2px 0; padding: 0; max-height: 16em; overflow-y: auto; }
   #t-crlist li button { display: block; width: 100%; text-align: left; background: none; color: var(--fg); border: 0; border-bottom: 1px solid var(--line); font: inherit; padding: 2px 4px; cursor: pointer; }
   #t-crlist li button:hover, #t-crlist li button:focus { background: var(--line); }
   #t-crlist li small { opacity: 0.7; }
-  #dock-traffic input[type=text] { background: var(--bg); color: var(--fg); border: 1px solid var(--line); font: inherit; padding: 1px 4px; width: 16em; }
+  #tool-traffic input[type=text] { background: var(--bg); color: var(--fg); border: 1px solid var(--line); font: inherit; padding: 1px 4px; width: 16em; }
   .kv { display: grid; grid-template-columns: auto 1fr; gap: 1px 12px; margin: 0 0 10px; }
   .kv dt { color: var(--dim); } .kv dd { margin: 0; overflow-wrap: anywhere; }
   #dash { flex: 0 0 34%; min-height: 220px; border-top: 1px solid var(--line); background: var(--panel); padding: 6px 10px; display: flex; flex-direction: column; gap: 4px; overflow: hidden; position: relative; }
@@ -124,6 +125,65 @@
   #dash canvas { flex: 1; min-height: 0; width: 100%; }
   #tip { position: absolute; display: none; pointer-events: none; background: var(--bg); border: 1px solid var(--line); padding: 2px 6px; font-size: 11px; white-space: pre; z-index: 2; }
 #mark.open { background: #b3261e; border-color: #b3261e; color: #fff; }
+  /* loop-road-ui: the tools as the dialog's cards (Drive, Cars, Traffic), the run's EVENTS, the pi loop's dock, the dashboard's glyphs */
+  #toolcards { display: flex; flex-direction: column; gap: 6px; }
+  #toolcards .fw-sec { border: 1px solid var(--line); padding: 2px 8px; background: var(--panel); }
+  #toolcards .fw-sec > summary { cursor: pointer; color: var(--dim); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; padding: 2px 0; }
+  #toolcards .fw-sec[open] > summary { color: var(--fg); }
+  #dash { flex-direction: row !important; gap: 6px; }
+  #dash .dmain { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+  #dash .dglyphs { flex: none; display: flex; flex-direction: column; gap: 4px; align-items: center; padding-top: 18px; border-left: 1px solid var(--line); padding-left: 6px; }
+  #dash .dsel { color: var(--cyan); font-size: 10.5px; }
+  .glyph { width: 22px; height: 22px; padding: 0; font: 13px/20px var(--mono); background: var(--bg); color: var(--fg); border: 1px solid var(--line); cursor: pointer; }
+  .glyph:hover:not(:disabled) { border-color: var(--cyan); color: var(--cyan); }
+  .glyph:disabled { opacity: .35; cursor: default; }
+  #events .ev-bar { display: flex; gap: 10px; align-items: center; margin-bottom: 6px; color: var(--dim); }
+  #events .ev-go { border-color: var(--yellow); color: var(--yellow); }
+  #events .ev-list { list-style: none; margin: 0; padding: 0; }
+  #events .ev { border: 1px solid var(--line); border-left: 3px solid #50c8dc; padding: 3px 6px; margin-bottom: 4px; cursor: pointer; }
+  #events .ev.ev-surprise { border-left-color: #e66767; }
+  #events .ev.sel { background: var(--sel); border-color: var(--cyan); }
+  #events .ev-h { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  #events .ev-kind { color: var(--dim); } #events .ev-t { color: var(--fg); } #events .ev-open { color: #b3261e; } #events .ev-st { color: var(--green); font-size: 11px; }
+  #events .ev-acts { margin-left: auto; display: inline-flex; gap: 3px; }
+  #events .ev-w { color: var(--dim); font-size: 11.5px; margin: 2px 0; }
+  #events .ev-note { width: 100%; box-sizing: border-box; background: var(--bg); color: var(--fg); border: 1px solid var(--line); font: inherit; padding: 1px 4px; margin-top: 3px; }
+  #dock-loop .dbody { display: flex; flex-direction: column; overflow: hidden; padding: 0; }
+  #loopframe { flex: 1 1 auto; min-height: 0; width: 100%; border: 0; background: var(--bg); }   /* the chat scrolls inside its frame */
+  /* the column's height: TOOLS and EVENTS as tall as their content (folded cards are small), at most a share; the loop's chat the rest */
+  #dock-tools.open { flex: 0 1 auto !important; max-height: 40%; }   /* !important: the shell keeps each dock's flex inline */
+  #dock-events.open { flex: 0 1 auto !important; max-height: 24%; }
+  #dock-loop.open { flex: 3 1 0 !important; min-height: 320px; }   /* the loop's log readable: a narration is 6-10 lines */
+  #dock-talk.open { min-height: 130px; }                                /* the road's own talk keeps its line and its input */
+  #dock-world.open { flex: 2 1 0 !important; min-height: 200px; }      /* a scenario's card, readable beside the chat */
+  #dock-tools.open { max-height: 36%; }
+  #right > .dock > .dbody { overflow: auto; }
+  #loopstate { color: var(--dim); text-transform: none; letter-spacing: 0; font-size: 11px; }
+  .loop-msg { padding: 6px 8px; margin: 0; }
+  /* the SCENARIOS tree: sources, situations, scenarios; the selected one marked, the running one green */
+  .sc-now { display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap; color: var(--dim); margin: 2px 0; }
+  .sc-now b { color: var(--green); font-weight: normal; overflow-wrap: anywhere; }
+  .sc-now input { width: 4.5em; background: var(--bg); color: var(--fg); border: 1px solid var(--line); font: inherit; padding: 1px 4px; }
+  #scenarios .sc-find { width: 100%; box-sizing: border-box; background: var(--bg); color: var(--fg); border: 1px solid var(--line); font: inherit; padding: 1px 4px; margin: 2px 0 4px; }
+  #scenarios .sc-tree { max-height: 22em; overflow: auto; }
+  #scenarios details { margin-left: 2px; } #scenarios details details { margin-left: 12px; }
+  #scenarios summary { cursor: pointer; padding: 1px 0; } #scenarios summary .sc-n { color: var(--dim); font-size: 11px; }
+  #scenarios ul { list-style: none; margin: 0 0 2px 14px; padding: 0; }
+  #scenarios .sc-leaf { display: flex; gap: 6px; align-items: baseline; padding: 1px 4px; cursor: pointer; user-select: none; }
+  #scenarios .sc-leaf:hover { background: var(--line); } #scenarios .sc-leaf.sel { background: var(--sel); outline: 1px solid var(--cyan); }
+  #scenarios .sc-leaf.run .sc-name { color: var(--green); } #scenarios .sc-leaf.run .sc-name::after { content: " ▶"; }
+  #scenarios .sc-leaf.elsewhere .sc-name { color: var(--dim); }
+  #scenarios .sc-v { font-size: 10.5px; color: var(--dim); } #scenarios .sc-pass { color: var(--green); } #scenarios .sc-fail { color: #e66767; } #scenarios .sc-soft { color: var(--yellow); }
+  #scenarios .sc-set { color: var(--green); font-size: 11px; }
+  #scenarios .sc-sit { color: var(--dim); font-size: 10.5px; }
+  #scenarios .sc-help { color: var(--dim); font-size: 11px; margin: 4px 0 0; }
+  .loop-msg[hidden] { display: none; }
+  .sc-msg { margin: 2px 0 4px; font-size: 12px; color: var(--dim, #8a93a3); }
+  .sc-msg.bad { color: var(--red, #e5534b); }
+  /* the active chat (TALK or LOOP: the mic and the voice go there): its green dot, glowing while the voice is on */
+  .chatdot { visibility: hidden; margin-right: 5px; font-size: 10px; color: var(--dim, #8a93a3); }
+  .chat-active .chatdot { visibility: visible; color: var(--green, #3fb950); }
+  .chat-voiced .chatdot { text-shadow: 0 0 5px var(--green, #3fb950); }
 </style>
 </head>
 <body>
@@ -134,9 +194,7 @@
       <span id="status" data-state="" aria-live="polite"><span class="state" id="sstate">…</span><span class="text" id="stext"></span><span class="opts" id="sopts"></span></span>
       <span id="sessbar">
         <span id="runbar">
-          <label>scenario <select id="scenario"><option>straight</option></select></label>
-          <label>seed <input id="seed" type="number" min="1" value="1"></label>
-          <button class="btn" id="run" type="button">new run</button>
+          <button class="btn" id="run" type="button" title="the running scenario again, from its start, with the seed in SCENARIOS">new run</button>
           <button class="btn" id="hold" type="button">pause</button>
           <button class="btn" id="mark" type="button" title="You see a problem: mark where it starts and where it ends. Each event goes in the journal, numbered, to talk about after.">mark event 1</button>
           <label>speed <select id="speed"><option>0.25</option><option>0.5</option><option selected>1</option><option>2</option><option>4</option></select></label>
@@ -162,7 +220,7 @@
     <div id="split"></div>
     <aside id="right">
       <section class="dock" id="dock-talk" data-dock="talk" tabindex="-1" aria-label="the dialog">
-        <header><span class="tw">▾</span><span class="tt">TALK</span><button class="x" type="button" aria-label="hide the dialog">✕</button></header>
+        <header><span class="tw">▾</span><span class="chatdot" aria-hidden="true">●</span><span class="tt">TALK</span><button class="x" type="button" aria-label="hide the dialog">✕</button></header>
         <div class="dbody">
           <div id="ask" hidden aria-live="assertive"><div class="q" id="askq"></div><div class="opts" id="askopts"></div></div>
           <div id="talkpanel"></div>
@@ -172,36 +230,34 @@
         <header><span class="tw">▾</span><span class="tt">HIERARCHY</span><span id="hstate"></span><button class="x" type="button" aria-label="hide the hierarchy">✕</button></header>
         <div class="dbody"><ul id="hlist" tabindex="-1" aria-label="the domains"></ul></div>
       </section>
-      <section class="dock" id="dock-drive" data-dock="drive" tabindex="-1" aria-label="drive">
-        <header><span class="tw">▾</span><span class="tt">DRIVE</span><button class="x" type="button" aria-label="hide drive">✕</button></header>
-        <div class="dbody">
+      <section class="dock" id="dock-tools" data-dock="tools" tabindex="-1" aria-label="the tools: scenarios, drive, run, cars, traffic">
+        <header><span class="tw">▾</span><span class="tt">TOOLS</span><button class="x" type="button" aria-label="hide the tools">✕</button></header>
+        <div class="dbody" id="toolcards">
+          <details class="fw-sec tool" id="tool-scenarios" data-tool="scenarios" open><summary>Scenarios</summary>
+            <div class="wrow sc-now"><span>running <b id="sc-running">…</b></span><label title="the seed of the next run: the traffic's draw, the same seed the same run">seed <input id="seed" type="number" min="1" value="1"></label>
+              <select id="scenario" hidden aria-hidden="true"><option>straight</option></select></div>
+            <p id="sc-msg" class="sc-msg" hidden></p>
+            <div id="scenarios"></div>
+          </details>
+          <details class="fw-sec tool" id="tool-drive" data-tool="drive" open><summary>Drive</summary>
           <div class="ph">AT THE NEXT JUNCTION</div>
           <div class="wrow"><button class="chip" data-drive="turn:left" type="button">turn left</button><button class="chip" data-drive="turn:straight" type="button">straight on</button><button class="chip" data-drive="turn:right" type="button">turn right</button></div>
           <div class="ph">LANE</div>
           <div class="wrow"><button class="chip" data-drive="lane:left" type="button">left lane</button><button class="chip" data-drive="lane:right" type="button">right lane</button></div>
           <div class="ph">SPEED</div>
           <div class="wrow"><button class="chip" data-drive="stop" type="button">stop</button><button class="chip" data-drive="go" type="button">go</button><button class="chip" data-drive="pace:easy" type="button">easy</button><button class="chip" data-drive="pace:normal" type="button">normal</button><button class="chip" data-drive="pace:brisk" type="button">brisk</button></div>
-        </div>
-      </section>
-      <section class="dock" id="dock-run" data-dock="run" tabindex="-1" aria-label="the run">
-        <header><span class="tw">▾</span><span class="tt">RUN</span><button class="x" type="button" aria-label="hide the run">✕</button></header>
-        <div class="dbody">
+          </details>
+          <details class="fw-sec tool" id="tool-run" data-tool="run"><summary>Run</summary>
           <div class="wrow"><button class="chip" id="follow" type="button" aria-pressed="false">follow the ego</button><button class="chip" id="center" type="button">center on the ego</button></div>
           <div class="ph">THE RUN, AS SUMO HAS IT</div><dl class="kv" id="run-info"></dl>
           <div class="ph">THE EGO, AS SUMO HAS IT</div><dl class="kv" id="ego"></dl>
-        </div>
-      </section>
-      <section class="dock" id="dock-cars" data-dock="cars" tabindex="-1" aria-label="the cars">
-        <header><span class="tw">▾</span><span class="tt">CARS</span><button class="x" type="button" aria-label="hide the cars">✕</button></header>
-        <div class="dbody">
+          </details>
+          <details class="fw-sec tool" id="tool-cars" data-tool="cars"><summary>Cars</summary>
           <div class="ph">SELECTED CAR</div><dl class="kv" id="picked"></dl>
           <div class="wrow" id="picked-tools" hidden><button class="chip" id="follow-picked" type="button">follow it</button><button class="chip" id="center-picked" type="button">center on it</button></div>
           <div class="ph">ROLES, AS THE EGO BELIEVES</div><dl class="kv" id="roles"></dl>
-        </div>
-      </section>
-      <section class="dock" id="dock-traffic" data-dock="traffic" tabindex="-1" aria-label="the traffic">
-        <header><span class="tw">▾</span><span class="tt">TRAFFIC</span><button class="x" type="button" aria-label="hide the traffic">✕</button></header>
-        <div class="dbody">
+          </details>
+          <details class="fw-sec tool" id="tool-traffic" data-tool="traffic"><summary>Traffic</summary>
           <div class="ph">ADD CARS</div>
           <div class="wrow"><label>style <select id="t-kind"><option value="aggr">aggressive</option><option value="calm">calm</option></select></label><label>how many <input id="t-n" type="number" min="1" max="50" value="5"></label></div>
           <div class="wrow"><button class="chip" id="t-add" type="button">on the road</button><button class="chip" id="t-ahead" type="button">ahead of the ego</button><button class="chip" id="t-clear" type="button">remove all but the ego</button></div>
@@ -221,7 +277,16 @@
           <div class="wrow"><input id="t-crq" type="search" placeholder="find: words of the id, country, map, tag (intersection, highway…)" aria-label="find a CommonRoad scenario" spellcheck="false"></div>
           <div class="wrow"><span id="t-crn" class="empty"></span></div>
           <ol id="t-crlist" aria-label="the CommonRoad scenarios found"></ol>
+          </details>
         </div>
+      </section>
+      <section class="dock" id="dock-events" data-dock="events" tabindex="-1" aria-label="the run's events: your marks and the surprises">
+        <header><span class="tw">▾</span><span class="tt">EVENTS</span><button class="x" type="button" aria-label="hide the events">✕</button></header>
+        <div class="dbody" id="events"></div>
+      </section>
+      <section class="dock" id="dock-loop" data-dock="loop" tabindex="-1" aria-label="the pi loop: its chat">
+        <header><span class="tw">▾</span><span class="chatdot" aria-hidden="true">●</span><span class="tt">LOOP</span><span id="loopstate"></span><button class="x" type="button" aria-label="hide the loop">✕</button></header>
+        <div class="dbody" id="loopbox"></div>
       </section>
       <section class="dock" id="dock-world" data-dock="world" tabindex="-1" aria-label="the world card">
         <header><span class="tw">▾</span><span class="tt">WORLD CARD</span><button class="x" type="button" aria-label="hide the world card">✕</button></header>
@@ -236,7 +301,7 @@
         <div class="dbody"><div id="dialogpart"></div></div>
       </section>
     </aside>
-    <nav id="strip"><button type="button" data-strip="talk">Talk</button><button type="button" data-strip="drive">Drive</button><button type="button" data-strip="run">Run</button><button type="button" data-strip="cars">Cars</button><button type="button" data-strip="traffic">Traffic</button><button type="button" data-strip="hierarchy">Hierarchy</button><button type="button" data-strip="world">World card</button><button type="button" data-strip="journal">Journal</button><button type="button" data-strip="dialog">Dialog</button></nav>
+    <nav id="strip"><button type="button" data-strip="talk">Talk</button><button type="button" data-strip="tools">Tools</button><button type="button" data-strip="events">Events</button><button type="button" data-strip="loop">Loop</button><button type="button" data-strip="hierarchy">Hierarchy</button><button type="button" data-strip="world">World card</button><button type="button" data-strip="journal">Journal</button><button type="button" data-strip="dialog">Dialog</button></nav>
   </main>
 </div>
 <script type="module">

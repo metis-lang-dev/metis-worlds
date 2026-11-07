@@ -160,6 +160,22 @@ def test_a_new_run_opens_one_world_and_the_planner_gets_a_trip(monkeypatch):
     assert "+trip 1" not in (b.tick({}) or [])                # once
 
 
+def test_the_pages_pause_holds_the_beat():
+    """The user, 2026-11-07 (lock step, not realtime): paused, the host holds the runtime's beat (metis-agent Live.beat_held): no tick,
+    the trace's k stays; play, or a new run, releases it. A run without a page never holds."""
+    a = host()
+    a.run["page"] = True
+    assert not a.holds_beat()
+    a.world(["pause"])
+    assert a.holds_beat()
+    a.world(["play"])
+    assert not a.holds_beat()
+    b = host()
+    b.run.pop("page", None)
+    b.shared["paused"] = True
+    assert not b.holds_beat()
+
+
 def test_a_commonroad_id_runs_on_sumo_after_its_cache_is_had(monkeypatch):
     """run:cr:ID:SEED (commonroad-world step 3): the colon inside the name kept, the run on SUMO, the cache loaded before the
     current world closes (cr_world.load converts on demand)."""
@@ -187,6 +203,27 @@ def test_a_commonroad_id_that_cannot_be_had_is_said_and_the_run_goes_on(monkeypa
     a.world(["run:cr:NOPE:1"])
     assert not closed and not made and a.shared["world"] is old
     assert any("I cannot run cr:NOPE" in x and "no scenario NOPE" in x for x in a.shared["wish"]["said"])
+
+
+def test_a_run_whose_world_will_not_start_is_said_and_the_run_before_it_starts_again(monkeypatch):
+    """SUMO that never answers (TraCI's retries, then its error): the page told why (world/runfail, and TALK), the run before it
+    started again, never a closed world left under the hosts (2026-11-07: a scenario double clicked left the page silent)."""
+    closed, made = [], []
+    old = SimpleNamespace(close=lambda: closed.append(1), scenario="straight", seed=1, arrived=lambda: False, tick=0, observe=lambda: ({}, {}, {}, []), log=[{}], proj={"ego": None})
+
+    def new_world(run):
+        made.append(run["scenario"])
+        if run["scenario"] == "broken":
+            raise RuntimeError("Could not connect to TraCI server at localhost:41234")
+        return SimpleNamespace(close=lambda: None, scenario=run["scenario"], seed=run["seed"], arrived=lambda: False)
+    monkeypatch.setattr(road_host, "new_world", new_world)
+    a = host(world=old)
+    was = a.run["scenario"]
+    a.world(["run:broken:3"])
+    assert closed == [1] and made == ["broken", was] and a.shared["world"] is not old and a.shared["world"].scenario == was
+    assert a.run["scenario"] == was                                       # what runs is still the run before it
+    assert a.shared["run_out"] == {"ev": "world/runfail", "scenario": "broken", "seed": 3, "why": "Could not connect to TraCI server at localhost:41234"}
+    assert any("I cannot run broken" in x for x in a.shared["wish"]["said"])
 
 
 def test_the_commonroad_picker_finds_by_every_word_and_says_a_missing_index(monkeypatch, tmp_path):
@@ -726,3 +763,83 @@ def test_the_page_install_puts_its_trace_under_the_workspace(tmp_path, monkeypat
     assert os.path.basename(run["trace"]).startswith("Town01-2-")
     assert yaml.safe_load(open(path))["trace"]["dir"] == run["trace"]
     assert road_hier.traces_dir(str(tmp_path / "scratch")) == str(tmp_path / "scratch" / "traces")
+
+
+def test_a_surprise_is_a_one_off_event_and_an_event_moves(tmp_path):
+    """loop-road-ui (the user, 2026-11-07): mark:N:once:KIND, a one-off event at this tick (start and stop), the next number, never while
+    one is open; mark:N:move:K0:K1, an ended event moved on the dashboard: a start and a stop row again beside the trace (the last pair
+    is the window: metispy's ws.marks), at the trace's k, the log's tick the k less this run's offset."""
+    world = SimpleNamespace(log=[{"lane": "E_0", "s": 1.0, "v": 2.0}], t=0.7, tick=7, arrived=lambda: False)
+    h = host("responder", world=world)
+    logged = []
+    h._log = logged.append
+    h.run["trace"] = str(tmp_path / "t")
+    h.shared["k"] = 8
+    h.world(["mark:1:start"])
+    with pytest.raises(ValueError, match="event 1 is open: end it first"):
+        h.world(["mark:2:once:collision"])
+    h.world(["mark:1:stop", "mark:2:once:collision"])
+    assert h.shared["marks"] == {"n": 2, "open": False}
+    assert "a collision at tick 7. The run is paused." in h.shared["mark_said"]
+    with pytest.raises(ValueError, match="the next is event 3"):
+        h.world(["mark:5:once:violation"])
+    h.world(["mark:1:move:6:3:5:2"])                                                  # the page's ticks with the k, in either order
+    assert h.shared["mark_said"] == "Event 1 moved to 0.2–0.5 s."
+    with pytest.raises(ValueError, match="there are events 1..2"):
+        h.world(["mark:3:move:1:2"])
+    h.world(["mark:3:start"])
+    with pytest.raises(ValueError, match="the last open"):
+        h.world(["mark:3:move:1:2"])
+    h.world(["mark:3:stop", "mark:3:move:9:12"])                                       # no ticks: none in the rows, the k said
+    assert h.shared["mark_said"] == "Event 3 moved to k 9–12."
+    rows = [json.loads(x) for x in (tmp_path / "t" / "marks.jsonl").read_text().splitlines()]
+    assert [(r["mark"], r["edge"], r["at_k"], r.get("kind"), r.get("moved")) for r in rows] == [
+        (1, "start", 8, None, None), (1, "stop", 8, None, None), (2, "start", 8, "collision", None), (2, "stop", 8, "collision", None),
+        (1, "start", 3, None, True), (1, "stop", 6, None, True), (3, "start", 8, None, None), (3, "stop", 8, None, None),
+        (3, "start", 9, None, True), (3, "stop", 12, None, True)]
+    moved = [r for r in logged if r.get("moved")]
+    assert [(r["at_tick"], r["t"]) for r in moved] == [(2, 0.2), (5, 0.5), (None, None), (None, None)]   # the page's ticks: the k goes on while paused
+
+
+def test_the_scene_names_its_k_and_trace(net):
+    h = host(world=loop(net))
+    h.world(["watching", "hello"])
+    h.shared["k"], h.run["trace"] = 41, "/x/.metis/traces/Town03-1-20261107T104100"
+    f = [x for x in h.frames() if x["ev"] == "world/scene"][0]
+    assert f["k"] == 41 and f["trace"] == "Town03-1-20261107T104100"
+
+
+def test_the_scenarios_tree_and_a_card(net):
+    """loop-road-ui (the user, 2026-11-07): the page's SCENARIOS tree. `catalog` → world/catalog, a row per card with the situation it is
+    filed under and the runs it starts here (a CARLA card at its town sites, CommonRoad as cr:ID, ours none); `scard:NAME` → the card."""
+    h = host(world=loop(net))
+    h.world(["watching", "catalog"])
+    f = [x for x in h.frames() if x["ev"] == "world/catalog"][0]
+    by = {r["id"]: r for r in f["rows"]}
+    assert {r["source"] for r in f["rows"]} >= {"scenario-runner", "commonroad", "ours"} and "straight" in f["towns"]
+    assert by["ParkingCutIn"]["situation"] == "cut-in" and by["ParkingCutIn"]["runs"][0]["run"].startswith("card:ParkingCutIn@Town")
+    assert by["ix-left-turn"]["runs"] == [] and by["ix-left-turn"]["world"] == "intersection"
+    cr = next(r for r in f["rows"] if r["source"] == "commonroad")
+    assert cr["runs"] == [{"label": "CommonRoad", "run": "cr:%s" % cr["id"]}]
+    assert {(r["kind"], r["provenance"]) for r in f["rows"] if r["source"] == "commonroad"} >= {("recorded", "scenario-factory"), ("interactive", "SUMO")}
+    assert by["USA_Lanker-1_2_I-1-1"]["kind"] == "interactive" and by["USA_Lanker-1_2_I-1-1"]["provenance"] == "NGSIM"   # from the code path
+    assert by["ParkingCutIn"]["kind"] is None
+    h.world(["scard:ParkingCutIn"])
+    c = [x for x in h.frames() if x["ev"] == "world/scard"][0]
+    assert c["card"]["scenario"] == "ParkingCutIn" and c["runs"] == by["ParkingCutIn"]["runs"]
+    h.world(["scard:../../etc"])
+    assert "no card" in [x for x in h.frames() if x["ev"] == "world/scard"][0]["error"]
+
+
+def test_a_member_reads_the_new_run_not_the_closed_one():
+    """A run started from the page swaps the shared world between ticks; a member that latches before its tick moved it must read the
+    new world, never the closed one (the page's SCENARIOS double click hung the service: every tick read a dead TraCI)."""
+    def world(name):
+        return SimpleNamespace(tick=5, observe=lambda: ({"from(%s)" % name: 1}, None))
+    old, new = world("old"), world("new")
+    h = host("responder", world=old)
+    h.period, h.observed = 1, None
+    assert "from(old)" in h.reading()
+    h.shared["world"] = new                                                            # start_run: the old world closed, the new one in place
+    old.observe = lambda: (_ for _ in ()).throw(AttributeError("'NoneType' object has no attribute 'vehicle'"))
+    assert "from(new)" in h.reading() and h.road is new

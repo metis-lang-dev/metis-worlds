@@ -12,7 +12,11 @@ const rows = (el, pairs) => el.replaceChildren(...pairs.flatMap(([k, v]) => {
 export class RoadMap {
   constructor(box, { line }) {
     Object.assign(this, { box, line, map: null, frame: null, ready: false, paused: false, following: false, ego: 'ego', picked: null });
-    this.dash = new Dash($('#dash'));
+    this.events = null;                                     // the page's EVENTS (events.js), set by world.js
+    this.dash = new Dash($('#dash'), {
+      events: () => this.events?.list || [], selected: () => this.events?.sel, onSelect: n => this.events?.select(n),
+      onMove: (n, k0, k1, t0, t1, i0, i1) => this.events?.moved(n, k0, k1, t0, t1, i0, i1), act: a => this.events?.[a](),
+    });
     this.view = { fit() {}, keep() {}, center() {} };
     this.marks = { n: 0, open: false };
     $('#mark').onclick = () => this.markEdge();
@@ -77,10 +81,27 @@ export class RoadMap {
 
   post(o) { if (this.ready) this.frame.contentWindow.postMessage(o, location.origin); }
   follows(on) { this.following = on; $('#follow').setAttribute('aria-pressed', String(on)); }
-  markEdge() {                        // the host numbers them (world/mark): this is the next edge as the page last heard it
-    const m = this.marks, n = m.open ? m.n : m.n + 1;
-    this.line(`mark:${n}:${m.open ? 'stop' : 'start'}:${this.tick ?? ''}`);
+  markEdge(words) {                   // the host numbers them (world/mark): this is the next edge as the page last heard it
+    const m = this.marks, n = m.open ? m.n : m.n + 1, edge = m.open ? 'stop' : 'start';
+    this.line(`mark:${n}:${edge}:${this.tick ?? ''}`);
     this.mark({ n, open: !m.open });
+    this.events?.edge(n, edge, words);
+    return n;
+  }
+
+  // a surprise (loop-road-ui, the user 2026-11-07): the run's collisions or violations rose — a one-off event, and the run stops on it
+  // until the person continues (the EVENTS dock's "stop on a surprise"; an open mark is ended first)
+  surprise(f) {
+    const kind = this.events?.surprised(f);
+    if (!kind) return;
+    const stop = this.events.stopOn;
+    if (this.marks.open) this.markEdge();
+    const n = this.marks.n + 1;
+    this.line(`mark:${n}:once:${kind}`);
+    this.mark({ n, open: false });
+    this.events.once(n, kind, stop);
+    if (stop && !this.paused) this.hold(true);
+    this.onSurprise?.(n, kind, stop);
   }
 
   mark({ n, open }) {
@@ -90,17 +111,42 @@ export class RoadMap {
     b.classList.toggle('open', open);
   }
 
+  runScenario(run) {                                        // a scenario from the SCENARIOS tree or its card: a town, card:NAME@TOWN#SITE, cr:ID
+    if (this.marks.open) this.markEdge();
+    this.crWant = run;
+    this.line(`run:${run}:${Math.max(1, Number($('#seed').value) || 1)}`);
+    this.hold(false, false);
+    this.runMsg(`starting ${run}…${run.startsWith('cr:') ? ' (a CommonRoad scenario is converted the first time: up to a minute)' : ''}`);
+    clearTimeout(this.runTimer);
+    this.runTimer = setTimeout(() => { if (this.crWant === run) this.runMsg(`${run} has not started after 90 s: the road service may have stopped (see the page's status)`, true); }, 90000);
+  }
+
+  runMsg(text, bad = false) {                               // the SCENARIOS card's line under "running": starting, or why a run could not start
+    const m = $('#sc-msg');
+    if (!m) return;
+    m.textContent = text || ''; m.hidden = !text; m.classList.toggle('bad', bad);
+  }
+
+  runFailed(f) {                                            // world/runfail (road_host.run_failed): the run asked for did not start
+    if (this.crWant === f.scenario) this.crWant = null;
+    clearTimeout(this.runTimer);
+    this.runMsg(`could not run ${f.scenario}: ${f.why}`, true);
+  }
+
   hold(on, tell = true) {
     this.paused = on;
+    if (!on) this.events?.resumed();
     $('#hold').textContent = on ? 'play' : 'pause';
     if (tell) this.line(on ? 'pause' : 'play');
   }
 
   net(f) {
     this.dash.net(f);
+    this.scenarios?.running(f.scenario);
     const names = f.scenarios && f.scenario && !f.scenarios.includes(f.scenario) ? [...f.scenarios, f.scenario] : f.scenarios;   // a cr: run is not in the list: its own option
     if (names && $('#scenario').options.length !== names.length) $('#scenario').replaceChildren(...names.map(s => Object.assign(document.createElement('option'), { textContent: s })));
-    if (f.scenario && f.scenario === this.crWant) { $('#t-cr-msg').textContent = `running ${f.scenario}`; this.crWant = null; }
+    $('#sc-running').textContent = f.scenario ? `${f.scenario} · seed ${f.seed}` : '…';
+    if (f.scenario && f.scenario === this.crWant) { $('#t-cr-msg').textContent = `running ${f.scenario}`; this.crWant = null; clearTimeout(this.runTimer); this.runMsg(''); }
     if (document.activeElement !== $('#scenario') && document.activeElement !== $('#seed')) { $('#scenario').value = f.scenario; $('#seed').value = f.seed; }   // what runs, also when a page opens on it
     const key = f.lanes.map(l => l.id).join() + JSON.stringify(f.goal || '');   // the client reads its road once: another road (or goal), another frame
     if (this.frame && key === this.netKey) return;
@@ -134,7 +180,9 @@ export class RoadMap {
     this.tick = f.tick;
     this.ego = f.ego;
     this.post({ scene: f });
+    this.events?.scene(f);
     this.dash.scene(f);
+    this.surprise(f);
     const me = f.movers.find(m => m.id === f.ego);
     rows($('#run-info'), [['time', `${f.t.toFixed(1)} s`], ['tick', f.tick], ['movers', f.movers.length], ['the sensor sees', f.seen ?? '-'], ['tracks', f.tracks ?? '-'],
       ['restricted ticks', f.restricted], ['collisions', f.collisions], ['arrived', f.arrived ? 'yes' : 'no']]);

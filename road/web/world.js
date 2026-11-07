@@ -30,8 +30,12 @@ import { Panel } from './vendor/panel.js';
 import { connect } from './vendor/ws.js';
 import { Journal } from './vendor/journal.js';
 import { Narrator, attachSelection, attachKey } from './vendor/narrator.js';
-import { voiceWidget } from './vendor/switch.js';
+import { voiceWidget, voiceSwitch } from './vendor/switch.js';
 import { keywordStop } from './vendor/dialog.js';
+import { LoopDock, loopUrl } from './loopdock.js';       // loop-road-ui: the pi loop's CHAT as a dock, its rows in the one voice
+import { Events } from './events.js';                    // the run's events: the person's marks and the surprises
+import { route } from './loopgrammar.js';                // the one voice redirected: the loop's and the events' lines
+import { Scenarios, cardHtml } from './scenarios.js';    // the SCENARIOS tree: click shows a card, double click runs it
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -123,6 +127,7 @@ const chips = (box, options, pressed) => box.replaceChildren(...(options || []).
 }));
 function answer(o) {                                 // a chip is the person saying its answer (the same path as typing it)
   rec('answer', { say: o.say ?? o.label });
+  if (o.gate) { loop?.answerGate(o.gate); $('#ask').hidden = true; return; }   // the loop's gate, answered here
   if (o.card) showCard();                            // "what can I ask?": the card shown, and the question said (the agent's card line)
   if (o.ev) send({ ev: o.ev }); else panel.say(o.say ?? o.label);
 }
@@ -222,6 +227,15 @@ function gameInfo() {                                // under the map: the game 
     ${x ? `<div class="gi-dim">${esc(x.id)}${room && x.episode ? ` · the room's game: ${esc(x.episode)}` : ''}</div>` : ''}
     ${m.intro ? `<div class="gi-intro">${esc(m.intro)}</div>` : ''}`;
 }
+// a scenario's card in the WORLD CARD dock (the tree's click; f.card arrives as world/scard); the town's own card is worldCard()
+function showScenario(f) {
+  const box = $('#wcard');
+  if (f.error) { box.innerHTML = `<p class="empty">${esc(f.error)}</p>`; return; }
+  box.innerHTML = cardHtml(f);
+  for (const b of box.querySelectorAll('[data-run]')) b.onclick = () => world.map.runScenario(b.dataset.run);
+  box.querySelector('[data-town-card]').onclick = () => worldCard();
+  showCard();
+}
 function showCard() { docks.set('world', { shown: true, open: true }); $('#dock-world')?.scrollIntoView?.({ block: 'nearest' }); }
 // the tiles as large as the left pane allows (the map, its attention slot beside it when there is room)
 function fitMap() {
@@ -293,6 +307,8 @@ function rowLook(r) {
   // a line the band already shows (the status line the agent then says, a reply that repeats its narration): once
   const prev = [...panel.dom.log.children].slice(-4, -1).filter(x => !x.hidden).map(x => x.querySelector('.fw-text')?.textContent.trim());
   if ((r.who === 'agent') && (prev.includes(r.text.trim()) || r.text.trim() === lastStatusRow.trim())) { li.hidden = true; return; }
+  if (r.who === 'agent' && r.narration === 'announce' && r.via === 'host') { who.textContent = 'page'; return; }   // the page's own word (an event, a pause)
+  if (r.who === 'person' && r.text && routed.has(r.text)) who.textContent = `you → ${routed.get(r.text)}`;
   if (r.who === 'agent' && r.narration) {
     const asks = r.narration === 'v3-ask';
     if (asks) text.textContent = asked(r.text)[0] ?? r.text;            // the answers are the ask box's chips
@@ -308,13 +324,17 @@ function rowLook(r) {
 function floorLook(s) { if (panel) panel.dom.floor.textContent = `floor: ${FLOOR[s.floor] ?? s.floor.toLowerCase()}`; }
 
 // ── the frames ──
-let say = 0, panel = null, send = () => {};
+let say = 0, panel = null, send = () => {}, loop = null, scenarios = null;
+const routed = new Map();                            // the person's lines that went to the loop or the events: where (the TALK log says so)
 async function frame(f) {
   if (f.ev === 'world/scene') { world.map.scene(f); return; }          // the road: ten a second, not recorded in the page's log
   if (f.ev === 'world/net') { world.map.net(f); return; }
   if (f.ev === 'world/mark') { world.map.mark(f); if (f.said) journalRow({ who: 'note', text: f.said }); return; }
   if (f.ev === 'world/summary') { world.map.summary(f); return; }
   if (f.ev === 'world/cr_list') { world.map.crList?.(f); return; }     // the road's CommonRoad picker (road_host.cr_find)
+  if (f.ev === 'world/catalog') { scenarios?.catalog(f); return; }       // the SCENARIOS tree's rows (road_host.catalog_tree)
+  if (f.ev === 'world/scard') { showScenario(f); return; }
+  if (f.ev === 'world/runfail') { world.map.runFailed(f); return; }                // a run that did not start: why, in the SCENARIOS card                // a card, whole, into the WORLD CARD
   if (f.ev === 'journal' && f.rec?.kind === 'dlg-world') return;       // the road: the page's own lines (watching, play, speed)
   if (f.ev === 'journal' && f.rec?.kind === 'dlg-relay') relay(f.rec);
   if (f.ev === 'journal' && f.rec) commands(f.rec);
@@ -387,14 +407,26 @@ const agentUrl = q.get('agent') || `${location.protocol === 'https:' ? 'wss' : '
 const hello = b => { b.send({ ev: 'hello', since: 1e15 }); b.send({ ev: 'world', domain: 'responder', atoms: ['watching', 'hello'] }); };   // the road: a page is open
 setInterval(() => send({ ev: 'world', domain: 'responder', atoms: ['watching'] }), 2000);
 const backend = agentUrl ? await live(agentUrl) : null;
+// the road service gone (demo.sh stopped, SUMO died): said at once in the status line and the SCENARIOS card, never a page that only stops moving
+let down = false;
+setInterval(() => {
+  const gone = !backend || !backend.isOpen;
+  if (gone === down) return;
+  down = gone;
+  $('#status').dataset.state = gone ? 'down' : '';
+  if (gone) { $('#sstate').textContent = 'stopped'; $('#stext').textContent = 'the road service is not answering: restart road/demo.sh; this page reloads when it is back'; }
+  world.map.runMsg(gone ? 'the road service stopped: nothing runs until road/demo.sh is started again' : '', gone);
+}, 2000);
 // the shell's docks (the consoles' look): tools the strip shows and hides, each open while shown (fold: false — "go to
 // Talk" lands at once; the DIALOG tool's own FLOOR / STATE / EVENTS sections fold inside it)
 const docks = world.docks = MetisShell.docks({
   // v3: the DIALOG drawer (fsttm-web's panel, its own part: the floor, barge-in, attention, the numbers), hidden until asked for
   // v4: the cards are tools, not folded (the world card and the journal shown by default as before; the dialog hidden)
-  names: ['talk', 'drive', 'run', 'cars', 'traffic', 'hierarchy', 'world', 'journal', 'dialog'], key: 'roadpage.docks.v4', fold: false,
-  defaults: { talk: { shown: true, open: true }, drive: { shown: true, open: true }, run: { shown: true, open: true }, cars: { shown: false, open: true }, traffic: { shown: false, open: true }, hierarchy: { shown: false, open: true }, world: { shown: false, open: true }, journal: { shown: true, open: true },
-    dialog: { shown: false, open: true } },
+  // v5 (loop-road-ui): Drive, Cars and Traffic one TOOLS dock of cards; the run's EVENTS; the pi LOOP's chat
+  // v6: RUN a card of TOOLS too (the user: one tool panel)
+  names: ['talk', 'tools', 'events', 'loop', 'hierarchy', 'world', 'journal', 'dialog'], key: 'roadpage.docks.v6', fold: false,
+  defaults: { talk: { shown: true, open: true }, tools: { shown: true, open: true }, events: { shown: true, open: true }, loop: { shown: true, open: true },
+    hierarchy: { shown: false, open: true }, world: { shown: false, open: true }, journal: { shown: false, open: true }, dialog: { shown: false, open: true } },
   onChange: st => panel?.showDialog(!!st.dialog?.shown),              // hidden: the panel draws nothing there
 });
 docks.apply();
@@ -419,6 +451,12 @@ const say0 = panel.core.say.bind(panel.core);
 let stops = 0;
 panel.core.say = (text, opts = {}) => {
   const t = String(text ?? '').trim();
+  if (t && opts.via === 'voice' && chat.active === 'loop') {         // heard while the LOOP is the active chat: the loop's, the page's own words aside
+    const r = route(t, routeCtx());
+    if (r && r.to !== 'loop') redirect(t, opts.via); else { routed.set(t, 'loop'); loop.say(r?.line ?? t, 'heard'); }
+    return;
+  }
+  if (t && opts.via !== 'host' && redirect(t, opts.via)) return;   // the loop's line or the events': not the road agent's turn
   if (backend && t && keywordStop(t, panel.core.dialog.stopWords) && ['working', 'asking', 'stuck'].includes(world.status?.state)) {
     panel.core.tts.cancel?.();
     panel.core.via = opts.via ?? 'say';
@@ -427,13 +465,101 @@ panel.core.say = (text, opts = {}) => {
   return say0(text, opts);
 };
 window.say = text => panel.say(text);
+
+// ── loop-road-ui: the pi loop's dock, the run's events, the one voice redirected ──
+const speak = text => panel.core.hostChat({ who: 'system', text });            // the page's own word (an event, a pause): in TALK, said
+// the voice for two chats (the user, 2026-11-07): TALK and LOOP, the last one active (clicked, focused, typed in) takes the mic
+// and is the one spoken; its dock's header shows a dot, green while the voice is on. The voice switch (Shift+8) is the
+// page's: on, the active chat's replies are spoken (TALK: the panel's own voice; LOOP: its rows through the one TTS).
+const CHAT_KEY = 'roadpage.voice.chat';
+const chat = world.chat = { active: (() => { try { return localStorage.getItem(CHAT_KEY) === 'loop' ? 'loop' : 'talk'; } catch { return 'talk'; } })(), voice: q.get('voice') === '1', subs: new Set() };
+function chatLook() {
+  for (const n of ['talk', 'loop']) {
+    const d = $(`#dock-${n}`);
+    d.classList.toggle('chat-active', chat.active === n);
+    d.classList.toggle('chat-voiced', chat.active === n && chat.voice);
+    const dot = d.querySelector('.chatdot');
+    if (dot) dot.title = chat.active === n ? `the active chat: the mic${chat.voice ? ' and the voice' : ''} go here` : `click here to make ${n.toUpperCase()} the active chat`;
+  }
+  panel.core.setVoice(chat.voice && chat.active === 'talk');
+}
+function setChat(n) {
+  if (n === chat.active) return;
+  chat.active = n;
+  try { localStorage.setItem(CHAT_KEY, n); } catch { /* this page only */ }
+  chatLook();
+}
+const voiced = {                                                     // the voice switch's panel: the page's voice, over both chats
+  core: { get voice() { return chat.voice; }, setVoice(on) { chat.voice = !!on; chatLook(); for (const f of chat.subs) f({ state: { voice: chat.voice } }); } },
+  subscribe: f => chat.subs.add(f),
+};
+$('#dock-talk').addEventListener('pointerdown', () => setChat('talk'));
+$('#dock-talk').addEventListener('focusin', () => setChat('talk'));
+$('#dock-loop').addEventListener('pointerdown', () => setChat('loop'));
+addEventListener('blur', () => setTimeout(() => { if (document.activeElement?.id === 'loopframe') setChat('loop'); }, 0));   // a click into the loop's frame
+const hear = text => { if (chat.voice && chat.active === 'loop') panel.core.tts.speak([text]); };   // the loop's row: heard while LOOP is the active chat, written in its dock only
+loop = world.loop = new LoopDock($('#loopbox'), {
+  url: loopUrl(q, location), speak: hear,
+  onRow: r => { events.row(r); $('#loopstate').textContent = loop.up ? '' : 'not connected'; },
+  onPage: t => { if (!redirect(t, 'text')) loop.say(t); },                   // "narrate event 4" typed in the loop's chat: the page's event
+  onGate: g => {
+    if (g.open) {                                                              // the gate as the agent's ask: confirm or refuse, by voice or chip
+      docks.set('loop', { shown: true, open: true });
+      ask({ question: `The loop asks: ${g.title}`, options: [{ label: 'confirm', gate: 'confirm' }, { label: 'refuse', gate: 'refuse' }] });
+    } else $('#ask').hidden = true;
+  },
+});
+const events = world.events = new Events($('#events'), {
+  line: l => world.map.line(l), loop, speak, hold: on => world.map.hold(on), context: () => ({ scenario: $('#scenario').value, seed: $('#seed').value }),
+  onChange: () => world.map.dash.changed(),
+});
+world.map.events = events;
+scenarios = world.scenarios = new Scenarios($('#scenarios'), {
+  line: l => world.map.line(l), run: r => world.map.runScenario(r),
+  onTown: () => { worldCard(); showCard(); },
+  onCard: (r, note) => { showScenario({ id: r.id, source: r.source, card: { title: r.title, tags: r.tags, set: r.set }, runs: r.runs, note }); },
+});
+world.map.scenarios = scenarios;
+if (backend) scenarios.ask();
+world.map.onSurprise = (n, kind, stopped) => {
+  docks.set('events', { shown: true, open: true });
+  speak(`Event ${n}: a ${kind}.${stopped ? ' The run is paused. Say continue when you are ready, or narrate, explain, or send it to the loop.' : ''}`);
+};
+// the tools' cards (the dialog's look): which are open, remembered
+for (const d of document.querySelectorAll('#toolcards details')) {
+  const k = `roadpage.tool.${d.dataset.tool}`, v = localStorage.getItem(k);
+  if (v != null) d.open = v === '1';
+  d.addEventListener('toggle', () => localStorage.setItem(k, d.open ? '1' : '0'));
+}
+function routeCtx() { return { loopMark: loop.lastMark, gate: !!loop.gate, paused: world.map.paused && events.waiting != null, scenarios: scenarios?.names() }; }
+function redirect(t, via) {
+  const r = route(t, routeCtx());
+  if (!r) return false;
+  routed.set(t, r.action === 'scenario' ? 'scenarios' : r.to === 'page' ? 'events' : 'loop');
+  panel.core.row({ who: 'person', text: t, channel: 'main' });
+  rec('redirect', { text: t, to: r.to, ...(r.line ? { line: r.line } : {}), ...(r.action ? { action: r.action } : {}) });
+  if (r.to === 'loop') { docks.set('loop', { shown: true, open: true }); loop.say(r.line, via === 'voice' ? 'heard' : undefined); }
+  else if (r.to === 'gate') { loop.answerGate(r.answer); $('#ask').hidden = true; }
+  else if (r.action === 'mark') { if (!world.map.marks.open) world.map.markEdge(); }
+  else if (r.action === 'endmark') { if (world.map.marks.open) world.map.markEdge(r.words); }
+  else if (r.action === 'continue') world.map.hold(false);
+  else if (r.action === 'scenario') scenarios.pick(r.name, true);
+  else events[r.action](r.n);
+  return true;
+}
+world.route = (t, ctx) => route(t, ctx);
 if (backend) hello(backend);
 // the narrator (fsttm-web 0.6): the page's selected text read aloud on F8 (the task card's words, the journal), never
 // taking the floor: it wraps the band's own TTS and yields while the dialog speaks
 const narrator = world.narrator = new Narrator({ tts: panel.core.tts });
 attachSelection(narrator, document); attachKey(narrator, document, { key: 'F8' });
-// the band's voice card (fsttm-web switch.js): [● mic ⟦switch⟧ narrator], the narrator always on
-$('#voice').replaceWith(Object.assign(voiceWidget(panel, { narrator, key: 'F8' }).el, { id: 'voice' }));
+// the band's voice card (fsttm-web switch.js): [● mic ⟦switch⟧ ● voice ⟦switch⟧ narrator], the narrator always on; the voice
+// switch is the page's (both chats, the active one spoken), so the widget's own is left out and this one put in its place
+const vw = voiceWidget(panel, { narrator, key: 'F8', voice: false });
+vw.voice = voiceSwitch(voiced, { store: 'roadpage.voice', title: 'the voice: the active chat (TALK or LOOP, its dot) spoken while on' });
+vw.el.insertBefore(vw.voice.el, vw.narrator?.el ?? null);
+$('#voice').replaceWith(Object.assign(vw.el, { id: 'voice' }));
+chatLook();
 $('#hlist').addEventListener('click', e => { const li = e.target.closest('li'); if (li?.dataset.domain === 'task') world.map.showTask('@agent'); });
 $('#hlist').addEventListener('keydown', e => { const li = e.target.closest('li'); if (e.key === 'Enter' && li?.dataset.domain === 'task') world.map.showTask('@agent'); });
 if (!agentUrl) await replay(q.get('replay') || 'fixtures/alfworld_tomato_microwave_13.run.jsonl');

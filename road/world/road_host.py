@@ -101,6 +101,10 @@ def manifest(package_dir):
     return yaml.safe_load(open(p)) or {}
 
 
+def _int(v):
+    return None if v in (None, "") else int(v)
+
+
 class RoadHost:
     PAIRS = ()
 
@@ -147,7 +151,9 @@ class RoadHost:
     def reading(self, counts=None):
         """The member's copy of the world: refreshed once a clock period (the planner's every tenth world step, the
         responder's every step), so a slow member's copies change, and it beats, at its own rate (the tick's rule 1);
-        `now` from the refresh until the member's command (one command a period)."""
+        `now` from the refresh until the member's command (one command a period). A new run (start_run) may have swapped the world
+        between this member's ticks: the reading moves to it first, never reads the closed one (the page's run picker hung the service so)."""
+        self.world_now()
         t = self.road.tick
         if self.latched is None or self.latched_at < t - t % self.period:
             self.latched, self.latched_at, self.now_due = self.fresh(), t, True
@@ -229,6 +235,10 @@ class RoadHost:
                 self.mark(line)
             elif line.startswith("crfind:"):
                 self.cr_find(line[len("crfind:"):])
+            elif line == "catalog":                    # the SCENARIOS tree (loop-road-ui, the user 2026-11-07): the cards, grouped
+                self.shared["catalog_out"] = {"ev": "world/catalog", "rows": self.catalog_tree(), "towns": road_frames.SCENARIO_NAMES()}
+            elif line.startswith("scard:"):            # one card, whole, for the WORLD CARD dock
+                self.shared["catalog_out"] = self.scenario_card(line[len("scard:"):])
             elif line.startswith("run:"):
                 scenario, seed = line[len("run:"):].rsplit(":", 1)        # a scenario's name may hold a colon (cr:ID, card:NAME@TOWN#SITE)
                 self.start_run(dict(self.run, scenario=scenario, seed=int(seed)))
@@ -237,7 +247,8 @@ class RoadHost:
             elif line.startswith("speed:"):
                 self.shared["speed"] = max(0.1, float(line[6:]))
             else:
-                raise ValueError("the road's page says run:SCENARIO:SEED, crfind:QUERY, play, pause, speed:X, mark:N:start, mark:N:stop or watching, not %r" % line)
+                raise ValueError("the road's page says run:SCENARIO:SEED, crfind:QUERY, play, pause, speed:X, mark:N:start, mark:N:stop, mark:N:once:KIND, "
+                                 "mark:N:move:K0:K1 or watching, not %r" % line)
 
     def catalog_rows(self):
         def one_word(v):                                            # §6b: a card's one-word standing is SUMO's when present, else the exerciser's
@@ -276,6 +287,64 @@ class RoadHost:
                          "country": "", "cached": True})
         return rows
 
+    # the situation a card is filed under in the page's tree: its most specific tag (road/docs/SCENARIO-CARD.md's tags)
+    SITUATIONS = ["pedestrian-crossing", "cyclist", "emergency-vehicle", "cut-in", "oncoming-pass", "turning-left", "right-before-left",
+                  "merge-zipper", "highway-ramp", "obstacle-static", "lane-change", "junction-priority", "following", "lane-keeping",
+                  "route-following", "speed-limit"]
+
+    def catalog_tree(self):
+        """The scenario catalog for the page's SCENARIOS tree: a row per card (road/catalog/<source>/*.yaml) with its title, suite, the
+        situation it is filed under, its standing (verdict, set) and the runs it can start here: a CARLA card at each of its town sites
+        (card:NAME@TOWN#SITE), a CommonRoad card as cr:ID; a card for another world (ours: the intersection) runs nowhere on this page."""
+        import scenario_cards as C
+        import yaml
+        rows = []
+        for f in sorted((C.ROAD / "catalog").glob("*/*.yaml")):
+            try:
+                c = yaml.safe_load(f.read_text())
+            except Exception:                                      # noqa: BLE001 — an unreadable card is left out of the tree
+                continue
+            src, mp = c.get("source") or {}, c.get("map") or {}
+            tags = c.get("tags") or []
+            runs = []
+            if src.get("suite") == "commonroad":
+                runs = [{"label": "CommonRoad", "run": "cr:%s" % c["scenario"]}]
+            elif mp.get("town"):
+                towns = (c.get("sites") or {}).get("towns") or {mp["town"]: "all"}
+                for town, sites in towns.items():
+                    for i in ([0] if sites == "all" or not sites else sites):
+                        runs.append({"label": "%s site %s" % (town, i), "run": "card:%s@%s#%s" % (c["scenario"], town, i)})
+            v = c.get("verdict") or {}
+            word = next((v[h]["status"] for h in ("sumo", "exerciser") if (v.get(h) or {}).get("status") not in (None, "skip")), v.get("status"))
+            kind, prov = self.cr_provenance(src) if src.get("suite") == "commonroad" else (None, None)
+            rows.append({"id": c["scenario"], "source": f.parent.name, "suite": src.get("suite"), "title": c.get("title") or c["scenario"],
+                         "kind": kind, "provenance": prov,
+                         "situation": next((t for t in self.SITUATIONS if t in tags), tags[0] if tags else "other"), "tags": tags,
+                         "verdict": word, "set": c.get("set"), "runs": runs, "world": mp.get("world")})
+        return rows
+
+    @staticmethod
+    def cr_provenance(src):
+        """A CommonRoad card's kind and provenance (CommonRoad's own tree: scenarios/<recorded|interactive>/<scenario-factory|hand-crafted|
+        SUMO|NGSIM|...>/): from the source's code path, else its type (kind/provenance); unknown, (other, other)."""
+        import re
+        m = re.search(r"/(recorded|interactive)/([^/]+)/", "/" + str(src.get("code") or ""))
+        if m:
+            return m.group(1), m.group(2)
+        t = str(src.get("type") or "")
+        return tuple(t.split("/", 1)) if "/" in t else ("other", "other")
+
+    def scenario_card(self, name):
+        """world/scard: the card NAME as it is on disk (its yaml), with its runs, for the page's WORLD CARD."""
+        import scenario_cards as C
+        import yaml
+        hits = [f for f in (C.ROAD / "catalog").glob("*/%s.yaml" % name) if "/" not in name and ".." not in name]
+        if not hits:
+            return {"ev": "world/scard", "id": name, "error": "no card %s in road/catalog" % name}
+        card = yaml.safe_load(hits[0].read_text())
+        row = next((r for r in self.catalog_tree() if r["id"] == name), {})
+        return {"ev": "world/scard", "id": name, "source": hits[0].parent.name, "card": card, "runs": row.get("runs", [])}
+
     def cr_find(self, query):
         """The Traffic dock's CommonRoad picker (commonroad-world step 3): the checkout's index (../.worlds/cr-cache/index.json, made by
         road/setup-commonroad.sh) filtered by every word of QUERY (in the id, country, map, set, source or tags), the first CR_LIST
@@ -299,9 +368,31 @@ class RoadHost:
 
     def mark(self, line):
         """A person saw a problem: mark:N:start[:TICK], then mark:N:stop[:TICK], the events numbered 1..N over the demo, to be discussed after. The line is in the journal as it came
-        (dlg-world; TICK is the page's, so a saved journal says where), the row with the car's place in the run's log. The row's tick is at_tick: a `tick` makes it a tick row."""
-        _, n, edge = line.split(":")[:3]
+        (dlg-world; TICK is the page's, so a saved journal says where), the row with the car's place in the run's log. The row's tick is at_tick: a `tick` makes it a tick row.
+        loop-road-ui (the user, 2026-11-07): mark:N:once:KIND — a one-off event (the page's surprise: a violation, a collision), its start and
+        stop at this tick, numbered as the next event, never while one is open (the page ends it first); mark:N:move:K0:K1 — event N, ended,
+        moved on the dashboard to the trace's k K0..K1: a start and a stop row again in marks.jsonl (the last pair is the window), moved: true."""
+        parts = line.split(":")
+        _, n, edge = parts[:3]
         m = self.shared.setdefault("marks", {"n": 0, "open": False})
+        if edge == "move":
+            return self.mark_move(m, int(n), *parts[3:7])
+        if edge == "once":
+            if m["open"]:
+                raise ValueError("the road's page says event %s once, and event %d is open: end it first" % (n, m["n"]))
+            if int(n) != m["n"] + 1:
+                raise ValueError("the road's page says event %s once, and the next is event %d" % (n, m["n"] + 1))
+            kind = parts[3] if len(parts) > 3 and parts[3] else "surprise"
+            m.update(n=int(n), open=False)
+            at = self.road.log[-1] if self.road.log else {}
+            base = {"t": round(self.road.t, 2), "mark": int(n), "at_tick": self.road.tick, "scenario": self.run.get("scenario"), "seed": self.run.get("seed"),
+                    "lane": at.get("lane"), "s": at.get("s"), "v": at.get("v"), "kind": kind}
+            for e in ("start", "stop"):
+                self._log(dict(base, edge=e))
+                self.mark_row(dict(base, edge=e))
+            self.shared["mark_due"] = True
+            self.shared["mark_said"] = "Event %s: a %s at tick %d. The run is paused." % (n, kind, self.road.tick)
+            return
         due = (m["n"], "stop") if m["open"] else (m["n"] + 1, "start")
         if (int(n), edge) != due:
             raise ValueError("the road's page says event %s %s, and the next is event %d %s" % (n, edge, *due))
@@ -313,6 +404,26 @@ class RoadHost:
         self.mark_row(rows[-1])
         self.shared["mark_due"] = True
         self.shared["mark_said"] = "Event %s %s, tick %d." % (n, "started" if edge == "start" else "ended", self.road.tick)
+
+    def mark_move(self, m, n, k0, k1, tick0=None, tick1=None):
+        """Event N moved to the trace's k K0..K1 (the dashboard's drag): a start and a stop row at those k in marks.jsonl, the log the same
+        rows. Their at_tick is the page's (mark:N:move:K0:K1:TICK0:TICK1: the run's tick at those k; the k goes on while the run is paused,
+        the tick does not, so the host does not derive it); without them, none. Only an event there was, and ended."""
+        (k0, tick0), (k1, tick1) = sorted([(int(k0), _int(tick0)), (int(k1), _int(tick1))])
+        if not 1 <= n <= m["n"] or (m["open"] and n == m["n"]):
+            raise ValueError("the road's page moves event %d, and there are events 1..%d%s" % (n, m["n"], ", the last open" if m["open"] else ""))
+        for e, k, tick in (("start", k0, tick0), ("stop", k1, tick1)):
+            row = {"t": None if tick is None else round(tick * DT, 2), "mark": n, "edge": e, "at_tick": tick, "scenario": self.run.get("scenario"),
+                   "seed": self.run.get("seed"), "moved": True}
+            self._log(row)
+            d = self.run.get("trace")
+            if d and self.shared.get("k") is not None:
+                os.makedirs(d, exist_ok=True)
+                with open(os.path.join(d, "marks.jsonl"), "a") as f:
+                    f.write(json.dumps(dict(row, at_k=k)) + "\n")
+        self.shared["mark_due"] = True
+        self.shared["mark_said"] = ("Event %d moved to %.1f–%.1f s." % (n, tick0 * DT, tick1 * DT)) if tick0 is not None and tick1 is not None \
+            else "Event %d moved to k %d–%d." % (n, k0, k1)
 
     def wish(self, rule):
         """What the person asks, from the task's rule (the words) or the Drive dock (rule's own form): a preference for the planner, or the ego's way."""
@@ -384,11 +495,16 @@ class RoadHost:
             time.sleep(due - now)
         self.shared["due"] = max(due, now) + DT / self.shared.get("speed", 1.0)
 
+    def holds_beat(self):
+        """The page's pause holds the beat (metis-agent Live.beat_held; the user, 2026-11-07: "we simulate in lock step, not realtime"):
+        no member ticks, the trace's k stays, so a paused page keeps its events in the trace's ring."""
+        return bool(self.run.get("page") and self.shared.get("paused"))
+
     def frames(self):
         if not (self.steps and self.run.get("page")):
             return []
         watched = self.shared.get("watched", 0) > time.monotonic()
-        out = [road_frames.scene_frame(self.road)] if watched or self.beat % UNWATCHED_EVERY == 0 else []
+        out = [self.scene()] if watched or self.beat % UNWATCHED_EVERY == 0 else []
         if self.shared.pop("net_due", False):
             out.insert(0, road_frames.net_frame(self.road))
         if self.shared.pop("mark_due", False):
@@ -396,6 +512,10 @@ class RoadHost:
             out.append({"ev": "world/mark", "n": m["n"], "open": m["open"], "said": self.shared.pop("mark_said", None)})
         if "cr_list" in self.shared:
             out.append(self.shared.pop("cr_list"))
+        if "catalog_out" in self.shared:
+            out.append(self.shared.pop("catalog_out"))
+        if "run_out" in self.shared:
+            out.append(self.shared.pop("run_out"))
         w = self.shared.get("wish")
         while w and w["said"]:
             out.append({"ev": "world/message", "text": w["said"].pop(0)})
@@ -408,7 +528,6 @@ class RoadHost:
         """The next run, now: one SUMO at a time. Every host finds the new world at its next reading (world_now). A CommonRoad
         scenario (cr:ID, commonroad-world s-9b7591fb step 3) runs on SUMO, converted into the cache first when it is not there
         (cr_world.load: the conversion venv, a few seconds); one that cannot be had is said, and the run on the page goes on."""
-        said = self.shared.setdefault("wish", road_wishes.new())["said"]
         if str(spec.get("scenario", "")).startswith("cr:"):
             import cr_world
             spec = dict(spec, world="sumo")
@@ -416,17 +535,34 @@ class RoadHost:
             try:
                 cr_world.load(cr_world.scenario_id(spec["scenario"]))
             except Exception as e:                                   # noqa: BLE001 — a bad id or a failed conversion: the person is told
-                said.append("I cannot run %s: %s" % (spec["scenario"], str(e)[:300]))
+                self.run_failed(spec, str(e))
                 return
             took = time.monotonic() - t0
-        close = getattr(self.shared["world"], "close", None)
+        was, old = self.run, self.shared["world"]
+        close = getattr(old, "close", None)
         if close:
             close()
+        try:
+            world = new_world(spec)
+        except Exception as e:                                       # noqa: BLE001 — SUMO that would not start (TraCI's retries): the page is told,
+            self.run_failed(spec, str(e))                            # and the run before it starts again, never a closed world left under the hosts
+            try:
+                self.shared["world"] = new_world(was)
+                self.shared.update(net_due=True)
+            except Exception as e2:                                  # noqa: BLE001
+                self.run_failed(was, "the run before it did not start again either: %s" % e2)
+            return
         self.run = spec
-        self.shared["world"] = new_world(spec)
+        self.shared["world"] = world
         self.shared.update(paused=False, said_arrived=False, wish=road_wishes.new(), net_due=True)
         if str(spec.get("scenario", "")).startswith("cr:") and took > 1.0:
             self.shared["wish"]["said"].append("%s converted into the cache in %.0f s; it runs now." % (spec["scenario"], took))
+
+    def run_failed(self, spec, why):
+        """A run that could not start: said in TALK and in the SCENARIOS card (world/runfail), the page never left waiting in silence."""
+        why = " ".join(str(why).split())[:400] or "no reason given"
+        self.shared.setdefault("wish", road_wishes.new())["said"].append("I cannot run %s: %s" % (spec.get("scenario"), why))
+        self.shared["run_out"] = {"ev": "world/runfail", "scenario": spec.get("scenario"), "seed": spec.get("seed"), "why": why}
 
     def world_now(self):
         """The shared world, if a new run replaced it: the copies start over. → True when it did."""
@@ -453,6 +589,15 @@ class RoadHost:
 
     def restore(self, snap):
         self.beat = snap.get("beat", 0)
+
+    def scene(self):
+        """The scene frame, with the trace's k and the run's trace name (loop-road-ui: the page's events name their window in the trace)."""
+        f = road_frames.scene_frame(self.road)
+        if self.shared.get("k") is not None:
+            f["k"] = int(self.shared["k"])
+        if self.run.get("trace"):
+            f["trace"] = os.path.basename(self.run["trace"])
+        return f
 
     def mark_row(self, row):
         """The mark beside the run's trace (loop-workspace step 5, WORKSPACE.md §6.1 item 2): the log's row with at_k, the trace's k at
