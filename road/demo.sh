@@ -19,6 +19,7 @@ export METIS_CATALOG="$HERE" METIS_ROAD_WORLD="$HERE/world" METIS_ROAD_RUN="$ROO
 # the road FAMILY (road-family s-f62c0ed8): the units by name through METIS_HOME = metis-catalog domains/road (domains/catalog.pin); the sibling checkout by default
 export METIS_HOME="${METIS_HOME:-$(cd "$WORLDS/.." && pwd)/metis-catalog/domains/road}"
 [ -f "$METIS_HOME/responder_domain.llp" ] || { echo "no road family at $METIS_HOME: check out metis-catalog beside (road/domains/catalog.pin) or set METIS_HOME" >&2; exit 2; }
-echo "the page: http://$ADDR/world.html"
+# the pi loop's dock (loop-road-ui): the loop console's URL, METIS_LOOP_URL (default the page's host at :8770, metis-loop/run.sh's port)
+echo "the page: http://$ADDR/world.html${METIS_LOOP_URL:+?loop=$METIS_LOOP_URL}"
 cd "$AGENT/py"
 exec "$AGENT/py/.venv/bin/python" -m metis_agent.service --config "$ROOT/.run/config.yaml" --ui-dir "$HERE/web" --lib-dir "$HERE/web/vendor" --addr "$ADDR"

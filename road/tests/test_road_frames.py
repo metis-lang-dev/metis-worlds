@@ -726,3 +726,47 @@ def test_the_page_install_puts_its_trace_under_the_workspace(tmp_path, monkeypat
     assert os.path.basename(run["trace"]).startswith("Town01-2-")
     assert yaml.safe_load(open(path))["trace"]["dir"] == run["trace"]
     assert road_hier.traces_dir(str(tmp_path / "scratch")) == str(tmp_path / "scratch" / "traces")
+
+
+def test_a_surprise_is_a_one_off_event_and_an_event_moves(tmp_path):
+    """loop-road-ui (the user, 2026-11-07): mark:N:once:KIND, a one-off event at this tick (start and stop), the next number, never while
+    one is open; mark:N:move:K0:K1, an ended event moved on the dashboard: a start and a stop row again beside the trace (the last pair
+    is the window: metispy's ws.marks), at the trace's k, the log's tick the k less this run's offset."""
+    world = SimpleNamespace(log=[{"lane": "E_0", "s": 1.0, "v": 2.0}], t=0.7, tick=7, arrived=lambda: False)
+    h = host("responder", world=world)
+    logged = []
+    h._log = logged.append
+    h.run["trace"] = str(tmp_path / "t")
+    h.shared["k"] = 8
+    h.world(["mark:1:start"])
+    with pytest.raises(ValueError, match="event 1 is open: end it first"):
+        h.world(["mark:2:once:collision"])
+    h.world(["mark:1:stop", "mark:2:once:collision"])
+    assert h.shared["marks"] == {"n": 2, "open": False}
+    assert "a collision at tick 7. The run is paused." in h.shared["mark_said"]
+    with pytest.raises(ValueError, match="the next is event 3"):
+        h.world(["mark:5:once:violation"])
+    h.world(["mark:1:move:6:3:5:2"])                                                  # the page's ticks with the k, in either order
+    assert h.shared["mark_said"] == "Event 1 moved to 0.2–0.5 s."
+    with pytest.raises(ValueError, match="there are events 1..2"):
+        h.world(["mark:3:move:1:2"])
+    h.world(["mark:3:start"])
+    with pytest.raises(ValueError, match="the last open"):
+        h.world(["mark:3:move:1:2"])
+    h.world(["mark:3:stop", "mark:3:move:9:12"])                                       # no ticks: none in the rows, the k said
+    assert h.shared["mark_said"] == "Event 3 moved to k 9–12."
+    rows = [json.loads(x) for x in (tmp_path / "t" / "marks.jsonl").read_text().splitlines()]
+    assert [(r["mark"], r["edge"], r["at_k"], r.get("kind"), r.get("moved")) for r in rows] == [
+        (1, "start", 8, None, None), (1, "stop", 8, None, None), (2, "start", 8, "collision", None), (2, "stop", 8, "collision", None),
+        (1, "start", 3, None, True), (1, "stop", 6, None, True), (3, "start", 8, None, None), (3, "stop", 8, None, None),
+        (3, "start", 9, None, True), (3, "stop", 12, None, True)]
+    moved = [r for r in logged if r.get("moved")]
+    assert [(r["at_tick"], r["t"]) for r in moved] == [(2, 0.2), (5, 0.5), (None, None), (None, None)]   # the page's ticks: the k goes on while paused
+
+
+def test_the_scene_names_its_k_and_trace(net):
+    h = host(world=loop(net))
+    h.world(["watching", "hello"])
+    h.shared["k"], h.run["trace"] = 41, "/x/.metis/traces/Town03-1-20261107T104100"
+    f = [x for x in h.frames() if x["ev"] == "world/scene"][0]
+    assert f["k"] == 41 and f["trace"] == "Town03-1-20261107T104100"

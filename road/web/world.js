@@ -32,6 +32,9 @@ import { Journal } from './vendor/journal.js';
 import { Narrator, attachSelection, attachKey } from './vendor/narrator.js';
 import { voiceWidget } from './vendor/switch.js';
 import { keywordStop } from './vendor/dialog.js';
+import { LoopDock, loopUrl } from './loopdock.js';       // loop-road-ui: the pi loop's CHAT as a dock, its rows in the one voice
+import { Events } from './events.js';                    // the run's events: the person's marks and the surprises
+import { route } from './loopgrammar.js';                // the one voice redirected: the loop's and the events' lines
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -123,6 +126,7 @@ const chips = (box, options, pressed) => box.replaceChildren(...(options || []).
 }));
 function answer(o) {                                 // a chip is the person saying its answer (the same path as typing it)
   rec('answer', { say: o.say ?? o.label });
+  if (o.gate) { loop?.answerGate(o.gate); $('#ask').hidden = true; return; }   // the loop's gate, answered here
   if (o.card) showCard();                            // "what can I ask?": the card shown, and the question said (the agent's card line)
   if (o.ev) send({ ev: o.ev }); else panel.say(o.say ?? o.label);
 }
@@ -293,6 +297,8 @@ function rowLook(r) {
   // a line the band already shows (the status line the agent then says, a reply that repeats its narration): once
   const prev = [...panel.dom.log.children].slice(-4, -1).filter(x => !x.hidden).map(x => x.querySelector('.fw-text')?.textContent.trim());
   if ((r.who === 'agent') && (prev.includes(r.text.trim()) || r.text.trim() === lastStatusRow.trim())) { li.hidden = true; return; }
+  if (r.who === 'agent' && r.narration === 'announce' && r.via === 'host') { who.textContent = 'loop'; li.classList.add('fw-loop'); return; }   // the pi loop's row, spoken
+  if (r.who === 'person' && r.text && routed.has(r.text)) who.textContent = `you → ${routed.get(r.text)}`;
   if (r.who === 'agent' && r.narration) {
     const asks = r.narration === 'v3-ask';
     if (asks) text.textContent = asked(r.text)[0] ?? r.text;            // the answers are the ask box's chips
@@ -308,7 +314,8 @@ function rowLook(r) {
 function floorLook(s) { if (panel) panel.dom.floor.textContent = `floor: ${FLOOR[s.floor] ?? s.floor.toLowerCase()}`; }
 
 // ── the frames ──
-let say = 0, panel = null, send = () => {};
+let say = 0, panel = null, send = () => {}, loop = null;
+const routed = new Map();                            // the person's lines that went to the loop or the events: where (the TALK log says so)
 async function frame(f) {
   if (f.ev === 'world/scene') { world.map.scene(f); return; }          // the road: ten a second, not recorded in the page's log
   if (f.ev === 'world/net') { world.map.net(f); return; }
@@ -392,9 +399,10 @@ const backend = agentUrl ? await live(agentUrl) : null;
 const docks = world.docks = MetisShell.docks({
   // v3: the DIALOG drawer (fsttm-web's panel, its own part: the floor, barge-in, attention, the numbers), hidden until asked for
   // v4: the cards are tools, not folded (the world card and the journal shown by default as before; the dialog hidden)
-  names: ['talk', 'drive', 'run', 'cars', 'traffic', 'hierarchy', 'world', 'journal', 'dialog'], key: 'roadpage.docks.v4', fold: false,
-  defaults: { talk: { shown: true, open: true }, drive: { shown: true, open: true }, run: { shown: true, open: true }, cars: { shown: false, open: true }, traffic: { shown: false, open: true }, hierarchy: { shown: false, open: true }, world: { shown: false, open: true }, journal: { shown: true, open: true },
-    dialog: { shown: false, open: true } },
+  // v5 (loop-road-ui): Drive, Cars and Traffic one TOOLS dock of cards; the run's EVENTS; the pi LOOP's chat
+  names: ['talk', 'tools', 'run', 'events', 'loop', 'hierarchy', 'world', 'journal', 'dialog'], key: 'roadpage.docks.v5', fold: false,
+  defaults: { talk: { shown: true, open: true }, tools: { shown: true, open: true }, run: { shown: false, open: true }, events: { shown: true, open: true }, loop: { shown: true, open: true },
+    hierarchy: { shown: false, open: true }, world: { shown: false, open: true }, journal: { shown: false, open: true }, dialog: { shown: false, open: true } },
   onChange: st => panel?.showDialog(!!st.dialog?.shown),              // hidden: the panel draws nothing there
 });
 docks.apply();
@@ -419,6 +427,7 @@ const say0 = panel.core.say.bind(panel.core);
 let stops = 0;
 panel.core.say = (text, opts = {}) => {
   const t = String(text ?? '').trim();
+  if (t && opts.via !== 'host' && redirect(t, opts.via)) return;   // the loop's line or the events': not the road agent's turn
   if (backend && t && keywordStop(t, panel.core.dialog.stopWords) && ['working', 'asking', 'stuck'].includes(world.status?.state)) {
     panel.core.tts.cancel?.();
     panel.core.via = opts.via ?? 'say';
@@ -427,6 +436,49 @@ panel.core.say = (text, opts = {}) => {
   return say0(text, opts);
 };
 window.say = text => panel.say(text);
+
+// ── loop-road-ui: the pi loop's dock, the run's events, the one voice redirected ──
+const speak = text => panel.core.hostChat({ who: 'system', text });            // a loop row in the road's voice (an announce)
+loop = world.loop = new LoopDock($('#loopbox'), {
+  url: loopUrl(q, location), speak,
+  onRow: r => { events.row(r); $('#loopstate').textContent = loop.up ? '' : 'not connected'; },
+  onGate: g => {
+    if (g.open) {                                                              // the gate as the agent's ask: confirm or refuse, by voice or chip
+      docks.set('loop', { shown: true, open: true });
+      ask({ question: `The loop asks: ${g.title}`, options: [{ label: 'confirm', gate: 'confirm' }, { label: 'refuse', gate: 'refuse' }] });
+    } else $('#ask').hidden = true;
+  },
+});
+const events = world.events = new Events($('#events'), {
+  line: l => world.map.line(l), loop, speak, hold: on => world.map.hold(on),
+  onChange: () => world.map.dash.changed(),
+});
+world.map.events = events;
+world.map.onSurprise = (n, kind, stopped) => {
+  docks.set('events', { shown: true, open: true });
+  speak(`Event ${n}: a ${kind}.${stopped ? ' The run is paused. Say continue when you are ready, or narrate, explain, or send it to the loop.' : ''}`);
+};
+// the tools' cards (the dialog's look): which are open, remembered
+for (const d of document.querySelectorAll('#toolcards details')) {
+  const k = `roadpage.tool.${d.dataset.tool}`, v = localStorage.getItem(k);
+  if (v != null) d.open = v === '1';
+  d.addEventListener('toggle', () => localStorage.setItem(k, d.open ? '1' : '0'));
+}
+function redirect(t, via) {
+  const r = route(t, { loopMark: loop.lastMark, gate: !!loop.gate, paused: world.map.paused && events.waiting != null });
+  if (!r) return false;
+  routed.set(t, r.to === 'page' ? 'events' : 'loop');
+  panel.core.row({ who: 'person', text: t, channel: 'main' });
+  rec('redirect', { text: t, to: r.to, ...(r.line ? { line: r.line } : {}), ...(r.action ? { action: r.action } : {}) });
+  if (r.to === 'loop') { docks.set('loop', { shown: true, open: true }); loop.say(r.line, via === 'voice' ? 'heard' : undefined); }
+  else if (r.to === 'gate') { loop.answerGate(r.answer); $('#ask').hidden = true; }
+  else if (r.action === 'mark') { if (!world.map.marks.open) world.map.markEdge(); }
+  else if (r.action === 'endmark') { if (world.map.marks.open) world.map.markEdge(r.words); }
+  else if (r.action === 'continue') world.map.hold(false);
+  else events[r.action](r.n);
+  return true;
+}
+world.route = (t, ctx) => route(t, ctx);
 if (backend) hello(backend);
 // the narrator (fsttm-web 0.6): the page's selected text read aloud on F8 (the task card's words, the journal), never
 // taking the floor: it wraps the band's own TTS and yields while the dialog speaks

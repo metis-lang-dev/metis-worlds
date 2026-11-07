@@ -101,6 +101,10 @@ def manifest(package_dir):
     return yaml.safe_load(open(p)) or {}
 
 
+def _int(v):
+    return None if v in (None, "") else int(v)
+
+
 class RoadHost:
     PAIRS = ()
 
@@ -237,7 +241,8 @@ class RoadHost:
             elif line.startswith("speed:"):
                 self.shared["speed"] = max(0.1, float(line[6:]))
             else:
-                raise ValueError("the road's page says run:SCENARIO:SEED, crfind:QUERY, play, pause, speed:X, mark:N:start, mark:N:stop or watching, not %r" % line)
+                raise ValueError("the road's page says run:SCENARIO:SEED, crfind:QUERY, play, pause, speed:X, mark:N:start, mark:N:stop, mark:N:once:KIND, "
+                                 "mark:N:move:K0:K1 or watching, not %r" % line)
 
     def catalog_rows(self):
         def one_word(v):                                            # §6b: a card's one-word standing is SUMO's when present, else the exerciser's
@@ -299,9 +304,31 @@ class RoadHost:
 
     def mark(self, line):
         """A person saw a problem: mark:N:start[:TICK], then mark:N:stop[:TICK], the events numbered 1..N over the demo, to be discussed after. The line is in the journal as it came
-        (dlg-world; TICK is the page's, so a saved journal says where), the row with the car's place in the run's log. The row's tick is at_tick: a `tick` makes it a tick row."""
-        _, n, edge = line.split(":")[:3]
+        (dlg-world; TICK is the page's, so a saved journal says where), the row with the car's place in the run's log. The row's tick is at_tick: a `tick` makes it a tick row.
+        loop-road-ui (the user, 2026-11-07): mark:N:once:KIND — a one-off event (the page's surprise: a violation, a collision), its start and
+        stop at this tick, numbered as the next event, never while one is open (the page ends it first); mark:N:move:K0:K1 — event N, ended,
+        moved on the dashboard to the trace's k K0..K1: a start and a stop row again in marks.jsonl (the last pair is the window), moved: true."""
+        parts = line.split(":")
+        _, n, edge = parts[:3]
         m = self.shared.setdefault("marks", {"n": 0, "open": False})
+        if edge == "move":
+            return self.mark_move(m, int(n), *parts[3:7])
+        if edge == "once":
+            if m["open"]:
+                raise ValueError("the road's page says event %s once, and event %d is open: end it first" % (n, m["n"]))
+            if int(n) != m["n"] + 1:
+                raise ValueError("the road's page says event %s once, and the next is event %d" % (n, m["n"] + 1))
+            kind = parts[3] if len(parts) > 3 and parts[3] else "surprise"
+            m.update(n=int(n), open=False)
+            at = self.road.log[-1] if self.road.log else {}
+            base = {"t": round(self.road.t, 2), "mark": int(n), "at_tick": self.road.tick, "scenario": self.run.get("scenario"), "seed": self.run.get("seed"),
+                    "lane": at.get("lane"), "s": at.get("s"), "v": at.get("v"), "kind": kind}
+            for e in ("start", "stop"):
+                self._log(dict(base, edge=e))
+                self.mark_row(dict(base, edge=e))
+            self.shared["mark_due"] = True
+            self.shared["mark_said"] = "Event %s: a %s at tick %d. The run is paused." % (n, kind, self.road.tick)
+            return
         due = (m["n"], "stop") if m["open"] else (m["n"] + 1, "start")
         if (int(n), edge) != due:
             raise ValueError("the road's page says event %s %s, and the next is event %d %s" % (n, edge, *due))
@@ -313,6 +340,26 @@ class RoadHost:
         self.mark_row(rows[-1])
         self.shared["mark_due"] = True
         self.shared["mark_said"] = "Event %s %s, tick %d." % (n, "started" if edge == "start" else "ended", self.road.tick)
+
+    def mark_move(self, m, n, k0, k1, tick0=None, tick1=None):
+        """Event N moved to the trace's k K0..K1 (the dashboard's drag): a start and a stop row at those k in marks.jsonl, the log the same
+        rows. Their at_tick is the page's (mark:N:move:K0:K1:TICK0:TICK1: the run's tick at those k; the k goes on while the run is paused,
+        the tick does not, so the host does not derive it); without them, none. Only an event there was, and ended."""
+        (k0, tick0), (k1, tick1) = sorted([(int(k0), _int(tick0)), (int(k1), _int(tick1))])
+        if not 1 <= n <= m["n"] or (m["open"] and n == m["n"]):
+            raise ValueError("the road's page moves event %d, and there are events 1..%d%s" % (n, m["n"], ", the last open" if m["open"] else ""))
+        for e, k, tick in (("start", k0, tick0), ("stop", k1, tick1)):
+            row = {"t": None if tick is None else round(tick * DT, 2), "mark": n, "edge": e, "at_tick": tick, "scenario": self.run.get("scenario"),
+                   "seed": self.run.get("seed"), "moved": True}
+            self._log(row)
+            d = self.run.get("trace")
+            if d and self.shared.get("k") is not None:
+                os.makedirs(d, exist_ok=True)
+                with open(os.path.join(d, "marks.jsonl"), "a") as f:
+                    f.write(json.dumps(dict(row, at_k=k)) + "\n")
+        self.shared["mark_due"] = True
+        self.shared["mark_said"] = ("Event %d moved to %.1f–%.1f s." % (n, tick0 * DT, tick1 * DT)) if tick0 is not None and tick1 is not None \
+            else "Event %d moved to k %d–%d." % (n, k0, k1)
 
     def wish(self, rule):
         """What the person asks, from the task's rule (the words) or the Drive dock (rule's own form): a preference for the planner, or the ego's way."""
@@ -388,7 +435,7 @@ class RoadHost:
         if not (self.steps and self.run.get("page")):
             return []
         watched = self.shared.get("watched", 0) > time.monotonic()
-        out = [road_frames.scene_frame(self.road)] if watched or self.beat % UNWATCHED_EVERY == 0 else []
+        out = [self.scene()] if watched or self.beat % UNWATCHED_EVERY == 0 else []
         if self.shared.pop("net_due", False):
             out.insert(0, road_frames.net_frame(self.road))
         if self.shared.pop("mark_due", False):
@@ -453,6 +500,15 @@ class RoadHost:
 
     def restore(self, snap):
         self.beat = snap.get("beat", 0)
+
+    def scene(self):
+        """The scene frame, with the trace's k and the run's trace name (loop-road-ui: the page's events name their window in the trace)."""
+        f = road_frames.scene_frame(self.road)
+        if self.shared.get("k") is not None:
+            f["k"] = int(self.shared["k"])
+        if self.run.get("trace"):
+            f["trace"] = os.path.basename(self.run["trace"])
+        return f
 
     def mark_row(self, row):
         """The mark beside the run's trace (loop-workspace step 5, WORKSPACE.md §6.1 item 2): the log's row with at_k, the trace's k at
