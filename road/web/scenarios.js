@@ -1,6 +1,6 @@
 // scenarios.js — the SCENARIOS card of the road page's TOOLS (loop-road-ui, the user's word 2026-11-07): the scenario catalog as a tree for
 // the tester, grouped by where the scenario comes from (the towns and plain roads, OpenSCENARIO's CARLA ScenarioRunner cards, CommonRoad,
-// ours), then by the situation it exercises. One click shows a scenario's card in the WORLD CARD dock (a town: the world's own card);
+// ours), then by the situation it exercises; CommonRoad as its own tree has it, recorded or interactive, then its provenance. One click shows a scenario's card in the WORLD CARD dock (a town: the world's own card);
 // a double click runs it (a card at its first site; its other sites are on the card). The host serves the rows (world/catalog: the
 // `catalog` line) and a card whole (world/scard: `scard:NAME`), road_host.catalog_tree / scenario_card.
 
@@ -11,6 +11,8 @@ const SOURCES = [
   ['ours', 'Ours', 'our scenarios on the intersection world (not run on this page)'],
 ];
 const words = t => String(t).replace(/-/g, ' ');
+const KINDS = { recorded: 'recorded: the others as they drove', interactive: 'interactive: the others react (SUMO)' };
+const PROV = { 'scenario-factory': 'scenario factory', 'hand-crafted': 'hand-crafted', SUMO: 'SUMO', NGSIM: 'NGSIM (US highways)', 'THI-Bicycle': 'THI bicycle', cooperative: 'cooperative' };
 
 export class Scenarios {
   constructor(box, { line, onCard, onTown, run }) {
@@ -33,7 +35,7 @@ export class Scenarios {
 
   match(r) {
     if (!this.q) return true;
-    return [r.id, r.title, r.situation, ...(r.tags || []), ...(r.runs || []).map(x => x.label)].some(s => String(s).toLowerCase().includes(this.q)
+    return [r.id, r.title, r.situation, r.kind, r.provenance, ...(r.tags || []), ...(r.runs || []).map(x => x.label)].some(s => String(s).toLowerCase().includes(this.q)
       || words(s).toLowerCase().includes(this.q));
   }
 
@@ -42,20 +44,23 @@ export class Scenarios {
     const det = (key, label, n, body, hint) => `<details data-key="${esc(key)}" ${open.has(key) || (this.q && n) ? 'open' : ''}>
       <summary title="${esc(hint || '')}">${esc(label)} <span class="sc-n">${n}</span></summary>${body}</details>`;
     const leaf = r => `<li class="sc-leaf${r.id === this.sel ? ' sel' : ''}${this.isRunning(r) ? ' run' : ''}${r.runs?.length ? '' : ' elsewhere'}" data-id="${esc(r.id)}" tabindex="0" role="treeitem" title="${esc(r.title)}">
-      <span class="sc-name">${esc(r.id)}</span>${r.verdict ? `<span class="sc-v sc-${esc(r.verdict)}">${esc(r.verdict)}</span>` : ''}${r.set === 'regression' ? '<span class="sc-set" title="the regression set: proven">✓</span>' : ''}</li>`;
+      <span class="sc-name">${esc(r.id)}</span>${r.source === 'commonroad' ? `<span class="sc-sit">${esc(words(r.situation))}</span>` : ''}${r.verdict ? `<span class="sc-v sc-${esc(r.verdict)}">${esc(r.verdict)}</span>` : ''}${r.set === 'regression' ? '<span class="sc-set" title="the regression set: proven">✓</span>' : ''}</li>`;
     const towns = this.towns.filter(t => !this.q || t.toLowerCase().includes(this.q));
     const town = t => `<li class="sc-leaf${t === this.sel ? ' sel' : ''}${t === this.current ? ' run' : ''}" data-town="${esc(t)}" tabindex="0" role="treeitem"><span class="sc-name">${esc(t)}</span></li>`;
     let html = det('towns', 'Towns', towns.length, `<ul>${towns.filter(t => /^Town/.test(t)).map(town).join('')}</ul>`
       + (towns.some(t => !/^Town/.test(t)) ? det('towns/plain', 'plain roads', towns.filter(t => !/^Town/.test(t)).length, `<ul>${towns.filter(t => !/^Town/.test(t)).map(town).join('')}</ul>`) : ''),
       'CARLA\'s towns on SUMO: free driving, the traffic yours (the TRAFFIC card)');
+    const group = (key, rows, by, label, inner) => [...new Set(rows.map(by))].sort().map(g => {   // a level of the tree: rows grouped BY
+      const in_ = rows.filter(r => by(r) === g);
+      return det(`${key}/${g}`, label(g), in_.length, inner ? inner(`${key}/${g}`, in_) : `<ul>${in_.sort((a, b) => a.id.localeCompare(b.id)).map(leaf).join('')}</ul>`);
+    }).join('');
     for (const [src, label, hint] of SOURCES) {
       const rows = this.rows.filter(r => r.source === src && this.match(r));
       if (!rows.length && this.q) continue;
-      const sits = [...new Set(rows.map(r => r.situation))].sort();
-      html += det(src, label, rows.length, sits.map(s => {
-        const in_ = rows.filter(r => r.situation === s).sort((a, b) => a.id.localeCompare(b.id));
-        return det(`${src}/${s}`, words(s), in_.length, `<ul>${in_.map(leaf).join('')}</ul>`);
-      }).join(''), hint);
+      html += det(src, label, rows.length, src === 'commonroad'
+        // CommonRoad as its own tree has it (the user): recorded or interactive, then where it comes from
+        ? group(src, rows, r => r.kind || 'other', k => KINDS[k] || k, (key, in_) => group(key, in_, r => r.provenance || 'other', p => PROV[p] || p))
+        : group(src, rows, r => r.situation, words), hint);
     }
     this.tree.innerHTML = html || '<p class="empty">nothing found</p>';
   }

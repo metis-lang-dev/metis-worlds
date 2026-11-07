@@ -314,10 +314,23 @@ class RoadHost:
                         runs.append({"label": "%s site %s" % (town, i), "run": "card:%s@%s#%s" % (c["scenario"], town, i)})
             v = c.get("verdict") or {}
             word = next((v[h]["status"] for h in ("sumo", "exerciser") if (v.get(h) or {}).get("status") not in (None, "skip")), v.get("status"))
+            kind, prov = self.cr_provenance(src) if src.get("suite") == "commonroad" else (None, None)
             rows.append({"id": c["scenario"], "source": f.parent.name, "suite": src.get("suite"), "title": c.get("title") or c["scenario"],
+                         "kind": kind, "provenance": prov,
                          "situation": next((t for t in self.SITUATIONS if t in tags), tags[0] if tags else "other"), "tags": tags,
                          "verdict": word, "set": c.get("set"), "runs": runs, "world": mp.get("world")})
         return rows
+
+    @staticmethod
+    def cr_provenance(src):
+        """A CommonRoad card's kind and provenance (CommonRoad's own tree: scenarios/<recorded|interactive>/<scenario-factory|hand-crafted|
+        SUMO|NGSIM|...>/): from the source's code path, else its type (kind/provenance); unknown, (other, other)."""
+        import re
+        m = re.search(r"/(recorded|interactive)/([^/]+)/", "/" + str(src.get("code") or ""))
+        if m:
+            return m.group(1), m.group(2)
+        t = str(src.get("type") or "")
+        return tuple(t.split("/", 1)) if "/" in t else ("other", "other")
 
     def scenario_card(self, name):
         """world/scard: the card NAME as it is on disk (its yaml), with its runs, for the page's WORLD CARD."""

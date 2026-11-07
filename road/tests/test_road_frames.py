@@ -784,6 +784,9 @@ def test_the_scenarios_tree_and_a_card(net):
     assert by["ix-left-turn"]["runs"] == [] and by["ix-left-turn"]["world"] == "intersection"
     cr = next(r for r in f["rows"] if r["source"] == "commonroad")
     assert cr["runs"] == [{"label": "CommonRoad", "run": "cr:%s" % cr["id"]}]
+    assert {(r["kind"], r["provenance"]) for r in f["rows"] if r["source"] == "commonroad"} >= {("recorded", "scenario-factory"), ("interactive", "SUMO")}
+    assert by["USA_Lanker-1_2_I-1-1"]["kind"] == "interactive" and by["USA_Lanker-1_2_I-1-1"]["provenance"] == "NGSIM"   # from the code path
+    assert by["ParkingCutIn"]["kind"] is None
     h.world(["scard:ParkingCutIn"])
     c = [x for x in h.frames() if x["ev"] == "world/scard"][0]
     assert c["card"]["scenario"] == "ParkingCutIn" and c["runs"] == by["ParkingCutIn"]["runs"]
