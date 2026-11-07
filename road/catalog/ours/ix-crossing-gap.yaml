@@ -32,6 +32,6 @@ verdict:
     status: fail
     record: 20261107T000323-debffe
     since:
-      worlds: 4895a98
+      worlds: 6ae7b91
       catalog: 915eae9
     note: 'l1: not arrived; l1: deadlock 42.5 s'
