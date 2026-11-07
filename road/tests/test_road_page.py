@@ -78,6 +78,10 @@ def test_one_tools_dock_of_cards_events_and_the_loop():
     """Drive, Cars and Traffic: one TOOLS dock of collapsible cards (the DIALOG's fw-sec look); EVENTS and LOOP docks; the strip names them."""
     tools = HTML[HTML.index('id="dock-tools"'):HTML.index('id="dock-events"')]
     assert [m for m in re.findall(r'<details class="fw-sec tool" id="tool-(\w+)"', tools)] == ["scenarios", "drive", "run", "cars", "traffic"]
+    bar = HTML[HTML.index('<span id="runbar">'):HTML.index('</span>', HTML.index('<span id="runbar">'))]
+    assert 'id="scenario"' not in bar and 'id="seed"' not in bar                      # the top bar: run controls only (the user)
+    card = HTML[HTML.index('id="tool-scenarios"'):HTML.index('id="tool-drive"')]
+    assert 'id="seed"' in card and 'id="sc-running"' in card and '<select id="scenario" hidden' in card
     sc = (WEB / "scenarios.js").read_text()
     assert "this.tree.addEventListener('click', e => this.click(e, false));" in sc and "this.tree.addEventListener('dblclick', e => this.click(e, true));" in sc
     assert "this.line(`scard:${r.id}`)" in sc and "this.run(r.runs[0].run)" in sc        # click: the card; double click: its first run

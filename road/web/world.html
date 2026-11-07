@@ -160,6 +160,9 @@
   #loopstate { color: var(--dim); text-transform: none; letter-spacing: 0; font-size: 11px; }
   .loop-msg { padding: 6px 8px; margin: 0; }
   /* the SCENARIOS tree: sources, situations, scenarios; the selected one marked, the running one green */
+  .sc-now { display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap; color: var(--dim); margin: 2px 0; }
+  .sc-now b { color: var(--green); font-weight: normal; overflow-wrap: anywhere; }
+  .sc-now input { width: 4.5em; background: var(--bg); color: var(--fg); border: 1px solid var(--line); font: inherit; padding: 1px 4px; }
   #scenarios .sc-find { width: 100%; box-sizing: border-box; background: var(--bg); color: var(--fg); border: 1px solid var(--line); font: inherit; padding: 1px 4px; margin: 2px 0 4px; }
   #scenarios .sc-tree { max-height: 22em; overflow: auto; }
   #scenarios details { margin-left: 2px; } #scenarios details details { margin-left: 12px; }
@@ -184,9 +187,7 @@
       <span id="status" data-state="" aria-live="polite"><span class="state" id="sstate">…</span><span class="text" id="stext"></span><span class="opts" id="sopts"></span></span>
       <span id="sessbar">
         <span id="runbar">
-          <label>scenario <select id="scenario"><option>straight</option></select></label>
-          <label>seed <input id="seed" type="number" min="1" value="1"></label>
-          <button class="btn" id="run" type="button">new run</button>
+          <button class="btn" id="run" type="button" title="the running scenario again, from its start, with the seed in SCENARIOS">new run</button>
           <button class="btn" id="hold" type="button">pause</button>
           <button class="btn" id="mark" type="button" title="You see a problem: mark where it starts and where it ends. Each event goes in the journal, numbered, to talk about after.">mark event 1</button>
           <label>speed <select id="speed"><option>0.25</option><option>0.5</option><option selected>1</option><option>2</option><option>4</option></select></label>
@@ -225,7 +226,10 @@
       <section class="dock" id="dock-tools" data-dock="tools" tabindex="-1" aria-label="the tools: scenarios, drive, run, cars, traffic">
         <header><span class="tw">▾</span><span class="tt">TOOLS</span><button class="x" type="button" aria-label="hide the tools">✕</button></header>
         <div class="dbody" id="toolcards">
-          <details class="fw-sec tool" id="tool-scenarios" data-tool="scenarios" open><summary>Scenarios</summary><div id="scenarios"></div>
+          <details class="fw-sec tool" id="tool-scenarios" data-tool="scenarios" open><summary>Scenarios</summary>
+            <div class="wrow sc-now"><span>running <b id="sc-running">…</b></span><label title="the seed of the next run: the traffic's draw, the same seed the same run">seed <input id="seed" type="number" min="1" value="1"></label>
+              <select id="scenario" hidden aria-hidden="true"><option>straight</option></select></div>
+            <div id="scenarios"></div>
           </details>
           <details class="fw-sec tool" id="tool-drive" data-tool="drive" open><summary>Drive</summary>
           <div class="ph">AT THE NEXT JUNCTION</div>

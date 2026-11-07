@@ -130,6 +130,7 @@ export class RoadMap {
     this.scenarios?.running(f.scenario);
     const names = f.scenarios && f.scenario && !f.scenarios.includes(f.scenario) ? [...f.scenarios, f.scenario] : f.scenarios;   // a cr: run is not in the list: its own option
     if (names && $('#scenario').options.length !== names.length) $('#scenario').replaceChildren(...names.map(s => Object.assign(document.createElement('option'), { textContent: s })));
+    $('#sc-running').textContent = f.scenario ? `${f.scenario} · seed ${f.seed}` : '…';
     if (f.scenario && f.scenario === this.crWant) { $('#t-cr-msg').textContent = `running ${f.scenario}`; this.crWant = null; }
     if (document.activeElement !== $('#scenario') && document.activeElement !== $('#seed')) { $('#scenario').value = f.scenario; $('#seed').value = f.seed; }   // what runs, also when a page opens on it
     const key = f.lanes.map(l => l.id).join() + JSON.stringify(f.goal || '');   // the client reads its road once: another road (or goal), another frame
