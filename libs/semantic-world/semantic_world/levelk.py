@@ -220,6 +220,7 @@ class Game:
     def __init__(self, prior=None, dt=DT):
         self.prior, self.dt = dict(prior or PRIOR), float(dt)
         self.belief, self.last_v, self.contra = {}, {}, {}
+        self.tables = {}                         # per crosser its last tick's tables (a host's measures read them)
 
     def step(self, key, pair, dt=None):
         dt = self.dt if dt is None else dt
@@ -233,12 +234,12 @@ class Game:
             b = update(b, t, move)
             want = rule_move(pair.type)
             self.contra[key] = self.contra.get(key, 0) + 1 if (want is not None and move != want) else 0
-        self.belief[key], self.last_v[key] = b, other.v
+        self.belief[key], self.last_v[key], self.tables[key] = b, other.v, t
         return {"tables": t, "belief": b, "believed": believed(b), "observed": move,
                 "zone": zone_game(pair.type, self.contra.get(key, 0), b)}
 
     def forget(self, keep):
-        for d in (self.belief, self.last_v, self.contra):
+        for d in (self.belief, self.last_v, self.contra, self.tables):
             for k in [k for k in d if k not in keep]:
                 d.pop(k)
 

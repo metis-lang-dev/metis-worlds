@@ -156,3 +156,46 @@ def test_without_a_restart_the_committed_ego_clears_with_no_contact(monkeypatch)
             break
     s = w.summary()
     assert w.committed_at and s["arrived"] and s["collisions"] == 0 and not s["deadlock"]
+
+
+def run_with_go(name, ticks=500):
+    w = I.IntersectionWorld(name)
+    for _ in range(ticks):
+        w.command(("accel", None), life=2)
+        w.observe()
+        w.step()
+        if w.arrived():
+            break
+    return w, w.summary()
+
+
+def test_a_level_2_driver_that_moves_as_level_0_is_identified_by_behaviour():
+    """The architect's step 4 ruling (3): at the left turn an l2 oncoming car and an l0 one predict the same move in every
+    state, the likelihoods tie, the belief rests at l0: never converged, but identified by behaviour (every tick's believed
+    level predicted the true level's move)."""
+    _, s = run_with_go("ix-left-turn:l2")
+    d = s["drivers"]["onc"]
+    assert d["converged"] is None and d["identified"] == "behaviour" and d["same_move"] == 1.0
+
+
+@pytest.mark.parametrize("level", ["l0", "l1"])
+def test_a_converged_driver_is_identified_by_level(level):
+    _, s = run_with_go("ix-left-turn:" + level)
+    d = s["drivers"]["onc"]
+    assert d["converged"] is not None and d["identified"] == "level"
+
+
+def test_a_driver_never_in_the_ego_s_game_is_not_identified():
+    _, s = run_with_go("ix-four-way:l1")
+    d = s["drivers"]["north"]                      # the parallel path: no zone with the ego
+    assert d["game_ticks"] == 0 and d["identified"] is None and d["same_move"] is None
+
+
+def test_identified_reads_the_logs():
+    w = I.IntersectionWorld("ix-left-turn:l2")
+    w.believed_log, w.same_log = {"onc": ["l0", "l1", "l0"]}, {"onc": [True, True, True]}
+    assert w.identified("onc") == "behaviour"
+    w.same_log = {"onc": [True, False, True]}
+    assert w.identified("onc") is None
+    w.believed_log = {"onc": ["l0", "l2", "l2"]}
+    assert w.identified("onc") == "level"

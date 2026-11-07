@@ -17,7 +17,8 @@ The measures beside RoadWorld's (summary): `deadlock_s` (the longest stretch eve
 APPROACH of them, at least two, stood with the zones empty) and `deadlock` (≥ DEADLOCK_S); `clear_t` (the ego's rear past
 its last zone) and `delay` (clear_t − the free run's, the ego alone accelerating to the limit); per driver `level`,
 `believed` (the ego's last believed level of it) and `converged` (ticks of its game until the ego's believed level is its
-true one and stays: None when it never is); `others_contacts` (two drivers in one zone at once: the world's, not the
+true one and stays: None when it never is), `identified` ("level" when converged; "behaviour" when the believed level
+predicted the true level's move on every tick: behavioural equivalence; else None) and `same_move` (that share of ticks); `others_contacts` (two drivers in one zone at once: the world's, not the
 family's); `collisions_partner` (contacts with a holder that moved after the ego committed past it under the waiver: the
 holder's restart, attributed to it, never the ego's fail) and `collisions_own`. A card (road/catalog/ours/*.yaml, `map: {world: intersection}`) places the paths, the cars and the levels."""
 import math
@@ -209,6 +210,7 @@ class IntersectionWorld(RoadWorld):
         self.last_in = {}
         self.stand, self.deadlock_s, self.clear_t, self.others_contacts = 0.0, 0.0, None, 0
         self.believed_log = {}                           # driver id -> [the ego's believed level each tick it is in the game]
+        self.same_log = {}                               # driver id -> [the believed level predicts the true level's move, per tick]
         self.committed_at, self.restarted = {}, set()   # the waiver (situation, WAIVER RULING 2): when the ego committed past a
                                                          # standing holder, and the holders that moved after it (their restart)
         self.ego_zones = [z for z in self.map.zones if self.ego.m.lane in z.lanes]
@@ -321,7 +323,11 @@ class IntersectionWorld(RoadWorld):
         for key, b in self.game.belief.items():
             oid = key.split(":")[0]
             if oid in self.level_of:
-                self.believed_log.setdefault(oid, []).append(levelk.believed(b))
+                k = levelk.believed(b)
+                t = self.game.tables.get(key)
+                same = t is not None and levelk.predicted(t, k) == levelk.predicted(t, self.level_of[oid])
+                self.believed_log.setdefault(oid, []).append(k)
+                self.same_log.setdefault(oid, []).append(same)
 
     def _in(self, z, m):
         if m.lane not in z.lanes:
@@ -359,6 +365,15 @@ class IntersectionWorld(RoadWorld):
                 return k
         return None
 
+    def identified(self, oid):
+        """How the ego identified OID (the architect's step 4 ruling, (3)): "level" when its believed level is the true one
+        and stays (converged), "behaviour" when the believed level predicted the true level's move on every tick of the game
+        (an l2 that moves as l1 in every state of the card: the likelihoods tie, the decision is the same), else None."""
+        if self.converged(oid) is not None:
+            return "level"
+        same = self.same_log.get(oid) or []
+        return "behaviour" if same and all(same) else None
+
     def summary(self):
         s = super().summary()
         free = self.free_clear_t()
@@ -369,7 +384,10 @@ class IntersectionWorld(RoadWorld):
                   "collisions_partner": sum(1 for c in self.collisions if c.get("by")),
                   "collisions_own": sum(1 for c in self.collisions if not c.get("by")),
                   "drivers": {oid: {"level": lv, "believed": (self.believed_log.get(oid) or [None])[-1],
-                                    "game_ticks": len(self.believed_log.get(oid) or []), "converged": self.converged(oid)}
+                                    "game_ticks": len(self.believed_log.get(oid) or []), "converged": self.converged(oid),
+                                    "identified": self.identified(oid),
+                                    "same_move": (round(sum(self.same_log[oid]) / len(self.same_log[oid]), 3)
+                                                  if self.same_log.get(oid) else None)}
                               for oid, lv in self.level_of.items()}})
         return s
 
