@@ -151,7 +151,9 @@ class RoadHost:
     def reading(self, counts=None):
         """The member's copy of the world: refreshed once a clock period (the planner's every tenth world step, the
         responder's every step), so a slow member's copies change, and it beats, at its own rate (the tick's rule 1);
-        `now` from the refresh until the member's command (one command a period)."""
+        `now` from the refresh until the member's command (one command a period). A new run (start_run) may have swapped the world
+        between this member's ticks: the reading moves to it first, never reads the closed one (the page's run picker hung the service so)."""
+        self.world_now()
         t = self.road.tick
         if self.latched is None or self.latched_at < t - t % self.period:
             self.latched, self.latched_at, self.now_due = self.fresh(), t, True

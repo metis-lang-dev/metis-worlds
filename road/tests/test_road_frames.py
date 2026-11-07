@@ -792,3 +792,17 @@ def test_the_scenarios_tree_and_a_card(net):
     assert c["card"]["scenario"] == "ParkingCutIn" and c["runs"] == by["ParkingCutIn"]["runs"]
     h.world(["scard:../../etc"])
     assert "no card" in [x for x in h.frames() if x["ev"] == "world/scard"][0]["error"]
+
+
+def test_a_member_reads_the_new_run_not_the_closed_one():
+    """A run started from the page swaps the shared world between ticks; a member that latches before its tick moved it must read the
+    new world, never the closed one (the page's SCENARIOS double click hung the service: every tick read a dead TraCI)."""
+    def world(name):
+        return SimpleNamespace(tick=5, observe=lambda: ({"from(%s)" % name: 1}, None))
+    old, new = world("old"), world("new")
+    h = host("responder", world=old)
+    h.period, h.observed = 1, None
+    assert "from(old)" in h.reading()
+    h.shared["world"] = new                                                            # start_run: the old world closed, the new one in place
+    old.observe = lambda: (_ for _ in ()).throw(AttributeError("'NoneType' object has no attribute 'vehicle'"))
+    assert "from(new)" in h.reading() and h.road is new
