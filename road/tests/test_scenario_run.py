@@ -36,6 +36,13 @@ def test_the_standing_of_a_net_card(tmp_path):
     soft = dict(ok, failed=["goal"], goal={"position_t": 12.0})
     assert R.standing(c, soft)["status"] == "soft"
     assert R.standing(c, dict(ok, failed=["goal"], goal={"position_t": None}))["status"] == "fail"
+    # a TIME-ONLY goal (SCENARIO-CARD §3: no region, the window is the goal): its window missed is soft, never "its place
+    # never reached" (ESP_Toledo-23_1_I-1-1, USA_US101-26_2_I-1-1 at the freeze); a card with no goal at all stays as before
+    for goal in ({"time": [3.3, 3.3]}, {"time": [8.0, 8.0], "region": None}):
+        t = net_card(tmp_path, ego={"goal": goal})
+        assert R.standing(t, dict(ok, failed=["goal"], goal={"position_t": None}))["status"] == "soft"
+    bare = net_card(tmp_path, ego={})
+    assert R.standing(bare, dict(ok, failed=["goal"], goal={"position_t": None}))["status"] == "fail"
     world = dict(ok, summary={"director": {"cr": {"goal_edge": "e1", "route_note": "no way from a to the goal's edge b"}}})
     assert R.standing(c, world)["status"] == "world"
     assert R.standing(c, dict(ok, error={"kind": "world", "line": "cr: no route"}))["status"] == "world"

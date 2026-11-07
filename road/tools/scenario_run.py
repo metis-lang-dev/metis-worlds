@@ -225,7 +225,9 @@ def standing(card, row, trace=None):
         return {"status": "fail", "why": ",".join(hard)}
     if "goal" in failed:
         g = row.get("goal") or {}
-        if g.get("position_t") is not None or not (card.get("ego") or {}).get("goal", {}).get("region", True):
+        goal = (card.get("ego") or {}).get("goal")
+        time_only = isinstance(goal, dict) and not goal.get("region")             # SCENARIO-CARD §3: no region, the window is the goal
+        if g.get("position_t") is not None or time_only:
             return {"status": "soft", "why": "the goal's place reached, its window missed"}
         return {"status": "fail", "why": "goal: its place never reached"}
     return {"status": "pass"}
