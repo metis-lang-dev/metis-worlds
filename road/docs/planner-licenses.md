@@ -30,6 +30,10 @@ bundled LICENSE file, on 2026-11-07.
 | **Polygon3 3.0.9.1** | | **LGPL for the wrapper; its metadata says the bundled GPC (General Polygon Clipper) is "free for non-commercial use only"** |
 
 ## The two not-permissive dependencies
+**Bench only: never a dependency of our planner or of anything we ship** (the architect's ruling, 2026-11-07). The reactive-planner
+venv is a research bench, untracked and never distributed, so Polygon3 and triangle may stay in it. Our planner's own requirements
+are a separate file, `road/planner/requirements-ours.txt` (casadi and what our reference builder and OCP need, neither of the two),
+so the boundary is a file. A veto by the user would mean replacing the drivability checker's polygon operations, not stopping.
 - **Polygon3 (GPC)** is required by commonroad-drivability-checker (`polygon3>=3.0.8`). **triangle** is required by
   commonroad-reactive-planner (`triangle>=20230923`), and by the drivability checker's `triangle` extra.
 - Using them in our own research bench (no distribution) is within their terms. Shipping them in a product, or in a commercial

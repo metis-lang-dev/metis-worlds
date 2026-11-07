@@ -1,0 +1,31 @@
+# planner-loop s-0dcc5ed1 step 2: the baseline SUBSET (25), the architect's amendment of 2026-11-06.
+# id                         # why (cluster of the ef793dc triage: /bigdata/work/harvest/ef793dc/clusters.json; kind, measure)
+# -- the reactive planner's three example scenarios (ZAM_Over-1_1 and DEU_Test-1_1_T-1 from its repo at 34ee3594, the user's word)
+ZAM_Tjunction-1_42_T-1       # example
+ZAM_Over-1_1                 # example
+DEU_Test-1_1_T-1             # example
+# -- one card per triage cluster with a member in road/catalog/commonroad (13 of the 64 clusters)
+USA_US101-2_1_T-1            # 3691f55f world contact:behind (616)
+ITA_Siderno-4_5_T-1          # 54257713 world contact:initial (283)
+HRV_Pula-8_3_T-1             # b74c490f world sumo_collision:initial (22)
+BEL_Zwevegem-1_7_T-1         # 399914d6 evidential violation (17)
+ZAM_Ramp-1_1-T-1             # 5c58c881 evidential off_lanelet (2)
+BEL_Putte-14_1_I-1-1         # 021f0e57 evidential contact (4); interactive: the .cr.xml has no recorded traffic
+USA_Lanker-2_24_T-1          # 88be8d36 perception contact:side (3)
+DEU_B471-1_1_T-1             # 97018d71 structural goal:position (1)
+ZAM_Urban-3_3                # 693fcbf4 probabilistic goal:position (1)
+ZAM_Zip-1_30_T-1             # a748bb1a structural violation (1)
+DEU_Ibbenbueren-16_1_T-1     # 8927f89b structural contact (1)
+ARG_Carcarana-6_2_T-1        # 99769d5a structural sumo_collision:side (1)
+DEU_Backnang-3_4_T-1         # 4296f12c structural contact:front (1)
+# -- the four largest clusters with no catalog card: their representative from the pin (not a card)
+USA_Lanker-1_3_T-1           # 0c42e32a world contact:side (13)
+ESP_Toledo-11_4_T-1          # 89dd6a88 evidential contact (13)
+ITA_CarpiCentro-5_3_T-1      # 9cb5fb14 structural contact (8)
+ESP_Cambre-5_3_I-1-1         # 041d75e1 structural off_lanelet (6); interactive: no recorded traffic
+# -- five regression cards at pass (SUMO), recorded
+BEL_Nivelles-3_2_T-1         # regression pass
+BEL_Wervik-4_1_T-1           # regression pass
+DEU_BadEssen-1_3_T-1         # regression pass
+DEU_Guetersloh-14_1_T-1      # regression pass
+DEU_Meckenheim-3_1_T-1       # regression pass

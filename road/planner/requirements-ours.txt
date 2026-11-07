@@ -1,0 +1,4 @@
+# OUR planner's requirements (PLANNER.md §3: the reference builder + the CasADi/IPOPT OCP), apart from the bench's
+# requirements.txt. Never Polygon3 (GPC) or triangle (Shewchuk) here: road/docs/planner-licenses.md.
+casadi==3.8.2
+numpy==2.4.6
