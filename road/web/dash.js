@@ -51,6 +51,7 @@ export class Dash {
     if (this.last && f.tick < this.last.tick) { const limit = this.limit; this.reset(); this.limit = limit; }
     const me = f.movers.find(m => m.id === f.ego);
     const was = this.last || { restricted: 0, violations: 0, collisions: 0 };
+    if (this.last && f.tick === this.last.tick) return;          // paused: the world stands, only the trace's k counts on (the user: the dashboard kept ticking)
     if (me) {
       this.rows.push({ t: f.t, k: f.k ?? f.tick, tick: f.tick, v: me.speed, a: f.a, cmd: f.cmd && f.cmd[0], restricted: f.restricted > was.restricted, bad: f.violations > was.violations || f.collisions > was.collisions });
       const from = this.rows[this.rows.length - 1].k - WINDOW;

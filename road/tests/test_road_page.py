@@ -49,6 +49,11 @@ CASES = [
     ("send event 2 to the loop", {}, {"to": "page", "action": "send", "n": 2}),
     ("continue", {"paused": True}, {"to": "page", "action": "continue"}),
     ("continue", {}, None),                                           # not waiting on a surprise: the road's
+    ("/narrate event 4", {}, {"to": "page", "action": "narrate", "n": 4}),   # typed as a command: the page's event, never the loop's /narrate
+    ("/explain 4", {}, {"to": "page", "action": "explain", "n": 4}),
+    ("/narrate 3", {}, {"to": "page", "action": "narrate", "n": 3}),
+    ("send 2 to pi", {}, {"to": "page", "action": "send", "n": 2}),
+    ("/narrate Town03-1-x 10..20 ctx", {}, {"to": "loop", "line": "/narrate Town03-1-x 10..20 ctx"}),
     ("load DynamicObjectCrossing", {"scenarios": ["Town03", "DynamicObjectCrossing"]}, {"to": "page", "action": "scenario", "name": "DynamicObjectCrossing"}),
     ("run the scenario town03", {"scenarios": ["Town03"]}, {"to": "page", "action": "scenario", "name": "Town03"}),
     ("load NoSuchThing", {"scenarios": ["Town03"]}, None),           # not in the tree: the road's (it says it does not know)
@@ -113,7 +118,7 @@ def test_the_dashboard_rolls_6000_ticks_and_moves_events():
     assert "this.o.onMove?.(d.n, k0, k1" in dash and "if (d.moved && (k0 !== d.was[0] || k1 !== d.was[1]))" in dash   # a press is no move and 'data-act="narrate"' in dash and 'data-act="explain"' in dash
     ev = (WEB / "events.js").read_text()
     assert "this.line(`mark:${n}:move:${k0}:${k1}${i0 != null && i1 != null ? `:${i0}:${i1}` : ''}`)" in ev   # the k, and the run's ticks
-    assert "this.loop.say(`/narrate ${e.trace} ${w0}..${w1} ${this.said(e)}`)" in ev   # one line, every member, the context
+    assert "this.loop.say(`/narrate ${e.trace} ${w0}..${w1} ${this.said(e)}`, undefined, `/narrate event ${e.n}`)" in ev   # one line, every member, the context
     assert "window(e) { return e.kind === 'mark' ? [e.k0, Math.max(e.k0, e.k1)] : [Math.max(0, e.k0 - LEAD), e.k0]; }" in ev   # a surprise with its lead-up
     road = (WEB / "road.js").read_text()
     assert "this.line(`mark:${n}:once:${kind}`)" in road and "if (stop && !this.paused) this.hold(true);" in road
@@ -167,3 +172,12 @@ def test_the_voice_goes_to_the_last_active_chat():
     panel = (WEB / "vendor" / "panel.js").read_text()
     assert "voiceBox = false" in panel and "voiceBox ? el('label', { class: 'fw-voice' }" in panel                                   # no voice tick in TALK
     assert "speakKey = 'Shift+8'" in (WEB / "vendor" / "switch.js").read_text()
+
+
+def test_a_paused_run_stands_still_on_the_dashboard_and_the_loop_chat_hands_the_page_its_events():
+    """The user, 2026-11-07: paused, the dashboard kept ticking (the trace's k counts on, the world's tick stands); "narrate event 4"
+    typed in the loop's chat reached the loop's /narrate (a trace and a window) and failed: the console's face hands it to the page."""
+    assert "if (this.last && f.tick === this.last.tick) return;" in (WEB / "dash.js").read_text()
+    dock = (WEB / "loopdock.js").read_text()
+    assert "if (d.metis === 'page' && typeof d.text === 'string') { this.onPage(d.text); return; }" in dock
+    assert "onPage: t => { if (!redirect(t, 'text')) loop.say(t); }," in WORLD

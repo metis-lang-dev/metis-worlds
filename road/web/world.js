@@ -501,6 +501,7 @@ const hear = text => { if (chat.voice && chat.active === 'loop') panel.core.tts.
 loop = world.loop = new LoopDock($('#loopbox'), {
   url: loopUrl(q, location), speak: hear,
   onRow: r => { events.row(r); $('#loopstate').textContent = loop.up ? '' : 'not connected'; },
+  onPage: t => { if (!redirect(t, 'text')) loop.say(t); },                   // "narrate event 4" typed in the loop's chat: the page's event
   onGate: g => {
     if (g.open) {                                                              // the gate as the agent's ask: confirm or refuse, by voice or chip
       docks.set('loop', { shown: true, open: true });

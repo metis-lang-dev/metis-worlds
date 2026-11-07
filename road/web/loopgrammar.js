@@ -14,6 +14,9 @@ const num = s => (s == null ? undefined : Number(s));
 
 // [pattern, (match, ctx, raw) → route | null]; the first that answers wins
 export const TABLE = [
+  // the page's events by number, typed as a command too ("/narrate event 4": the loop's /narrate wants a trace and a window, the page has the event)
+  [/^\/?(narrate|explain)(?: event)? (\d+)$/, m => ({ to: 'page', action: m[1], n: num(m[2]) })],
+  [/^\/?send (?:event )?(\d+) to (?:pi|the loop|the pi loop)$/, m => ({ to: 'page', action: 'send', n: num(m[1]) })],
   [/^\/(.+)$/, (m, c, raw) => ({ to: 'loop', line: raw.trim() })],                                      // typed: a command, as it is
   [/^(?:loop|pi)[,:]?\s+(.+)$/, (m, c, raw) => ({ to: 'loop', line: raw.trim().replace(/^(?:loop|pi)[,:]?\s+/i, '') })],   // addressed to the loop
   [/^(?:end|stop|close) (?:the )?(?:mark|event)(?:[,:]?\s+(.*))?$/, (m, c, raw) => ({ to: 'page', action: 'endmark', words: rest(raw, /^\s*\S+\s+(?:the\s+)?(?:mark|event)[,:.]?\s*/i) })],

@@ -2,8 +2,9 @@
 // served page with ?panels=chat&embed=<this page's origin> (never a copy of its code), its rows spoken through the road's one voice.
 // The wire is metis-loop's embed face (console/lib/embed.js, CHAT.md §1): window.postMessage, origin-checked on both sides.
 //
-//   const loop = new LoopDock(box, {url, speak(text), onGate(g), onRow(row)})
-//   loop.say(text, via)          a line into the CHAT as typed ("/…" at 0 USD, else pi's)
+//   const loop = new LoopDock(box, {url, speak(text), onGate(g), onRow(row), onPage(text)})
+//                                onPage: a line typed in the CHAT that is the page's ("narrate event 4": the console's embed face sends it here)
+//   loop.say(text, via, shown)   a line into the CHAT as typed ("/…" at 0 USD, else pi's); shown: the log's short form
 //   loop.answerGate(how)         the open gate answered: confirm | refuse
 //   loop.up                      the face said ready
 //   loop.lastMark                the last loop mark narrated (its number, for /agree and /disagree)
@@ -27,8 +28,8 @@ export function spokenForm(row) {                         // a row as the voice 
 }
 
 export class LoopDock {
-  constructor(box, { url, speak, onGate, onRow }) {
-    Object.assign(this, { box, url, speak, onGate: onGate || (() => {}), onRow: onRow || (() => {}), up: false, lastMark: null, gate: null, queue: [] });
+  constructor(box, { url, speak, onGate, onRow, onPage }) {
+    Object.assign(this, { box, url, speak, onGate: onGate || (() => {}), onRow: onRow || (() => {}), onPage: onPage || (() => {}), up: false, lastMark: null, gate: null, queue: [] });
     this.origin = new URL(url).origin;
     this.msg = Object.assign(document.createElement('p'), { className: 'empty loop-msg', textContent: `connecting to the loop at ${url} …` });
     this.frame = Object.assign(document.createElement('iframe'), {
@@ -45,7 +46,7 @@ export class LoopDock {
     if (!d || typeof d !== 'object') return;
     if (d.metis === 'ready') {
       this.up = true; clearTimeout(this.timer); this.msg.hidden = true;
-      for (const [t, v] of this.queue.splice(0)) this.post({ metis: 'chat', text: t, via: v });
+      for (const [t, v, sh] of this.queue.splice(0)) this.post({ metis: 'chat', text: t, ...(v ? { via: v } : {}), ...(sh ? { shown: sh } : {}) });
       return;
     }
     if (d.metis === 'row') {
@@ -54,6 +55,7 @@ export class LoopDock {
       if (SPOKEN.has(d.kind) && (d.kind !== 'cmd' || this.sent)) { const s = spokenForm(d); if (s) this.speak(s); }   // the CHAT's opening /status is not said
       return;
     }
+    if (d.metis === 'page' && typeof d.text === 'string') { this.onPage(d.text); return; }   // the page's events by number, typed in the CHAT
     if (d.metis === 'gate') {
       if (d.open) { this.gate = { id: d.id, title: d.title }; this.speak(`The loop asks: ${d.title}. Say confirm, or refuse.`); }
       else if (this.gate && this.gate.id === d.id) this.gate = null;
@@ -63,11 +65,11 @@ export class LoopDock {
 
   post(m) { this.frame.contentWindow?.postMessage(m, this.origin); }
 
-  say(text, via) {
+  say(text, via, shown) {                                 // shown: the CHAT log's short form of a long line (the road's /narrate)
     if (!text) return;
     this.sent = (this.sent || 0) + 1;
-    if (!this.up) { this.queue.push([text, via]); return; }
-    this.post({ metis: 'chat', text, ...(via ? { via } : {}) });
+    if (!this.up) { this.queue.push([text, via, shown]); return; }
+    this.post({ metis: 'chat', text, ...(via ? { via } : {}), ...(shown ? { shown } : {}) });
   }
 
   answerGate(how) {

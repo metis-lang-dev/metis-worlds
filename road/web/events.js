@@ -93,7 +93,7 @@ export class Events {
     this.sel = e.n;
     this.pending.push(e.n);
     const [w0, w1] = this.window(e);
-    this.loop.say(`/narrate ${e.trace} ${w0}..${w1} ${this.said(e)}`);
+    this.loop.say(`/narrate ${e.trace} ${w0}..${w1} ${this.said(e)}`, undefined, `/narrate event ${e.n}`);   // the log: the short form (the mark card carries the context)
     e.state = 'narrated'; this.save(); this.draw();
   }
 
