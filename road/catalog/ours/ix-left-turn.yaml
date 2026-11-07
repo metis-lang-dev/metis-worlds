@@ -20,16 +20,14 @@ params:
 actors:
   - {id: onc, kind: car, mode: model, driver: levelk, path: N_S, s: 12.0, v: 11.1}
 expect: {arrived: true, collisions: 0, violations: 0, deadlock: false}
-set: working                # SCENARIO-CARD §6c: regression iff every played host is at pass (the first verdict)
+set: regression             # promoted (SCENARIO-CARD §6c): every played host at pass since the waiver (365188d), record 20261107T000323-debffe
 verdict:
   sumo:
     status: skip
     note: the level-k intersection plays on the exerciser only (SUMO later, LEVELK.md
       §5)
   exerciser:
-    status: fail
-    record: 20261107T000323-debffe
+    status: pass
     since:
-      worlds: 6ae7b91
+      worlds: 365188d
       catalog: 915eae9
-    note: 'l1: not arrived; l1: deadlock 29.5 s'
