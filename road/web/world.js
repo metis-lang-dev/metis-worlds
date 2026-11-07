@@ -30,7 +30,7 @@ import { Panel } from './vendor/panel.js';
 import { connect } from './vendor/ws.js';
 import { Journal } from './vendor/journal.js';
 import { Narrator, attachSelection, attachKey } from './vendor/narrator.js';
-import { voiceWidget } from './vendor/switch.js';
+import { voiceWidget, voiceSwitch } from './vendor/switch.js';
 import { keywordStop } from './vendor/dialog.js';
 import { LoopDock, loopUrl } from './loopdock.js';       // loop-road-ui: the pi loop's CHAT as a dock, its rows in the one voice
 import { Events } from './events.js';                    // the run's events: the person's marks and the surprises
@@ -451,6 +451,11 @@ const say0 = panel.core.say.bind(panel.core);
 let stops = 0;
 panel.core.say = (text, opts = {}) => {
   const t = String(text ?? '').trim();
+  if (t && opts.via === 'voice' && chat.active === 'loop') {         // heard while the LOOP is the active chat: the loop's, the page's own words aside
+    const r = route(t, routeCtx());
+    if (r && r.to !== 'loop') redirect(t, opts.via); else { routed.set(t, 'loop'); loop.say(r?.line ?? t, 'heard'); }
+    return;
+  }
   if (t && opts.via !== 'host' && redirect(t, opts.via)) return;   // the loop's line or the events': not the road agent's turn
   if (backend && t && keywordStop(t, panel.core.dialog.stopWords) && ['working', 'asking', 'stuck'].includes(world.status?.state)) {
     panel.core.tts.cancel?.();
@@ -463,7 +468,36 @@ window.say = text => panel.say(text);
 
 // ── loop-road-ui: the pi loop's dock, the run's events, the one voice redirected ──
 const speak = text => panel.core.hostChat({ who: 'system', text });            // the page's own word (an event, a pause): in TALK, said
-const hear = text => { if (panel.core.voice) panel.core.tts.speak([text]); };  // the loop's row: heard in the one voice, written in the LOOP dock only
+// the voice for two chats (the user, 2026-11-07): TALK and LOOP, the last one active (clicked, focused, typed in) takes the mic
+// and is the one spoken; its dock's header shows a dot, green while the voice is on. The voice switch (Shift+8) is the
+// page's: on, the active chat's replies are spoken (TALK: the panel's own voice; LOOP: its rows through the one TTS).
+const CHAT_KEY = 'roadpage.voice.chat';
+const chat = world.chat = { active: (() => { try { return localStorage.getItem(CHAT_KEY) === 'loop' ? 'loop' : 'talk'; } catch { return 'talk'; } })(), voice: q.get('voice') === '1', subs: new Set() };
+function chatLook() {
+  for (const n of ['talk', 'loop']) {
+    const d = $(`#dock-${n}`);
+    d.classList.toggle('chat-active', chat.active === n);
+    d.classList.toggle('chat-voiced', chat.active === n && chat.voice);
+    const dot = d.querySelector('.chatdot');
+    if (dot) dot.title = chat.active === n ? `the active chat: the mic${chat.voice ? ' and the voice' : ''} go here` : `click here to make ${n.toUpperCase()} the active chat`;
+  }
+  panel.core.setVoice(chat.voice && chat.active === 'talk');
+}
+function setChat(n) {
+  if (n === chat.active) return;
+  chat.active = n;
+  try { localStorage.setItem(CHAT_KEY, n); } catch { /* this page only */ }
+  chatLook();
+}
+const voiced = {                                                     // the voice switch's panel: the page's voice, over both chats
+  core: { get voice() { return chat.voice; }, setVoice(on) { chat.voice = !!on; chatLook(); for (const f of chat.subs) f({ state: { voice: chat.voice } }); } },
+  subscribe: f => chat.subs.add(f),
+};
+$('#dock-talk').addEventListener('pointerdown', () => setChat('talk'));
+$('#dock-talk').addEventListener('focusin', () => setChat('talk'));
+$('#dock-loop').addEventListener('pointerdown', () => setChat('loop'));
+addEventListener('blur', () => setTimeout(() => { if (document.activeElement?.id === 'loopframe') setChat('loop'); }, 0));   // a click into the loop's frame
+const hear = text => { if (chat.voice && chat.active === 'loop') panel.core.tts.speak([text]); };   // the loop's row: heard while LOOP is the active chat, written in its dock only
 loop = world.loop = new LoopDock($('#loopbox'), {
   url: loopUrl(q, location), speak: hear,
   onRow: r => { events.row(r); $('#loopstate').textContent = loop.up ? '' : 'not connected'; },
@@ -496,8 +530,9 @@ for (const d of document.querySelectorAll('#toolcards details')) {
   if (v != null) d.open = v === '1';
   d.addEventListener('toggle', () => localStorage.setItem(k, d.open ? '1' : '0'));
 }
+function routeCtx() { return { loopMark: loop.lastMark, gate: !!loop.gate, paused: world.map.paused && events.waiting != null, scenarios: scenarios?.names() }; }
 function redirect(t, via) {
-  const r = route(t, { loopMark: loop.lastMark, gate: !!loop.gate, paused: world.map.paused && events.waiting != null, scenarios: scenarios?.names() });
+  const r = route(t, routeCtx());
   if (!r) return false;
   routed.set(t, r.action === 'scenario' ? 'scenarios' : r.to === 'page' ? 'events' : 'loop');
   panel.core.row({ who: 'person', text: t, channel: 'main' });
@@ -517,8 +552,13 @@ if (backend) hello(backend);
 // taking the floor: it wraps the band's own TTS and yields while the dialog speaks
 const narrator = world.narrator = new Narrator({ tts: panel.core.tts });
 attachSelection(narrator, document); attachKey(narrator, document, { key: 'F8' });
-// the band's voice card (fsttm-web switch.js): [● mic ⟦switch⟧ narrator], the narrator always on
-$('#voice').replaceWith(Object.assign(voiceWidget(panel, { narrator, key: 'F8' }).el, { id: 'voice' }));
+// the band's voice card (fsttm-web switch.js): [● mic ⟦switch⟧ ● voice ⟦switch⟧ narrator], the narrator always on; the voice
+// switch is the page's (both chats, the active one spoken), so the widget's own is left out and this one put in its place
+const vw = voiceWidget(panel, { narrator, key: 'F8', voice: false });
+vw.voice = voiceSwitch(voiced, { store: 'roadpage.voice', title: 'the voice: the active chat (TALK or LOOP, its dot) spoken while on' });
+vw.el.insertBefore(vw.voice.el, vw.narrator?.el ?? null);
+$('#voice').replaceWith(Object.assign(vw.el, { id: 'voice' }));
+chatLook();
 $('#hlist').addEventListener('click', e => { const li = e.target.closest('li'); if (li?.dataset.domain === 'task') world.map.showTask('@agent'); });
 $('#hlist').addEventListener('keydown', e => { const li = e.target.closest('li'); if (e.key === 'Enter' && li?.dataset.domain === 'task') world.map.showTask('@agent'); });
 if (!agentUrl) await replay(q.get('replay') || 'fixtures/alfworld_tomato_microwave_13.run.jsonl');

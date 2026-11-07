@@ -104,7 +104,7 @@ def test_the_loop_is_an_iframe_of_the_console_never_its_code():
     assert "postMessage(m, this.origin)" in dock and "'*'" not in dock
     for f in WEB.glob("*.js"):
         assert "MetisLoop" not in f.read_text(), f                        # no loop code copied into road/web
-    assert "if (panel.core.voice) panel.core.tts.speak([text]);" in WORLD and "speak: hear," in WORLD   # the loop's rows heard, not written in TALK
+    assert "if (chat.voice && chat.active === 'loop') panel.core.tts.speak([text]);" in WORLD and "speak: hear," in WORLD   # the loop's rows heard, not written in TALK
 
 
 def test_the_dashboard_rolls_6000_ticks_and_moves_events():
@@ -150,3 +150,20 @@ process.stdout.write(JSON.stringify(out));""")
     assert o == [476338, 5555928] and bound == "0.75,0.70,2671.65,887.71" and lane == "62.00,72.50,1.0 72.00,73.50"
     assert junction == {"id": "j", "x": "2.00", "y": "2.00", "shape": "2.00,2.00 3.00,3.00"} and goal == [[[0, 0]]] and x == 4
     assert same is True and o2 == [0, 0]
+
+
+def test_the_voice_goes_to_the_last_active_chat():
+    """The user, 2026-11-07: voice for two chats. TALK or LOOP, the last one active (clicked, focused, the loop's frame entered) takes
+    the mic and is spoken; its header's dot is green. The voice switch is the band's (Shift+8), over both; no tick in TALK, no say button."""
+    for dock in ('id="dock-talk"', 'id="dock-loop"'):
+        head = HTML[HTML.index(dock):HTML.index('</header>', HTML.index(dock))]
+        assert '<span class="chatdot" aria-hidden="true">●</span>' in head, dock
+    assert ".chat-active .chatdot { visibility: visible; color: var(--green" in HTML
+    assert "$('#dock-talk').addEventListener('pointerdown', () => setChat('talk'));" in WORLD and "$('#dock-loop').addEventListener('pointerdown', () => setChat('loop'));" in WORLD
+    assert "if (document.activeElement?.id === 'loopframe') setChat('loop');" in WORLD
+    assert "if (t && opts.via === 'voice' && chat.active === 'loop') {" in WORLD and "loop.say(r?.line ?? t, 'heard')" in WORLD   # heard: to the active chat
+    assert "panel.core.setVoice(chat.voice && chat.active === 'talk');" in WORLD                                                     # TALK spoken only while active
+    assert "vw.voice = voiceSwitch(voiced, { store: 'roadpage.voice'" in WORLD and "voiceWidget(panel, { narrator, key: 'F8', voice: false })" in WORLD
+    panel = (WEB / "vendor" / "panel.js").read_text()
+    assert "voiceBox = false" in panel and "voiceBox ? el('label', { class: 'fw-voice' }" in panel                                   # no voice tick in TALK
+    assert "speakKey = 'Shift+8'" in (WEB / "vendor" / "switch.js").read_text()

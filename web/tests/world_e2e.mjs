@@ -21,9 +21,10 @@ const stepTo = pred => ev(`(async () => { for (let i = 0; i < 200; i++) { if (${
 try {
   c.ok(await ev(`document.querySelectorAll('#map .wm-ent').length === 52 && world.frames.length > 40`), 'the recording and its map load (51 places and the agent)', null);
   c.ok(await ev(`world.narrator.state === 'stopped' && document.getElementById('voice').classList.contains('fw-voicebar')
-    && document.querySelectorAll('#voice .fw-switch').length === 1 && document.getElementById('voice').textContent === 'micnarrator'
+    && document.querySelectorAll('#voice .fw-switch').length === 2 && document.getElementById('voice').textContent === 'micvoicenarrator'
+    && !document.querySelector('#talkpanel .fw-voice')
     && document.querySelector('#voice .fw-narr')?.dataset.state === 'stopped' && !document.querySelector('#band .narrator')`),
-    'the band\'s voice card (fsttm-web): [● mic ⟦switch⟧ narrator], the narrator (F8) always on, stopped', null);
+    'the band\'s voice card (fsttm-web): [● mic ⟦switch⟧ ● voice ⟦switch⟧ narrator], no voice tick in TALK, the narrator (F8) always on, stopped', null);
   await ev(`(() => { world.panel.core.listening = true; world.panel.core.changed(); world.narrator._set('reading'); })()`);
   const on = await ev(`[getComputedStyle(document.querySelector('#voice .fw-sw-light')).backgroundColor, getComputedStyle(document.querySelector('#voice .fw-narr')).color]`);
   c.ok(on.every(x => x === 'rgb(63, 185, 80)'), 'on: the mic light and the reading narrator green (not the page\'s white accent)', on);

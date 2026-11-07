@@ -457,7 +457,7 @@ if (backend) hello(backend);
 const narrator = world.narrator = new Narrator({ tts: panel.core.tts });
 attachSelection(narrator, document); attachKey(narrator, document, { key: 'F8' });
 // the band's voice card (fsttm-web switch.js): [● mic ⟦switch⟧ narrator], the narrator always on
-$('#voice').replaceWith(Object.assign(voiceWidget(panel, { narrator, key: 'F8' }).el, { id: 'voice' }));
+$('#voice').replaceWith(Object.assign(voiceWidget(panel, { narrator, key: 'F8', store: 'nethackpage.voice' }).el, { id: 'voice' }));   // [mic · voice (Shift+8) · narrator]
 $('#hlist').addEventListener('click', e => { const li = e.target.closest('li'); if (li?.dataset.domain === 'task') world.map.showTask('@agent'); });
 $('#hlist').addEventListener('keydown', e => { const li = e.target.closest('li'); if (e.key === 'Enter' && li?.dataset.domain === 'task') world.map.showTask('@agent'); });
 if (!agentUrl) await replay(q.get('replay') || 'fixtures/alfworld_tomato_microwave_13.run.jsonl');
