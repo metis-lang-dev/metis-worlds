@@ -42,5 +42,16 @@ so the boundary is a file. A veto by the user would mean replacing the drivabili
   the source (GPC: the Manchester page named in Polygon3's metadata; Triangle: cs.cmu.edu/~quake/triangle.html) before any such
   step.
 
-## Not used
-SB-2023 (github.com/KochdumperNiklas/MotionPlanner) has no license: read only, nothing copied (s-0dcc5ed1 steps/sb2023-reading-opus.md).
+## The SB-2023 bench column: bench column only
+- **SB-2023** (github.com/KochdumperNiklas/MotionPlanner at 5434d0559b85d3d84733d46ee1596cd5338fe549) has **no license**, so
+  all rights are reserved. It is cloned on the user's word (2026-11-07) outside every repo, at
+  /bigdata/datasets/commonroad/sb2023-motionplanner (SOURCE line beside it). It is **bench column only**: run and read on
+  the bench, never copied, never a dependency of our planner or of anything we ship. road/planner/sb_bench.py imports it
+  from the clone; nothing of it is in this tree. Its 100 scenarios (the sb100 set) stay in the clone.
+- Its venv `road/.venv-sb2023` (git-ignored): CPython 3.8.20 by uv (the README's Python), at the pins of
+  `road/planner/requirements-sb2023.txt` (38, a freeze of its requirements.txt resolved on 2026-11-07): commonroad-io
+  2023.1, drivability-checker 2024.1, route-planner 2025.0.1, casadi 3.8.2 (LGPL-3.0+), control 0.9.4 (BSD-3-Clause),
+  mat4py 0.6.0 (MIT), opencv-python 5.0.0.93 (Apache-2.0), shapely 2.0.7, numpy 1.24.4, scipy 1.10.1, matplotlib 3.7.5.
+- **GPL in it:** pypoman 1.1.1 (GPL-3.0), pycddlib 2.1.8 (GPL), cvxopt 1.3.3 (GPL-3.0). These are bench-venv only (the
+  user's word). Note: the Optimization planner's module imports pypoman at load, so it is on the path we run, not only
+  on the linearisation path.

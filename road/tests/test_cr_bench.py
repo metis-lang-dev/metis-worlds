@@ -109,3 +109,37 @@ def test_a_missing_scenario_is_an_error_row_not_a_crash(tmp_path):
     pytest.importorskip("commonroad_rp", reason="the planner venv: road/planner/setup-venv.sh")
     r = B.run("ZAM_Nowhere-9_9_T-9", planner="stub", out=tmp_path)
     assert r["outcome"] == "error" and "FileNotFoundError" in r["reason"]["exception"]
+
+
+def test_table_names_per_planner_and_set():
+    assert B.table_name("reactive", "road/planner/subset.txt", "abc1234") == "baseline-subset-abc1234.md"
+    assert B.table_name("sb2023", "road/planner/sets/sb100.txt", "abc1234") == "sb2023-sb100-abc1234.md"
+
+
+def test_sb_reasons_read_as_solver_or_exception():
+    s = B.short_reason(row(reason={"sb": {"stage": "low_level", "kind": "solver", "status": "Infeasible_Problem_Detected"}}))
+    assert s == "SB low_level: IPOPT Infeasible_Problem_Detected"
+    s = B.short_reason(row(reason={"sb": {"stage": "decision", "kind": "exception", "exception": "IndexError: x",
+                                          "where": ["highLevelPlanner.py:300 refine_plan"]}}))
+    assert s == "SB decision raised IndexError: x (highLevelPlanner.py:300 refine_plan)"
+
+
+def test_sb_record_drives_the_oracle_states(tmp_path, monkeypatch):
+    """A record written by sb_bench becomes centred states (no shift) of SB's vehicle type; a failure is a row."""
+    pytest.importorskip("commonroad_rp", reason="the planner venv: road/planner/setup-venv.sh")
+    d = tmp_path / "X"
+    d.mkdir()
+    rec = {"times": {"decision_s": 0.5, "low_level_s": 2.0}, "solves": [{"status": "Solve_Succeeded", "iterations": 9}],
+           "failure": None, "trajectory": [{"k": i, "x": float(i), "y": 0.0, "v": 10.0, "phi": 0.0, "delta": 0.0, "a": 0.0}
+                                           for i in range(3)]}
+    monkeypatch.setattr(B.subprocess, "run", lambda *a, **k: (d / "record.json").write_text(json.dumps(rec)))
+    r = B.blank_row("X", "sb2023")
+    r["file"] = "X.xml"
+    states, veh = B.drive_sb2023(None, None, 2, r, d)
+    assert [float(s.position[0]) for s in states] == [0.0, 1.0, 2.0] and veh.wb_rear_axle == 0.0
+    assert r["ms_cycle"] == 2500.0 and r["solver"] == {"status": "Solve_Succeeded", "iterations": 9}
+    rec["failure"] = {"stage": "low_level", "kind": "solver", "status": "Infeasible_Problem_Detected"}
+    r = B.blank_row("X", "sb2023")
+    r["file"] = "X.xml"
+    states, _ = B.drive_sb2023(None, None, 2, r, d)
+    assert states == [] and r["infeasible"] and B.classify(dict(r, collision=False, offroad=False, goal=False)) == "infeasible"
