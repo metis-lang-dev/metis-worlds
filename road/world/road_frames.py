@@ -6,6 +6,11 @@ import xml.etree.ElementTree as ET
 
 from sumo_world import SCENARIOS
 
+
+def SCENARIO_NAMES():
+    """The worlds the page runs by name: the towns (CARLA's, maps/) and the plain roads."""
+    return list(SCENARIOS)
+
 STAGES = ("restrict", "sumo", "perceive", "project", "account")     # the Loop's stages, each tick's seconds
 LIGHTS_EVERY = 10     # ticks between two readings of the lights: every one costs TraCI calls, a big town has hundreds
 LAND = 100.0          # the land around the road, m: margin on every side (a straight net's boundary has no height of its own)

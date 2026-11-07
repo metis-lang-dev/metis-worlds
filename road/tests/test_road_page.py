@@ -77,7 +77,10 @@ process.stdout.write(JSON.stringify(cases.map(([t, ctx]) => route(t, ctx))));"""
 def test_one_tools_dock_of_cards_events_and_the_loop():
     """Drive, Cars and Traffic: one TOOLS dock of collapsible cards (the DIALOG's fw-sec look); EVENTS and LOOP docks; the strip names them."""
     tools = HTML[HTML.index('id="dock-tools"'):HTML.index('id="dock-events"')]
-    assert [m for m in re.findall(r'<details class="fw-sec tool" id="tool-(\w+)"', tools)] == ["drive", "run", "cars", "traffic"]
+    assert [m for m in re.findall(r'<details class="fw-sec tool" id="tool-(\w+)"', tools)] == ["scenarios", "drive", "run", "cars", "traffic"]
+    sc = (WEB / "scenarios.js").read_text()
+    assert "this.tree.addEventListener('click', e => this.click(e, false));" in sc and "this.tree.addEventListener('dblclick', e => this.click(e, true));" in sc
+    assert "this.line(`scard:${r.id}`)" in sc and "this.run(r.runs[0].run)" in sc        # click: the card; double click: its first run
     for gone in ('id="dock-drive"', 'id="dock-run"', 'id="dock-cars"', 'id="dock-traffic"', 'data-strip="drive"', 'data-strip="run"',
                  'data-strip="cars"', 'data-strip="traffic"'):
         assert gone not in HTML, gone

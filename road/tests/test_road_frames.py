@@ -770,3 +770,22 @@ def test_the_scene_names_its_k_and_trace(net):
     h.shared["k"], h.run["trace"] = 41, "/x/.metis/traces/Town03-1-20261107T104100"
     f = [x for x in h.frames() if x["ev"] == "world/scene"][0]
     assert f["k"] == 41 and f["trace"] == "Town03-1-20261107T104100"
+
+
+def test_the_scenarios_tree_and_a_card(net):
+    """loop-road-ui (the user, 2026-11-07): the page's SCENARIOS tree. `catalog` → world/catalog, a row per card with the situation it is
+    filed under and the runs it starts here (a CARLA card at its town sites, CommonRoad as cr:ID, ours none); `scard:NAME` → the card."""
+    h = host(world=loop(net))
+    h.world(["watching", "catalog"])
+    f = [x for x in h.frames() if x["ev"] == "world/catalog"][0]
+    by = {r["id"]: r for r in f["rows"]}
+    assert {r["source"] for r in f["rows"]} >= {"scenario-runner", "commonroad", "ours"} and "straight" in f["towns"]
+    assert by["ParkingCutIn"]["situation"] == "cut-in" and by["ParkingCutIn"]["runs"][0]["run"].startswith("card:ParkingCutIn@Town")
+    assert by["ix-left-turn"]["runs"] == [] and by["ix-left-turn"]["world"] == "intersection"
+    cr = next(r for r in f["rows"] if r["source"] == "commonroad")
+    assert cr["runs"] == [{"label": "CommonRoad", "run": "cr:%s" % cr["id"]}]
+    h.world(["scard:ParkingCutIn"])
+    c = [x for x in h.frames() if x["ev"] == "world/scard"][0]
+    assert c["card"]["scenario"] == "ParkingCutIn" and c["runs"] == by["ParkingCutIn"]["runs"]
+    h.world(["scard:../../etc"])
+    assert "no card" in [x for x in h.frames() if x["ev"] == "world/scard"][0]["error"]

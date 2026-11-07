@@ -152,10 +152,26 @@
   /* the column's height: TOOLS and EVENTS as tall as their content (folded cards are small), at most a share; the loop's chat the rest */
   #dock-tools.open { flex: 0 1 auto !important; max-height: 40%; }   /* !important: the shell keeps each dock's flex inline */
   #dock-events.open { flex: 0 1 auto !important; max-height: 30%; }
-  #dock-loop.open { flex: 3 1 0 !important; min-height: 260px; }
+  #dock-loop.open { flex: 3 1 0 !important; min-height: 220px; }
+  #dock-talk.open { min-height: 130px; }                                /* the road's own talk keeps its line and its input */
+  #dock-world.open { flex: 2 1 0 !important; min-height: 200px; }      /* a scenario's card, readable beside the chat */
+  #dock-tools.open { max-height: 36%; }
   #right > .dock > .dbody { overflow: auto; }
   #loopstate { color: var(--dim); text-transform: none; letter-spacing: 0; font-size: 11px; }
   .loop-msg { padding: 6px 8px; margin: 0; }
+  /* the SCENARIOS tree: sources, situations, scenarios; the selected one marked, the running one green */
+  #scenarios .sc-find { width: 100%; box-sizing: border-box; background: var(--bg); color: var(--fg); border: 1px solid var(--line); font: inherit; padding: 1px 4px; margin: 2px 0 4px; }
+  #scenarios .sc-tree { max-height: 22em; overflow: auto; }
+  #scenarios details { margin-left: 2px; } #scenarios details details { margin-left: 12px; }
+  #scenarios summary { cursor: pointer; padding: 1px 0; } #scenarios summary .sc-n { color: var(--dim); font-size: 11px; }
+  #scenarios ul { list-style: none; margin: 0 0 2px 14px; padding: 0; }
+  #scenarios .sc-leaf { display: flex; gap: 6px; align-items: baseline; padding: 1px 4px; cursor: pointer; user-select: none; }
+  #scenarios .sc-leaf:hover { background: var(--line); } #scenarios .sc-leaf.sel { background: var(--sel); outline: 1px solid var(--cyan); }
+  #scenarios .sc-leaf.run .sc-name { color: var(--green); } #scenarios .sc-leaf.run .sc-name::after { content: " ▶"; }
+  #scenarios .sc-leaf.elsewhere .sc-name { color: var(--dim); }
+  #scenarios .sc-v { font-size: 10.5px; color: var(--dim); } #scenarios .sc-pass { color: var(--green); } #scenarios .sc-fail { color: #e66767; } #scenarios .sc-soft { color: var(--yellow); }
+  #scenarios .sc-set { color: var(--green); font-size: 11px; }
+  #scenarios .sc-help { color: var(--dim); font-size: 11px; margin: 4px 0 0; }
   .loop-msg[hidden] { display: none; }
 </style>
 </head>
@@ -205,9 +221,11 @@
         <header><span class="tw">▾</span><span class="tt">HIERARCHY</span><span id="hstate"></span><button class="x" type="button" aria-label="hide the hierarchy">✕</button></header>
         <div class="dbody"><ul id="hlist" tabindex="-1" aria-label="the domains"></ul></div>
       </section>
-      <section class="dock" id="dock-tools" data-dock="tools" tabindex="-1" aria-label="the tools: drive, run, cars, traffic">
+      <section class="dock" id="dock-tools" data-dock="tools" tabindex="-1" aria-label="the tools: scenarios, drive, run, cars, traffic">
         <header><span class="tw">▾</span><span class="tt">TOOLS</span><button class="x" type="button" aria-label="hide the tools">✕</button></header>
         <div class="dbody" id="toolcards">
+          <details class="fw-sec tool" id="tool-scenarios" data-tool="scenarios" open><summary>Scenarios</summary><div id="scenarios"></div>
+          </details>
           <details class="fw-sec tool" id="tool-drive" data-tool="drive" open><summary>Drive</summary>
           <div class="ph">AT THE NEXT JUNCTION</div>
           <div class="wrow"><button class="chip" data-drive="turn:left" type="button">turn left</button><button class="chip" data-drive="turn:straight" type="button">straight on</button><button class="chip" data-drive="turn:right" type="button">turn right</button></div>

@@ -233,6 +233,10 @@ class RoadHost:
                 self.mark(line)
             elif line.startswith("crfind:"):
                 self.cr_find(line[len("crfind:"):])
+            elif line == "catalog":                    # the SCENARIOS tree (loop-road-ui, the user 2026-11-07): the cards, grouped
+                self.shared["catalog_out"] = {"ev": "world/catalog", "rows": self.catalog_tree(), "towns": road_frames.SCENARIO_NAMES()}
+            elif line.startswith("scard:"):            # one card, whole, for the WORLD CARD dock
+                self.shared["catalog_out"] = self.scenario_card(line[len("scard:"):])
             elif line.startswith("run:"):
                 scenario, seed = line[len("run:"):].rsplit(":", 1)        # a scenario's name may hold a colon (cr:ID, card:NAME@TOWN#SITE)
                 self.start_run(dict(self.run, scenario=scenario, seed=int(seed)))
@@ -280,6 +284,51 @@ class RoadHost:
                          "verdict": one_word(c.get("verdict")), "map": town or (c.get("map") or {}).get("net"), "run": run,
                          "country": "", "cached": True})
         return rows
+
+    # the situation a card is filed under in the page's tree: its most specific tag (road/docs/SCENARIO-CARD.md's tags)
+    SITUATIONS = ["pedestrian-crossing", "cyclist", "emergency-vehicle", "cut-in", "oncoming-pass", "turning-left", "right-before-left",
+                  "merge-zipper", "highway-ramp", "obstacle-static", "lane-change", "junction-priority", "following", "lane-keeping",
+                  "route-following", "speed-limit"]
+
+    def catalog_tree(self):
+        """The scenario catalog for the page's SCENARIOS tree: a row per card (road/catalog/<source>/*.yaml) with its title, suite, the
+        situation it is filed under, its standing (verdict, set) and the runs it can start here: a CARLA card at each of its town sites
+        (card:NAME@TOWN#SITE), a CommonRoad card as cr:ID; a card for another world (ours: the intersection) runs nowhere on this page."""
+        import scenario_cards as C
+        import yaml
+        rows = []
+        for f in sorted((C.ROAD / "catalog").glob("*/*.yaml")):
+            try:
+                c = yaml.safe_load(f.read_text())
+            except Exception:                                      # noqa: BLE001 — an unreadable card is left out of the tree
+                continue
+            src, mp = c.get("source") or {}, c.get("map") or {}
+            tags = c.get("tags") or []
+            runs = []
+            if src.get("suite") == "commonroad":
+                runs = [{"label": "CommonRoad", "run": "cr:%s" % c["scenario"]}]
+            elif mp.get("town"):
+                towns = (c.get("sites") or {}).get("towns") or {mp["town"]: "all"}
+                for town, sites in towns.items():
+                    for i in ([0] if sites == "all" or not sites else sites):
+                        runs.append({"label": "%s site %s" % (town, i), "run": "card:%s@%s#%s" % (c["scenario"], town, i)})
+            v = c.get("verdict") or {}
+            word = next((v[h]["status"] for h in ("sumo", "exerciser") if (v.get(h) or {}).get("status") not in (None, "skip")), v.get("status"))
+            rows.append({"id": c["scenario"], "source": f.parent.name, "suite": src.get("suite"), "title": c.get("title") or c["scenario"],
+                         "situation": next((t for t in self.SITUATIONS if t in tags), tags[0] if tags else "other"), "tags": tags,
+                         "verdict": word, "set": c.get("set"), "runs": runs, "world": mp.get("world")})
+        return rows
+
+    def scenario_card(self, name):
+        """world/scard: the card NAME as it is on disk (its yaml), with its runs, for the page's WORLD CARD."""
+        import scenario_cards as C
+        import yaml
+        hits = [f for f in (C.ROAD / "catalog").glob("*/%s.yaml" % name) if "/" not in name and ".." not in name]
+        if not hits:
+            return {"ev": "world/scard", "id": name, "error": "no card %s in road/catalog" % name}
+        card = yaml.safe_load(hits[0].read_text())
+        row = next((r for r in self.catalog_tree() if r["id"] == name), {})
+        return {"ev": "world/scard", "id": name, "source": hits[0].parent.name, "card": card, "runs": row.get("runs", [])}
 
     def cr_find(self, query):
         """The Traffic dock's CommonRoad picker (commonroad-world step 3): the checkout's index (../.worlds/cr-cache/index.json, made by
@@ -443,6 +492,8 @@ class RoadHost:
             out.append({"ev": "world/mark", "n": m["n"], "open": m["open"], "said": self.shared.pop("mark_said", None)})
         if "cr_list" in self.shared:
             out.append(self.shared.pop("cr_list"))
+        if "catalog_out" in self.shared:
+            out.append(self.shared.pop("catalog_out"))
         w = self.shared.get("wish")
         while w and w["said"]:
             out.append({"ev": "world/message", "text": w["said"].pop(0)})

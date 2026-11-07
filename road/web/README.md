@@ -14,7 +14,9 @@ Each edge goes in the journal as a world line, `mark:N:start:TICK` or `mark:N:st
 
 ## The loop dock, the events, the tools (loop-road-ui s-0314a8ee)
 
-The page is for road and regulation testers. **TOOLS** is one dock of cards (Drive, Cars, Traffic), folded like the DIALOG's sections; RUN stays its own.
+The page is for road and regulation testers. **TOOLS** is one dock of cards (Scenarios, Drive, Run, Cars, Traffic), folded like the DIALOG's sections.
+
+**Scenarios** is the scenario catalog as a tree: Towns (CARLA's towns and the plain roads), OpenSCENARIO (CARLA ScenarioRunner), CommonRoad, Ours. Inside a source the cards are filed by the situation they exercise (their most specific tag), and a search filters them. One click shows the card in WORLD CARD: what it checks, its situations, how it stands, and its sites as run chips. A double click runs it, at its first site. A town's click shows the world's own card. The host serves the rows (`catalog` → world/catalog) and a card whole (`scard:NAME` → world/scard), road_host.catalog_tree / scenario_card.
 
 **EVENTS** lists the run's events, newest first. A *mark* is a window you open and close: the top bar's button, or by voice "mark" … "end mark, WORDS". A *surprise* is a one-off event the page makes itself when the run's collisions or violations rise (a rise within 2 s of the last is the same one). With "stop on a surprise" ticked, the run pauses on it until you continue ("continue the run", the play button, or "continue"). Each event goes to the host as `mark:N:start|stop`, `mark:N:once:KIND` or `mark:N:move:K0:K1`. In the run's `marks.jsonl` it has its window in the trace's k (`at_k`), and the last start/stop pair is the window. The list is kept in the browser per trace.
 

@@ -35,6 +35,7 @@ import { keywordStop } from './vendor/dialog.js';
 import { LoopDock, loopUrl } from './loopdock.js';       // loop-road-ui: the pi loop's CHAT as a dock, its rows in the one voice
 import { Events } from './events.js';                    // the run's events: the person's marks and the surprises
 import { route } from './loopgrammar.js';                // the one voice redirected: the loop's and the events' lines
+import { Scenarios, cardHtml } from './scenarios.js';    // the SCENARIOS tree: click shows a card, double click runs it
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -226,6 +227,15 @@ function gameInfo() {                                // under the map: the game 
     ${x ? `<div class="gi-dim">${esc(x.id)}${room && x.episode ? ` · the room's game: ${esc(x.episode)}` : ''}</div>` : ''}
     ${m.intro ? `<div class="gi-intro">${esc(m.intro)}</div>` : ''}`;
 }
+// a scenario's card in the WORLD CARD dock (the tree's click; f.card arrives as world/scard); the town's own card is worldCard()
+function showScenario(f) {
+  const box = $('#wcard');
+  if (f.error) { box.innerHTML = `<p class="empty">${esc(f.error)}</p>`; return; }
+  box.innerHTML = cardHtml(f);
+  for (const b of box.querySelectorAll('[data-run]')) b.onclick = () => world.map.runScenario(b.dataset.run);
+  box.querySelector('[data-town-card]').onclick = () => worldCard();
+  showCard();
+}
 function showCard() { docks.set('world', { shown: true, open: true }); $('#dock-world')?.scrollIntoView?.({ block: 'nearest' }); }
 // the tiles as large as the left pane allows (the map, its attention slot beside it when there is room)
 function fitMap() {
@@ -314,7 +324,7 @@ function rowLook(r) {
 function floorLook(s) { if (panel) panel.dom.floor.textContent = `floor: ${FLOOR[s.floor] ?? s.floor.toLowerCase()}`; }
 
 // ── the frames ──
-let say = 0, panel = null, send = () => {}, loop = null;
+let say = 0, panel = null, send = () => {}, loop = null, scenarios = null;
 const routed = new Map();                            // the person's lines that went to the loop or the events: where (the TALK log says so)
 async function frame(f) {
   if (f.ev === 'world/scene') { world.map.scene(f); return; }          // the road: ten a second, not recorded in the page's log
@@ -322,6 +332,8 @@ async function frame(f) {
   if (f.ev === 'world/mark') { world.map.mark(f); if (f.said) journalRow({ who: 'note', text: f.said }); return; }
   if (f.ev === 'world/summary') { world.map.summary(f); return; }
   if (f.ev === 'world/cr_list') { world.map.crList?.(f); return; }     // the road's CommonRoad picker (road_host.cr_find)
+  if (f.ev === 'world/catalog') { scenarios?.catalog(f); return; }       // the SCENARIOS tree's rows (road_host.catalog_tree)
+  if (f.ev === 'world/scard') { showScenario(f); return; }                // a card, whole, into the WORLD CARD
   if (f.ev === 'journal' && f.rec?.kind === 'dlg-world') return;       // the road: the page's own lines (watching, play, speed)
   if (f.ev === 'journal' && f.rec?.kind === 'dlg-relay') relay(f.rec);
   if (f.ev === 'journal' && f.rec) commands(f.rec);
@@ -456,6 +468,13 @@ const events = world.events = new Events($('#events'), {
   onChange: () => world.map.dash.changed(),
 });
 world.map.events = events;
+scenarios = world.scenarios = new Scenarios($('#scenarios'), {
+  line: l => world.map.line(l), run: r => world.map.runScenario(r),
+  onTown: () => { worldCard(); showCard(); },
+  onCard: (r, note) => { showScenario({ id: r.id, source: r.source, card: { title: r.title, tags: r.tags, set: r.set }, runs: r.runs, note }); },
+});
+world.map.scenarios = scenarios;
+if (backend) scenarios.ask();
 world.map.onSurprise = (n, kind, stopped) => {
   docks.set('events', { shown: true, open: true });
   speak(`Event ${n}: a ${kind}.${stopped ? ' The run is paused. Say continue when you are ready, or narrate, explain, or send it to the loop.' : ''}`);

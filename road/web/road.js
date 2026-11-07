@@ -111,6 +111,13 @@ export class RoadMap {
     b.classList.toggle('open', open);
   }
 
+  runScenario(run) {                                        // a scenario from the SCENARIOS tree or its card: a town, card:NAME@TOWN#SITE, cr:ID
+    if (this.marks.open) this.markEdge();
+    this.crWant = run;
+    this.line(`run:${run}:${Math.max(1, Number($('#seed').value) || 1)}`);
+    this.hold(false, false);
+  }
+
   hold(on, tell = true) {
     this.paused = on;
     if (!on) this.events?.resumed();
@@ -120,6 +127,7 @@ export class RoadMap {
 
   net(f) {
     this.dash.net(f);
+    this.scenarios?.running(f.scenario);
     const names = f.scenarios && f.scenario && !f.scenarios.includes(f.scenario) ? [...f.scenarios, f.scenario] : f.scenarios;   // a cr: run is not in the list: its own option
     if (names && $('#scenario').options.length !== names.length) $('#scenario').replaceChildren(...names.map(s => Object.assign(document.createElement('option'), { textContent: s })));
     if (f.scenario && f.scenario === this.crWant) { $('#t-cr-msg').textContent = `running ${f.scenario}`; this.crWant = null; }
