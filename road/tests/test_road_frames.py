@@ -160,6 +160,22 @@ def test_a_new_run_opens_one_world_and_the_planner_gets_a_trip(monkeypatch):
     assert "+trip 1" not in (b.tick({}) or [])                # once
 
 
+def test_the_pages_pause_holds_the_beat():
+    """The user, 2026-11-07 (lock step, not realtime): paused, the host holds the runtime's beat (metis-agent Live.beat_held): no tick,
+    the trace's k stays; play, or a new run, releases it. A run without a page never holds."""
+    a = host()
+    a.run["page"] = True
+    assert not a.holds_beat()
+    a.world(["pause"])
+    assert a.holds_beat()
+    a.world(["play"])
+    assert not a.holds_beat()
+    b = host()
+    b.run.pop("page", None)
+    b.shared["paused"] = True
+    assert not b.holds_beat()
+
+
 def test_a_commonroad_id_runs_on_sumo_after_its_cache_is_had(monkeypatch):
     """run:cr:ID:SEED (commonroad-world step 3): the colon inside the name kept, the run on SUMO, the cache loaded before the
     current world closes (cr_world.load converts on demand)."""

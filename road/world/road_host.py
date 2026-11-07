@@ -495,6 +495,11 @@ class RoadHost:
             time.sleep(due - now)
         self.shared["due"] = max(due, now) + DT / self.shared.get("speed", 1.0)
 
+    def holds_beat(self):
+        """The page's pause holds the beat (metis-agent Live.beat_held; the user, 2026-11-07: "we simulate in lock step, not realtime"):
+        no member ticks, the trace's k stays, so a paused page keeps its events in the trace's ring."""
+        return bool(self.run.get("page") and self.shared.get("paused"))
+
     def frames(self):
         if not (self.steps and self.run.get("page")):
             return []
