@@ -1,5 +1,7 @@
 # The CARLA stack: CARLA 0.9 (UE4) + ROS 2 Humble + C++, the C++ client library for control and sensors, our planner, no Nav2 (design, the architect, 2026-11-07; the simulator changed 2026-11-11)
 
+> **Moved (2026-11-12):** the maintained copy is in the Perotheia organisation, perotheia-packages/carla_ws `docs/CARLA-STACK.md` (the user: autonomous driving is Perotheia; the runtime there is Theia, not ROS 2). This copy is frozen.
+
 **Status: DESIGN for the user's own implementation. The user's choices (2026-11-07): a C++ ROS 2 controller; OUR OCP planner (road/planner, PLANNER.md §3, parity with SB-2023 shown); no Nav2, our original stack (PLANNER.md §1's five levels); interfaces independent of CARLA and Autoware, so the planner never knows whether CARLA, a real car or another simulator tracks its trajectory; a later port to Adaptive AUTOSAR (theia) for a faster runtime. Package names are the user's (nina_*).**
 
 **Changed 2026-11-11 (the user): CARLA 0.9 on UE4, not 0.10.0.** We have no hardware for UE5, so 0.10.0 and its native ROS 2 interface (DDS inside the server) are out. Simulator I/O is CARLA's own C++ client library (LibCarla's client, `carla::client`) for BOTH directions: the sensors are read through it and the commands are applied through it, inside `nina_carla_adapter`. No DDS in the server and no `carla-ros-bridge`: the adapter is the only process that speaks CARLA at run time, beside the scenario manager. The version to pin is the latest 0.9 release that S0 passes on our GPU (0.9.15 proposed; not yet tried here).

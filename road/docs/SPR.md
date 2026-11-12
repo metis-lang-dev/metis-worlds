@@ -1,5 +1,7 @@
 # The structured perception representation: the contract between perception and the rest (spec PROPOSAL v0, 2026-11-12)
 
+> **Moved (2026-11-12):** the maintained copy is in the Perotheia organisation, perotheia-packages/spr `docs/SPR.md` (the user: autonomous driving is Perotheia; the runtime there is Theia, not ROS 2). This copy is frozen.
+
 **Status: a proposal, drafted by pascal on the user's word (2026-11-12): "we need intermediate Structured
 Perception Representations. its perception output abstraction. from it data forks into 1) semantic map and
 2) dynamic trajectory planner ... nicely integrate it into carla stack and wc stack ... also as testable
