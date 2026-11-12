@@ -34,6 +34,10 @@ The reference builder is the one place the lanelet ever was: today it reads the 
 - **The chair**: the unicycle model in the same problem; the corridor from free space; the same cost.
 - **Size**: the OCP ~400 lines, the reference builder ~600–900, the loop + tests ~300 (opus's reading of SB-2023: steps/sb2023-reading-opus.md). No code of SB-2023's is copied (unlicensed): the method is a few equations and the design above.
 
+**Terrain variant (proposal, 2026-11-12, SPR.md §6):** the same OCP with the terrain read under the wheels from
+the structured perception representation: closed cells from `step`, tip-over margins from the slope layers,
+a speed bound from down-slope, cross-slope and surface. The lane planner above is its flat special case.
+
 ## 4. The CommonRoad native loop (the benchmark, no SUMO)
 
 The scenario's lanelet network → the LaneMap through the exerciser's observation adapter; the recorded obstacles as movers; the planning problem's initial state and goal; the family drives through the five levels; CommonRoad's drivability checker (collision, kinematic feasibility), its cost functions and the goal-in-window test are the oracle beside our measures; a solution file is written per run so TUM's own evaluation reads it. The set: the catalog's 192 CommonRoad cards (their scenario ids from the checkout at the pin), then the recorded sets whole on panzer. CI nightly over the recorded set as the catalog's is.
