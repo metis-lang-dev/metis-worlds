@@ -6,7 +6,8 @@ METISC ?= $(abspath ../../../metis-lang/src/metisc)
 # METIS_HOME: the road family (metis-catalog domains/road at catalog.pin; road-family s-f62c0ed8): the units by name
 export METIS_HOME ?= $(abspath ../../../metis-catalog/domains/road)
 
-build/road.build: composition.yaml $(wildcard *.llp) $(wildcard */*.llp) $(wildcard */domain.yaml)
+# the family's units too: an /apply that writes one (the loop's) must make the image stale (loop-chat s-f6c32d0c step 4; loop-road-ui step 0)
+build/road.build: composition.yaml $(wildcard *.llp) $(wildcard */*.llp) $(wildcard */domain.yaml) $(wildcard $(METIS_HOME)/*.llp)
 	$(METISC) build .
 
 check:
