@@ -59,3 +59,9 @@ def test_the_catalog_watch_by_content(tmp_path):
     (fam / "planner_domain.llp").write_text("g\n")
     moved = N.changed(s0, N.snapshot(N.catalog_files(tmp_path, fam)))
     assert N.rel(moved, tmp_path, fam) == ["family:planner_domain.llp"]
+
+
+def test_the_host_files_are_the_world_models_code():
+    fs = N.host_files(ROAD / "world")
+    names = {f.name for f in fs}
+    assert "road_facts.py" in names and "road_host.py" in names and all(f.suffix == ".py" for f in fs)

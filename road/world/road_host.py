@@ -66,6 +66,7 @@ DT = 0.1                          # the world's step, s
 CR_LIST = 60                    # the CommonRoad picker's rows at most (the index has thousands)
 WATCHED_S = 5.0                   # a page said `watching` this recently: a scene every step, else every second
 UNWATCHED_EVERY = 10
+HOST_LOADED = None                # the world model's code as this process loaded it (road_narrate.snapshot of road/world/*.py), at import
 CATALOG_S = 2.0                   # the catalog watch: the domains and the family read by content every 2 s (metis-plugin step 4)
 
 
@@ -240,6 +241,8 @@ class RoadHost:
                 self.shared["catalog_out"] = {"ev": "world/catalog", "rows": self.catalog_tree(), "towns": road_frames.SCENARIO_NAMES()}
             elif line.startswith("narrate:"):          # metis-plugin step 4: the page's own narration (the pi LOOP dock is gone)
                 self.narrate_line(line)
+            elif line == "restart":                    # the world model (road/world/*.py) changed: the service again, on the same arguments
+                self.restart_service()
             elif line == "catalog:seen":               # the page reloaded the members on the change it was shown: that state is the base
                 import road_narrate as RN
                 self.shared["cat_base"] = RN.snapshot(RN.catalog_files(os.environ.get("METIS_CATALOG", ""), os.environ.get("METIS_HOME")))
@@ -267,6 +270,34 @@ class RoadHost:
             self.shared["narr_out"] = {"ev": "world/narration", "n": int(n), "run": run, "k0": int(k0), "k1": int(k1), **out}
         except (ValueError, OSError) as e:
             self.shared["narr_out"] = {"ev": "world/narration", "n": line.split(":")[1] if line.count(":") >= 1 else None, "error": str(e)}
+
+    def restart_service(self):
+        """The world model's code changed (a host fix, metis-plugin step 6): a reload cannot take Python already loaded, so the service
+        runs again in this process, on its own arguments and environment (os.execv of sys.orig_argv); its SUMO goes with it, the page
+        reloads when the service answers again (world.js onReopen)."""
+        try:
+            self.road.close()
+        except Exception:                                  # noqa: BLE001 — a world already gone: the exec ends it anyway
+            pass
+        sys.stdout.flush(); sys.stderr.flush()
+        os.execv(sys.executable, list(sys.orig_argv))
+
+    def host_watch(self):
+        """road/world/*.py by content (the world model's code), every CATALOG_S: world/host_changed, once per new state. Its base is the
+        code this process loaded (HOST_LOADED, at import), so only a restart clears it."""
+        import road_narrate as RN
+        now = time.monotonic()
+        if now - self.shared.get("host_at", 0) < CATALOG_S:
+            return None
+        self.shared["host_at"] = now
+        snap = RN.snapshot(RN.host_files(HERE))
+        base = HOST_LOADED if HOST_LOADED is not None else snap
+        moved = RN.changed(base, snap)
+        key = ",".join("%s=%s" % (k, snap.get(k)) for k in moved)
+        if not moved or self.shared.get("host_said") == key:
+            return None
+        self.shared["host_said"] = key
+        return {"ev": "world/host_changed", "changed": [os.path.relpath(p, ROAD) for p in moved][:40], "count": len(moved)}
 
     def catalog_watch(self):
         """The catalog changed on disk (Claude Code edits, builds and commits it; the page offers the reload): the road's domains and the
@@ -552,9 +583,9 @@ class RoadHost:
             out.append(self.shared.pop("catalog_out"))
         if "narr_out" in self.shared:
             out.append(self.shared.pop("narr_out"))
-        cat = self.catalog_watch()
-        if cat:
-            out.append(cat)
+        for fr in (self.catalog_watch(), self.host_watch()):     # the catalog (a reload) and the world model's code (a restart)
+            if fr:
+                out.append(fr)
         if "run_out" in self.shared:
             out.append(self.shared.pop("run_out"))
         w = self.shared.get("wish")
@@ -690,3 +721,15 @@ def road_host_ego(road):
 
 def make(case=None, package_dir=None):
     return RoadHost(package_dir or HERE, case)
+
+
+def _host_loaded():
+    global HOST_LOADED
+    try:
+        import road_narrate as RN
+        HOST_LOADED = RN.snapshot(RN.host_files(HERE))
+    except Exception:                                      # noqa: BLE001 — no watch then, never a broken host
+        HOST_LOADED = None
+
+
+_host_loaded()

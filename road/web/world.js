@@ -335,6 +335,7 @@ async function frame(f) {
   if (f.ev === 'world/scard') { showScenario(f); return; }
   if (f.ev === 'world/narration') { events?.narrated(f); return; }        // metis-plugin step 4: the road host's own narration of an event
   if (f.ev === 'world/catalog_changed') { catalogChanged(f); return; }     // the catalog changed on disk (Claude Code's change): offer the reload
+  if (f.ev === 'world/host_changed') { hostChanged(f); return; }           // the world model's code changed (a host fix): offer the restart
   if (f.ev === 'reload_ack') { reloaded(f); return; }
   if (f.ev === 'world/runfail') { world.map.runFailed(f); return; }                // a run that did not start: why, in the SCENARIOS card                // a card, whole, into the WORLD CARD
   if (f.ev === 'journal' && f.rec?.kind === 'dlg-world') return;       // the road: the page's own lines (watching, play, speed)
@@ -493,8 +494,19 @@ function metisLook(up = metis.up) {
 metisLook(false);
 // the catalog changed on disk (the road host's watch over the domains and the family; the bridge's too): the reload is the person's
 const MEMBERS = ['responder', 'signals', 'planner', 'road_director', 'task'];
-const reload = { want: new Set(), failed: [] };
+const reload = { want: new Set(), failed: [], mode: 'reload' };
+function hostChanged(f) {                                          // road/world/*.py: Python the service loaded; a reload cannot take it, a restart does
+  const n = f.count ?? (f.changed || []).length;
+  reload.mode = 'restart';
+  $('#catchg-t').textContent = `the world model changed (${n} file${n === 1 ? '' : 's'}): restart, the run starts again`;
+  $('#catchg-reload').textContent = 'restart';
+  $('#catchg-reload').title = 'restart the road service on the changed world model: the run stops and starts again, the page reloads when the service is back';
+  $('#catchg').title = (f.changed || []).join('\n');
+  $('#catchg').hidden = false;
+  speak(`The world model changed: ${(f.changed || []).slice(0, 3).join(', ')}. Restart the service when you are ready: the run starts again.`);
+}
 function catalogChanged(f) {
+  if (reload.mode === 'restart') return;                            // a restart is due already: it takes the catalog's change too
   const n = f.count ?? (f.changed || []).length;
   $('#catchg-t').textContent = `the catalog changed (${n} file${n === 1 ? '' : 's'})`;
   $('#catchg').title = (f.changed || []).join('\n');
@@ -503,6 +515,7 @@ function catalogChanged(f) {
   world.catalogSaid = true;
 }
 $('#catchg-reload').onclick = () => {
+  if (reload.mode === 'restart') { $('#catchg-t').textContent = 'restarting the road service…'; world.map.line('restart'); return; }
   reload.want = new Set(MEMBERS); reload.failed = [];
   for (const d of MEMBERS) send({ ev: 'reload', domain: d });
   $('#catchg-t').textContent = 'reloading…';

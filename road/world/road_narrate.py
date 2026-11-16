@@ -91,6 +91,13 @@ def catalog_files(root, family=None):
     return out
 
 
+def host_files(world_dir):
+    """The world model's code (metis-plugin step 6: a fix can be the HOST's, road_facts.py, not a rule): road/world/*.py. Python already
+    loaded in the service: a change is a RESTART, not a reload."""
+    d = Path(world_dir)
+    return sorted(p for p in d.glob("*.py") if p.is_file()) if d.is_dir() else []
+
+
 def snapshot(files):
     snap = {}
     for p in files:

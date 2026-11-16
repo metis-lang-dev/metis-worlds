@@ -116,7 +116,19 @@ def test_narrate_is_the_road_hosts_and_the_catalog_change_is_offered():
     assert "if (f.ev === 'world/catalog_changed') { catalogChanged(f); return; }" in WORLD and "|| f.ev === 'reload_ack'," in WORLD
     assert "for (const d of MEMBERS) send({ ev: 'reload', domain: d });" in WORLD and "world.map.line('catalog:seen');" in WORLD
     host = (WEB.parent / "world" / "road_host.py").read_text()
-    assert 'elif line.startswith("narrate:"):' in host and 'elif line == "catalog:seen":' in host and "cat = self.catalog_watch()" in host
+    assert 'elif line.startswith("narrate:"):' in host and 'elif line == "catalog:seen":' in host
+    assert "for fr in (self.catalog_watch(), self.host_watch()):" in host
+
+
+def test_a_world_model_change_is_a_restart():
+    """pascal (step 6): a fix can be the HOST's (road/world/road_facts.py): the page says 'the world model changed: restart, the run
+    starts again' and its button restarts the service (os.execv of its own argv); the catalog's reload path stays as it is."""
+    assert "if (f.ev === 'world/host_changed') { hostChanged(f); return; }" in WORLD
+    assert "the world model changed (${n} file${n === 1 ? '' : 's'}): restart, the run starts again" in WORLD
+    assert "world.map.line('restart')" in WORLD
+    host = (WEB.parent / "world" / "road_host.py").read_text()
+    assert 'elif line == "restart":' in host and "os.execv(sys.executable, list(sys.orig_argv))" in host
+    assert "base = HOST_LOADED if HOST_LOADED is not None else snap" in host
 
 
 def test_the_dashboard_rolls_6000_ticks_and_moves_events():
