@@ -150,6 +150,7 @@ def test_a_sumo_card_its_findings_signalled(tmp_path):
     ws = tmp_path / "ws"
     p, got = _runner(ws, ["--card", "FollowLeadingVehicle"], 1200)
     assert p.returncode == 0, p.stderr[-2000:]
+    assert all(l.startswith("{") for l in p.stdout.splitlines() if l.strip()), p.stdout[:500]    # JSON lines only (TraCI's to stderr)
     types = [s["type"] for s in got]
     news = [s for s in got if s["type"] == "surprise.new"]
     assert news and types.index("surprise.new") < types.index("run.ended")

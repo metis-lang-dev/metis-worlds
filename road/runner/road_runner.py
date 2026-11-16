@@ -42,6 +42,13 @@ def specs(a):
     return [{k: v for k, v in s.items() if v is not None} for s in out]
 
 
+def _quiet_stdout():
+    """Our JSON lines on the real stdout; whatever else prints (SUMO's TraCI: 'Retrying in 1 seconds') to stderr."""
+    out = sys.stdout
+    sys.stdout = sys.stderr
+    return out
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--card", action="append", help="a catalog card id (repeat, or a,b,c)")
@@ -55,6 +62,7 @@ def main(argv=None):
     ap.add_argument("--port", type=int, default=0)
     ap.add_argument("--linger", type=float, default=5.0)
     a = ap.parse_args(argv)
+    out_fh = _quiet_stdout()
     todo = specs(a)
     if not todo:
         ap.error("give --card ID (or --scenario NAME)")
@@ -82,7 +90,7 @@ def main(argv=None):
                 scenario, world_kind, ticks, stop_after, env, card, kind = cards.plan(spec)
             except (SystemExit, ValueError, KeyError) as e:
                 out = {"spec": spec, "reason": "error", "error": "the spec cannot be run: %s" % e}
-                print(json.dumps(out), flush=True)
+                print(json.dumps(out), file=out_fh, flush=True)
                 results.append(out)
                 bad = True
                 continue
@@ -93,12 +101,12 @@ def main(argv=None):
                                   spec=spec, env=env)
             state["run"] = None
             out["spec"] = spec
-            print(json.dumps(out, default=str), flush=True)
+            print(json.dumps(out, default=str), file=out_fh, flush=True)
             results.append(out)
             bad = bad or out["reason"] == "error"
     finally:
         feed.stop(linger=0 if state["stop"] else a.linger)
-    print(json.dumps({"done": True, "runs": [r.get("run") for r in results]}), flush=True)
+    print(json.dumps({"done": True, "runs": [r.get("run") for r in results]}), file=out_fh, flush=True)
     return 1 if bad else 0
 
 
