@@ -23,7 +23,7 @@ export class Dash {
       ${figure('events', `Shield and safety <span><i style="background:${STRIP_ROWS.restricted}"></i>restricted</span><span><i style="background:${STRIP_ROWS.violation}"></i>violation or collision</span><span><i style="background:${EV.edge}"></i>event</span>`)}
     </div></div><div class="dglyphs" role="toolbar" aria-orientation="vertical" aria-label="the selected event">
       <button type="button" class="glyph" data-act="narrate" title="narrate the selected event: the rules' own words (free)">¶</button>
-      <button type="button" class="glyph" data-act="explain" title="explain the selected event: ask pi why the car acted so (paid)">?</button>
+      <button type="button" class="glyph" data-act="explain" title="explain the selected event: ask Claude Code (the Metis bridge) why the car acted so">?</button>
       <span class="dsel" title="the selected event"></span>
     </div><div id="tip"></div>`;
     this.stats = el.querySelector('.stats');

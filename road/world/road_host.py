@@ -66,6 +66,8 @@ DT = 0.1                          # the world's step, s
 CR_LIST = 60                    # the CommonRoad picker's rows at most (the index has thousands)
 WATCHED_S = 5.0                   # a page said `watching` this recently: a scene every step, else every second
 UNWATCHED_EVERY = 10
+HOST_LOADED = None                # the world model's code as this process loaded it (road_narrate.snapshot of road/world/*.py), at import
+CATALOG_S = 2.0                   # the catalog watch: the domains and the family read by content every 2 s (metis-plugin step 4)
 
 
 def run_spec():
@@ -224,8 +226,13 @@ class RoadHost:
             if line == "watching":
                 self.shared["watched"] = time.monotonic() + WATCHED_S
             elif line == "hello":                      # a page opened: the road once, it is big
+                metis_ide()                            # … and the backend looks for an attached plugin (its /metis-ui lockfile)
+                if self.shared.get("metis_up"):        # … and a new page is told an attachment it cannot know (not attached: its default)
+                    self.shared["metis_up"] = False
                 self.shared["net_due"] = True
                 self.shared["mark_due"] = True         # … and where the events stand: a reload does not start the count again
+                self.shared.pop("cat_said", None)      # … and a pending catalog / world-model change said again: a page that just opened
+                self.shared.pop("host_said", None)     # (or reloaded) has not seen it (metis-plugin step 6)
             elif line.startswith("drive:"):
                 _, verb, value = (line.split(":") + [""])[:3]
                 self.wish("%s[X=%s]" % (verb, value) if value else verb)
@@ -237,18 +244,150 @@ class RoadHost:
                 self.cr_find(line[len("crfind:"):])
             elif line == "catalog":                    # the SCENARIOS tree (loop-road-ui, the user 2026-11-07): the cards, grouped
                 self.shared["catalog_out"] = {"ev": "world/catalog", "rows": self.catalog_tree(), "towns": road_frames.SCENARIO_NAMES()}
+            elif line.startswith("narrate:"):          # metis-plugin step 4: the page's own narration (the pi LOOP dock is gone)
+                self.narrate_line(line)
+            elif line.startswith("metis:"):            # the surprise interface (metis-plugin s-df4ff191): the page asks its backend
+                self.metis_line(line)
+            elif line == "restart":                    # the world model (road/world/*.py) changed: the service again, on the same arguments
+                self.restart_service()
+            elif line == "catalog:seen":               # the page reloaded the members on the change it was shown: that state is the base
+                import road_narrate as RN
+                self.shared["cat_base"] = RN.snapshot(RN.catalog_files(os.environ.get("METIS_CATALOG", ""), os.environ.get("METIS_HOME")))
+                self.shared.pop("cat_said", None)
             elif line.startswith("scard:"):            # one card, whole, for the WORLD CARD dock
                 self.shared["catalog_out"] = self.scenario_card(line[len("scard:"):])
             elif line.startswith("run:"):
                 scenario, seed = line[len("run:"):].rsplit(":", 1)        # a scenario's name may hold a colon (cr:ID, card:NAME@TOWN#SITE)
                 self.start_run(dict(self.run, scenario=scenario, seed=int(seed)))
+                self.shared["scenario_start"] = {"scenario": scenario, "seed": int(seed), "at": time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())}
             elif line in ("play", "pause"):
                 self.shared["paused"] = line == "pause"
             elif line.startswith("speed:"):
                 self.shared["speed"] = max(0.1, float(line[6:]))
             else:
                 raise ValueError("the road's page says run:SCENARIO:SEED, crfind:QUERY, play, pause, speed:X, mark:N:start, mark:N:stop, mark:N:once:KIND, "
-                                 "mark:N:move:K0:K1 or watching, not %r" % line)
+                                 "mark:N:move:K0:K1, narrate:N:RUN:K0:K1, catalog:seen or watching, not %r" % line)
+
+    def narrate_line(self, line):
+        """narrate:N:RUN:K0:K1 → world/narration {n, run, k0, k1, members, text}: the window of the page's own trace told in the rules'
+        own words (road_narrate.narrate), or its error; the run's name may hold no colon (road_hier's names: SCENARIO-SEED-TIME)."""
+        import road_narrate as RN
+        try:
+            _, n, run, k0, k1 = line.split(":")
+            out = RN.narrate(os.environ.get("METIS_CATALOG", ""), run, int(k0), int(k1))
+            self.shared["narr_out"] = {"ev": "world/narration", "n": int(n), "run": run, "k0": int(k0), "k1": int(k1), **out}
+        except (ValueError, OSError) as e:
+            self.shared["narr_out"] = {"ev": "world/narration", "n": line.split(":")[1] if line.count(":") >= 1 else None, "error": str(e)}
+
+    def metis_line(self, line):
+        """metis:send:<json> (a person's event: written into the workspace, then signalled to the attached plugin) or
+        metis:explain:<json> (a question for it). Off the tick: a kept window copies files. The answer is a world/metis_ack frame."""
+        _, op, body = line.split(":", 2)
+        try:
+            b = json.loads(body)
+        except ValueError:
+            self.metis_ack({"op": op, "ok": False, "error": "not a JSON body"})
+            return
+        metis_ide()
+
+        def work():
+            try:
+                if op == "send":
+                    self.metis_ack({"op": op, "n": b.get("n"), "rid": b.get("rid"), "ok": True, **page_mark(b)})
+                elif op == "explain":
+                    about = {"run": b.get("run"), "k0": (b.get("window") or [None])[0], "k1": (b.get("window") or [None, None])[1],
+                             "surprise": b.get("sid")}
+                    self.metis_ack({"op": op, "n": b.get("n"), "rid": b.get("rid"), "ok": True, **page_request(about, b.get("words"), b.get("mode") or "explain")})
+                else:
+                    raise ValueError("metis:send or metis:explain, not metis:%s" % op)
+            except (ValueError, KeyError, OSError) as e:
+                self.metis_ack({"op": op, "n": b.get("n"), "rid": b.get("rid"), "ok": False, "error": str(e)})
+        import threading
+        threading.Thread(target=work, daemon=True, name="metis-%s" % op).start()
+
+    def metis_ack(self, ack):
+        self.shared.setdefault("metis_out", []).append({"ev": "world/metis_ack", **ack})
+
+    def metis_frames(self):
+        """The page's view of the surprise interface (RUNTIME-INTERFACE v1.5: the road UI's service embeds the runtime 'road-ui'
+        and, under /metis-ui, is a ui client): the run edges and ticks to its own feed, the feedback of EITHER path relayed once (the
+        fan-out is the backend's; the page never sees a token), the acks of the page's requests, the attachment's state."""
+        out = list(self.shared.pop("metis_out", []) or [])
+        feed = runtime_feed()
+        if feed is not None and self.run.get("trace"):
+            trace = os.path.basename(self.run["trace"])
+            st = self.shared.setdefault("scenario_start", {"scenario": self.run.get("scenario"), "seed": self.run.get("seed"),
+                                                            "at": time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())})
+            run = run_name(st)                             # a run per scenario start (RUNTIME v1.5: an embedding), named once, unique
+            if FEED.get("run") != run and not st.get("ended"):   # its trace stays the service's (one Live: the page's runs go on in it)
+                if FEED.get("run"):
+                    feed.run_ended(FEED["run"], "done")
+                FEED["run"] = run
+                feed.run_started(run, "traces/" + trace, {k: st.get(k) for k in ("scenario", "seed") if st.get(k) is not None})
+            FEED["trace"] = trace
+            watch_hook(feed)
+            if self.shared.get("k") is not None:
+                k = int(self.shared["k"])
+                feed.tick(k)
+                feed.segment_closed(k - 1)                  # a queued finding (the kernel watch's) once its window is on disk
+        for m in feedback():
+            out.append({"ev": "world/metis", "msg": m})
+        up = attached()
+        if self.shared.get("metis_up", False) != up:      # a CHANGE only: not attached is the page's own default (frames say
+            self.shared["metis_up"] = up                    # what changed, test_road_frames' contract)
+            out.append({"ev": "world/metis_state", "connected": up})
+        return out
+
+    def restart_service(self):
+        """The world model's code changed (a host fix, metis-plugin step 6): a reload cannot take Python already loaded, so the service
+        runs again in this process, on its own arguments and environment (os.execv of sys.orig_argv); its SUMO goes with it, the page
+        reloads when the service answers again (world.js onReopen)."""
+        try:
+            self.road.close()
+        except Exception:                                  # noqa: BLE001 — a world already gone: the exec ends it anyway
+            pass
+        stop_runtime("restart")                          # the runtime's run ends with this process: its clients re-attach to the next
+        try:
+            fresh_trace(sys.orig_argv, os.environ.get("METIS_ROAD_RUN"))
+        except Exception as e:                             # noqa: BLE001 — the restart goes on; the trace dir is said
+            print("[road] restart: the trace dir stays (%s)" % e, flush=True)
+        sys.stdout.flush(); sys.stderr.flush()
+        os.execv(sys.executable, list(sys.orig_argv))
+
+    def host_watch(self):
+        """road/world/*.py by content (the world model's code), every CATALOG_S: world/host_changed, once per new state. Its base is the
+        code this process loaded (HOST_LOADED, at import), so only a restart clears it."""
+        import road_narrate as RN
+        now = time.monotonic()
+        if now - self.shared.get("host_at", 0) < CATALOG_S:
+            return None
+        self.shared["host_at"] = now
+        snap = RN.snapshot(RN.host_files(HERE))
+        base = HOST_LOADED if HOST_LOADED is not None else snap
+        moved = RN.changed(base, snap)
+        key = ",".join("%s=%s" % (k, snap.get(k)) for k in moved)
+        if not moved or self.shared.get("host_said") == key:
+            return None
+        self.shared["host_said"] = key
+        return {"ev": "world/host_changed", "changed": [os.path.relpath(p, ROAD) for p in moved][:40], "count": len(moved)}
+
+    def catalog_watch(self):
+        """The catalog changed on disk (Claude Code edits, builds and commits it; the page offers the reload): the road's domains and the
+        family (METIS_HOME) by content, every CATALOG_S; one world/catalog_changed per new state, with the files."""
+        import road_narrate as RN
+        now = time.monotonic()
+        if now - self.shared.get("cat_at", 0) < CATALOG_S:
+            return None
+        self.shared["cat_at"] = now
+        root, fam = os.environ.get("METIS_CATALOG", ""), os.environ.get("METIS_HOME")
+        snap = RN.snapshot(RN.catalog_files(root, fam))
+        base = self.shared.setdefault("cat_base", snap)
+        moved = RN.changed(base, snap)
+        key = ",".join("%s=%s" % (k, snap.get(k)) for k in moved)
+        if not moved or self.shared.get("cat_said") == key:
+            return None
+        self.shared["cat_said"] = key
+        return {"ev": "world/catalog_changed", "changed": RN.rel(moved, root, fam)[:40], "count": len(moved)}
 
     def catalog_rows(self):
         def one_word(v):                                            # §6b: a card's one-word standing is SUMO's when present, else the exerciser's
@@ -514,6 +653,12 @@ class RoadHost:
             out.append(self.shared.pop("cr_list"))
         if "catalog_out" in self.shared:
             out.append(self.shared.pop("catalog_out"))
+        if "narr_out" in self.shared:
+            out.append(self.shared.pop("narr_out"))
+        for fr in (self.catalog_watch(), self.host_watch()):     # the catalog (a reload) and the world model's code (a restart)
+            if fr:
+                out.append(fr)
+        out += self.metis_frames()
         if "run_out" in self.shared:
             out.append(self.shared.pop("run_out"))
         w = self.shared.get("wish")
@@ -521,7 +666,9 @@ class RoadHost:
             out.append({"ev": "world/message", "text": w["said"].pop(0)})
         if self.road.arrived() and not self.shared.get("said_arrived"):
             self.shared["said_arrived"] = True
-            out.append(road_frames.summary_frame(self.road))
+            sf = road_frames.summary_frame(self.road)
+            out.append(sf)
+            end_run(self.shared, "done", {k: v for k, v in sf.items() if k != "ev"})   # the scenario's end: its runtime run ends
         return out
 
     def start_run(self, spec):
@@ -649,3 +796,204 @@ def road_host_ego(road):
 
 def make(case=None, package_dir=None):
     return RoadHost(package_dir or HERE, case)
+
+
+def fresh_trace(argv, run_json=None):
+    """A restart's trace is a NEW dir (step 6: the restart re-read the same config, rewrote the dir from seg-0 and left the last start's
+    later segments beside it, a trace no replay can read): the config's trace.dir and run.json's trace get this moment's stamp."""
+    import re
+    import yaml
+    argv = list(argv)
+    if "--config" not in argv:
+        return None
+    cfg = argv[argv.index("--config") + 1]
+    c = yaml.safe_load(open(cfg))
+    old = (c.get("trace") or {}).get("dir")
+    if not old:
+        return None
+    now = time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())      # run names <stem>-<UTC stamp>, as the generic runtime's (RUNTIME-INTERFACE)
+    new = re.sub(r"\d{8}T\d{6}Z?$", now, old) if re.search(r"\d{8}T\d{6}Z?$", old) else "%s-%s" % (old, now)
+    c["trace"]["dir"] = new
+    yaml.safe_dump(c, open(cfg, "w"), sort_keys=False)
+    if run_json and os.path.isfile(run_json):
+        r = json.load(open(run_json))
+        r["trace"] = new
+        json.dump(r, open(run_json, "w"), indent=1)
+    return new
+
+
+IDE = {}
+FEED = {}
+RUNTIME_NAME = os.environ.get("METIS_RUNTIME_NAME", "road-ui")   # the page's runtime; the headless road runner's is 'road'
+FEEDBACK = ("surprise.taken", "surprise.tried", "surprise.ruled", "surprise.applied", "explain.answer", "catalog.changed", "world.changed")
+
+
+def runtime_feed():
+    """The road UI's service EMBEDS the generic runtime (metis-agent metis_agent/runtime/feed.py; RUNTIME-INTERFACE v1.5): its feed
+    named RUNTIME_NAME, its discovery file in this workspace, so a plugin's /metis-runtime road-ui attaches to the page's runs. None
+    when the runtime package is not there (an older metis-agent): the page then has only the /metis-ui path."""
+    if "feed" not in FEED:
+        try:
+            from metis_agent.runtime.feed import RuntimeFeed
+        except ImportError:
+            FEED["feed"] = None
+            return None
+        import atexit
+        f = RuntimeFeed(os.environ.get("METIS_CATALOG", ""), RUNTIME_NAME, domain="road")
+        f.start()
+        FEED.update(feed=f, since=0, seen=set())
+        atexit.register(stop_runtime, "stopped")
+    return FEED["feed"]
+
+
+def run_name(st):
+    """The runtime run of a scenario start: <scenario>-<seed>-<UTC stamp>, fixed once on the start, unique in this process (two starts
+    in one second get -2, -3: a second start is a second run)."""
+    if not st.get("run"):
+        base = "%s-%s-%s" % (st.get("scenario"), st.get("seed"), st.get("at"))
+        names = FEED.setdefault("names", set())
+        name, i = base, 1
+        while name in names:
+            i += 1
+            name = "%s-%d" % (base, i)
+        names.add(name)
+        st["run"] = name
+    return st["run"]
+
+
+def end_run(shared, reason="done", summary=None):
+    """The current scenario start's run ends (its car arrived, the page stopped it): run.ended, carrying what is still queued."""
+    f, st = FEED.get("feed"), (shared or {}).get("scenario_start") or {}
+    if f is None or not FEED.get("run") or st.get("ended") or FEED["run"] != st.get("run"):
+        return
+    st["ended"] = True
+    f.run_ended(FEED["run"], reason, summary=summary)
+    FEED["run"] = None
+
+
+def watch_hook(feed):
+    """The kernel watch's surprises as findings (RUNTIME v1.5; bond004's service.Live hook): the process's Live
+    (service.Live.current) calls on_finding({kind: watch, k, member, words, record, difference}); the embedding queues it on its (the trace: the service's; the run: the scenario start's)
+    feed under the service's trace (its window is in that trace's ticks). Set once; nothing when the agent has no such hook."""
+    if FEED.get("hooked"):
+        return
+    try:
+        from metis_agent.service import Live
+    except ImportError:
+        return
+    live = getattr(Live, "current", None)
+    if live is None or not hasattr(live, "on_finding"):
+        return
+
+    def on_finding(f):
+        feed.finding(dict(f, trace=FEED.get("trace") or f.get("trace")))   # the run: the feed's current (the scenario start's)
+    live.on_finding = on_finding
+    FEED["hooked"] = True
+
+
+def stop_runtime(reason="stopped"):
+    f = FEED.get("feed")
+    if f is None or FEED.get("stopped"):
+        return
+    FEED["stopped"] = True
+    try:
+        if FEED.get("run"):
+            f.run_ended(FEED["run"], reason)
+        f.stop()
+    except Exception:                                      # noqa: BLE001 — the process is going anyway
+        pass
+
+
+def attached():
+    """Some agent hears the page: an ide pairing, or a client on the page's runtime feed."""
+    ide, f = IDE.get("client"), FEED.get("feed")
+    return bool((ide is not None and ide.status()["connected"]) or (f is not None and f.clients))
+
+
+def feedback():
+    """The feedback of both paths (the /metis-ui client's and the runtime feed's clients'), each signal ONCE (by type and id)."""
+    msgs = []
+    ide = IDE.get("client")
+    if ide is not None:
+        msgs += ide.take()
+    f = FEED.get("feed")
+    if f is not None:
+        got = f.after(FEED.get("since", 0))
+        if got:
+            FEED["since"] = max(g["seq"] for g in got)
+        msgs += [g for g in got if g.get("type") in FEEDBACK and g.get("from") != f.me]
+    out, seen = [], FEED.setdefault("seen", set())
+    for m in msgs:
+        k = (m.get("type"), m.get("id"), m.get("text") if m.get("type") == "explain.answer" else None, tuple(m.get("paths") or ()))
+        if m.get("type") in FEEDBACK and k in seen:
+            continue
+        if m.get("type") in FEEDBACK:
+            seen.add(k)
+        out.append(m)
+    return out
+
+
+def page_mark(b):
+    """A person's mark from the page, WRITTEN at once (RUNTIME-INTERFACE §4: finding(f, now=True)) through the embedded runtime: the
+    SDK's drop_window under the page mark's key; surprise.new on the runtime's feed; and to a /metis-ui-paired plugin too (one key, one
+    record: spec §5). Without the runtime package: the ide client writes it (its own drop_window path)."""
+    k0, k1, n = int(b["window"][0]), int(b["window"][1]), b.get("n")
+    key = "%s:mark:%s:%d-%d" % (b["run"], n if n is not None else "-", k0, k1)
+    page = {x: b.get(x) for x in ("n", "scenario", "seed", "t0", "t1") if b.get(x) not in (None, "")}
+    ide, f = metis_ide(), runtime_feed()
+    if f is None:
+        return ide.surprise(b["run"], k0, k1, b.get("words"), key, member=b.get("member"), kind=b.get("kind") or "mark", extra={"page": page})
+    seq0 = next(iter(f.after(0)[-1:]), {}).get("seq", 0)
+    sid = f.finding({"kind": b.get("kind") or "mark", "trace": b["run"], "k": k1, "k0": k0, "k1": k1, "key": key,
+                     "words": b.get("words"), "member": b.get("member"), "page": page}, now=True)
+    if not sid:
+        why = next((s.get("error") for s in f.after(seq0) if s.get("type") == "finding.refused" and s.get("key") == key), None)
+        raise ValueError(why or "the workspace refused the mark")
+    rec = f.ws.surprise(sid)
+    signalled = bool(f.clients)
+    if ide.status()["connected"]:
+        try:
+            ide.signal({"type": "surprise.new", "id": sid, "ref": ".metis/surprises/%s.json" % sid, "key": key,
+                        "kind": b.get("kind") or "mark", "member": rec.get("member")})
+            signalled = True
+        except ValueError:
+            pass
+    return {"id": sid, "ref": ".metis/surprises/%s.json" % sid, "key": key, "member": rec.get("member"), "trace": rec.get("trace"),
+            "signalled": signalled}
+
+
+def page_request(about, words, mode="explain"):
+    """The page's explain / narrate request, by the route rule (RUNTIME-INTERFACE §5): the /metis-ui pairing when connected, else the
+    runtime feed's clients, else refused in words (never silence)."""
+    import secrets
+    ide, f = metis_ide(), runtime_feed()
+    if ide.status()["connected"]:
+        return ide.explain(about, words, mode=mode)
+    if f is not None and f.clients:
+        rid = "x%s-%s" % (time.strftime("%Y%m%dT%H%M%S"), secrets.token_hex(2))
+        r = f.request("explain.request", {"id": rid, "mode": mode, "about": about, "words": " ".join(str(words or "").split())})
+        if r.get("delivered"):
+            return {"id": rid, "via": "runtime"}
+    raise ValueError("no Claude Code is attached: /metis-ui in a Claude Code session in this workspace, or /metis-runtime %s" % RUNTIME_NAME)
+
+
+def metis_ide():
+    """The backend's ONE /metis-ui client (spec v1.1 §1: a UI backend pairs with one plugin), started at its first use and looking for
+    the plugin's lockfile in this workspace from then on."""
+    if "client" not in IDE:
+        from metis_agent.runtime.ui_client import UiClient   # the generic client (metis-agent; RUNTIME-INTERFACE v1.6): road keeps the glue
+        import road_narrate as RN
+        IDE["client"] = UiClient(os.environ.get("METIS_CATALOG", ""), name="road-ui", domain="road", member_of=RN.member_of).start()
+    return IDE["client"]
+
+
+def _host_loaded():
+    global HOST_LOADED
+    try:
+        import road_narrate as RN
+        HOST_LOADED = RN.snapshot(RN.host_files(HERE))
+    except Exception:                                      # noqa: BLE001 — no watch then, never a broken host
+        HOST_LOADED = None
+
+
+_host_loaded()
