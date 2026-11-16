@@ -77,6 +77,23 @@ def narrate(root, run, k0, k1):
     return {"members": told, "text": text}
 
 
+def member_of(ws, run, k0, k1):
+    """The member a window is about (spec v1.1 §6's member_of, for an SDK before it): the most worded firings in [k0, k1] of
+    ws's trace RUN, never the director."""
+    from collections import Counter
+    from metis import trace as T
+    tdir = Path(ws.root) / ".metis" / "traces" / run
+    best = Counter()
+    for m in _members(tdir):
+        if any(x in m for x in SKIP):
+            continue
+        docs = _docs(ws.root, m)
+        ticks, _ = T.timeline(str(tdir), m)
+        best[m] = sum(1 for t in ticks if k0 <= t.k <= k1 for name in t.fired if name.partition("[")[0] in docs)
+    best = +best
+    return best.most_common(1)[0][0] if best else None
+
+
 def catalog_files(root, family=None):
     out = []
     bases = [Path(root) / "domains"] + ([Path(family)] if family else [])

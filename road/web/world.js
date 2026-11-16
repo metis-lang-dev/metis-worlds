@@ -32,7 +32,6 @@ import { Journal } from './vendor/journal.js';
 import { Narrator, attachSelection, attachKey } from './vendor/narrator.js';
 import { voiceWidget, voiceSwitch } from './vendor/switch.js';
 import { keywordStop } from './vendor/dialog.js';
-import { MetisBridge, bridgeFrom } from './metisbridge.js';   // metis-plugin step 4: explain and send go to the Metis bridge (Claude Code's)
 import { Events } from './events.js';                    // the run's events: the person's marks and the surprises
 import { route } from './pagegrammar.js';                // the one voice redirected: the events' lines (mark, narrate, explain, send)
 import { Scenarios, cardHtml } from './scenarios.js';    // the SCENARIOS tree: click shows a card, double click runs it
@@ -337,6 +336,9 @@ async function frame(f) {
   if (f.ev === 'world/catalog_changed') { catalogChanged(f); return; }     // the catalog changed on disk (Claude Code's change): offer the reload
   if (f.ev === 'world/host_changed') { hostChanged(f); return; }           // the world model's code changed (a host fix): offer the restart
   if (f.ev === 'reload_ack') { reloaded(f); return; }
+  if (f.ev === 'world/metis_ack') { metis.ack(f); return; }             // the surprise interface: the backend's answer to the page's request
+  if (f.ev === 'world/metis_state') { metisLook(f.connected); return; }   // … whether a Claude Code is attached (its /ide)
+  if (f.ev === 'world/metis') { metisSignal(f.msg || {}); return; }     // … and the plugin's signals, relayed (the page never sees its token)
   if (f.ev === 'world/runfail') { world.map.runFailed(f); return; }                // a run that did not start: why, in the SCENARIOS card                // a card, whole, into the WORLD CARD
   if (f.ev === 'journal' && f.rec?.kind === 'dlg-world') return;       // the road: the page's own lines (watching, play, speed)
   if (f.ev === 'journal' && f.rec?.kind === 'dlg-relay') relay(f.rec);
@@ -478,18 +480,43 @@ const voiced = {                                                     // the voic
   core: { get voice() { return chat.voice; }, setVoice(on) { chat.voice = !!on; chatLook(); for (const f of chat.subs) f({ state: { voice: chat.voice } }); } },
   subscribe: f => chat.subs.add(f),
 };
-// the Metis bridge (?metis=URL&token=T, as Claude Code's bridge_enable gives them): explain and send go there, its feed comes back
-const metis = world.metis = new MetisBridge({
-  ...(bridgeFrom(q) || {}),
-  onFrame: f => { if (f.kind === 'catalog') catalogChanged({ changed: f.changed, count: f.count, by: 'metis' }); else events?.feed(f); },
-  onState: up => metisLook(up),
-});
+// the surprise interface (metis-plugin s-df4ff191, spec v1.1): the page talks only to its own backend, the road service, which is the
+// /ide client of an attached Claude Code (its lockfile in this workspace) and relays the plugin's signals here
+const metis = world.metis = {
+  on: true, up: false, pending: new Map(),
+  call(op, b) {
+    return new Promise((res, rej) => {
+      const k = `${op}:${b.n}`;
+      this.pending.set(k, { res, rej });
+      world.map.line(`metis:${op}:${JSON.stringify(b)}`);
+      setTimeout(() => { if (this.pending.delete(k)) rej(new Error('the road service did not answer')); }, 30000);
+    });
+  },
+  surprise(b) { return this.call('send', b); },
+  explain(b) { return this.call('explain', { ...b, mode: 'explain' }); },
+  ack(f) {
+    const k = `${f.op}:${f.n}`, p = this.pending.get(k);
+    if (!p) return;
+    this.pending.delete(k);
+    if (f.ok) p.res(f); else p.rej(new Error(f.error || 'refused'));
+  },
+};
+function metisSignal(m) {                                          // a plugin signal -> the events' rows, the answers, the change bars
+  const t = m.type || '';
+  if (t.startsWith('surprise.')) events?.feed({ kind: 'surprise', id: m.id, status: t.slice('surprise.'.length), verdict: m.verdict, commit: m.commit, ruling: m.ruling });
+  else if (t === 'explain.answer') events?.feed({ kind: 'answer', ref: m.id, text: m.text });
+  else if (t === 'catalog.changed') catalogChanged({ changed: m.paths || [], count: (m.paths || []).length, by: 'metis', commit: m.commit });
+  else if (t === 'world.changed') hostChanged({ changed: m.paths || [], count: (m.paths || []).length, by: 'metis', commit: m.commit });
+  else if (t === 'ide.connected') metisLook(true);
+  else if (t === 'ide.disconnected') metisLook(false);
+}
 function metisLook(up = metis.up) {
+  metis.up = !!up;
   const el = $('#metisstate');
-  el.textContent = !metis.on ? 'Metis: off' : up ? 'Metis: connected' : 'Metis: not answering';
+  el.textContent = up ? 'Claude: attached' : 'Claude: not attached';
   el.classList.toggle('up', !!up);
-  el.title = !metis.on ? 'explain and send go to the Metis bridge: enable it in Claude Code (bridge_enable) and open this page with ?metis=URL&token=T'
-    : up ? `the Metis bridge at ${metis.url}: explain and send go there, its feed comes back` : `the Metis bridge at ${metis.url} is not answering`;
+  el.title = up ? 'a Claude Code session (/ide) is attached to this workspace: send and explain go to it, its work comes back here'
+    : 'no Claude Code is attached: run /ide in a Claude Code session started in this workspace. A sent event is still written into the workspace.';
 }
 metisLook(false);
 // the catalog changed on disk (the road host's watch over the domains and the family; the bridge's too): the reload is the person's

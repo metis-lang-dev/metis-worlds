@@ -150,8 +150,10 @@ export class Events {
     e.state = 'sending…'; delete e.sid; this.draw();             // a click shows at once; a resend is a new surprise
     try {
       const r = await this.metis.surprise(this.body(e));
-      Object.assign(e, { sid: r.id, member: r.member, state: 'sent to Metis' });
-      this.speak(`Event ${e.n} is in the workspace as surprise ${r.id} (the ${r.member}): Claude Code works it.`);
+      Object.assign(e, { sid: r.id, member: r.member, state: r.signalled === false ? 'in the workspace' : 'sent to Metis' });
+      this.speak(r.signalled === false
+        ? `Event ${e.n} is in the workspace as surprise ${r.id} (the ${r.member}); no Claude Code is attached: run /ide in one and it sees it.`
+        : `Event ${e.n} is in the workspace as surprise ${r.id} (the ${r.member}): Claude Code works it.`);
     } catch (err) { this.failed(e, 'send', err); }
     this.save(); this.draw();
   }
@@ -169,7 +171,7 @@ export class Events {
     const e = this.list.find(x => x.sid && x.sid === f.id);
     if (!e) return;
     const was = e.state;
-    e.state = f.status === 'ruled' ? `ruled ${String(f.verdict || '').split(/[:\s]/)[0]}` : f.status === 'tried' ? `tried: ${f.verdict || ''}` : f.status === 'open' ? 'sent to Metis' : f.status;
+    e.state = f.status === 'ruled' ? `ruled ${String(f.verdict || '').split(/[:\s]/)[0]}` : f.status === 'tried' ? `tried: ${f.verdict || ''}` : f.status === 'open' || f.status === 'new' ? 'sent to Metis' : f.status;
     if (e.state !== was && f.status !== 'open') this.speak(`Event ${e.n}: ${e.state}${f.status === 'applied' && f.commit ? ` (${f.commit})` : ''}.`);
     this.save(); this.draw();
   }

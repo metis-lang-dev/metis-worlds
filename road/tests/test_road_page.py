@@ -90,21 +90,22 @@ def test_one_tools_dock_of_cards_and_events_no_loop():
     assert "names: ['talk', 'tools', 'events', 'hierarchy', 'world', 'journal', 'dialog'], key: 'roadpage.docks.v7'" in WORLD
 
 
-def test_no_pi_loop_explain_and_send_go_to_the_metis_bridge():
-    """metis-plugin s-df4ff191 step 4: the pi LOOP dock is gone (no loopdock.js, no loop code); explain and send post to the Metis bridge with
-    its token, the feed comes back on its socket; with no bridge the page says so where it is asked."""
-    assert not (WEB / "loopdock.js").exists() and not (WEB / "loopgrammar.js").exists()
+def test_no_pi_loop_the_page_talks_only_to_its_backend():
+    """metis-plugin s-df4ff191 (spec v1.1): the pi LOOP dock is gone; the page talks only to its own backend (the road service, the /ide
+    client of an attached Claude Code): send and explain are metis:send|explain lines, answered by world/metis_ack; the plugin's signals
+    come relayed as world/metis frames; the page never holds the plugin's URL or token."""
+    assert not (WEB / "loopdock.js").exists() and not (WEB / "loopgrammar.js").exists() and not (WEB / "metisbridge.js").exists()
     for f in WEB.glob("*.js"):
         t = f.read_text()
         assert "MetisLoop" not in t and "LoopDock" not in t, f
-    mb = (WEB / "metisbridge.js").read_text()
-    assert "headers: { 'content-type': 'application/json', 'X-Metis-Token': this.token }" in mb
-    assert "/feed/ws?token=${encodeURIComponent(this.token)}&since=${this.since}" in mb
-    assert "the Metis bridge is off: enable it in Claude Code (bridge_enable)" in mb
-    assert "const metis = world.metis = new MetisBridge({" in WORLD and "...(bridgeFrom(q) || {})," in WORLD
+        assert "token=" not in t and "X-Metis-Token" not in t and "Authorization" not in t and "Bearer" not in t, f   # no credential
+    assert "world.map.line(`metis:${op}:${JSON.stringify(b)}`);" in WORLD
+    assert "if (f.ev === 'world/metis_ack') { metis.ack(f); return; }" in WORLD and "if (f.ev === 'world/metis') { metisSignal(f.msg || {}); return; }" in WORLD
     ev = (WEB / "events.js").read_text()
     assert "const r = await this.metis.surprise(this.body(e));" in ev and "const r = await this.metis.explain(this.body(e));" in ev
-    assert "return { run: e.trace, window: [w0, w1], n: e.n, kind: e.kind," in ev        # the page's own trace and its window: no fetching
+    assert "return { run: e.trace, window: [w0, w1], n: e.n, kind: e.kind," in ev
+    host = (WEB.parent / "world" / "road_host.py").read_text()
+    assert 'elif line.startswith("metis:"):' in host and "out += self.metis_frames()" in host
 
 
 def test_narrate_is_the_road_hosts_and_the_catalog_change_is_offered():

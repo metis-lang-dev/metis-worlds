@@ -226,6 +226,8 @@ class RoadHost:
             if line == "watching":
                 self.shared["watched"] = time.monotonic() + WATCHED_S
             elif line == "hello":                      # a page opened: the road once, it is big
+                metis_ide()                            # … and the backend looks for an attached plugin (its /ide lockfile)
+                self.shared.pop("metis_up", None)      # … whose state the new page is told
                 self.shared["net_due"] = True
                 self.shared["mark_due"] = True         # … and where the events stand: a reload does not start the count again
                 self.shared.pop("cat_said", None)      # … and a pending catalog / world-model change said again: a page that just opened
@@ -243,6 +245,8 @@ class RoadHost:
                 self.shared["catalog_out"] = {"ev": "world/catalog", "rows": self.catalog_tree(), "towns": road_frames.SCENARIO_NAMES()}
             elif line.startswith("narrate:"):          # metis-plugin step 4: the page's own narration (the pi LOOP dock is gone)
                 self.narrate_line(line)
+            elif line.startswith("metis:"):            # the surprise interface (metis-plugin s-df4ff191): the page asks its backend
+                self.metis_line(line)
             elif line == "restart":                    # the world model (road/world/*.py) changed: the service again, on the same arguments
                 self.restart_service()
             elif line == "catalog:seen":               # the page reloaded the members on the change it was shown: that state is the base
@@ -272,6 +276,52 @@ class RoadHost:
             self.shared["narr_out"] = {"ev": "world/narration", "n": int(n), "run": run, "k0": int(k0), "k1": int(k1), **out}
         except (ValueError, OSError) as e:
             self.shared["narr_out"] = {"ev": "world/narration", "n": line.split(":")[1] if line.count(":") >= 1 else None, "error": str(e)}
+
+    def metis_line(self, line):
+        """metis:send:<json> (a person's event: written into the workspace, then signalled to the attached plugin) or
+        metis:explain:<json> (a question for it). Off the tick: a kept window copies files. The answer is a world/metis_ack frame."""
+        _, op, body = line.split(":", 2)
+        try:
+            b = json.loads(body)
+        except ValueError:
+            self.metis_ack({"op": op, "ok": False, "error": "not a JSON body"})
+            return
+        ide = metis_ide()
+
+        def work():
+            try:
+                if op == "send":
+                    r = ide.surprise(b["run"], b["window"][0], b["window"][1], b.get("words"), n=b.get("n"), kind=b.get("kind") or "mark",
+                                     member=b.get("member"), page={k: b.get(k) for k in ("scenario", "seed", "t0", "t1")})
+                    self.metis_ack({"op": op, "n": b.get("n"), "ok": True, **r})
+                elif op == "explain":
+                    r = ide.explain({"run": b.get("run"), "k0": (b.get("window") or [None])[0], "k1": (b.get("window") or [None, None])[1],
+                                     "surprise": b.get("sid")}, b.get("words"), mode=b.get("mode") or "explain")
+                    self.metis_ack({"op": op, "n": b.get("n"), "ok": True, **r})
+                else:
+                    raise ValueError("metis:send or metis:explain, not metis:%s" % op)
+            except (ValueError, KeyError, OSError) as e:
+                self.metis_ack({"op": op, "n": b.get("n"), "ok": False, "error": str(e)})
+        import threading
+        threading.Thread(target=work, daemon=True, name="metis-%s" % op).start()
+
+    def metis_ack(self, ack):
+        self.shared.setdefault("metis_out", []).append({"ev": "world/metis_ack", **ack})
+
+    def metis_frames(self):
+        """The plugin's signals for the page (spec v1.1: the fan-out is the backend's; the page never sees the plugin's token), the
+        acks of the page's own requests, and the connection's state when it changes."""
+        out = list(self.shared.pop("metis_out", []) or [])
+        ide = IDE.get("client")
+        if ide is None:
+            return out
+        for m in ide.take():
+            out.append({"ev": "world/metis", "msg": m})
+        up = ide.status()["connected"]
+        if self.shared.get("metis_up") != up:
+            self.shared["metis_up"] = up
+            out.append({"ev": "world/metis_state", "connected": up, "url": ide.status()["url"]})
+        return out
 
     def restart_service(self):
         """The world model's code changed (a host fix, metis-plugin step 6): a reload cannot take Python already loaded, so the service
@@ -588,6 +638,7 @@ class RoadHost:
         for fr in (self.catalog_watch(), self.host_watch()):     # the catalog (a reload) and the world model's code (a restart)
             if fr:
                 out.append(fr)
+        out += self.metis_frames()
         if "run_out" in self.shared:
             out.append(self.shared.pop("run_out"))
         w = self.shared.get("wish")
@@ -723,6 +774,20 @@ def road_host_ego(road):
 
 def make(case=None, package_dir=None):
     return RoadHost(package_dir or HERE, case)
+
+
+IDE = {}
+
+
+def metis_ide():
+    """The backend's ONE /ide client (spec v1.1 §1: a UI backend pairs with one plugin), started at its first use and looking for
+    the plugin's lockfile in this workspace from then on."""
+    if "client" not in IDE:
+        import road_ide
+        import road_narrate as RN
+        IDE["client"] = road_ide.IdeClient(os.environ.get("METIS_CATALOG", ""), name="road-ui", domain="road",
+                                           member_of=RN.member_of).start()
+    return IDE["client"]
 
 
 def _host_loaded():
