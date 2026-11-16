@@ -46,9 +46,11 @@ def main(argv=None):
     ap.add_argument("--ticks", type=int, default=400)
     ap.add_argument("--linger", type=float, default=5.0)
     ap.add_argument("--plant", default=None, metavar="MEMBER:-ATOM,+ATOM",
-                    help="a PLANTED world change, once: after MEMBER's first command, its next reading drops each -ATOM "
-                         "and adds each +ATOM (e.g. grasp:-holding,+handsfree: the take the game took, read as not taken), "
-                         "so the member's kernel watch finds its own effect missing: a surprise (the watch's path, proven)")
+                    help="a PLANTED world change: from MEMBER's first command until its next, the reading its kernel watch "
+                         "scores drops each -ATOM, adds each +ATOM, and with +was:PRED keeps the PRED(...) atoms it read before "
+                         "the command (nav:+was:at: the robot read where it was, its move not made). The watch compares the "
+                         "atoms its own events touched, present in the reading, at the member's NEXT tick: a member must tick "
+                         "again (nav does; grasp is done after its take), and the reading must be one its program cannot make")
     a = ap.parse_args(argv)
     ws = Path(a.workspace).resolve()
     w = worlds()
@@ -84,18 +86,23 @@ def main(argv=None):
             if outer is None or not hasattr(outer, "observe"):
                 raise ValueError("--plant: no member %s with a world host that the watch reads" % member)
             drop = [x[1:] for x in change.split(",") if x.startswith("-")]
-            add = [x[1:] for x in change.split(",") if x.startswith("+")]
-            real, self.planted = outer.observe, None        # the face the watch reads (AgentHost copies the inner one)
+            add = [x[1:] for x in change.split(",") if x.startswith("+") and not x.startswith("+was:")]
+            was = [x[5:] for x in change.split(",") if x.startswith("+was:")]      # +was:PRED: the pre-command PRED(...) atoms kept
+            real, self.planted, before = outer.observe, None, {}     # the face the watch reads (AgentHost copies the inner one)
 
             def observe(counts):
                 r = real(counts)
                 n = len(getattr(inner, "commands", None) or [])
+                if n == 0:
+                    before.clear()
+                    before.update({x: c for x, c in r.items() if x.split("(")[0] in was})
                 if n == 1:                      # from its first command until its next: the planted reading
                     r = {x: c for x, c in r.items() if x not in drop}
                     r.update({x: 1 for x in add})
+                    r.update(before)            # the world did not move: the atoms the command consumed still read
                     if self.planted is None:
-                        self.planted = {"member": member, "after": inner.commands[0][2], "dropped": drop, "added": add,
-                                        "reads": 0}
+                        self.planted = {"member": member, "after": inner.commands[0][2], "dropped": drop,
+                                        "added": add + sorted(before), "reads": 0}
                     self.planted["reads"] += 1
                 return r
             outer.observe = observe
