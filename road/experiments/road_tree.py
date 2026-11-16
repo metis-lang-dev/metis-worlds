@@ -129,8 +129,7 @@ def window_over(world, margin):
     return bool(f and f(margin))
 
 
-def run(scenario, seed, out_dir, ticks=1500, world_kind=None, vehicles=None, trace=None, sensor_range=None, stop_after=None,
-        on_tick=None):
+def run(scenario, seed, out_dir, ticks=1500, world_kind=None, vehicles=None, trace=None, sensor_range=None, stop_after=None):
     if trace and not has_reader():
         raise no_reader("this metis-agent has no metis_agent.trace")
     from metis_agent import service as S
@@ -174,8 +173,6 @@ def run(scenario, seed, out_dir, ticks=1500, world_kind=None, vehicles=None, tra
     shared = road_host.SHARED[key]
     for _ in range(ticks):
         lv.tick()
-        if on_tick is not None:                                     # a headless runner's observer (road/runner)
-            on_tick(world)
         held = stop_after is not None and hold(world, shared, stop_after)
         if world.arrived() and not held:
             break

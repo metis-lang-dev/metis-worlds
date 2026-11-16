@@ -1,0 +1,90 @@
+#!/usr/bin/env python3
+"""road_runner.py — the road's HEADLESS SCENARIO RUNNER (metis-plugin s-df4ff191; the user: scenario running is the
+domain's, separate from the runtime): one or more catalog cards (or scenarios) played by the road family with no page,
+each run a RUNTIME the Metis plugin attaches to by name (/connect-runtime road: metis-agent's RuntimeClient follows the
+name from run to run). The run loop, the feed and the wire are metis-agent's (metis_agent.runtime: run.Run, feed.RuntimeFeed);
+this file only turns a card into a run (cards.py) and hands road's host (host.py) to the loop.
+
+    (cwd metis-worlds; the Live's venv; metis_agent with its runtime package on the path)
+    python road/runner/road_runner.py --card FollowLeadingVehicle [--card ID ...] [--seed 1] [--host sumo|exerciser]
+                                      [--site I] [--ticks N] [--scenario NAME] [--workspace road] [--name road] [--linger 5]
+
+- the workspace: metis-worlds/road by default (its .metis/: traces, surprises), or --workspace W
+- ONE runtime (feed) named NAME for the invocation, serving while its runs go: .metis/runtimes/<name>.json; every run's
+  trace in .metis/traces/<run>, its findings (collisions, RSS violations, broken road rules, a failed end) written as
+  surprises and signalled (surprise.new) as their segment closes; run.started / run.ended per run; LINGER seconds after
+  the last run for an attached client to drain, then the discovery file removed
+- stdout: one JSON line per run {run, trace, reason, summary, error}, then {done: true, runs}; exit 1 when a run errs
+- the workspace's runner.yaml names this command (the agent adds --card ...)."""
+import argparse
+import json
+import sys
+from pathlib import Path
+
+HERE = Path(__file__).resolve().parent
+ROAD = HERE.parent
+sys.path.insert(0, str(HERE))
+sys.path.insert(0, str(ROAD / "world"))
+
+
+def stem_of(scenario, seed):
+    return "%s-%d" % (scenario.replace(":", "_").replace("@", "_").replace("#", "_"), int(seed))
+
+
+def specs(a):
+    base = {"seed": a.seed, "host": a.host, "ticks": a.ticks, "site": a.site}
+    out = [dict(base, card=c) for cs in a.card or [] for c in cs.split(",") if c]
+    out += [dict(base, scenario=s) for s in a.scenario or []]
+    return [{k: v for k, v in s.items() if v is not None} for s in out]
+
+
+def main(argv=None):
+    ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
+    ap.add_argument("--card", action="append", help="a catalog card id (repeat, or a,b,c)")
+    ap.add_argument("--scenario", action="append", help="a road world scenario name (road_tree's) instead of a card")
+    ap.add_argument("--seed", type=int, default=1)
+    ap.add_argument("--host", default="sumo", choices=["sumo", "exerciser"])
+    ap.add_argument("--site", type=int, default=None)
+    ap.add_argument("--ticks", type=int, default=None)
+    ap.add_argument("--workspace", default=str(ROAD))
+    ap.add_argument("--name", default="road")
+    ap.add_argument("--port", type=int, default=0)
+    ap.add_argument("--linger", type=float, default=5.0)
+    a = ap.parse_args(argv)
+    todo = specs(a)
+    if not todo:
+        ap.error("give --card ID (or --scenario NAME)")
+    import cards
+    import host as H
+    from metis_agent.runtime.feed import RuntimeFeed
+    from metis_agent.runtime.run import Run
+    feed = RuntimeFeed(a.workspace, a.name, H.RoadHost())
+    info = feed.start(port=a.port)
+    sys.stderr.write("road runner: runtime %s at %s (%s)\n" % (a.name, info.get("url"), info.get("discovery")))
+    results, bad = [], False
+    try:
+        for spec in todo:
+            try:
+                scenario, world_kind, ticks, stop_after, env, card, kind = cards.plan(spec)
+            except (SystemExit, ValueError, KeyError) as e:
+                out = {"spec": spec, "reason": "error", "error": "the spec cannot be run: %s" % e}
+                print(json.dumps(out), flush=True)
+                results.append(out)
+                bad = True
+                continue
+            host = H.RoadHost(scenario, spec.get("seed", 1), world_kind=world_kind if world_kind == "sumo" else None,
+                              card=card, kind=kind, stop_after=stop_after)
+            out = Run(a.workspace, host, feed).go(H.road_config(spec.get("seed", 1)), ticks, stem_of(scenario, spec.get("seed", 1)),
+                                                  spec=spec, env=env)
+            out["spec"] = spec
+            print(json.dumps(out, default=str), flush=True)
+            results.append(out)
+            bad = bad or out["reason"] == "error"
+    finally:
+        feed.stop(linger=a.linger)
+    print(json.dumps({"done": True, "runs": [r.get("run") for r in results]}), flush=True)
+    return 1 if bad else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
