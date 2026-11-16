@@ -315,9 +315,10 @@ class RoadHost:
         feed = runtime_feed()
         if feed is not None and self.run.get("trace"):
             trace = os.path.basename(self.run["trace"])
-            st = self.shared.get("scenario_start") or {"scenario": self.run.get("scenario"), "seed": self.run.get("seed"), "at": trace}
-            run = "%s-%s-%s" % (st.get("scenario"), st.get("seed"), st.get("at"))   # a run per scenario start (RUNTIME v1.5: an embedding)
-            if FEED.get("run") != run:                     # its trace stays the service's (one Live: the page's runs go on in it)
+            st = self.shared.setdefault("scenario_start", {"scenario": self.run.get("scenario"), "seed": self.run.get("seed"),
+                                                            "at": time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())})
+            run = run_name(st)                             # a run per scenario start (RUNTIME v1.5: an embedding), named once, unique
+            if FEED.get("run") != run and not st.get("ended"):   # its trace stays the service's (one Live: the page's runs go on in it)
                 if FEED.get("run"):
                     feed.run_ended(FEED["run"], "done")
                 FEED["run"] = run
@@ -664,7 +665,9 @@ class RoadHost:
             out.append({"ev": "world/message", "text": w["said"].pop(0)})
         if self.road.arrived() and not self.shared.get("said_arrived"):
             self.shared["said_arrived"] = True
-            out.append(road_frames.summary_frame(self.road))
+            sf = road_frames.summary_frame(self.road)
+            out.append(sf)
+            end_run(self.shared, "done", {k: v for k, v in sf.items() if k != "ev"})   # the scenario's end: its runtime run ends
         return out
 
     def start_run(self, spec):
@@ -842,9 +845,34 @@ def runtime_feed():
     return FEED["feed"]
 
 
+def run_name(st):
+    """The runtime run of a scenario start: <scenario>-<seed>-<UTC stamp>, fixed once on the start, unique in this process (two starts
+    in one second get -2, -3: a second start is a second run)."""
+    if not st.get("run"):
+        base = "%s-%s-%s" % (st.get("scenario"), st.get("seed"), st.get("at"))
+        names = FEED.setdefault("names", set())
+        name, i = base, 1
+        while name in names:
+            i += 1
+            name = "%s-%d" % (base, i)
+        names.add(name)
+        st["run"] = name
+    return st["run"]
+
+
+def end_run(shared, reason="done", summary=None):
+    """The current scenario start's run ends (its car arrived, the page stopped it): run.ended, carrying what is still queued."""
+    f, st = FEED.get("feed"), (shared or {}).get("scenario_start") or {}
+    if f is None or not FEED.get("run") or st.get("ended") or FEED["run"] != st.get("run"):
+        return
+    st["ended"] = True
+    f.run_ended(FEED["run"], reason, summary=summary)
+    FEED["run"] = None
+
+
 def watch_hook(feed):
     """The kernel watch's surprises as findings (RUNTIME v1.5; bond004's service.Live hook): the process's Live
-    (service.Live.current) calls on_finding({kind: watch, k, member, words, record, difference}); the embedding queues it on its
+    (service.Live.current) calls on_finding({kind: watch, k, member, words, record, difference}); the embedding queues it on its (the trace: the service's; the run: the scenario start's)
     feed under the service's trace (its window is in that trace's ticks). Set once; nothing when the agent has no such hook."""
     if FEED.get("hooked"):
         return
@@ -857,7 +885,7 @@ def watch_hook(feed):
         return
 
     def on_finding(f):
-        feed.finding(dict(f, run=FEED.get("trace") or f.get("run")))
+        feed.finding(dict(f, trace=FEED.get("trace") or f.get("trace")))   # the run: the feed's current (the scenario start's)
     live.on_finding = on_finding
     FEED["hooked"] = True
 
@@ -915,7 +943,7 @@ def page_mark(b):
     if f is None:
         return ide.surprise(b["run"], k0, k1, b.get("words"), key, member=b.get("member"), kind=b.get("kind") or "mark", extra={"page": page})
     seq0 = next(iter(f.after(0)[-1:]), {}).get("seq", 0)
-    sid = f.finding({"kind": b.get("kind") or "mark", "run": b["run"], "k": k1, "k0": k0, "k1": k1, "key": key,
+    sid = f.finding({"kind": b.get("kind") or "mark", "trace": b["run"], "k": k1, "k0": k0, "k1": k1, "key": key,
                      "words": b.get("words"), "member": b.get("member"), "page": page}, now=True)
     if not sid:
         why = next((s.get("error") for s in f.after(seq0) if s.get("type") == "finding.refused" and s.get("key") == key), None)
