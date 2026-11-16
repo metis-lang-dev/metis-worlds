@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """road_runner.py — the road's HEADLESS SCENARIO RUNNER (metis-plugin s-df4ff191; the user: scenario running is the
 domain's, separate from the runtime): one or more catalog cards (or scenarios) played by the road family with no page,
-each run a RUNTIME the Metis plugin attaches to by name (/connect-runtime road: metis-agent's RuntimeClient follows the
+each run a RUNTIME the Metis plugin attaches to by name (/metis-runtime road: metis-agent's RuntimeClient follows the
 name from run to run). The run loop, the feed and the wire are metis-agent's (metis_agent.runtime: run.Run, feed.RuntimeFeed);
 this file only turns a card into a run (cards.py) and hands road's host (host.py) to the loop.
 
