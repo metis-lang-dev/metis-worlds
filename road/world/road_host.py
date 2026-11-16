@@ -291,8 +291,10 @@ class RoadHost:
         def work():
             try:
                 if op == "send":
-                    r = ide.surprise(b["run"], b["window"][0], b["window"][1], b.get("words"), n=b.get("n"), kind=b.get("kind") or "mark",
-                                     member=b.get("member"), page={k: b.get(k) for k in ("scenario", "seed", "t0", "t1")})
+                    k0, k1, n = int(b["window"][0]), int(b["window"][1]), b.get("n")
+                    key = "%s:mark:%s:%d-%d" % (b["run"], n if n is not None else "-", k0, k1)   # the page mark's key (surprise interface §5)
+                    r = ide.surprise(b["run"], k0, k1, b.get("words"), key, member=b.get("member"), kind=b.get("kind") or "mark",
+                                     extra={"page": {k: b.get(k) for k in ("n", "scenario", "seed", "t0", "t1") if b.get(k) not in (None, "")}})
                     self.metis_ack({"op": op, "n": b.get("n"), "ok": True, **r})
                 elif op == "explain":
                     r = ide.explain({"run": b.get("run"), "k0": (b.get("window") or [None])[0], "k1": (b.get("window") or [None, None])[1],
@@ -793,8 +795,8 @@ def fresh_trace(argv, run_json=None):
     old = (c.get("trace") or {}).get("dir")
     if not old:
         return None
-    now = time.strftime("%Y%m%dT%H%M%S")
-    new = re.sub(r"\d{8}T\d{6}$", now, old) if re.search(r"\d{8}T\d{6}$", old) else "%s-%s" % (old, now)
+    now = time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())      # run names <stem>-<UTC stamp>, as the generic runtime's (RUNTIME-INTERFACE)
+    new = re.sub(r"\d{8}T\d{6}Z?$", now, old) if re.search(r"\d{8}T\d{6}Z?$", old) else "%s-%s" % (old, now)
     c["trace"]["dir"] = new
     yaml.safe_dump(c, open(cfg, "w"), sort_keys=False)
     if run_json and os.path.isfile(run_json):
@@ -811,10 +813,9 @@ def metis_ide():
     """The backend's ONE /ide client (spec v1.1 §1: a UI backend pairs with one plugin), started at its first use and looking for
     the plugin's lockfile in this workspace from then on."""
     if "client" not in IDE:
-        import road_ide
+        from metis_agent.runtime.ide_client import IdeClient   # the generic client (metis-agent; RUNTIME-INTERFACE v1.2): road keeps the glue
         import road_narrate as RN
-        IDE["client"] = road_ide.IdeClient(os.environ.get("METIS_CATALOG", ""), name="road-ui", domain="road",
-                                           member_of=RN.member_of).start()
+        IDE["client"] = IdeClient(os.environ.get("METIS_CATALOG", ""), name="road-ui", domain="road", member_of=RN.member_of).start()
     return IDE["client"]
 
 

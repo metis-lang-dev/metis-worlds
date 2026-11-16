@@ -54,7 +54,7 @@ def install(root, agent_py, port=8400, scenario="Town03", seed=1):
     root = os.path.abspath(root)
     # the demo's trace: one dir per start, never wiped by the next (a page's later runs go on in it: the trace is the
     # Live's, one per process); its marks and its config beside it (§6.1 items 1-3)
-    trace = os.path.join(traces_dir(root), "%s-%s-%s" % (scenario, int(seed), time.strftime("%Y%m%dT%H%M%S")))
+    trace = os.path.join(traces_dir(root), "%s-%s-%s" % (scenario, int(seed), time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())))   # <stem>-<UTC stamp>
     run = {"scenario": scenario, "seed": int(seed), "world": "sumo", "page": True, "key": "page", "vehicles": 0,
            "work": os.path.join(root, "work"), "log": os.path.join(root, "log.jsonl"),
            "trace": trace, "config": os.path.join(root, ".run", "config.yaml")}

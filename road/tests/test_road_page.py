@@ -273,6 +273,6 @@ def test_a_restart_starts_a_new_trace_dir(tmp_path):
     cfg.write_text(yaml.safe_dump({"trace": {"dir": old, "every": 200}}))
     rj.write_text(json.dumps({"trace": old, "scenario": "Town03"}))
     new = H.fresh_trace(["python", "-m", "metis_agent.service", "--config", str(cfg)], str(rj))
-    assert new != old and new.startswith(str(tmp_path / "traces" / "Town03-1-2"))
+    assert new != old and new.startswith(str(tmp_path / "traces" / "Town03-1-2")) and new.endswith("Z")
     assert yaml.safe_load(cfg.read_text())["trace"]["dir"] == new and json.loads(rj.read_text())["trace"] == new
     assert yaml.safe_load(cfg.read_text())["trace"]["every"] == 200
