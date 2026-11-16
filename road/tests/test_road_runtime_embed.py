@@ -70,3 +70,20 @@ def test_a_clients_feedback_reaches_the_page_once(H):
     assert H.feedback() == []                                       # the same signal by the /ide path: not twice
     H.IDE.clear()
     assert H.attached() is True
+
+
+def test_the_kernel_watch_hook_queues_its_findings_on_the_trace(H, monkeypatch):
+    """bond004's hook (service.Live.current.on_finding): the embedding sets it, a watch surprise becomes a finding under the service's
+    TRACE (not the scenario run's name), queued, then written when its window is on disk (segment_closed)."""
+    import metis_agent.service as S
+    live = type("L", (), {"on_finding": None})()
+    monkeypatch.setattr(S.Live, "current", live, raising=False)
+    feed = H.runtime_feed()
+    H.FEED["trace"] = "run1"
+    H.watch_hook(feed)
+    assert live.on_finding is not None
+    live.on_finding({"kind": "watch", "k": 20, "member": "signals", "words": "the light read red where it was amber"})
+    assert not [s for s in feed.after(0) if s["type"] == "surprise.new"]          # queued: its window not closed yet
+    feed.segment_closed(199)
+    new = [s for s in feed.after(0) if s["type"] == "surprise.new"]
+    assert new and new[0]["kind"] == "watch" and feed.ws.surprise(new[0]["id"])["trace"].startswith("traces/run1-")

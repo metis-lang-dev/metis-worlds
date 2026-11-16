@@ -322,8 +322,12 @@ class RoadHost:
                     feed.run_ended(FEED["run"], "done")
                 FEED["run"] = run
                 feed.run_started(run, "traces/" + trace, {k: st.get(k) for k in ("scenario", "seed") if st.get(k) is not None})
+            FEED["trace"] = trace
+            watch_hook(feed)
             if self.shared.get("k") is not None:
-                feed.tick(int(self.shared["k"]))
+                k = int(self.shared["k"])
+                feed.tick(k)
+                feed.segment_closed(k - 1)                  # a queued finding (the kernel watch's) once its window is on disk
         for m in feedback():
             out.append({"ev": "world/metis", "msg": m})
         up = attached()
@@ -836,6 +840,26 @@ def runtime_feed():
         FEED.update(feed=f, since=0, seen=set())
         atexit.register(stop_runtime, "stopped")
     return FEED["feed"]
+
+
+def watch_hook(feed):
+    """The kernel watch's surprises as findings (RUNTIME v1.5; bond004's service.Live hook): the process's Live
+    (service.Live.current) calls on_finding({kind: watch, k, member, words, record, difference}); the embedding queues it on its
+    feed under the service's trace (its window is in that trace's ticks). Set once; nothing when the agent has no such hook."""
+    if FEED.get("hooked"):
+        return
+    try:
+        from metis_agent.service import Live
+    except ImportError:
+        return
+    live = getattr(Live, "current", None)
+    if live is None or not hasattr(live, "on_finding"):
+        return
+
+    def on_finding(f):
+        feed.finding(dict(f, run=FEED.get("trace") or f.get("run")))
+    live.on_finding = on_finding
+    FEED["hooked"] = True
 
 
 def stop_runtime(reason="stopped"):
