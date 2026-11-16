@@ -25,6 +25,7 @@ HERE = Path(__file__).resolve().parent
 ROAD = HERE.parent
 sys.path.insert(0, str(HERE))
 sys.path.insert(0, str(ROAD / "world"))
+sys.path.insert(0, str(ROAD.parent / "libs" / "semantic-world"))     # metis-worlds' own library (the road world's)
 
 
 def stem_of(scenario, seed):

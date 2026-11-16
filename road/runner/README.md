@@ -32,7 +32,7 @@ One invocation = ONE runtime named `road`, serving while its runs go (`.metis/ru
 - the Live's venv with metis-agent's runtime package: metis-agent `claude-plugin` ≥ 36bfe64
 - `METIS_HOME`: the road family, at `road/domains/catalog.pin`'s commit
 - SUMO: `sumo` on `PATH`, `SUMO_HOME`
-- the semantic world: `libs/semantic-world` on `PYTHONPATH` (runner.yaml sets it)
+- the semantic world: metis-worlds' `libs/semantic-world` (road_runner.py puts it on its path itself)
 
 Tests: `road/tests/test_road_runner.py`. The observer, the host under the run loop (the world's tick is the trace's),
 the runner by name on the exerciser, a bad card said in words; one SUMO card with `RUNNER_SUMO=1`.

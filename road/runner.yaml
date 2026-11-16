@@ -2,9 +2,8 @@
 # runner_start runs it with the agent's args appended (e.g. '--card FollowLeadingVehicle'); its runs are the runtime
 # named 'road' (runtime_connect road follows them from run to run). {python}: the plugin's METIS_PYTHON (the Live's venv,
 # with metis-agent's runtime package); the road family (METIS_HOME) and SUMO (sumo on PATH, SUMO_HOME) come from the
-# session's environment. See runner/README.md.
+# session's environment (its PYTHONPATH kept: metis-agent's runtime and metispy's SDK); see runner/README.md.
 name: road
 command: "{python}"
 args: [runner/road_runner.py, --workspace, "{workspace}", --name, road]
-env: {PYTHONPATH: "{workspace}/../libs/semantic-world"}
 ready_s: 30
