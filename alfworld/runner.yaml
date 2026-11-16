@@ -1,0 +1,7 @@
+# ALFWorld's HEADLESS SCENARIO RUNNER (metis-plugin s-df4ff191; RUNTIME-INTERFACE v1.6 §6). The Metis plugin's
+# runner_start runs it with the agent's args appended (e.g. '--object tomato --receptacle microwave1'); its run is the
+# runtime named 'alfworld' (runtime_connect alfworld follows it). {python}: the plugin's METIS_PYTHON (the Live's venv,
+# with metis-agent's runtime package); ALFWorld's data and venv are found by the runner (runner/alf_runner.py).
+name: alfworld
+command: "{python}"
+args: [runner/alf_runner.py, --workspace, "{workspace}", --name, alfworld]
