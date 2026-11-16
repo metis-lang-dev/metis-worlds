@@ -177,3 +177,43 @@ def test_the_voice_is_talks():
 def test_a_paused_run_stands_still_on_the_dashboard():
     """The user, 2026-11-07: paused, the dashboard kept ticking (the trace's k counts on, the world's tick stands)."""
     assert "if (this.last && f.tick === this.last.tick) return;" in (WEB / "dash.js").read_text()
+
+
+def test_the_events_react_to_the_host_and_the_bridge(tmp_path):
+    """events.js under node with a stub DOM: narrate sends the host's line and says the narration; send posts the event's own trace
+    window to the bridge; the feed moves the event sent -> taken -> ruled ACCEPTED -> applied; an explain's answer is said and kept;
+    a bridge that refuses is said, never silent."""
+    js = tmp_path / "ev.mjs"
+    js.write_text("""const stubEl = () => ({ innerHTML: '', onchange: null, onclick: null, querySelector: () => stubEl(), querySelectorAll: () => [] });
+globalThis.document = { querySelector: () => stubEl() };
+globalThis.localStorage = { getItem: () => null, setItem: () => {} };
+const { Events } = await import(process.argv[2]);
+const lines = [], said = [], posts = [];
+const metis = {
+  surprise: async b => { posts.push(['surprise', b]); return { id: 'S1', trace: 'traces/run-mark-3', member: 'planner' }; },
+  explain: async b => { posts.push(['explain', b]); return { ref: 'X1' }; },
+};
+const ev = new Events(stubEl(), { line: l => lines.push(l), metis, speak: t => said.push(t), context: () => ({ scenario: 'cut_in', seed: '1' }) });
+ev.scene({ trace: 'run', k: 100, t: 10, tick: 100 });
+ev.edge(3, 'start'); ev.scene({ trace: 'run', k: 160, t: 16, tick: 160 }); ev.edge(3, 'stop', 'braked late');
+ev.narrate(3);
+ev.narrated({ n: 3, members: { planner: ['I keep my speed.'] }, text: 'x' });
+await ev.send(3);
+for (const st of [['taken'], ['ruled', 'accepted: the gate'], ['applied']]) ev.feed({ kind: 'surprise', id: 'S1', n: 3, status: st[0], verdict: st[1], commit: 'abc' });
+await ev.explain(3);
+ev.feed({ kind: 'answer', ref: 'X1', text: 'The cut-in came inside the brake reach.' });
+const bad = new Events(stubEl(), { line: () => {}, metis: { surprise: async () => { throw new Error('the Metis bridge is off'); } }, speak: t => said.push('BAD ' + t) });
+bad.scene({ trace: 'r2', k: 5, t: 0.5, tick: 5 }); bad.once(1, 'collision'); await bad.send(1);
+const e = ev.get(3);
+process.stdout.write(JSON.stringify({ lines, said, posts, state: e.state, answer: e.answer, sid: e.sid }));""")
+    p = subprocess.run([node(), str(js), (WEB / "events.js").as_uri()], capture_output=True, text=True, timeout=60)
+    assert p.returncode == 0, p.stderr
+    o = json.loads(p.stdout)
+    assert o["lines"] == ["narrate:3:run:100:160"]
+    assert any("I keep my speed." in s for s in o["said"])
+    kind, body = o["posts"][0]
+    assert kind == "surprise" and body["run"] == "run" and body["window"] == [100, 160] and body["n"] == 3 and "braked late" in body["words"]
+    assert o["sid"] == "S1" and o["state"] == "answered" and o["answer"] == "The cut-in came inside the brake reach."
+    assert any(s == "Event 3: taken." for s in o["said"]) and any(s.startswith("Event 3: ruled accepted") for s in o["said"])
+    assert any("Event 3: applied (abc)." == s for s in o["said"])
+    assert any(s.startswith("BAD the Metis bridge is off") for s in o["said"])
