@@ -331,6 +331,10 @@ class RoadHost:
             self.road.close()
         except Exception:                                  # noqa: BLE001 — a world already gone: the exec ends it anyway
             pass
+        try:
+            fresh_trace(sys.orig_argv, os.environ.get("METIS_ROAD_RUN"))
+        except Exception as e:                             # noqa: BLE001 — the restart goes on; the trace dir is said
+            print("[road] restart: the trace dir stays (%s)" % e, flush=True)
         sys.stdout.flush(); sys.stderr.flush()
         os.execv(sys.executable, list(sys.orig_argv))
 
@@ -774,6 +778,30 @@ def road_host_ego(road):
 
 def make(case=None, package_dir=None):
     return RoadHost(package_dir or HERE, case)
+
+
+def fresh_trace(argv, run_json=None):
+    """A restart's trace is a NEW dir (step 6: the restart re-read the same config, rewrote the dir from seg-0 and left the last start's
+    later segments beside it, a trace no replay can read): the config's trace.dir and run.json's trace get this moment's stamp."""
+    import re
+    import yaml
+    argv = list(argv)
+    if "--config" not in argv:
+        return None
+    cfg = argv[argv.index("--config") + 1]
+    c = yaml.safe_load(open(cfg))
+    old = (c.get("trace") or {}).get("dir")
+    if not old:
+        return None
+    now = time.strftime("%Y%m%dT%H%M%S")
+    new = re.sub(r"\d{8}T\d{6}$", now, old) if re.search(r"\d{8}T\d{6}$", old) else "%s-%s" % (old, now)
+    c["trace"]["dir"] = new
+    yaml.safe_dump(c, open(cfg, "w"), sort_keys=False)
+    if run_json and os.path.isfile(run_json):
+        r = json.load(open(run_json))
+        r["trace"] = new
+        json.dump(r, open(run_json, "w"), indent=1)
+    return new
 
 
 IDE = {}

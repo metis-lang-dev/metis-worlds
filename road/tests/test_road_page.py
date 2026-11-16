@@ -259,3 +259,20 @@ process.stdout.write(JSON.stringify({ mid, after: ev.get(1), last: posts[posts.l
     o = json.loads(p.stdout)
     assert "sid" not in o["mid"] and o["mid"].get("state") in (None, "")
     assert o["after"]["sid"] == "S2" and o["after"]["state"] == "sent to Metis" and o["last"]["window"] == [336, 469]
+
+
+def test_a_restart_starts_a_new_trace_dir(tmp_path):
+    """Step 6: the page's restart re-read the same config and rewrote the same trace dir from seg-0, leaving the last start's later
+    segments: a trace no replay can read. fresh_trace gives the config and run.json a new stamped dir before the exec."""
+    import sys as S
+    import yaml
+    S.path.insert(0, str(WEB.parent / "world"))
+    import road_host as H
+    cfg, rj = tmp_path / "config.yaml", tmp_path / "run.json"
+    old = str(tmp_path / "traces" / "Town03-1-20261116T133826")
+    cfg.write_text(yaml.safe_dump({"trace": {"dir": old, "every": 200}}))
+    rj.write_text(json.dumps({"trace": old, "scenario": "Town03"}))
+    new = H.fresh_trace(["python", "-m", "metis_agent.service", "--config", str(cfg)], str(rj))
+    assert new != old and new.startswith(str(tmp_path / "traces" / "Town03-1-2"))
+    assert yaml.safe_load(cfg.read_text())["trace"]["dir"] == new and json.loads(rj.read_text())["trace"] == new
+    assert yaml.safe_load(cfg.read_text())["trace"]["every"] == 200
