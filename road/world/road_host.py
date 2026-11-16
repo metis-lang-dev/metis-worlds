@@ -258,6 +258,7 @@ class RoadHost:
             elif line.startswith("run:"):
                 scenario, seed = line[len("run:"):].rsplit(":", 1)        # a scenario's name may hold a colon (cr:ID, card:NAME@TOWN#SITE)
                 self.start_run(dict(self.run, scenario=scenario, seed=int(seed)))
+                self.shared["scenario_start"] = {"scenario": scenario, "seed": int(seed), "at": time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())}
             elif line in ("play", "pause"):
                 self.shared["paused"] = line == "pause"
             elif line.startswith("speed:"):
@@ -313,12 +314,14 @@ class RoadHost:
         out = list(self.shared.pop("metis_out", []) or [])
         feed = runtime_feed()
         if feed is not None and self.run.get("trace"):
-            run = os.path.basename(self.run["trace"])
-            if FEED.get("run") != run:                     # the service's Live and its trace: one run of the runtime
+            trace = os.path.basename(self.run["trace"])
+            st = self.shared.get("scenario_start") or {"scenario": self.run.get("scenario"), "seed": self.run.get("seed"), "at": trace}
+            run = "%s-%s-%s" % (st.get("scenario"), st.get("seed"), st.get("at"))   # a run per scenario start (RUNTIME v1.5: an embedding)
+            if FEED.get("run") != run:                     # its trace stays the service's (one Live: the page's runs go on in it)
                 if FEED.get("run"):
-                    feed.run_ended(FEED["run"], "stopped")
+                    feed.run_ended(FEED["run"], "done")
                 FEED["run"] = run
-                feed.run_started(run, "traces/" + run, {k: self.run.get(k) for k in ("scenario", "seed") if self.run.get(k) is not None})
+                feed.run_started(run, "traces/" + trace, {k: st.get(k) for k in ("scenario", "seed") if st.get(k) is not None})
             if self.shared.get("k") is not None:
                 feed.tick(int(self.shared["k"]))
         for m in feedback():
