@@ -226,7 +226,7 @@ class RoadHost:
             if line == "watching":
                 self.shared["watched"] = time.monotonic() + WATCHED_S
             elif line == "hello":                      # a page opened: the road once, it is big
-                metis_ide()                            # … and the backend looks for an attached plugin (its /ide lockfile)
+                metis_ide()                            # … and the backend looks for an attached plugin (its /metis-ui lockfile)
                 self.shared.pop("metis_up", None)      # … whose state the new page is told
                 self.shared["net_due"] = True
                 self.shared["mark_due"] = True         # … and where the events stand: a reload does not start the count again
@@ -309,7 +309,7 @@ class RoadHost:
 
     def metis_frames(self):
         """The page's view of the surprise interface (RUNTIME-INTERFACE v1.5: the road UI's service embeds the runtime 'road-ui'
-        and, under /ide, is an ide client): the run edges and ticks to its own feed, the feedback of EITHER path relayed once (the
+        and, under /metis-ui, is a ui client): the run edges and ticks to its own feed, the feedback of EITHER path relayed once (the
         fan-out is the backend's; the page never sees a token), the acks of the page's requests, the attachment's state."""
         out = list(self.shared.pop("metis_out", []) or [])
         feed = runtime_feed()
@@ -829,8 +829,8 @@ FEEDBACK = ("surprise.taken", "surprise.tried", "surprise.ruled", "surprise.appl
 
 def runtime_feed():
     """The road UI's service EMBEDS the generic runtime (metis-agent metis_agent/runtime/feed.py; RUNTIME-INTERFACE v1.5): its feed
-    named RUNTIME_NAME, its discovery file in this workspace, so a plugin's /connect-runtime road-ui attaches to the page's runs. None
-    when the runtime package is not there (an older metis-agent): the page then has only the /ide path."""
+    named RUNTIME_NAME, its discovery file in this workspace, so a plugin's /metis-runtime road-ui attaches to the page's runs. None
+    when the runtime package is not there (an older metis-agent): the page then has only the /metis-ui path."""
     if "feed" not in FEED:
         try:
             from metis_agent.runtime.feed import RuntimeFeed
@@ -910,7 +910,7 @@ def attached():
 
 
 def feedback():
-    """The feedback of both paths (the /ide client's and the runtime feed's clients'), each signal ONCE (by type and id)."""
+    """The feedback of both paths (the /metis-ui client's and the runtime feed's clients'), each signal ONCE (by type and id)."""
     msgs = []
     ide = IDE.get("client")
     if ide is not None:
@@ -934,7 +934,7 @@ def feedback():
 
 def page_mark(b):
     """A person's mark from the page, WRITTEN at once (RUNTIME-INTERFACE §4: finding(f, now=True)) through the embedded runtime: the
-    SDK's drop_window under the page mark's key; surprise.new on the runtime's feed; and to an /ide-paired plugin too (one key, one
+    SDK's drop_window under the page mark's key; surprise.new on the runtime's feed; and to a /metis-ui-paired plugin too (one key, one
     record: spec §5). Without the runtime package: the ide client writes it (its own drop_window path)."""
     k0, k1, n = int(b["window"][0]), int(b["window"][1]), b.get("n")
     key = "%s:mark:%s:%d-%d" % (b["run"], n if n is not None else "-", k0, k1)
@@ -962,7 +962,7 @@ def page_mark(b):
 
 
 def page_request(about, words, mode="explain"):
-    """The page's explain / narrate request, by the route rule (RUNTIME-INTERFACE §5): the /ide pairing when connected, else the
+    """The page's explain / narrate request, by the route rule (RUNTIME-INTERFACE §5): the /metis-ui pairing when connected, else the
     runtime feed's clients, else refused in words (never silence)."""
     import secrets
     ide, f = metis_ide(), runtime_feed()
@@ -973,16 +973,16 @@ def page_request(about, words, mode="explain"):
         r = f.request("explain.request", {"id": rid, "mode": mode, "about": about, "words": " ".join(str(words or "").split())})
         if r.get("delivered"):
             return {"id": rid, "via": "runtime"}
-    raise ValueError("no Claude Code is attached: /ide in a Claude Code session in this workspace, or /connect-runtime %s" % RUNTIME_NAME)
+    raise ValueError("no Claude Code is attached: /metis-ui in a Claude Code session in this workspace, or /metis-runtime %s" % RUNTIME_NAME)
 
 
 def metis_ide():
-    """The backend's ONE /ide client (spec v1.1 §1: a UI backend pairs with one plugin), started at its first use and looking for
+    """The backend's ONE /metis-ui client (spec v1.1 §1: a UI backend pairs with one plugin), started at its first use and looking for
     the plugin's lockfile in this workspace from then on."""
     if "client" not in IDE:
-        from metis_agent.runtime.ide_client import IdeClient   # the generic client (metis-agent; RUNTIME-INTERFACE v1.2): road keeps the glue
+        from metis_agent.runtime.ui_client import UiClient   # the generic client (metis-agent; RUNTIME-INTERFACE v1.6): road keeps the glue
         import road_narrate as RN
-        IDE["client"] = IdeClient(os.environ.get("METIS_CATALOG", ""), name="road-ui", domain="road", member_of=RN.member_of).start()
+        IDE["client"] = UiClient(os.environ.get("METIS_CATALOG", ""), name="road-ui", domain="road", member_of=RN.member_of).start()
     return IDE["client"]
 
 

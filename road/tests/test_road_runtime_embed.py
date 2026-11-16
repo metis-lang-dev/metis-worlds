@@ -1,6 +1,6 @@
 """The road UI's service EMBEDS the generic runtime (metis-plugin s-df4ff191, RUNTIME-INTERFACE v1.5): a page mark is written at once
 through the runtime (finding now=True: the SDK's drop_window under the page mark's key) and said on its feed; the page's explain goes by
-the route rule (an /ide pairing, else the feed's clients, else words); a client's feedback reaches the page ONCE."""
+the route rule (an /metis-ui pairing, else the feed's clients, else words); a client's feedback reaches the page ONCE."""
 import os
 import shutil
 import sys
@@ -53,7 +53,7 @@ def test_explain_by_the_route_rule(H):
     with pytest.raises(ValueError, match="no Claude Code is attached"):
         H.page_request({"run": "run1", "k0": 10, "k1": 30}, "why?")
     feed = H.runtime_feed()
-    feed.signal_in({"type": "hello", "from": "plugin:1"})           # a plugin attached by /connect-runtime road-ui
+    feed.signal_in({"type": "hello", "from": "plugin:1"})           # a plugin attached by /metis-runtime road-ui
     r = H.page_request({"run": "run1", "k0": 10, "k1": 30}, "why so late?")
     assert r["via"] == "runtime" and any(s["type"] == "explain.request" and s["id"] == r["id"] for s in feed.after(0))
 
@@ -67,7 +67,7 @@ def test_a_clients_feedback_reaches_the_page_once(H):
     assert H.feedback() == []                                       # read once
     H.IDE["client"] = type("I", (), {"take": lambda self: [{"type": "surprise.ruled", "id": "S1", "verdict": "accepted"}],
                                      "status": lambda self: {"connected": True}})()
-    assert H.feedback() == []                                       # the same signal by the /ide path: not twice
+    assert H.feedback() == []                                       # the same signal by the /metis-ui path: not twice
     H.IDE.clear()
     assert H.attached() is True
 

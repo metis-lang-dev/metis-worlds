@@ -337,7 +337,7 @@ async function frame(f) {
   if (f.ev === 'world/host_changed') { hostChanged(f); return; }           // the world model's code changed (a host fix): offer the restart
   if (f.ev === 'reload_ack') { reloaded(f); return; }
   if (f.ev === 'world/metis_ack') { metis.ack(f); return; }             // the surprise interface: the backend's answer to the page's request
-  if (f.ev === 'world/metis_state') { metisLook(f.connected); return; }   // … whether a Claude Code is attached (its /ide)
+  if (f.ev === 'world/metis_state') { metisLook(f.connected); return; }   // … whether a Claude Code is attached (its /metis-ui)
   if (f.ev === 'world/metis') { metisSignal(f.msg || {}); return; }     // … and the plugin's signals, relayed (the page never sees its token)
   if (f.ev === 'world/runfail') { world.map.runFailed(f); return; }                // a run that did not start: why, in the SCENARIOS card                // a card, whole, into the WORLD CARD
   if (f.ev === 'journal' && f.rec?.kind === 'dlg-world') return;       // the road: the page's own lines (watching, play, speed)
@@ -481,7 +481,7 @@ const voiced = {                                                     // the voic
   subscribe: f => chat.subs.add(f),
 };
 // the surprise interface (metis-plugin s-df4ff191, spec v1.1): the page talks only to its own backend, the road service, which is the
-// /ide client of an attached Claude Code (its lockfile in this workspace) and relays the plugin's signals here
+// /metis-ui client of an attached Claude Code (its lockfile in this workspace) and relays the plugin's signals here
 const PAGE_ID = Math.random().toString(36).slice(2, 8);
 const metis = world.metis = {
   on: true, up: false, pending: new Map(), n: 0,
@@ -517,8 +517,8 @@ function metisLook(up = metis.up) {
   const el = $('#metisstate');
   el.textContent = up ? 'Claude: attached' : 'Claude: not attached';
   el.classList.toggle('up', !!up);
-  el.title = up ? 'a Claude Code session (/ide) is attached to this workspace: send and explain go to it, its work comes back here'
-    : 'no Claude Code is attached: run /ide in a Claude Code session started in this workspace. A sent event is still written into the workspace.';
+  el.title = up ? 'a Claude Code session (/metis-ui) is attached to this workspace: send and explain go to it, its work comes back here'
+    : 'no Claude Code is attached: run /metis-ui in a Claude Code session started in this workspace. A sent event is still written into the workspace.';
 }
 metisLook(false);
 // the catalog changed on disk (the road host's watch over the domains and the family; the bridge's too): the reload is the person's

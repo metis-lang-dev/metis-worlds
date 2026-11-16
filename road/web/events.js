@@ -152,7 +152,7 @@ export class Events {
       const r = await this.metis.surprise(this.body(e));
       Object.assign(e, { sid: r.id, member: r.member, state: r.signalled === false ? 'in the workspace' : 'sent to Metis' });
       this.speak(r.signalled === false
-        ? `Event ${e.n} is in the workspace as surprise ${r.id} (the ${r.member}); no Claude Code is attached: run /ide in one and it sees it.`
+        ? `Event ${e.n} is in the workspace as surprise ${r.id} (the ${r.member}); no Claude Code is attached: run /metis-ui in one and it sees it.`
         : `Event ${e.n} is in the workspace as surprise ${r.id} (the ${r.member}): Claude Code works it.`);
     } catch (err) { this.failed(e, 'send', err); }
     this.save(); this.draw();

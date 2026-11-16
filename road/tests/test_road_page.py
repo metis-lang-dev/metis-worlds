@@ -91,7 +91,7 @@ def test_one_tools_dock_of_cards_and_events_no_loop():
 
 
 def test_no_pi_loop_the_page_talks_only_to_its_backend():
-    """metis-plugin s-df4ff191 (spec v1.1): the pi LOOP dock is gone; the page talks only to its own backend (the road service, the /ide
+    """metis-plugin s-df4ff191 (spec v1.1): the pi LOOP dock is gone; the page talks only to its own backend (the road service, the /metis-ui
     client of an attached Claude Code): send and explain are metis:send|explain lines, answered by world/metis_ack; the plugin's signals
     come relayed as world/metis frames; the page never holds the plugin's URL or token."""
     assert not (WEB / "loopdock.js").exists() and not (WEB / "loopgrammar.js").exists() and not (WEB / "metisbridge.js").exists()
