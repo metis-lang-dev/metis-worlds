@@ -286,20 +286,16 @@ class RoadHost:
         except ValueError:
             self.metis_ack({"op": op, "ok": False, "error": "not a JSON body"})
             return
-        ide = metis_ide()
+        metis_ide()
 
         def work():
             try:
                 if op == "send":
-                    k0, k1, n = int(b["window"][0]), int(b["window"][1]), b.get("n")
-                    key = "%s:mark:%s:%d-%d" % (b["run"], n if n is not None else "-", k0, k1)   # the page mark's key (surprise interface §5)
-                    r = ide.surprise(b["run"], k0, k1, b.get("words"), key, member=b.get("member"), kind=b.get("kind") or "mark",
-                                     extra={"page": {k: b.get(k) for k in ("n", "scenario", "seed", "t0", "t1") if b.get(k) not in (None, "")}})
-                    self.metis_ack({"op": op, "n": b.get("n"), "ok": True, **r})
+                    self.metis_ack({"op": op, "n": b.get("n"), "ok": True, **page_mark(b)})
                 elif op == "explain":
-                    r = ide.explain({"run": b.get("run"), "k0": (b.get("window") or [None])[0], "k1": (b.get("window") or [None, None])[1],
-                                     "surprise": b.get("sid")}, b.get("words"), mode=b.get("mode") or "explain")
-                    self.metis_ack({"op": op, "n": b.get("n"), "ok": True, **r})
+                    about = {"run": b.get("run"), "k0": (b.get("window") or [None])[0], "k1": (b.get("window") or [None, None])[1],
+                             "surprise": b.get("sid")}
+                    self.metis_ack({"op": op, "n": b.get("n"), "ok": True, **page_request(about, b.get("words"), b.get("mode") or "explain")})
                 else:
                     raise ValueError("metis:send or metis:explain, not metis:%s" % op)
             except (ValueError, KeyError, OSError) as e:
@@ -311,18 +307,26 @@ class RoadHost:
         self.shared.setdefault("metis_out", []).append({"ev": "world/metis_ack", **ack})
 
     def metis_frames(self):
-        """The plugin's signals for the page (spec v1.1: the fan-out is the backend's; the page never sees the plugin's token), the
-        acks of the page's own requests, and the connection's state when it changes."""
+        """The page's view of the surprise interface (RUNTIME-INTERFACE v1.5: the road UI's service embeds the runtime 'road-ui'
+        and, under /ide, is an ide client): the run edges and ticks to its own feed, the feedback of EITHER path relayed once (the
+        fan-out is the backend's; the page never sees a token), the acks of the page's requests, the attachment's state."""
         out = list(self.shared.pop("metis_out", []) or [])
-        ide = IDE.get("client")
-        if ide is None:
-            return out
-        for m in ide.take():
+        feed = runtime_feed()
+        if feed is not None and self.run.get("trace"):
+            run = os.path.basename(self.run["trace"])
+            if FEED.get("run") != run:                     # the service's Live and its trace: one run of the runtime
+                if FEED.get("run"):
+                    feed.run_ended(FEED["run"], "stopped")
+                FEED["run"] = run
+                feed.run_started(run, "traces/" + run, {k: self.run.get(k) for k in ("scenario", "seed") if self.run.get(k) is not None})
+            if self.shared.get("k") is not None:
+                feed.tick(int(self.shared["k"]))
+        for m in feedback():
             out.append({"ev": "world/metis", "msg": m})
-        up = ide.status()["connected"]
+        up = attached()
         if self.shared.get("metis_up") != up:
             self.shared["metis_up"] = up
-            out.append({"ev": "world/metis_state", "connected": up, "url": ide.status()["url"]})
+            out.append({"ev": "world/metis_state", "connected": up})
         return out
 
     def restart_service(self):
@@ -333,6 +337,7 @@ class RoadHost:
             self.road.close()
         except Exception:                                  # noqa: BLE001 — a world already gone: the exec ends it anyway
             pass
+        stop_runtime("restart")                          # the runtime's run ends with this process: its clients re-attach to the next
         try:
             fresh_trace(sys.orig_argv, os.environ.get("METIS_ROAD_RUN"))
         except Exception as e:                             # noqa: BLE001 — the restart goes on; the trace dir is said
@@ -807,6 +812,113 @@ def fresh_trace(argv, run_json=None):
 
 
 IDE = {}
+FEED = {}
+RUNTIME_NAME = os.environ.get("METIS_RUNTIME_NAME", "road-ui")   # the page's runtime; the headless road runner's is 'road'
+FEEDBACK = ("surprise.taken", "surprise.tried", "surprise.ruled", "surprise.applied", "explain.answer", "catalog.changed", "world.changed")
+
+
+def runtime_feed():
+    """The road UI's service EMBEDS the generic runtime (metis-agent metis_agent/runtime/feed.py; RUNTIME-INTERFACE v1.5): its feed
+    named RUNTIME_NAME, its discovery file in this workspace, so a plugin's /connect-runtime road-ui attaches to the page's runs. None
+    when the runtime package is not there (an older metis-agent): the page then has only the /ide path."""
+    if "feed" not in FEED:
+        try:
+            from metis_agent.runtime.feed import RuntimeFeed
+        except ImportError:
+            FEED["feed"] = None
+            return None
+        import atexit
+        f = RuntimeFeed(os.environ.get("METIS_CATALOG", ""), RUNTIME_NAME, domain="road")
+        f.start()
+        FEED.update(feed=f, since=0, seen=set())
+        atexit.register(stop_runtime, "stopped")
+    return FEED["feed"]
+
+
+def stop_runtime(reason="stopped"):
+    f = FEED.get("feed")
+    if f is None or FEED.get("stopped"):
+        return
+    FEED["stopped"] = True
+    try:
+        if FEED.get("run"):
+            f.run_ended(FEED["run"], reason)
+        f.stop()
+    except Exception:                                      # noqa: BLE001 — the process is going anyway
+        pass
+
+
+def attached():
+    """Some agent hears the page: an ide pairing, or a client on the page's runtime feed."""
+    ide, f = IDE.get("client"), FEED.get("feed")
+    return bool((ide is not None and ide.status()["connected"]) or (f is not None and f.clients))
+
+
+def feedback():
+    """The feedback of both paths (the /ide client's and the runtime feed's clients'), each signal ONCE (by type and id)."""
+    msgs = []
+    ide = IDE.get("client")
+    if ide is not None:
+        msgs += ide.take()
+    f = FEED.get("feed")
+    if f is not None:
+        got = f.after(FEED.get("since", 0))
+        if got:
+            FEED["since"] = max(g["seq"] for g in got)
+        msgs += [g for g in got if g.get("type") in FEEDBACK and g.get("from") != f.me]
+    out, seen = [], FEED.setdefault("seen", set())
+    for m in msgs:
+        k = (m.get("type"), m.get("id"), m.get("text") if m.get("type") == "explain.answer" else None, tuple(m.get("paths") or ()))
+        if m.get("type") in FEEDBACK and k in seen:
+            continue
+        if m.get("type") in FEEDBACK:
+            seen.add(k)
+        out.append(m)
+    return out
+
+
+def page_mark(b):
+    """A person's mark from the page, WRITTEN at once (RUNTIME-INTERFACE §4: finding(f, now=True)) through the embedded runtime: the
+    SDK's drop_window under the page mark's key; surprise.new on the runtime's feed; and to an /ide-paired plugin too (one key, one
+    record: spec §5). Without the runtime package: the ide client writes it (its own drop_window path)."""
+    k0, k1, n = int(b["window"][0]), int(b["window"][1]), b.get("n")
+    key = "%s:mark:%s:%d-%d" % (b["run"], n if n is not None else "-", k0, k1)
+    page = {x: b.get(x) for x in ("n", "scenario", "seed", "t0", "t1") if b.get(x) not in (None, "")}
+    ide, f = metis_ide(), runtime_feed()
+    if f is None:
+        return ide.surprise(b["run"], k0, k1, b.get("words"), key, member=b.get("member"), kind=b.get("kind") or "mark", extra={"page": page})
+    seq0 = next(iter(f.after(0)[-1:]), {}).get("seq", 0)
+    sid = f.finding({"kind": b.get("kind") or "mark", "run": b["run"], "k": k1, "k0": k0, "k1": k1, "key": key,
+                     "words": b.get("words"), "member": b.get("member"), "page": page}, now=True)
+    if not sid:
+        why = next((s.get("error") for s in f.after(seq0) if s.get("type") == "finding.refused" and s.get("key") == key), None)
+        raise ValueError(why or "the workspace refused the mark")
+    rec = f.ws.surprise(sid)
+    signalled = bool(f.clients)
+    if ide.status()["connected"]:
+        try:
+            ide.signal({"type": "surprise.new", "id": sid, "ref": ".metis/surprises/%s.json" % sid, "key": key,
+                        "kind": b.get("kind") or "mark", "member": rec.get("member")})
+            signalled = True
+        except ValueError:
+            pass
+    return {"id": sid, "ref": ".metis/surprises/%s.json" % sid, "key": key, "member": rec.get("member"), "trace": rec.get("trace"),
+            "signalled": signalled}
+
+
+def page_request(about, words, mode="explain"):
+    """The page's explain / narrate request, by the route rule (RUNTIME-INTERFACE §5): the /ide pairing when connected, else the
+    runtime feed's clients, else refused in words (never silence)."""
+    import secrets
+    ide, f = metis_ide(), runtime_feed()
+    if ide.status()["connected"]:
+        return ide.explain(about, words, mode=mode)
+    if f is not None and f.clients:
+        rid = "x%s-%s" % (time.strftime("%Y%m%dT%H%M%S"), secrets.token_hex(2))
+        r = f.request("explain.request", {"id": rid, "mode": mode, "about": about, "words": " ".join(str(words or "").split())})
+        if r.get("delivered"):
+            return {"id": rid, "via": "runtime"}
+    raise ValueError("no Claude Code is attached: /ide in a Claude Code session in this workspace, or /connect-runtime %s" % RUNTIME_NAME)
 
 
 def metis_ide():
