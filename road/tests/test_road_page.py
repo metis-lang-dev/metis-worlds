@@ -129,6 +129,7 @@ def test_a_world_model_change_is_a_restart():
     host = (WEB.parent / "world" / "road_host.py").read_text()
     assert 'elif line == "restart":' in host and "os.execv(sys.executable, list(sys.orig_argv))" in host
     assert "base = HOST_LOADED if HOST_LOADED is not None else snap" in host
+    assert 'self.shared.pop("host_said", None)' in host and 'self.shared.pop("cat_said", None)' in host   # a page that opens later is told
 
 
 def test_the_dashboard_rolls_6000_ticks_and_moves_events():

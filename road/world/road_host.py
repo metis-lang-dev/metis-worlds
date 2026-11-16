@@ -228,6 +228,8 @@ class RoadHost:
             elif line == "hello":                      # a page opened: the road once, it is big
                 self.shared["net_due"] = True
                 self.shared["mark_due"] = True         # … and where the events stand: a reload does not start the count again
+                self.shared.pop("cat_said", None)      # … and a pending catalog / world-model change said again: a page that just opened
+                self.shared.pop("host_said", None)     # (or reloaded) has not seen it (metis-plugin step 6)
             elif line.startswith("drive:"):
                 _, verb, value = (line.split(":") + [""])[:3]
                 self.wish("%s[X=%s]" % (verb, value) if value else verb)
