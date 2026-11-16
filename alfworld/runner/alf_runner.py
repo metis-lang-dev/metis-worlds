@@ -45,6 +45,10 @@ def main(argv=None):
     ap.add_argument("--receptacle", default="microwave1")
     ap.add_argument("--ticks", type=int, default=400)
     ap.add_argument("--linger", type=float, default=5.0)
+    ap.add_argument("--plant", default=None, metavar="MEMBER:-ATOM,+ATOM",
+                    help="a PLANTED world change, once: after MEMBER's first command, its next reading drops each -ATOM "
+                         "and adds each +ATOM (e.g. grasp:-holding,+handsfree: the take the game took, read as not taken), "
+                         "so the member's kernel watch finds its own effect missing: a surprise (the watch's path, proven)")
     a = ap.parse_args(argv)
     ws = Path(a.workspace).resolve()
     w = worlds()
@@ -65,14 +69,43 @@ def main(argv=None):
 
         def start(self, live, cfg):
             live.started.set()
+            if a.plant:
+                self.plant(live, a.plant)
             self.err = live.typed("task", "r1", {"intent": "FETCH", "object": a.object.upper(),
                                                  "receptacle": a.receptacle.upper()})
+
+        def plant(self, live, spec):
+            """Wrap the member's host's observe (the reading its watch scores): once, after its first command, the
+            reading the planted change makes. Said in the run's summary; never on without --plant."""
+            member, _, change = spec.partition(":")
+            ag = live.agents.agents.get(member)
+            outer = getattr(ag, "host", None)
+            inner = getattr(outer, "inner", outer)
+            if outer is None or not hasattr(outer, "observe"):
+                raise ValueError("--plant: no member %s with a world host that the watch reads" % member)
+            drop = [x[1:] for x in change.split(",") if x.startswith("-")]
+            add = [x[1:] for x in change.split(",") if x.startswith("+")]
+            real, self.planted = outer.observe, None        # the face the watch reads (AgentHost copies the inner one)
+
+            def observe(counts):
+                r = real(counts)
+                n = len(getattr(inner, "commands", None) or [])
+                if n == 1:                      # from its first command until its next: the planted reading
+                    r = {x: c for x, c in r.items() if x not in drop}
+                    r.update({x: 1 for x in add})
+                    if self.planted is None:
+                        self.planted = {"member": member, "after": inner.commands[0][2], "dropped": drop, "added": add,
+                                        "reads": 0}
+                    self.planted["reads"] += 1
+                return r
+            outer.observe = observe
 
         def done(self, live, k):
             return bool(self.err) or bool(live.status and live.status.get("state") in END)
 
         def summary(self, live):
-            return {"status": live.status, "typed": self.err, "task": [a.object, a.receptacle], "game": a.game}
+            return {"status": live.status, "typed": self.err, "task": [a.object, a.receptacle], "game": a.game,
+                    **({"planted": getattr(self, "planted", None)} if a.plant else {})}
 
         def end_findings(self, live, summary):
             st = (live.status or {}).get("state")
