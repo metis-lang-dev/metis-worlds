@@ -99,7 +99,7 @@ def test_no_pi_loop_the_page_talks_only_to_its_backend():
         t = f.read_text()
         assert "MetisLoop" not in t and "LoopDock" not in t, f
         assert "token=" not in t and "X-Metis-Token" not in t and "Authorization" not in t and "Bearer" not in t, f   # no credential
-    assert "world.map.line(`metis:${op}:${JSON.stringify(b)}`);" in WORLD
+    assert "world.map.line(`metis:${op}:${JSON.stringify({ ...b, rid: k })}`);" in WORLD and "const k = f.rid, p = k && this.pending.get(k);" in WORLD
     assert "if (f.ev === 'world/metis_ack') { metis.ack(f); return; }" in WORLD and "if (f.ev === 'world/metis') { metisSignal(f.msg || {}); return; }" in WORLD
     ev = (WEB / "events.js").read_text()
     assert "const r = await this.metis.surprise(this.body(e));" in ev and "const r = await this.metis.explain(this.body(e));" in ev

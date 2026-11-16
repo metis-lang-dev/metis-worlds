@@ -482,20 +482,22 @@ const voiced = {                                                     // the voic
 };
 // the surprise interface (metis-plugin s-df4ff191, spec v1.1): the page talks only to its own backend, the road service, which is the
 // /ide client of an attached Claude Code (its lockfile in this workspace) and relays the plugin's signals here
+const PAGE_ID = Math.random().toString(36).slice(2, 8);
 const metis = world.metis = {
-  on: true, up: false, pending: new Map(),
+  on: true, up: false, pending: new Map(), n: 0,
   call(op, b) {
     return new Promise((res, rej) => {
-      const k = `${op}:${b.n}`;
+      // a request id of THIS page: every page hears every ack (two tabs on one service both had an event #1: proof A, 2026-11-16)
+      const k = `${PAGE_ID}-${++this.n}`;
       this.pending.set(k, { res, rej });
-      world.map.line(`metis:${op}:${JSON.stringify(b)}`);
+      world.map.line(`metis:${op}:${JSON.stringify({ ...b, rid: k })}`);
       setTimeout(() => { if (this.pending.delete(k)) rej(new Error('the road service did not answer')); }, 30000);
     });
   },
   surprise(b) { return this.call('send', b); },
   explain(b) { return this.call('explain', { ...b, mode: 'explain' }); },
   ack(f) {
-    const k = `${f.op}:${f.n}`, p = this.pending.get(k);
+    const k = f.rid, p = k && this.pending.get(k);
     if (!p) return;
     this.pending.delete(k);
     if (f.ok) p.res(f); else p.rej(new Error(f.error || 'refused'));

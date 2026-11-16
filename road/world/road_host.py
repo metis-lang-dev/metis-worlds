@@ -292,15 +292,15 @@ class RoadHost:
         def work():
             try:
                 if op == "send":
-                    self.metis_ack({"op": op, "n": b.get("n"), "ok": True, **page_mark(b)})
+                    self.metis_ack({"op": op, "n": b.get("n"), "rid": b.get("rid"), "ok": True, **page_mark(b)})
                 elif op == "explain":
                     about = {"run": b.get("run"), "k0": (b.get("window") or [None])[0], "k1": (b.get("window") or [None, None])[1],
                              "surprise": b.get("sid")}
-                    self.metis_ack({"op": op, "n": b.get("n"), "ok": True, **page_request(about, b.get("words"), b.get("mode") or "explain")})
+                    self.metis_ack({"op": op, "n": b.get("n"), "rid": b.get("rid"), "ok": True, **page_request(about, b.get("words"), b.get("mode") or "explain")})
                 else:
                     raise ValueError("metis:send or metis:explain, not metis:%s" % op)
             except (ValueError, KeyError, OSError) as e:
-                self.metis_ack({"op": op, "n": b.get("n"), "ok": False, "error": str(e)})
+                self.metis_ack({"op": op, "n": b.get("n"), "rid": b.get("rid"), "ok": False, "error": str(e)})
         import threading
         threading.Thread(target=work, daemon=True, name="metis-%s" % op).start()
 
