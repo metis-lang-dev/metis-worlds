@@ -227,7 +227,8 @@ class RoadHost:
                 self.shared["watched"] = time.monotonic() + WATCHED_S
             elif line == "hello":                      # a page opened: the road once, it is big
                 metis_ide()                            # … and the backend looks for an attached plugin (its /metis-ui lockfile)
-                self.shared.pop("metis_up", None)      # … whose state the new page is told
+                if self.shared.get("metis_up"):        # … and a new page is told an attachment it cannot know (not attached: its default)
+                    self.shared["metis_up"] = False
                 self.shared["net_due"] = True
                 self.shared["mark_due"] = True         # … and where the events stand: a reload does not start the count again
                 self.shared.pop("cat_said", None)      # … and a pending catalog / world-model change said again: a page that just opened
@@ -332,8 +333,8 @@ class RoadHost:
         for m in feedback():
             out.append({"ev": "world/metis", "msg": m})
         up = attached()
-        if self.shared.get("metis_up") != up:
-            self.shared["metis_up"] = up
+        if self.shared.get("metis_up", False) != up:      # a CHANGE only: not attached is the page's own default (frames say
+            self.shared["metis_up"] = up                    # what changed, test_road_frames' contract)
             out.append({"ev": "world/metis_state", "connected": up})
         return out
 
