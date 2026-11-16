@@ -14,10 +14,13 @@ this file only turns a card into a run (cards.py) and hands road's host (host.py
   trace in .metis/traces/<run>, its findings (collisions, RSS violations, broken road rules, a failed end) written as
   surprises and signalled (surprise.new) as their segment closes; run.started / run.ended per run; LINGER seconds after
   the last run for an attached client to drain, then the discovery file removed
+- SIGTERM / SIGINT (the plugin's runner_stop, its session's end): the run on stops at its next tick ('stopped': the
+  world shut, its findings written), the cards after it are not started, the feed stops at once (its file removed)
 - stdout: one JSON line per run {run, trace, reason, summary, error}, then {done: true, runs}; exit 1 when a run errs
 - the workspace's runner.yaml names this command (the agent adds --card ...)."""
 import argparse
 import json
+import signal
 import sys
 from pathlib import Path
 
@@ -60,11 +63,21 @@ def main(argv=None):
     from metis_agent.runtime.feed import RuntimeFeed
     from metis_agent.runtime.run import Run
     feed = RuntimeFeed(a.workspace, a.name, H.RoadHost())
+    state = {"stop": False, "run": None}
+
+    def term(*_):                                   # SIGTERM / SIGINT (runner_stop, the session's end): the run on stops
+        state["stop"] = True                        # at its next tick, the world shut, the feed stopped, the file removed
+        if state["run"] is not None:
+            state["run"].stop()
+    for sig in (signal.SIGTERM, signal.SIGINT):
+        signal.signal(sig, term)
     info = feed.start(port=a.port)
     sys.stderr.write("road runner: runtime %s at %s (%s)\n" % (a.name, info.get("url"), info.get("discovery")))
     results, bad = [], False
     try:
         for spec in todo:
+            if state["stop"]:
+                break
             try:
                 scenario, world_kind, ticks, stop_after, env, card, kind = cards.plan(spec)
             except (SystemExit, ValueError, KeyError) as e:
@@ -75,14 +88,16 @@ def main(argv=None):
                 continue
             host = H.RoadHost(scenario, spec.get("seed", 1), world_kind=world_kind if world_kind == "sumo" else None,
                               card=card, kind=kind, stop_after=stop_after)
-            out = Run(a.workspace, host, feed).go(H.road_config(spec.get("seed", 1)), ticks, stem_of(scenario, spec.get("seed", 1)),
-                                                  spec=spec, env=env)
+            state["run"] = Run(a.workspace, host, feed)
+            out = state["run"].go(H.road_config(spec.get("seed", 1)), ticks, stem_of(scenario, spec.get("seed", 1)),
+                                  spec=spec, env=env)
+            state["run"] = None
             out["spec"] = spec
             print(json.dumps(out, default=str), flush=True)
             results.append(out)
             bad = bad or out["reason"] == "error"
     finally:
-        feed.stop(linger=a.linger)
+        feed.stop(linger=0 if state["stop"] else a.linger)
     print(json.dumps({"done": True, "runs": [r.get("run") for r in results]}), flush=True)
     return 1 if bad else 0
 

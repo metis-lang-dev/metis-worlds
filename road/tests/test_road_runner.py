@@ -158,3 +158,22 @@ def test_a_sumo_card_its_findings_signalled(tmp_path):
     for s in news:
         rec = w.surprise(s["id"])
         assert rec["member"] and rec["trace"].startswith("traces/") and s["key"].startswith(s["run"] + ":")
+
+
+def test_a_term_stops_the_run_and_cleans_up(tmp_path):
+    _need_live()
+    import signal as SIG
+    ws = tmp_path / "ws"
+    p = subprocess.Popen([sys.executable, str(ROAD / "runner" / "road_runner.py"), "--workspace", str(ws), "--linger", "30",
+                          "--scenario", "cruise", "--host", "exerciser", "--ticks", "100000"], stdout=subprocess.PIPE,
+                         stderr=subprocess.PIPE, text=True, cwd=str(ROAD.parent))
+    disc = ws / ".metis" / "runtimes" / "road.json"
+    end = time.time() + 120                                                    # until the run is under way
+    while time.time() < end and not (disc.is_file() and list(ws.glob(".metis/traces/cruise-1-*/seg-*.jsonl"))):
+        time.sleep(0.2)
+    assert disc.is_file()
+    p.send_signal(SIG.SIGTERM)
+    out, err = p.communicate(timeout=60)
+    rows = [json.loads(l) for l in out.splitlines() if l.startswith("{")]
+    assert rows[0]["reason"] == "stopped", (rows, err[-1500:])
+    assert not disc.exists()                                                   # no linger after a stop: the file gone
