@@ -14,6 +14,8 @@ this file only turns a card into a run (cards.py) and hands road's host (host.py
   trace in .metis/traces/<run>, its findings (collisions, RSS violations, broken road rules, a failed end) written as
   surprises and signalled (surprise.new) as their segment closes; run.started / run.ended per run; LINGER seconds after
   the last run for an attached client to drain, then the discovery file removed
+- its own environment: SUMO found as road/demo.sh finds it (sumo_env), the semantic world and road/world on its path;
+  the session's PYTHONPATH (metis-agent's runtime, metispy's SDK) and METIS_HOME are kept
 - SIGTERM / SIGINT (the plugin's runner_stop, its session's end): the run on stops at its next tick ('stopped': the
   world shut, its findings written), the cards after it are not started, the feed stops at once (its file removed)
 - stdout: one JSON line per run {run, trace, reason, summary, error}, then {done: true, runs}; exit 1 when a run errs
@@ -42,6 +44,31 @@ def specs(a):
     return [{k: v for k, v in s.items() if v is not None} for s in out]
 
 
+def sumo_env():
+    """SUMO for the run, found as road/demo.sh finds it, so the runner needs no environment of its own (runner.yaml
+    names none): $SUMO_VENV, else <metis-worlds>/../.worlds/road, else ~/repo/perotheia-packages/.worlds/road (the
+    host's install); its bin first on PATH, SUMO_HOME from its sumo package. A sumo already on PATH with SUMO_HOME set
+    is kept as it is. -> the venv used, or None."""
+    import os
+    import shutil
+    import subprocess
+    if shutil.which("sumo") and os.environ.get("SUMO_HOME"):
+        return None
+    for v in [os.environ.get("SUMO_VENV"), ROAD.parent.parent / ".worlds" / "road",
+              Path.home() / "repo" / "perotheia-packages" / ".worlds" / "road"]:
+        if v and (Path(v) / "bin" / "sumo").exists():
+            v = Path(v)
+            os.environ["PATH"] = str(v / "bin") + os.pathsep + os.environ.get("PATH", "")
+            if not os.environ.get("SUMO_HOME"):
+                py = v / "bin" / "python"
+                home = subprocess.run([str(py), "-c", "import sumo; print(sumo.SUMO_HOME)"], capture_output=True,
+                                      text=True).stdout.strip() if py.exists() else ""
+                if home:
+                    os.environ["SUMO_HOME"] = home
+            return str(v)
+    return None
+
+
 def _quiet_stdout():
     """Our JSON lines on the real stdout; whatever else prints (SUMO's TraCI: 'Retrying in 1 seconds') to stderr."""
     out = sys.stdout
@@ -63,6 +90,9 @@ def main(argv=None):
     ap.add_argument("--linger", type=float, default=5.0)
     a = ap.parse_args(argv)
     out_fh = _quiet_stdout()
+    venv = sumo_env()
+    if venv:
+        sys.stderr.write("road runner: SUMO from %s\n" % venv)
     todo = specs(a)
     if not todo:
         ap.error("give --card ID (or --scenario NAME)")

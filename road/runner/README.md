@@ -31,7 +31,7 @@ One invocation = ONE runtime named `road`, serving while its runs go (`.metis/ru
 
 - the Live's venv with metis-agent's runtime package: metis-agent `claude-plugin` ≥ 36bfe64
 - `METIS_HOME`: the road family, at `road/domains/catalog.pin`'s commit
-- SUMO: `sumo` on `PATH`, `SUMO_HOME`
+- SUMO: found by the runner as `road/demo.sh` does (`$SUMO_VENV`, else `../.worlds/road`, else the host's `~/repo/perotheia-packages/.worlds/road`); a `sumo` on `PATH` with `SUMO_HOME` set wins
 - the semantic world: metis-worlds' `libs/semantic-world` (road_runner.py puts it on its path itself)
 
 Tests: `road/tests/test_road_runner.py`. The observer, the host under the run loop (the world's tick is the trace's),
