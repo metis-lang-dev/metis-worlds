@@ -1,7 +1,7 @@
-"""The road page's loop dock, events and one voice (loop-road-ui s-0314a8ee step 2; the user's word 2026-11-07): the grammar that routes
-a line to the pi loop or to the page's events (run under node: $NODE, else `node` on PATH; none, those tests skip, METIS_ROAD_REQUIRE_NODE=1
-fails instead), and the page's shape: one TOOLS dock of cards, EVENTS, the LOOP dock as an iframe of the loop console (never its code), the
-dashboard's rolling window and glyphs."""
+"""The road page's events, the Metis bridge and one voice (loop-road-ui s-0314a8ee; metis-plugin s-df4ff191 step 4: the pi LOOP dock out):
+the grammar that routes a line to the page's events (run under node: $NODE, else `node` on PATH; none, those tests skip,
+METIS_ROAD_REQUIRE_NODE=1 fails instead), and the page's shape: one TOOLS dock of cards, EVENTS whose explain and send go to the Metis
+bridge, narrate by the road's own host, the 'catalog changed: reload' notice, the dashboard's rolling window and glyphs."""
 import json
 import os
 import re
@@ -18,45 +18,31 @@ WORLD = (WEB / "world.js").read_text()
 # (the person says, the context, the route) — brief §1.3's table, and what stays the road's
 CASES = [
     ("go right", {}, None),
-    ("stop", {}, None),                                               # the car's word, never the loop's
+    ("stop", {}, None),                                               # the car's word
     ("what's around us", {}, None),
     ("mark", {}, {"to": "page", "action": "mark"}),
     ("mark here", {}, {"to": "page", "action": "mark"}),
     ("End mark, the car braked for nothing.", {}, {"to": "page", "action": "endmark", "words": "the car braked for nothing"}),
     ("end the event", {}, {"to": "page", "action": "endmark", "words": ""}),
-    ("agree", {"loopMark": 3}, {"to": "loop", "line": "/agree 3"}),
-    ("agree", {}, None),                                              # nothing narrated yet: not the loop's
-    ("yes, that is what I saw", {"loopMark": 2}, {"to": "loop", "line": "/agree 2"}),
-    ("disagree, it should have kept going", {"loopMark": 3}, {"to": "loop", "line": "/disagree 3 it should have kept going"}),
-    ("take it", {}, {"to": "loop", "line": "/take"}),
-    ("take the next surprise", {}, {"to": "loop", "line": "/take"}),
-    ("why lead_ok", {}, {"to": "loop", "line": "/why lead_ok"}),
-    ("why did it brake", {}, {"to": "loop", "line": "why did it brake"}),
-    ("what did you change", {}, {"to": "loop", "line": "/diff"}),
-    ("show the ruling", {}, {"to": "loop", "line": "/ruling"}),
-    ("apply", {}, {"to": "loop", "line": "/apply"}),
-    ("confirm", {"gate": True}, {"to": "gate", "answer": "confirm"}),
-    ("refuse", {"gate": True}, {"to": "gate", "answer": "refuse"}),
-    ("confirm", {}, None),                                            # no gate open: the road's
-    ("rebuild", {}, {"to": "loop", "line": "/rebuild"}),
-    ("reload", {}, {"to": "loop", "line": "/reload"}),
-    ("stop the loop", {}, {"to": "loop", "line": "/stop"}),
-    ("loop, why did the planner change lanes?", {}, {"to": "loop", "line": "why did the planner change lanes?"}),
-    ("/status", {}, {"to": "loop", "line": "/status"}),
     ("narrate", {}, {"to": "page", "action": "narrate"}),
     ("narrate event 4", {}, {"to": "page", "action": "narrate", "n": 4}),
     ("explain it", {}, {"to": "page", "action": "explain"}),
-    ("send event 2 to the loop", {}, {"to": "page", "action": "send", "n": 2}),
+    ("send event 2 to metis", {}, {"to": "page", "action": "send", "n": 2}),
+    ("send it to Claude", {}, {"to": "page", "action": "send"}),
+    ("send event 2 to the loop", {}, {"to": "page", "action": "send", "n": 2}),   # the old words still understood: they go to Metis now
     ("continue", {"paused": True}, {"to": "page", "action": "continue"}),
     ("continue", {}, None),                                           # not waiting on a surprise: the road's
-    ("/narrate event 4", {}, {"to": "page", "action": "narrate", "n": 4}),   # typed as a command: the page's event, never the loop's /narrate
+    ("/narrate event 4", {}, {"to": "page", "action": "narrate", "n": 4}),
     ("/explain 4", {}, {"to": "page", "action": "explain", "n": 4}),
-    ("/narrate 3", {}, {"to": "page", "action": "narrate", "n": 3}),
-    ("send 2 to pi", {}, {"to": "page", "action": "send", "n": 2}),
-    ("/narrate Town03-1-x 10..20 ctx", {}, {"to": "loop", "line": "/narrate Town03-1-x 10..20 ctx"}),
     ("load DynamicObjectCrossing", {"scenarios": ["Town03", "DynamicObjectCrossing"]}, {"to": "page", "action": "scenario", "name": "DynamicObjectCrossing"}),
     ("run the scenario town03", {"scenarios": ["Town03"]}, {"to": "page", "action": "scenario", "name": "Town03"}),
     ("load NoSuchThing", {"scenarios": ["Town03"]}, None),           # not in the tree: the road's (it says it does not know)
+    # the pi loop's lines are gone with its dock: the road agent's now (or nothing)
+    ("agree", {"loopMark": 3}, None),
+    ("take the next surprise", {}, None),
+    ("/status", {}, None),
+    ("confirm", {"gate": True}, None),
+    ("why did it brake", {}, None),
 ]
 
 
@@ -69,9 +55,9 @@ def node():
     return n
 
 
-def test_the_grammar_routes_the_loops_lines_and_leaves_the_roads(tmp_path):
+def test_the_grammar_routes_the_events_lines_and_leaves_the_roads(tmp_path):
     js = tmp_path / "run.mjs"
-    js.write_text(f"""import {{ route }} from {json.dumps((WEB / "loopgrammar.js").as_uri())};
+    js.write_text(f"""import {{ route }} from {json.dumps((WEB / "pagegrammar.js").as_uri())};
 const cases = JSON.parse(process.argv[2]);
 process.stdout.write(JSON.stringify(cases.map(([t, ctx]) => route(t, ctx))));""")
     p = subprocess.run([node(), str(js), json.dumps([[t, c] for t, c, _ in CASES])], capture_output=True, text=True, timeout=60)
@@ -82,8 +68,8 @@ process.stdout.write(JSON.stringify(cases.map(([t, ctx]) => route(t, ctx))));"""
         assert got == want, (t, c)
 
 
-def test_one_tools_dock_of_cards_events_and_the_loop():
-    """Drive, Cars and Traffic: one TOOLS dock of collapsible cards (the DIALOG's fw-sec look); EVENTS and LOOP docks; the strip names them."""
+def test_one_tools_dock_of_cards_and_events_no_loop():
+    """Drive, Cars and Traffic: one TOOLS dock of collapsible cards (the DIALOG's fw-sec look); EVENTS; no LOOP dock (metis-plugin step 4)."""
     tools = HTML[HTML.index('id="dock-tools"'):HTML.index('id="dock-events"')]
     assert [m for m in re.findall(r'<details class="fw-sec tool" id="tool-(\w+)"', tools)] == ["scenarios", "drive", "run", "cars", "traffic"]
     bar = HTML[HTML.index('<span id="runbar">'):HTML.index('</span>', HTML.index('<span id="runbar">'))]
@@ -96,20 +82,41 @@ def test_one_tools_dock_of_cards_events_and_the_loop():
     for gone in ('id="dock-drive"', 'id="dock-run"', 'id="dock-cars"', 'id="dock-traffic"', 'data-strip="drive"', 'data-strip="run"',
                  'data-strip="cars"', 'data-strip="traffic"'):
         assert gone not in HTML, gone
-    for el in ('id="t-add"', 'id="t-cr-run"', 'data-drive="turn:left"', 'id="picked"', 'id="run-info"', 'id="follow"', 'id="dock-events"', 'id="dock-loop"', 'id="loopbox"'):
+    for el in ('id="t-add"', 'id="t-cr-run"', 'data-drive="turn:left"', 'id="picked"', 'id="run-info"', 'id="follow"', 'id="dock-events"',
+               'id="metisstate"', 'id="catchg"', 'id="catchg-reload"'):
         assert el in HTML, el
-    assert "names: ['talk', 'tools', 'events', 'loop', 'hierarchy', 'world', 'journal', 'dialog'], key: 'roadpage.docks.v6'" in WORLD
-    assert "#loopframe { flex: 1 1 auto; min-height: 0;" in HTML                     # the loop's chat scrolls in its dock, the page holds
+    for gone in ('id="dock-loop"', 'id="loopbox"', 'data-strip="loop"', '#loopframe'):
+        assert gone not in HTML, gone
+    assert "names: ['talk', 'tools', 'events', 'hierarchy', 'world', 'journal', 'dialog'], key: 'roadpage.docks.v7'" in WORLD
 
 
-def test_the_loop_is_an_iframe_of_the_console_never_its_code():
-    dock = (WEB / "loopdock.js").read_text()
-    assert "src: `${url}/?panels=chat&embed=${encodeURIComponent(location.origin)}`" in dock
-    assert "if (e.origin !== this.origin || e.source !== this.frame.contentWindow) return;" in dock     # the console in our dock only
-    assert "postMessage(m, this.origin)" in dock and "'*'" not in dock
+def test_no_pi_loop_explain_and_send_go_to_the_metis_bridge():
+    """metis-plugin s-df4ff191 step 4: the pi LOOP dock is gone (no loopdock.js, no loop code); explain and send post to the Metis bridge with
+    its token, the feed comes back on its socket; with no bridge the page says so where it is asked."""
+    assert not (WEB / "loopdock.js").exists() and not (WEB / "loopgrammar.js").exists()
     for f in WEB.glob("*.js"):
-        assert "MetisLoop" not in f.read_text(), f                        # no loop code copied into road/web
-    assert "if (chat.voice && chat.active === 'loop') panel.core.tts.speak([text]);" in WORLD and "speak: hear," in WORLD   # the loop's rows heard, not written in TALK
+        t = f.read_text()
+        assert "MetisLoop" not in t and "LoopDock" not in t, f
+    mb = (WEB / "metisbridge.js").read_text()
+    assert "headers: { 'content-type': 'application/json', 'X-Metis-Token': this.token }" in mb
+    assert "/feed/ws?token=${encodeURIComponent(this.token)}&since=${this.since}" in mb
+    assert "the Metis bridge is off: enable it in Claude Code (bridge_enable)" in mb
+    assert "const metis = world.metis = new MetisBridge({" in WORLD and "...(bridgeFrom(q) || {})," in WORLD
+    ev = (WEB / "events.js").read_text()
+    assert "const r = await this.metis.surprise(this.body(e));" in ev and "const r = await this.metis.explain(this.body(e));" in ev
+    assert "return { run: e.trace, window: [w0, w1], n: e.n, kind: e.kind," in ev        # the page's own trace and its window: no fetching
+
+
+def test_narrate_is_the_road_hosts_and_the_catalog_change_is_offered():
+    """narrate goes to the road's own host (narrate:N:RUN:K0:K1 -> world/narration), never to a loop; the host's catalog watch says
+    world/catalog_changed, the page shows 'catalog changed' and its reload asks the service to reload every member, then says catalog:seen."""
+    ev = (WEB / "events.js").read_text()
+    assert "this.line(`narrate:${e.n}:${e.trace}:${w0}:${w1}`);" in ev
+    assert "if (f.ev === 'world/narration') { events?.narrated(f); return; }" in WORLD
+    assert "if (f.ev === 'world/catalog_changed') { catalogChanged(f); return; }" in WORLD and "|| f.ev === 'reload_ack'," in WORLD
+    assert "for (const d of MEMBERS) send({ ev: 'reload', domain: d });" in WORLD and "world.map.line('catalog:seen');" in WORLD
+    host = (WEB.parent / "world" / "road_host.py").read_text()
+    assert 'elif line.startswith("narrate:"):' in host and 'elif line == "catalog:seen":' in host and "cat = self.catalog_watch()" in host
 
 
 def test_the_dashboard_rolls_6000_ticks_and_moves_events():
@@ -118,11 +125,10 @@ def test_the_dashboard_rolls_6000_ticks_and_moves_events():
     assert "this.o.onMove?.(d.n, k0, k1" in dash and "if (d.moved && (k0 !== d.was[0] || k1 !== d.was[1]))" in dash   # a press is no move and 'data-act="narrate"' in dash and 'data-act="explain"' in dash
     ev = (WEB / "events.js").read_text()
     assert "this.line(`mark:${n}:move:${k0}:${k1}${i0 != null && i1 != null ? `:${i0}:${i1}` : ''}`)" in ev   # the k, and the run's ticks
-    assert "this.loop.say(`/narrate ${e.trace} ${w0}..${w1} ${this.said(e)}`, undefined, `/narrate event ${e.n}`)" in ev   # one line, every member, the context
     assert "window(e) { return e.kind === 'mark' ? [e.k0, Math.max(e.k0, e.k1)] : [Math.max(0, e.k0 - LEAD), e.k0]; }" in ev   # a surprise with its lead-up
     road = (WEB / "road.js").read_text()
     assert "this.line(`mark:${n}:once:${kind}`)" in road and "if (stop && !this.paused) this.hold(true);" in road
-    assert "const RING = 6000;" in ev and "if (e && !this.usable(e)) return;" in ev and ev.count("if (e && !this.usable(e)) return;") == 3   # a window the ring dropped: no loop action
+    assert "const RING = 6000;" in ev and "if (e && !this.usable(e)) return null;" in ev and ev.count("const e = this.ready(n);") == 3   # a window the ring dropped: no action
 
 
 def test_a_run_that_does_not_start_and_a_service_gone_are_said_on_the_page():
@@ -157,27 +163,17 @@ process.stdout.write(JSON.stringify(out));""")
     assert same is True and o2 == [0, 0]
 
 
-def test_the_voice_goes_to_the_last_active_chat():
-    """The user, 2026-11-07: voice for two chats. TALK or LOOP, the last one active (clicked, focused, the loop's frame entered) takes
-    the mic and is spoken; its header's dot is green. The voice switch is the band's (Shift+8), over both; no tick in TALK, no say button."""
-    for dock in ('id="dock-talk"', 'id="dock-loop"'):
-        head = HTML[HTML.index(dock):HTML.index('</header>', HTML.index(dock))]
-        assert '<span class="chatdot" aria-hidden="true">●</span>' in head, dock
-    assert ".chat-active .chatdot { visibility: visible; color: var(--green" in HTML
-    assert "$('#dock-talk').addEventListener('pointerdown', () => setChat('talk'));" in WORLD and "$('#dock-loop').addEventListener('pointerdown', () => setChat('loop'));" in WORLD
-    assert "if (document.activeElement?.id === 'loopframe') setChat('loop');" in WORLD
-    assert "if (t && opts.via === 'voice' && chat.active === 'loop') {" in WORLD and "loop.say(r?.line ?? t, 'heard')" in WORLD   # heard: to the active chat
-    assert "panel.core.setVoice(chat.voice && chat.active === 'talk');" in WORLD                                                     # TALK spoken only while active
+def test_the_voice_is_talks():
+    """One chat now (the LOOP dock gone): TALK has the mic and, with the band's voice switch (Shift+8) on, the voice."""
+    head = HTML[HTML.index('id="dock-talk"'):HTML.index('</header>', HTML.index('id="dock-talk"'))]
+    assert '<span class="chatdot" aria-hidden="true">●</span>' in head
+    assert "panel.core.setVoice(chat.voice);" in WORLD and "setChat" not in WORLD
     assert "vw.voice = voiceSwitch(voiced, { store: 'roadpage.voice'" in WORLD and "voiceWidget(panel, { narrator, key: 'F8', voice: false })" in WORLD
     panel = (WEB / "vendor" / "panel.js").read_text()
     assert "voiceBox = false" in panel and "voiceBox ? el('label', { class: 'fw-voice' }" in panel                                   # no voice tick in TALK
     assert "speakKey = 'Shift+8'" in (WEB / "vendor" / "switch.js").read_text()
 
 
-def test_a_paused_run_stands_still_on_the_dashboard_and_the_loop_chat_hands_the_page_its_events():
-    """The user, 2026-11-07: paused, the dashboard kept ticking (the trace's k counts on, the world's tick stands); "narrate event 4"
-    typed in the loop's chat reached the loop's /narrate (a trace and a window) and failed: the console's face hands it to the page."""
+def test_a_paused_run_stands_still_on_the_dashboard():
+    """The user, 2026-11-07: paused, the dashboard kept ticking (the trace's k counts on, the world's tick stands)."""
     assert "if (this.last && f.tick === this.last.tick) return;" in (WEB / "dash.js").read_text()
-    dock = (WEB / "loopdock.js").read_text()
-    assert "if (d.metis === 'page' && typeof d.text === 'string') { this.onPage(d.text); return; }" in dock
-    assert "onPage: t => { if (!redirect(t, 'text')) loop.say(t); }," in WORLD

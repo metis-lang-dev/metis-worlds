@@ -66,6 +66,7 @@ DT = 0.1                          # the world's step, s
 CR_LIST = 60                    # the CommonRoad picker's rows at most (the index has thousands)
 WATCHED_S = 5.0                   # a page said `watching` this recently: a scene every step, else every second
 UNWATCHED_EVERY = 10
+CATALOG_S = 2.0                   # the catalog watch: the domains and the family read by content every 2 s (metis-plugin step 4)
 
 
 def run_spec():
@@ -237,6 +238,12 @@ class RoadHost:
                 self.cr_find(line[len("crfind:"):])
             elif line == "catalog":                    # the SCENARIOS tree (loop-road-ui, the user 2026-11-07): the cards, grouped
                 self.shared["catalog_out"] = {"ev": "world/catalog", "rows": self.catalog_tree(), "towns": road_frames.SCENARIO_NAMES()}
+            elif line.startswith("narrate:"):          # metis-plugin step 4: the page's own narration (the pi LOOP dock is gone)
+                self.narrate_line(line)
+            elif line == "catalog:seen":               # the page reloaded the members on the change it was shown: that state is the base
+                import road_narrate as RN
+                self.shared["cat_base"] = RN.snapshot(RN.catalog_files(os.environ.get("METIS_CATALOG", ""), os.environ.get("METIS_HOME")))
+                self.shared.pop("cat_said", None)
             elif line.startswith("scard:"):            # one card, whole, for the WORLD CARD dock
                 self.shared["catalog_out"] = self.scenario_card(line[len("scard:"):])
             elif line.startswith("run:"):
@@ -248,7 +255,36 @@ class RoadHost:
                 self.shared["speed"] = max(0.1, float(line[6:]))
             else:
                 raise ValueError("the road's page says run:SCENARIO:SEED, crfind:QUERY, play, pause, speed:X, mark:N:start, mark:N:stop, mark:N:once:KIND, "
-                                 "mark:N:move:K0:K1 or watching, not %r" % line)
+                                 "mark:N:move:K0:K1, narrate:N:RUN:K0:K1, catalog:seen or watching, not %r" % line)
+
+    def narrate_line(self, line):
+        """narrate:N:RUN:K0:K1 → world/narration {n, run, k0, k1, members, text}: the window of the page's own trace told in the rules'
+        own words (road_narrate.narrate), or its error; the run's name may hold no colon (road_hier's names: SCENARIO-SEED-TIME)."""
+        import road_narrate as RN
+        try:
+            _, n, run, k0, k1 = line.split(":")
+            out = RN.narrate(os.environ.get("METIS_CATALOG", ""), run, int(k0), int(k1))
+            self.shared["narr_out"] = {"ev": "world/narration", "n": int(n), "run": run, "k0": int(k0), "k1": int(k1), **out}
+        except (ValueError, OSError) as e:
+            self.shared["narr_out"] = {"ev": "world/narration", "n": line.split(":")[1] if line.count(":") >= 1 else None, "error": str(e)}
+
+    def catalog_watch(self):
+        """The catalog changed on disk (Claude Code edits, builds and commits it; the page offers the reload): the road's domains and the
+        family (METIS_HOME) by content, every CATALOG_S; one world/catalog_changed per new state, with the files."""
+        import road_narrate as RN
+        now = time.monotonic()
+        if now - self.shared.get("cat_at", 0) < CATALOG_S:
+            return None
+        self.shared["cat_at"] = now
+        root, fam = os.environ.get("METIS_CATALOG", ""), os.environ.get("METIS_HOME")
+        snap = RN.snapshot(RN.catalog_files(root, fam))
+        base = self.shared.setdefault("cat_base", snap)
+        moved = RN.changed(base, snap)
+        key = ",".join("%s=%s" % (k, snap.get(k)) for k in moved)
+        if not moved or self.shared.get("cat_said") == key:
+            return None
+        self.shared["cat_said"] = key
+        return {"ev": "world/catalog_changed", "changed": RN.rel(moved, root, fam)[:40], "count": len(moved)}
 
     def catalog_rows(self):
         def one_word(v):                                            # §6b: a card's one-word standing is SUMO's when present, else the exerciser's
@@ -514,6 +550,11 @@ class RoadHost:
             out.append(self.shared.pop("cr_list"))
         if "catalog_out" in self.shared:
             out.append(self.shared.pop("catalog_out"))
+        if "narr_out" in self.shared:
+            out.append(self.shared.pop("narr_out"))
+        cat = self.catalog_watch()
+        if cat:
+            out.append(cat)
         if "run_out" in self.shared:
             out.append(self.shared.pop("run_out"))
         w = self.shared.get("wish")

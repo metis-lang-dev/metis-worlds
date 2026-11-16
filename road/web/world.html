@@ -125,7 +125,7 @@
   #dash canvas { flex: 1; min-height: 0; width: 100%; }
   #tip { position: absolute; display: none; pointer-events: none; background: var(--bg); border: 1px solid var(--line); padding: 2px 6px; font-size: 11px; white-space: pre; z-index: 2; }
 #mark.open { background: #b3261e; border-color: #b3261e; color: #fff; }
-  /* loop-road-ui: the tools as the dialog's cards (Drive, Cars, Traffic), the run's EVENTS, the pi loop's dock, the dashboard's glyphs */
+  /* loop-road-ui: the tools as the dialog's cards (Drive, Cars, Traffic), the run's EVENTS, the dashboard's glyphs */
   #toolcards { display: flex; flex-direction: column; gap: 6px; }
   #toolcards .fw-sec { border: 1px solid var(--line); padding: 2px 8px; background: var(--panel); }
   #toolcards .fw-sec > summary { cursor: pointer; color: var(--dim); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; padding: 2px 0; }
@@ -148,18 +148,18 @@
   #events .ev-acts { margin-left: auto; display: inline-flex; gap: 3px; }
   #events .ev-w { color: var(--dim); font-size: 11.5px; margin: 2px 0; }
   #events .ev-note { width: 100%; box-sizing: border-box; background: var(--bg); color: var(--fg); border: 1px solid var(--line); font: inherit; padding: 1px 4px; margin-top: 3px; }
-  #dock-loop .dbody { display: flex; flex-direction: column; overflow: hidden; padding: 0; }
-  #loopframe { flex: 1 1 auto; min-height: 0; width: 100%; border: 0; background: var(--bg); }   /* the chat scrolls inside its frame */
-  /* the column's height: TOOLS and EVENTS as tall as their content (folded cards are small), at most a share; the loop's chat the rest */
+  /* the column's height: TOOLS and EVENTS as tall as their content (folded cards are small), at most a share */
   #dock-tools.open { flex: 0 1 auto !important; max-height: 40%; }   /* !important: the shell keeps each dock's flex inline */
   #dock-events.open { flex: 0 1 auto !important; max-height: 24%; }
-  #dock-loop.open { flex: 3 1 0 !important; min-height: 320px; }   /* the loop's log readable: a narration is 6-10 lines */
   #dock-talk.open { min-height: 130px; }                                /* the road's own talk keeps its line and its input */
   #dock-world.open { flex: 2 1 0 !important; min-height: 200px; }      /* a scenario's card, readable beside the chat */
   #dock-tools.open { max-height: 36%; }
   #right > .dock > .dbody { overflow: auto; }
-  #loopstate { color: var(--dim); text-transform: none; letter-spacing: 0; font-size: 11px; }
-  .loop-msg { padding: 6px 8px; margin: 0; }
+  #metisstate { color: var(--dim); text-transform: none; letter-spacing: 0; font-size: 11px; margin-left: 6px; }
+  #metisstate.up { color: var(--green, #3fb950); }
+  #catchg { border: 1px solid var(--yellow); background: #2a2111; color: var(--yellow); padding: 1px 6px; border-radius: 3px; }
+  #catchg[hidden] { display: none; }
+  .ev-a { color: var(--fg); border-left: 2px solid var(--green, #3fb950); padding-left: 6px; margin: 2px 0; }
   /* the SCENARIOS tree: sources, situations, scenarios; the selected one marked, the running one green */
   .sc-now { display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap; color: var(--dim); margin: 2px 0; }
   .sc-now b { color: var(--green); font-weight: normal; overflow-wrap: anywhere; }
@@ -177,10 +177,9 @@
   #scenarios .sc-set { color: var(--green); font-size: 11px; }
   #scenarios .sc-sit { color: var(--dim); font-size: 10.5px; }
   #scenarios .sc-help { color: var(--dim); font-size: 11px; margin: 4px 0 0; }
-  .loop-msg[hidden] { display: none; }
   .sc-msg { margin: 2px 0 4px; font-size: 12px; color: var(--dim, #8a93a3); }
   .sc-msg.bad { color: var(--red, #e5534b); }
-  /* the active chat (TALK or LOOP: the mic and the voice go there): its green dot, glowing while the voice is on */
+  /* the active chat (TALK: the mic and the voice go there): its green dot, glowing while the voice is on */
   .chatdot { visibility: hidden; margin-right: 5px; font-size: 10px; color: var(--dim, #8a93a3); }
   .chat-active .chatdot { visibility: visible; color: var(--green, #3fb950); }
   .chat-voiced .chatdot { text-shadow: 0 0 5px var(--green, #3fb950); }
@@ -201,6 +200,7 @@
         </span>
         <select id="game" hidden aria-label="the room: the agent goes there"></select>
       <select id="gameall" hidden aria-label="every room"></select>
+        <span id="catchg" hidden role="status" aria-live="polite"><span id="catchg-t">the catalog changed</span> <button class="btn" id="catchg-reload" type="button" title="reload the road's domains from the changed catalog (each member recompiles; a failure keeps the old one running)">reload</button><button class="btn" id="catchg-x" type="button" title="not now">later</button></span>
         <span id="conn"></span>
         <span id="voice"></span>
         <span id="ctrl" tabindex="-1" aria-label="the replay">
@@ -281,12 +281,8 @@
         </div>
       </section>
       <section class="dock" id="dock-events" data-dock="events" tabindex="-1" aria-label="the run's events: your marks and the surprises">
-        <header><span class="tw">▾</span><span class="tt">EVENTS</span><button class="x" type="button" aria-label="hide the events">✕</button></header>
+        <header><span class="tw">▾</span><span class="tt">EVENTS</span><span id="metisstate" title="the Metis bridge: where explain and send go (Claude Code enables it)"></span><button class="x" type="button" aria-label="hide the events">✕</button></header>
         <div class="dbody" id="events"></div>
-      </section>
-      <section class="dock" id="dock-loop" data-dock="loop" tabindex="-1" aria-label="the pi loop: its chat">
-        <header><span class="tw">▾</span><span class="chatdot" aria-hidden="true">●</span><span class="tt">LOOP</span><span id="loopstate"></span><button class="x" type="button" aria-label="hide the loop">✕</button></header>
-        <div class="dbody" id="loopbox"></div>
       </section>
       <section class="dock" id="dock-world" data-dock="world" tabindex="-1" aria-label="the world card">
         <header><span class="tw">▾</span><span class="tt">WORLD CARD</span><button class="x" type="button" aria-label="hide the world card">✕</button></header>
@@ -301,7 +297,7 @@
         <div class="dbody"><div id="dialogpart"></div></div>
       </section>
     </aside>
-    <nav id="strip"><button type="button" data-strip="talk">Talk</button><button type="button" data-strip="tools">Tools</button><button type="button" data-strip="events">Events</button><button type="button" data-strip="loop">Loop</button><button type="button" data-strip="hierarchy">Hierarchy</button><button type="button" data-strip="world">World card</button><button type="button" data-strip="journal">Journal</button><button type="button" data-strip="dialog">Dialog</button></nav>
+    <nav id="strip"><button type="button" data-strip="talk">Talk</button><button type="button" data-strip="tools">Tools</button><button type="button" data-strip="events">Events</button><button type="button" data-strip="hierarchy">Hierarchy</button><button type="button" data-strip="world">World card</button><button type="button" data-strip="journal">Journal</button><button type="button" data-strip="dialog">Dialog</button></nav>
   </main>
 </div>
 <script type="module">

@@ -1,10 +1,11 @@
-// events.js — the run's EVENTS (loop-road-ui s-0314a8ee, the user's word 2026-11-07): the person's marks and the run's surprises, one list.
+// events.js — the run's EVENTS (loop-road-ui s-0314a8ee; metis-plugin s-df4ff191 step 4): the person's marks and the run's surprises, one list.
 // A mark is a window the person opened and closed (the top bar's button, or "mark" … "end mark, WORDS" by voice); a surprise is a one-off
 // event the page makes itself when the run's collisions or violations rise, and the run stops on it until the person continues. Each
 // event has its window in the trace's k (the host's marks.jsonl row, at_k), so it can be:
-//   narrated   /narrate TRACE K0..K1 CONTEXT in the pi CHAT: every member in the rules' own words + one-fact-short, the event's context, 0 USD
-//   explained  the question to pi in words (paid, the loop's budget)
-//   sent       /disagree M WORDS (a confusion record, the triage) then /take: pi processes it; the person applies or refuses at the gate
+//   narrated   by the road's own host (narrate:N:RUN:K0:K1 -> world/narration): every member in its rules' own words, in TALK, 0 USD
+//   explained  a question to Claude Code through the Metis bridge (it answers in its own time; the answer comes back on the feed)
+//   sent       to Metis: the window kept in the workspace as a surprise with the tester's words; Claude Code works it, the feed says
+//              taken -> ruled VERDICT -> applied, and when the catalog changed the page offers the reload
 // The dashboard draws them and moves their edges (mark:N:move:K0:K1). The list is kept in the browser per trace (localStorage).
 
 const KEY = trace => `roadpage.events.v1:${trace}`;
@@ -16,11 +17,10 @@ const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '
 const secs = t => (t == null ? '…' : `${t.toFixed(1)}`);
 
 export class Events {
-  constructor(box, { line, loop, hold, speak, onChange, context }) {
-    Object.assign(this, { box, line, loop, hold, speak, onChange: onChange || (() => {}), context: context || (() => ({})) });
+  constructor(box, { line, metis, hold, speak, say, onChange, context }) {
+    Object.assign(this, { box, line, metis, hold, speak, say: say || speak, onChange: onChange || (() => {}), context: context || (() => ({})) });
     this.list = []; this.sel = null; this.trace = null; this.last = null; this.stopOn = true; this.waiting = null;
     this.rise = { c: 0, v: 0, tick: -1e9 };
-    this.pending = [];                                          // narrations asked, their loop marks to come: [event number]
     this.draw();
   }
 
@@ -49,7 +49,7 @@ export class Events {
     const a = this.at();
     let e = this.get(n);
     if (edge === 'start' || !e) {
-      e = { n, kind: 'mark', open: true, trace: this.trace, k0: a.k, t0: a.t, k1: null, t1: null, words: '', note: '', loop: [] };
+      e = { n, kind: 'mark', open: true, trace: this.trace, k0: a.k, t0: a.t, k1: null, t1: null, words: '', note: '' };
       this.list = this.list.filter(x => x.n !== n).concat(e);
     }
     if (edge === 'stop') { Object.assign(e, { open: false, k1: a.k, t1: a.t }); if (words) e.words = words; }
@@ -59,7 +59,7 @@ export class Events {
 
   once(n, kind, stops = true) {
     const a = this.at();
-    this.list = this.list.filter(x => x.n !== n).concat({ n, kind, open: false, trace: this.trace, k0: a.k, t0: a.t, k1: a.k, t1: a.t, words: `a ${kind}`, note: '', loop: [] });
+    this.list = this.list.filter(x => x.n !== n).concat({ n, kind, open: false, trace: this.trace, k0: a.k, t0: a.t, k1: a.k, t1: a.t, words: `a ${kind}`, note: '' });
     this.sel = n; if (stops) this.waiting = n;
     this.save(); this.draw();
   }
@@ -67,7 +67,7 @@ export class Events {
   moved(n, k0, k1, t0, t1, i0, i1) {                             // the dashboard's drag, ended: the host hears it (the k, and the run's ticks there), the list keeps it
     const e = this.get(n);
     if (!e || e.open) return;
-    Object.assign(e, { k0, k1, t0, t1, loop: [] });             // a moved window is narrated again
+    Object.assign(e, { k0, k1, t0, t1, narration: null });      // a moved window is narrated again
     this.line(`mark:${n}:move:${k0}:${k1}${i0 != null && i1 != null ? `:${i0}:${i1}` : ''}`);
     this.save(); this.draw();
   }
@@ -85,55 +85,82 @@ export class Events {
   // the window told for an event: a mark's own; a surprise's tick with the LEAD ticks before it
   window(e) { return e.kind === 'mark' ? [e.k0, Math.max(e.k0, e.k1)] : [Math.max(0, e.k0 - LEAD), e.k0]; }
 
-  // ── the loop ──
-  narrate(n) {
+  // ── narrate (the road's host), explain and send (the Metis bridge) ──
+  ready(n) {                                                     // the event to act on, or why not (said)
     const e = this.get(n ?? this.sel);
-    if (e && !this.usable(e)) return;
-    if (!e || e.open || !e.trace || e.k0 == null) { this.speak(e?.open ? `Event ${e.n} is still open: end it first.` : 'Mark an event first.'); return; }
+    if (e && !this.usable(e)) return null;
+    if (!e || e.open || !e.trace || e.k0 == null) { this.speak(e?.open ? `Event ${e.n} is still open: end it first.` : 'Mark an event first.'); return null; }
     this.sel = e.n;
-    this.pending.push(e.n);
-    const [w0, w1] = this.window(e);
-    this.loop.say(`/narrate ${e.trace} ${w0}..${w1} ${this.said(e)}`, undefined, `/narrate event ${e.n}`);   // the log: the short form (the mark card carries the context)
-    e.state = 'narrated'; this.save(); this.draw();
+    return e;
   }
 
-  said(e) {                                                      // the event's context, as the loop's chat shows it on the narration
+  narrate(n) {
+    const e = this.ready(n);
+    if (!e) return;
+    const [w0, w1] = this.window(e);
+    this.line(`narrate:${e.n}:${e.trace}:${w0}:${w1}`);
+    e.state = 'narrating'; this.save(); this.draw();
+  }
+
+  narrated(f) {                                                  // world/narration from the host: said in TALK, kept on the event
+    const e = this.get(Number(f.n));
+    if (f.error) { this.speak(`I cannot narrate event ${f.n}: ${f.error}`); if (e) { e.state = null; this.save(); this.draw(); } return; }
+    if (!e) return;
+    e.narration = f.members; e.state = 'narrated';
+    const said = Object.entries(f.members || {}).map(([m, ls]) => `the ${m}: ${ls.join('; ')}`).join('. ');
+    this.say(`Event ${e.n}, ${this.said(e)}. ${said || f.text}`);
+    this.save(); this.draw();
+  }
+
+  said(e) {                                                      // the event's context, as the narration and Metis are told it
     const c = this.context(), saw = (e.note || (e.kind === 'mark' ? e.words : '') || '').replace(/\s+/g, ' ').trim();
     const when = e.kind === 'mark' ? `${secs(e.t0)}–${secs(e.t1)} s` : `${secs(e.t0)} s`;
-    return `event ${e.n}, ${e.kind === 'mark' ? 'a mark' : `a ${e.kind} (told with the 3 s before it)`} at ${when} of the run${c.scenario ? ` on ${c.scenario} seed ${c.seed}` : ''}`
+    return `${e.kind === 'mark' ? 'a mark' : `a ${e.kind} (told with the 3 s before it)`} at ${when} of the run${c.scenario ? ` on ${c.scenario} seed ${c.seed}` : ''}`
       + (saw ? `; the tester saw: ${saw}` : '');
   }
 
-  explain(n) {
-    const e = this.get(n ?? this.sel);
-    if (e && !this.usable(e)) return;
-    if (!e || e.open || !e.trace) { this.speak('Mark an event first.'); return; }
-    this.sel = e.n;
-    const what = e.note || e.words;
-    const [w0, w1] = this.window(e);
-    this.loop.say(`Explain event ${e.n} for a road tester: run ${e.trace}, trace window k ${w0}..${w1} (${e.kind === 'mark' ? `${secs(e.t0)}–${secs(e.t1)} s of the run` : `the 3 s up to the ${e.kind} at ${secs(e.t0)} s`})`
-      + `${what ? `, what the tester saw: "${what}"` : ''}. Why did the car act as it did there? Name the rules that decided and the facts they saw, in plain words, briefly.`);
-    e.state = 'explained'; this.save(); this.draw();
+  body(e) {                                                      // what the bridge is told of an event
+    const c = this.context(), [w0, w1] = this.window(e);
+    return { run: e.trace, window: [w0, w1], n: e.n, kind: e.kind, t0: e.t0, t1: e.t1, scenario: c.scenario || undefined,
+      seed: c.seed ? Number(c.seed) : undefined, words: `${(e.note || e.words || `event ${e.n}`).replace(/\s+/g, ' ')} (${this.said(e)})` };
   }
 
-  send(n) {
-    const e = this.get(n ?? this.sel);
-    if (e && !this.usable(e)) return;
-    if (!e || e.open || !e.trace) { this.speak('Mark an event first.'); return; }
-    this.sel = e.n;
-    if (!e.loop.length) { e.sendAfter = true; this.narrate(e.n); return; }
-    const m = e.loop[e.loop.length - 1];
-    this.loop.say(`/disagree ${m.mark} ${(e.note || e.words || `event ${e.n}`).replace(/\s+/g, ' ')}`);
-    this.loop.say('/take');
-    e.sendAfter = false; e.state = 'sent to pi'; this.save(); this.draw();
-  }
-
-  row(r) {                                                       // a row of the CHAT: a mark narrated belongs to the oldest narration asked
-    if (r.kind !== 'mark' || !r.mark || !this.pending.length) return;
-    const e = this.get(this.pending.shift());
+  async explain(n) {
+    const e = this.ready(n);
     if (!e) return;
-    e.loop = e.loop.concat({ mark: r.mark });
-    if (e.sendAfter && !this.pending.includes(e.n)) this.send(e.n);
+    try {
+      const r = await this.metis.explain(this.body(e));
+      e.ref = r.ref; e.state = 'asked Claude';
+      this.speak(`Event ${e.n} is asked of Claude Code: its answer comes here.`);
+    } catch (err) { this.speak(String(err.message || err)); }
+    this.save(); this.draw();
+  }
+
+  async send(n) {
+    const e = this.ready(n);
+    if (!e) return;
+    try {
+      const r = await this.metis.surprise(this.body(e));
+      Object.assign(e, { sid: r.id, member: r.member, state: 'sent to Metis' });
+      this.speak(`Event ${e.n} is in the workspace as surprise ${r.id} (the ${r.member}): Claude Code works it.`);
+    } catch (err) { this.speak(String(err.message || err)); }
+    this.save(); this.draw();
+  }
+
+  feed(f) {                                                      // the bridge's feed: a sent event's life, an explain's answer
+    if (f.kind === 'answer') {
+      const e = this.list.find(x => x.ref && x.ref === f.ref);
+      if (e) { e.state = 'answered'; e.answer = f.text; this.save(); this.draw(); }
+      this.say(e ? `Claude Code on event ${e.n}: ${f.text}` : `Claude Code: ${f.text}`);
+      return;
+    }
+    if (f.kind !== 'surprise') return;
+    const e = this.list.find(x => (x.sid && x.sid === f.id) || (f.n != null && x.n === f.n && x.trace && !x.sid));
+    if (!e) return;
+    e.sid = f.id;
+    const was = e.state;
+    e.state = f.status === 'ruled' ? `ruled ${String(f.verdict || '').split(/[:\s]/)[0]}` : f.status === 'tried' ? `tried: ${f.verdict || ''}` : f.status === 'open' ? 'sent to Metis' : f.status;
+    if (e.state !== was && f.status !== 'open') this.speak(`Event ${e.n}: ${e.state}${f.status === 'applied' && f.commit ? ` (${f.commit})` : ''}.`);
     this.save(); this.draw();
   }
 
@@ -156,8 +183,9 @@ export class Events {
         <div class="ev-h"><b>#${e.n}</b> <span class="ev-kind">${esc(e.kind === 'mark' ? 'mark' : e.kind)}</span>
           <span class="ev-t">${secs(e.t0)}${e.kind === 'mark' ? `–${secs(e.t1)}` : ''} s</span>${e.open ? '<span class="ev-open">open</span>' : ''}${e.state ? `<span class="ev-st">${esc(e.state)}</span>` : ''}
           ${this.gone(e) ? '<span class="ev-gone" title="the trace keeps the last 6000 ticks (10 min): this window is gone">older than the trace</span>' : ''}
-          <span class="ev-acts"><button type="button" class="glyph" data-act="narrate" title="narrate: the rules' own words for this event (free)">¶</button><button type="button" class="glyph" data-act="explain" title="explain: ask pi why the car acted so (paid)">?</button><button type="button" class="glyph" data-act="send" title="send to the pi loop: a record of what you saw, pi proposes a correction, you decide whether to apply it (paid)">⇢</button></span></div>
+          <span class="ev-acts"><button type="button" class="glyph" data-act="narrate" title="narrate: the rules' own words for this event (free)">¶</button><button type="button" class="glyph" data-act="explain" title="explain: ask Claude Code (through the Metis bridge) why the car acted so">?</button><button type="button" class="glyph" data-act="send" title="send to Metis: the window and your words as a surprise in the workspace; Claude Code works it, the catalog change comes back as a reload">⇢</button></span></div>
         ${e.words && e.kind === 'mark' ? `<div class="ev-w">${esc(e.words)}</div>` : ''}
+        ${e.answer ? `<div class="ev-a" title="Claude Code's answer">${esc(e.answer)}</div>` : ''}
         <input class="ev-note" type="text" placeholder="what you saw (your words go with it)" value="${esc(e.note)}" aria-label="your words for event ${e.n}">
       </li>`).join('')}</ol>`;
     this.box.querySelector('#ev-stop').onchange = ev => { this.stopOn = ev.target.checked; };
