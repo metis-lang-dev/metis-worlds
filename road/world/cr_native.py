@@ -44,8 +44,8 @@ MATCH_PAD_M = 6.0
 PATH_AHEAD_M = 250.0           # the length of a lane's centreline sent as a reference path
 BEAT_S = 1.0                   # brake(R)'s desired speed: the restricted deceleration over this
 # the trajectory level (metis-plugin s-df4ff191 step 5): "ocp" = reference.py + ocp_server.py (OUR Python OCP, M3);
-# "trajplan" = perotheia-packages/planner's C++ planner (lane plan + OCP + its obstacle floors) as a child process,
-# re-planned every step (road/planner/trajplan_client.py)
+# "trajplan" = perotheia-packages/planner's C++ planner (lane plan + OCP + its obstacle floors) in process,
+# re-planned every step (road/planner/trajplan.py: its C ABI through ctypes)
 TRAJ = os.environ.get("CR_TRAJ", "ocp")
 SB_VEHICLE = {"length": 4.3, "width": 1.7, "wheelbase": 2.3, "b": 1.15, "a_max": 9.0, "s_max": 1.0}   # = ocp.SB_VEHICLE
 
@@ -262,10 +262,9 @@ class NativeCrWorld:
         """The C++ planner: the lanelets → its lane map (the planner's tools/cr_lanes.py), the server, the route to the
         goal (the ego's start → the goal region's centre, or the goal lanelet's middle)."""
         sys.path.insert(0, str(ROAD / "planner"))
-        import trajplan_client as tc
+        import trajplan as tp
         lanes = self.work / "trajplan.lanes"
-        subprocess.run([sys.executable, str(tc.CR_LANES), os.environ["CR_LANES_JSON"], str(lanes)], check=True,
-                       stdout=subprocess.DEVNULL)
+        tp.lanes_file(self.lanemap, lanes)             # the same LaneMap the family reads (cr_lanes over the lanelets)
         pl = (self.doc.get("planning") or [{}])[0]["initial"]
         self.ego = {"k": int(pl["k"]), "x": float(pl["x"]), "y": float(pl["y"]), "v": float(pl.get("v") or 0.0),
                     "phi": float(pl.get("theta") or 0.0), "delta": 0.0, "a": 0.0}
@@ -274,14 +273,19 @@ class NativeCrWorld:
         # state (its start from the previous plan absorbs a real car's tracking error; here it would undo the clip)
         params = {"replan_tol": 0, "replan_lon": 0, "replan_dv": 0}
         params.update({k[len("TRAJPLAN_"):].lower(): v for k, v in os.environ.items()
-                       if k.startswith("TRAJPLAN_") and k not in ("TRAJPLAN_SERVER",)})
-        self.traj = tc.TrajplanServer(lanes, open(self.work / "trajplan_server.log", "w"), veh, **params)
+                       if k.startswith("TRAJPLAN_") and k not in ("TRAJPLAN_LIB",)})
+        self.traj = tp.Trajplan(lanes, veh, **params)
+        import commander as cm
+        self.cmdr = cm.Commander(ego_front=0.5 * veh["length"])
+        self.cmdr_loop, self.cmdr_holder, self.cmdr_status = None, None, {"cmd_seq": 0, "change": 0}
+        self._fit_v, self._fit_n = None, 0
         self.EGO_L, self.EGO_W = veh["length"], veh["width"]
         self.record["vehicle"] = dict(veh, type="SB's car (ocp.SB_VEHICLE); the oracle's FORD_ESCORT")
         self.record["planner"] = "trajplan"
-        self.record["settings"].update(planner="perotheia-packages/planner trajplan::Planner (lane plan + OCP) via "
-                                       "cr_plan_server, every step", reference="the planner's own (its lane map from "
-                                       "the lanelets: tools/cr_lanes.py)", params=params, server=str(tc.SERVER))
+        self.record["settings"].update(planner="perotheia-packages/planner trajplan::Planner (lane plan + OCP) in "
+                                       "process (libtrajplan_c.so via road/planner/trajplan.py), every step",
+                                       reference="the planner's own, over the family's LaneMap (trajplan.lanes_file)",
+                                       params=self.traj.params, lib=str(tp.LIB))
         goal = None
         g = self.goals[0] if self.goals else {}
         if g.get("polygons"):
@@ -519,6 +523,33 @@ class NativeCrWorld:
             self.plan_failures += 1
             self.plan, self.plan_i = [], 0
 
+    def fired(self, member, rule, loop):
+        """A fired command rule (road_host.on_event): the commander's (trajplan mode; the ocp path reads the Loop's
+        held command through `command`)."""
+        if self.traj is None:
+            return
+        import commander as cm
+        self.cmdr_loop = loop
+        e = self.ego
+        ego = loop.proj.get("ego")
+        try:
+            line = loop.yield_gap(ego) if ego is not None else None
+        except Exception:
+            line = None
+        roles = {r: int(v[2:]) for r, v in (loop.proj.get("binding") or {}).items()
+                 if isinstance(v, str) and v.startswith("cr") and v[2:].isdigit()}
+        self.cmdr.fired(member, rule, {"cap": loop.pace, "line": line, "stop": None, "roles": roles},
+                        {"x": e["x"], "y": e["y"], "heading": e["phi"], "speed": e["v"]})
+        if cm.rule_base(rule) not in ("change_home", "drive_away"):
+            self.cmdr_holder = member
+
+    def cmdr_fit_epoch(self, v_t):
+        """A counter that moves when the KEEP target moves by 0.25 m/s or more (the commander's `same`)."""
+        if self._fit_v is None or abs(v_t - self._fit_v) >= 0.25:
+            self._fit_v = v_t
+            self._fit_n += 1
+        return self._fit_n
+
     def _fit_cruise(self, target):
         """The family's target lowered so the arrival at a goal on the path lands in its window (reference.build's
         window-fitted speed, the same bisection), recomputed every REPLAN steps; None: no goal on the path."""
@@ -553,7 +584,7 @@ class NativeCrWorld:
     def _replan_trajplan(self, sp):
         """One cycle of the C++ planner: the step's obstacles, the family's command as its BehaviourCmd, a plan from
         the ego's state; the plan sampled at the scenario's dt becomes self.plan (state 0 = now)."""
-        import trajplan_client as tc
+        import trajplan as tp
         t0 = time.perf_counter()
         obs = []
         for o in self.obstacles:
@@ -564,23 +595,27 @@ class NativeCrWorld:
                         float(o.get("length") or 4.5), float(o.get("width") or 1.8), o.get("role") == "static"))
         t = self.tick * self.dt
         self.traj.obstacles(t, obs)
-        here = self.lanemap.lanes.get(self.ego_lane)
+        # the family's fired rules → BehaviourCmd as RoadDomain decides it (commander.py, fed by `fired`); a KEEP's
+        # target is capped by the goal window's fitted cruise (the bench's own target, as reference.build did)
+        holder = self.cmdr_holder if self.cmdr_loop is not None and self.cmdr_loop.life > 0 else None
+        bc = self.cmdr.command(holder, self.cmdr_status)
         kind, v_t, x, y = "keep", 0.0, 0.0, 0.0
-        if self.carry is not None and self.target_lane == self.carry["into"]:
-            kind = "pass_opposite"
-        elif self.target_lane is not None and self.target_lane != self.ego_lane and here is not None \
-                and self.target_lane in (here.left, here.right):
-            kind = "change_left" if here.left == self.target_lane else "change_right"
-        elif sp.stop_xy is not None:
-            kind, (x, y) = "stop_at", sp.stop_xy
-        if kind != "stop_at":
-            target = sp.desired_v if sp.desired_v is not None else self._limit()
-            fit = self._fit_cruise(target) if target > 0.05 else None
-            v_t = tc.V_STOP if target <= 0.05 else (min(target, fit) if fit is not None else target)
-            v_t = max(v_t, tc.V_STOP)
-        self.traj.command(kind, v_t, x, y)
+        if bc is not None:
+            kind, v_t, x, y = bc["name"], bc["v_target"], bc["x"], bc["y"]
+        if kind == "keep":
+            lim = v_t if v_t > 0 else self._limit()
+            fit = self._fit_cruise(lim)
+            if fit is not None and fit < lim:
+                v_t = max(tp.V_STOP, fit)
+        seq = None
+        if bc is not None:
+            seq = bc["seq"] + 1000 * self.cmdr_fit_epoch(v_t)        # a new fitted cruise is a new decision
+        self.traj.command(kind, v_t, x, y, bc["lead_id"] if bc else 0, bc["yield_id"] if bc else 0,
+                          bc["min_gap"] if bc else 0.0, seq=seq)
         e = self.ego
         h, pts = self.traj.plan(t, e["x"], e["y"], e["phi"], e["v"], e.get("a") or 0.0, e.get("delta") or 0.0)
+        self.cmdr_status = {"cmd_seq": self.traj.seq, "change": h.get("change")}
+        self.record["plan_ms"] = self.record.get("plan_ms", 0.0) + (h.get("ms") or 0.0)
         ok = bool(h.get("ok")) and len(pts) > 1
         self.record["solves"].append({"k": self.k, "stage": "plan", "status": h.get("status"), "success": ok,
                                       "iterations": h.get("iters"), "t_wall_s": round(time.perf_counter() - t0, 4),
@@ -596,7 +631,7 @@ class NativeCrWorld:
         self.plan = []
         i = 0
         while i * self.dt <= horizon + 1e-9:
-            q = tc.sample(pts, i * self.dt)
+            q = tp.sample(pts, i * self.dt)
             self.plan.append({"k": self.k + i, "x": q[1], "y": q[2], "phi": q[3], "v": max(0.0, q[4]), "a": q[5],
                               "delta": math.atan(q[6] * L)})
             i += 1

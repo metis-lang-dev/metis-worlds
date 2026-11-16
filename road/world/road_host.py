@@ -82,6 +82,9 @@ def new_world(run):
     RoadWorld's face (observe, command, step, tick, t, log, arrived, summary)."""
     if run.get("world") == "sumo":
         import sumo_host
+        if run.get("traj") == "trajplan":                     # the ego on the vehicle's planner (metis-plugin step 5)
+            import sumo_planned
+            return sumo_host.Loop(run, world=sumo_planned.PlannedSumoWorld)
         return sumo_host.Loop(run)
     if run.get("world") == "crnative":                          # a CommonRoad scenario's native loop, no SUMO (planner-loop)
         import cr_native
@@ -216,6 +219,9 @@ class RoadHost:
         if cmd is not None:
             self.now_due = False                       # this period's command is given
             self.road.command(cmd, life=self.period)
+            w = getattr(self.road, "world", None)
+            if hasattr(w, "fired"):                    # a trajectory level (sumo_planned): the rule itself, as RoadDomain's
+                w.fired(self.spec, name, self.road)
             self._log({"t": round(self.road.t, 2), "member": self.spec, "rule": name, "command": list(cmd)})
 
     def bind(self, reg):

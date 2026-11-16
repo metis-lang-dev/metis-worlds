@@ -5,7 +5,7 @@ exerciser (road/world: road_world through road_host). No model, no person: the p
 destination, the responder answers the situation layer.
 
     cd metis-agent/py && .venv/bin/python <worlds>/road/experiments/road_tree.py SCENARIO SEED [SEED …] [--ticks N] [--out DIR] \\
-        [--world sumo] [--vehicles N] [--trace DIR] [--stop-after-window S]
+        [--world sumo] [--traj trajplan] [--vehicles N] [--trace DIR] [--stop-after-window S]
 
 --world sumo runs nina's SUMO loop (road_host.new_world) in place of the exerciser; --vehicles goes into its run spec.
 --stop-after-window S: a cr: run stops S s after its goal's time window ended with the goal not reached (the summary's
@@ -142,6 +142,8 @@ def run(scenario, seed, out_dir, ticks=1500, world_kind=None, vehicles=None, tra
     run_spec = {"scenario": scenario, "seed": seed, "log": str(log), "key": "%s-%d-%f" % (scenario, seed, time.time())}
     if world_kind:
         run_spec["world"] = world_kind
+    if os.environ.get("ROAD_TRAJ"):                   # --traj trajplan: the ego on the vehicle's planner (sumo_planned)
+        run_spec["traj"] = os.environ["ROAD_TRAJ"]
     if vehicles is not None:
         run_spec["vehicles"] = vehicles
     if sensor_range is not None:                      # the ego's sensor range (m); both hosts default to 100
@@ -249,6 +251,8 @@ def main(argv):
             args.append(a)
     ticks = int(opts.get("--ticks", 1500))
     world_kind = opts.get("--world")
+    if "--traj" in opts:
+        os.environ["ROAD_TRAJ"] = opts["--traj"]
     vehicles = int(opts["--vehicles"]) if "--vehicles" in opts else None
     out = Path(opts["--out"]) if "--out" in opts else Path(tempfile.mkdtemp(prefix="road-tree-"))
     scenario, seeds = args[0], [int(x) for x in args[1:]] or [1]

@@ -377,7 +377,8 @@ class Loop:
                 "ms": {k: mean(k) for k in ("restrict", "sumo", "perceive", "project", "account")},
                 "vehicles_max": max((m["vehicles"] for m in self.ms), default=0),
                 "undue_brakes": len(self.undue), "passes": self.passes, "rss": dict(rss_card(), sensor_range=self.perc.sensor.range),
-                "sensor_range": self.perc.sensor.range}
+                "sensor_range": self.perc.sensor.range,
+                "planned": w.summary() if hasattr(w, "summary") else None}     # the trajectory level's (sumo_planned)
 
 
     def close(self):

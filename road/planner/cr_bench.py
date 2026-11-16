@@ -682,8 +682,8 @@ HOW["ours"] = ("OUR planner: the road family's command per beat (road_tree --wor
 HOW["trajplan"] = ("perotheia-packages/planner's C++ planner: the road family's command per beat (road_tree --world crnative "
                    "over the LaneMap from the lanelets, as `ours`) → its BehaviourCmd (keep at the target, window-fitted; "
                    "stop_at; change_left/right; pass_opposite) → trajplan::Planner (its lane plan over the lanelets "
-                   "converted by the planner's tools/cr_lanes.py, its IDM / stop / gap floors against the recorded "
-                   "obstacles, its OCP: 5 s at 0.1 s), re-planned EVERY step through cr_plan_server; the restrictor's cap "
+                   "the family's LaneMap written as the planner's lane map (trajplan.lanes_file), its IDM / stop / gap floors against the recorded "
+                   "obstacles, its OCP: 5 s at 0.1 s), re-planned EVERY step in process (libtrajplan_c.so through ctypes); the restrictor's cap "
                    "clips the executed speed; SB's vehicle.")
 HOW["ours-parity"] = ("OUR OCP (ocp.py: SB's low-level optimisation from its equations, every addition off) on SB's OWN "
                       "reference (the sb2023 column's record), one shot, SB's vehicle: the parity proof of M2.")
