@@ -43,6 +43,11 @@ MATCH_HEADING_DEG = 45.0
 MATCH_PAD_M = 6.0
 PATH_AHEAD_M = 250.0           # the length of a lane's centreline sent as a reference path
 BEAT_S = 1.0                   # brake(R)'s desired speed: the restricted deceleration over this
+# the trajectory level (metis-plugin s-df4ff191 step 5): "ocp" = reference.py + ocp_server.py (OUR Python OCP, M3);
+# "trajplan" = perotheia-packages/planner's C++ planner (lane plan + OCP + its obstacle floors) as a child process,
+# re-planned every step (road/planner/trajplan_client.py)
+TRAJ = os.environ.get("CR_TRAJ", "ocp")
+SB_VEHICLE = {"length": 4.3, "width": 1.7, "wheelbase": 2.3, "b": 1.15, "a_max": 9.0, "s_max": 1.0}   # = ocp.SB_VEHICLE
 
 
 def _seg_project(px, py, ax, ay, bx, by):
@@ -214,6 +219,8 @@ class NativeCrWorld:
         self.plan, self.plan_i, self.last_plan_tick, self.last_set = [], 0, None, None
         self.plan_failures = 0
         self.proc = None
+        self.traj = None                               # the trajplan server (CR_TRAJ=trajplan)
+        self.fit = (None, None)                        # (tick, cruise): the window-fitted cruise, every REPLAN steps
         self.started = False
         rec = record or os.environ.get("CR_NATIVE_RECORD")       # cr_bench --planner composition sets it per run
         self.record_path = Path(rec) if rec else self.work / "record.json"
@@ -251,8 +258,51 @@ class NativeCrWorld:
             if line.startswith("{"):
                 return json.loads(line)
 
+    def _start_trajplan(self):
+        """The C++ planner: the lanelets → its lane map (the planner's tools/cr_lanes.py), the server, the route to the
+        goal (the ego's start → the goal region's centre, or the goal lanelet's middle)."""
+        sys.path.insert(0, str(ROAD / "planner"))
+        import trajplan_client as tc
+        lanes = self.work / "trajplan.lanes"
+        subprocess.run([sys.executable, str(tc.CR_LANES), os.environ["CR_LANES_JSON"], str(lanes)], check=True,
+                       stdout=subprocess.DEVNULL)
+        pl = (self.doc.get("planning") or [{}])[0]["initial"]
+        self.ego = {"k": int(pl["k"]), "x": float(pl["x"]), "y": float(pl["y"]), "v": float(pl.get("v") or 0.0),
+                    "phi": float(pl.get("theta") or 0.0), "delta": 0.0, "a": 0.0}
+        veh = dict(SB_VEHICLE)
+        # the ego here executes the plan exactly (the cap's clip aside): the planner always starts from the ego's
+        # state (its start from the previous plan absorbs a real car's tracking error; here it would undo the clip)
+        params = {"replan_tol": 0, "replan_lon": 0, "replan_dv": 0}
+        params.update({k[len("TRAJPLAN_"):].lower(): v for k, v in os.environ.items()
+                       if k.startswith("TRAJPLAN_") and k not in ("TRAJPLAN_SERVER",)})
+        self.traj = tc.TrajplanServer(lanes, open(self.work / "trajplan_server.log", "w"), veh, **params)
+        self.EGO_L, self.EGO_W = veh["length"], veh["width"]
+        self.record["vehicle"] = dict(veh, type="SB's car (ocp.SB_VEHICLE); the oracle's FORD_ESCORT")
+        self.record["planner"] = "trajplan"
+        self.record["settings"].update(planner="perotheia-packages/planner trajplan::Planner (lane plan + OCP) via "
+                                       "cr_plan_server, every step", reference="the planner's own (its lane map from "
+                                       "the lanelets: tools/cr_lanes.py)", params=params, server=str(tc.SERVER))
+        goal = None
+        g = self.goals[0] if self.goals else {}
+        if g.get("polygons"):
+            poly = g["polygons"][0]
+            goal = (sum(q[0] for q in poly) / len(poly), sum(q[1] for q in poly) / len(poly))
+        elif g.get("lanelets"):
+            la = next((x for x in self.doc.get("lanelets") or [] if int(x["id"]) == int(g["lanelets"][0])), None)
+            if la:
+                c = la["center"]
+                goal = tuple(c[len(c) // 2])
+        self.traj_route = self.traj.route([(self.ego["x"], self.ego["y"]), goal] if goal else None)
+
     def start(self):
         self.work.mkdir(parents=True, exist_ok=True)
+        if TRAJ == "trajplan":
+            self._start_trajplan()
+            m = self._match_ego()
+            self.ego_lane, self.ego_s, self.ego_lat = m
+            self.home_lane = self.ego_lane
+            self.ego_route = self._route(self.ego_lane)
+            return
         log = open(self.work / "ocp_server.log", "w")
         self.proc = subprocess.Popen([PLANNER_PY, str(OCP_SERVER)], stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                                      stderr=log, text=True)
@@ -270,6 +320,9 @@ class NativeCrWorld:
         self.ego_route = self._route(self.ego_lane)
 
     def close(self):
+        if self.traj is not None:
+            self.traj.close()
+            self.traj = None
         if self.proc is not None:
             try:
                 self._ask({"op": "quit"})
@@ -433,6 +486,8 @@ class NativeCrWorld:
     def _replan(self, sp):
         """A solve over the remaining window: the reference (reference.build) along the lane the family's command names
         (the route lane, the sibling of a change, the oncoming lane of a pass), its speed the setpoints'."""
+        if self.traj is not None:
+            return self._replan_trajplan(sp)
         sys.path.insert(0, str(ROAD / "planner"))
         import reference
         lane = self.target_lane or self.ego_lane
@@ -464,6 +519,92 @@ class NativeCrWorld:
             self.plan_failures += 1
             self.plan, self.plan_i = [], 0
 
+    def _fit_cruise(self, target):
+        """The family's target lowered so the arrival at a goal on the path lands in its window (reference.build's
+        window-fitted speed, the same bisection), recomputed every REPLAN steps; None: no goal on the path."""
+        if self.fit[0] is not None and self.tick - self.fit[0] < REPLAN:
+            return self.fit[1]
+        import reference
+        cruise = None
+        last = max([int(g["time"][1]) for g in self.goals if g.get("time")] or [self.k + MIN_HORIZON])
+        n = max(MIN_HORIZON, last - self.k) + 1
+        path = self._path_for(self.ego_lane, False, ahead=max(PATH_AHEAD_M, n * self.dt * max(self.ego["v"], target) + 50))
+        if path:
+            goal_s, w = self._goal_on(path)
+            if goal_s is not None and w is not None:
+                s0, _ = reference.project(path, (self.ego["x"], self.ego["y"]))
+                goal_rel, t1 = goal_s - s0, (w[0] - self.k) * self.dt
+                _, ds = reference._profile(self.ego["v"], self.dt, n, target, 1.0)
+                t = reference._arrival(ds, self.dt, goal_rel)
+                if goal_rel > 0 and t is not None and t1 > 0 and t < t1 - 1e-9:
+                    lo, hi = 0.0, target
+                    for _ in range(40):
+                        mid = 0.5 * (lo + hi)
+                        _, dm = reference._profile(self.ego["v"], self.dt, n, mid, 1.0)
+                        tm = reference._arrival(dm, self.dt, goal_rel)
+                        if tm is None or tm > t1:
+                            lo = mid
+                        else:
+                            hi = mid
+                    cruise = hi
+        self.fit = (self.tick, cruise)
+        return cruise
+
+    def _replan_trajplan(self, sp):
+        """One cycle of the C++ planner: the step's obstacles, the family's command as its BehaviourCmd, a plan from
+        the ego's state; the plan sampled at the scenario's dt becomes self.plan (state 0 = now)."""
+        import trajplan_client as tc
+        t0 = time.perf_counter()
+        obs = []
+        for o in self.obstacles:
+            p = self._present(o, self.k)
+            if p is None:
+                continue
+            obs.append((int(o["id"]), float(p["x"]), float(p["y"]), float(p.get("theta") or 0.0), float(p.get("v") or 0.0),
+                        float(o.get("length") or 4.5), float(o.get("width") or 1.8), o.get("role") == "static"))
+        t = self.tick * self.dt
+        self.traj.obstacles(t, obs)
+        here = self.lanemap.lanes.get(self.ego_lane)
+        kind, v_t, x, y = "keep", 0.0, 0.0, 0.0
+        if self.carry is not None and self.target_lane == self.carry["into"]:
+            kind = "pass_opposite"
+        elif self.target_lane is not None and self.target_lane != self.ego_lane and here is not None \
+                and self.target_lane in (here.left, here.right):
+            kind = "change_left" if here.left == self.target_lane else "change_right"
+        elif sp.stop_xy is not None:
+            kind, (x, y) = "stop_at", sp.stop_xy
+        if kind != "stop_at":
+            target = sp.desired_v if sp.desired_v is not None else self._limit()
+            fit = self._fit_cruise(target) if target > 0.05 else None
+            v_t = tc.V_STOP if target <= 0.05 else (min(target, fit) if fit is not None else target)
+            v_t = max(v_t, tc.V_STOP)
+        self.traj.command(kind, v_t, x, y)
+        e = self.ego
+        h, pts = self.traj.plan(t, e["x"], e["y"], e["phi"], e["v"], e.get("a") or 0.0, e.get("delta") or 0.0)
+        ok = bool(h.get("ok")) and len(pts) > 1
+        self.record["solves"].append({"k": self.k, "stage": "plan", "status": h.get("status"), "success": ok,
+                                      "iterations": h.get("iters"), "t_wall_s": round(time.perf_counter() - t0, 4),
+                                      "ms": h.get("ms"), "lane": self.ego_lane, "cmd": [kind, round(v_t, 2)],
+                                      "change": h.get("change"), "limit": h.get("limit"), "why": h.get("why") or None})
+        self.record["steps"][-1].update(v_ref=round(v_t, 3) if kind != "stop_at" else 0.0)
+        if not ok:
+            self.plan_failures += 1
+            self.plan, self.plan_i = [], 0
+            return
+        L = SB_VEHICLE["wheelbase"]
+        horizon = pts[-1][0]
+        self.plan = []
+        i = 0
+        while i * self.dt <= horizon + 1e-9:
+            q = tc.sample(pts, i * self.dt)
+            self.plan.append({"k": self.k + i, "x": q[1], "y": q[2], "phi": q[3], "v": max(0.0, q[4]), "a": q[5],
+                              "delta": math.atan(q[6] * L)})
+            i += 1
+        self.plan_i = 1
+        if self.record["horizon"]["steps"] is None:
+            self.record["horizon"].update(mode="receding (every step)", steps=len(self.plan) - 1,
+                                          seconds=round(horizon, 2))
+
     def step(self):
         """One step: the first call only presents the ego at its initial state (the episode's start); after it, the ego
         follows the plan (replanned as the setpoints ask), clipped by the cap, the obstacles move to their recorded pose."""
@@ -477,7 +618,7 @@ class NativeCrWorld:
         key = (sp.desired_v and round(sp.desired_v, 1), sp.stop_xy and tuple(round(c, 1) for c in sp.stop_xy),
                self.target_lane, self.reverse)
         due = (not self.plan or self.plan_i >= len(self.plan) or key != self.last_set
-               or (self.tick - (self.last_plan_tick or 0)) >= REPLAN)
+               or (self.tick - (self.last_plan_tick or 0)) >= REPLAN or self.traj is not None)
         if due:
             self._replan(sp)
             self.last_plan_tick, self.last_set = self.tick, key

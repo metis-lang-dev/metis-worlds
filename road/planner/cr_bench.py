@@ -407,7 +407,7 @@ def drive_ours_parity(cfg, ref_fn, last_step, row, d):
     return states, _CentredVehicle()
 
 
-def drive_ours(cfg, ref_fn, last_step, row, d):
+def drive_ours(cfg, ref_fn, last_step, row, d, traj="ocp"):
     """M3, OUR planner: the road family's command per beat over the LaneMap from the scenario's LANELETS (cr_lanelets →
     cr_lanes: no SUMO conversion), the reference (reference.py) into OUR OCP (ocp.py, SB's), through road_tree.py --world
     crnative (the Live: perception, belief, facts, fold, restrictor); SB's vehicle; the record → the states."""
@@ -420,7 +420,7 @@ def drive_ours(cfg, ref_fn, last_step, row, d):
     d.mkdir(parents=True, exist_ok=True)
     lanes = cr_lanelets.export(xml, d / "lanes.json")
     env = dict(os.environ, CR_LANES_JSON=str(lanes), PLANNER_PY=sys.executable, CR_NATIVE_RECORD=str(d / "record.json"),
-               PYTHONPATH=str(REPO / "libs" / "semantic-world"))
+               PYTHONPATH=str(REPO / "libs" / "semantic-world"), CR_TRAJ=traj)
     if not env.get("METIS_HOME"):
         row["error"] = True
         row["reason"] = {"child": "METIS_HOME unset: the family's catalog pin (a detached worktree at road/domains/catalog.pin)"}
@@ -458,7 +458,15 @@ def drive_ours(cfg, ref_fn, last_step, row, d):
     return states, _CentredVehicle()
 
 
-PLANNERS = {"ours": drive_ours, "ours-parity": drive_ours_parity, "reactive": drive_reactive, "stub": drive_stub, "sb2023": drive_sb2023, "sb2023-ca": drive_sb2023_ca,
+def drive_trajplan(cfg, ref_fn, last_step, row, d):
+    """metis-plugin s-df4ff191 step 5: the family's command per beat (road_tree --world crnative, as `ours`) into
+    perotheia-packages/planner's C++ planner (trajplan::Planner: its lane plan over the scenario's lanelets, its OCP,
+    its obstacle floors; cr_plan_server, re-planned every step: road/planner/trajplan_client.py) instead of
+    reference.py + ocp.py; SB's vehicle."""
+    return drive_ours(cfg, ref_fn, last_step, row, d, traj="trajplan")
+
+
+PLANNERS = {"ours": drive_ours, "trajplan": drive_trajplan, "ours-parity": drive_ours_parity, "reactive": drive_reactive, "stub": drive_stub, "sb2023": drive_sb2023, "sb2023-ca": drive_sb2023_ca,
             "sb2023-vlim": drive_sb2023_vlim, "composition": drive_composition}
 
 
@@ -671,6 +679,12 @@ HOW["ours"] = ("OUR planner: the road family's command per beat (road_tree --wor
                "scenario's lanelets, no SUMO) → the reference (reference.py: the lane the command names, the target speed, "
                "stops, the window-fitted arrival) → OUR OCP (ocp.py = SB's, parity proven), re-solved over the remaining "
                "window at a new command or every 1 s; the restrictor's cap clips the executed speed; SB's vehicle.")
+HOW["trajplan"] = ("perotheia-packages/planner's C++ planner: the road family's command per beat (road_tree --world crnative "
+                   "over the LaneMap from the lanelets, as `ours`) → its BehaviourCmd (keep at the target, window-fitted; "
+                   "stop_at; change_left/right; pass_opposite) → trajplan::Planner (its lane plan over the lanelets "
+                   "converted by the planner's tools/cr_lanes.py, its IDM / stop / gap floors against the recorded "
+                   "obstacles, its OCP: 5 s at 0.1 s), re-planned EVERY step through cr_plan_server; the restrictor's cap "
+                   "clips the executed speed; SB's vehicle.")
 HOW["ours-parity"] = ("OUR OCP (ocp.py: SB's low-level optimisation from its equations, every addition off) on SB's OWN "
                       "reference (the sb2023 column's record), one shot, SB's vehicle: the parity proof of M2.")
 HOW["sb2023-ca"] = HOW["sb2023"].replace("collision_avoidance off", "collision_avoidance ON (the one flag)")
