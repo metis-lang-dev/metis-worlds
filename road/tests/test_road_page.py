@@ -218,7 +218,7 @@ ev.feed({ kind: 'answer', ref: 'X1', text: 'The cut-in came inside the brake rea
 const bad = new Events(stubEl(), { line: () => {}, metis: { surprise: async () => { throw new Error('the Metis bridge is off'); } }, speak: t => said.push('BAD ' + t) });
 bad.scene({ trace: 'r2', k: 5, t: 0.5, tick: 5 }); bad.once(1, 'collision'); await bad.send(1);
 const e = ev.get(3);
-process.stdout.write(JSON.stringify({ lines, said, posts, state: e.state, answer: e.answer, sid: e.sid }));""")
+process.stdout.write(JSON.stringify({ lines, said, posts, state: e.state, answer: e.answer, sid: e.sid, bad_state: bad.get(1).state }));""")
     p = subprocess.run([node(), str(js), (WEB / "events.js").as_uri()], capture_output=True, text=True, timeout=60)
     assert p.returncode == 0, p.stderr
     o = json.loads(p.stdout)
@@ -229,4 +229,32 @@ process.stdout.write(JSON.stringify({ lines, said, posts, state: e.state, answer
     assert o["sid"] == "S1" and o["state"] == "answered" and o["answer"] == "The cut-in came inside the brake reach."
     assert any(s == "Event 3: taken." for s in o["said"]) and any(s.startswith("Event 3: ruled accepted") for s in o["said"])
     assert any("Event 3: applied (abc)." == s for s in o["said"])
-    assert any(s.startswith("BAD the Metis bridge is off") for s in o["said"])
+    assert any(s.startswith("BAD Event 1: send failed: the Metis bridge is off") for s in o["said"])
+    assert o["bad_state"].startswith("send failed: the Metis bridge is off")                  # on the row too, not only said
+
+
+def test_a_rerun_event_never_takes_the_first_runs_surprise(tmp_path):
+    """Step 6 live: a re-run on the same trace numbers its events from 1 again; the bridge's feed, replayed after a reconnect, carries
+    the first run's #1. The new #1 must keep no sid and no state of it, and its send must post its own window."""
+    js = tmp_path / "rerun.mjs"
+    js.write_text("""const store = {};
+const stubEl = () => ({ innerHTML: '', onchange: null, onclick: null, querySelector: () => stubEl(), querySelectorAll: () => [] });
+globalThis.document = { querySelector: () => stubEl() };
+globalThis.localStorage = { getItem: k => store[k] ?? null, setItem: (k, v) => { store[k] = v; } };
+const { Events } = await import(process.argv[2]);
+const posts = [];
+const metis = { surprise: async b => { posts.push(b); return { id: 'S' + posts.length, trace: 't', member: 'planner' }; }, explain: async () => ({}) };
+let ev = new Events(stubEl(), { line: () => {}, metis, speak: () => {}, context: () => ({}) });
+ev.scene({ trace: 'T', k: 300, t: 30, tick: 300 }); ev.edge(1, 'start'); ev.scene({ trace: 'T', k: 330, t: 33, tick: 330 }); ev.edge(1, 'stop');
+await ev.send(1); ev.feed({ kind: 'surprise', id: 'S1', n: 1, status: 'applied' });
+ev = new Events(stubEl(), { line: () => {}, metis, speak: () => {}, context: () => ({}) });
+ev.scene({ trace: 'T', k: 336, t: 33.5, tick: 336 }); ev.edge(1, 'start'); ev.scene({ trace: 'T', k: 469, t: 46.8, tick: 469 }); ev.edge(1, 'stop');
+for (const s of ['open', 'taken', 'ruled', 'applied']) ev.feed({ kind: 'surprise', id: 'S1', n: 1, status: s });
+const mid = JSON.parse(JSON.stringify(ev.get(1)));
+await ev.send(1);
+process.stdout.write(JSON.stringify({ mid, after: ev.get(1), last: posts[posts.length - 1] }));""")
+    p = subprocess.run([node(), str(js), (WEB / "events.js").as_uri()], capture_output=True, text=True, timeout=60)
+    assert p.returncode == 0, p.stderr
+    o = json.loads(p.stdout)
+    assert "sid" not in o["mid"] and o["mid"].get("state") in (None, "")
+    assert o["after"]["sid"] == "S2" and o["after"]["state"] == "sent to Metis" and o["last"]["window"] == [336, 469]

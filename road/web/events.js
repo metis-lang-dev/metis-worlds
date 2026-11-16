@@ -125,25 +125,34 @@ export class Events {
       seed: c.seed ? Number(c.seed) : undefined, words: `${(e.note || e.words || `event ${e.n}`).replace(/\s+/g, ' ')} (${this.said(e)})` };
   }
 
+  failed(e, what, err) {                                         // a failure ON the row (step 6 live: a send that said nothing), and said
+    const msg = String(err?.message || err);
+    e.state = `${what} failed: ${msg}`;
+    console.error(`[events] event ${e.n}: ${what} failed:`, err);
+    this.speak(`Event ${e.n}: ${what} failed: ${msg}`);
+  }
+
   async explain(n) {
     const e = this.ready(n);
     if (!e) return;
+    e.state = 'asking…'; this.draw();
     try {
       const r = await this.metis.explain(this.body(e));
       e.ref = r.ref; e.state = 'asked Claude';
       this.speak(`Event ${e.n} is asked of Claude Code: its answer comes here.`);
-    } catch (err) { this.speak(String(err.message || err)); }
+    } catch (err) { this.failed(e, 'explain', err); }
     this.save(); this.draw();
   }
 
   async send(n) {
     const e = this.ready(n);
     if (!e) return;
+    e.state = 'sending…'; delete e.sid; this.draw();             // a click shows at once; a resend is a new surprise
     try {
       const r = await this.metis.surprise(this.body(e));
       Object.assign(e, { sid: r.id, member: r.member, state: 'sent to Metis' });
       this.speak(`Event ${e.n} is in the workspace as surprise ${r.id} (the ${r.member}): Claude Code works it.`);
-    } catch (err) { this.speak(String(err.message || err)); }
+    } catch (err) { this.failed(e, 'send', err); }
     this.save(); this.draw();
   }
 
@@ -155,9 +164,10 @@ export class Events {
       return;
     }
     if (f.kind !== 'surprise') return;
-    const e = this.list.find(x => (x.sid && x.sid === f.id) || (f.n != null && x.n === f.n && x.trace && !x.sid));
+    // by the surprise's id only (the send's answer gives it): a re-run on the same trace numbers its events from 1 again, and the
+    // feed replayed after a reconnect carries the first run's #1, which a new #1 must not take (step 6 live)
+    const e = this.list.find(x => x.sid && x.sid === f.id);
     if (!e) return;
-    e.sid = f.id;
     const was = e.state;
     e.state = f.status === 'ruled' ? `ruled ${String(f.verdict || '').split(/[:\s]/)[0]}` : f.status === 'tried' ? `tried: ${f.verdict || ''}` : f.status === 'open' ? 'sent to Metis' : f.status;
     if (e.state !== was && f.status !== 'open') this.speak(`Event ${e.n}: ${e.state}${f.status === 'applied' && f.commit ? ` (${f.commit})` : ''}.`);
@@ -175,6 +185,8 @@ export class Events {
   save() { if (this.trace) try { localStorage.setItem(KEY(this.trace), JSON.stringify(this.list)); } catch { /* full or private */ } }
 
   draw() {
+    const was = typeof document !== 'undefined' ? document.activeElement : null;          // a note being typed keeps its focus and caret
+    const keep = was && was.classList?.contains('ev-note') ? { n: was.closest?.('li.ev')?.dataset.n, at: was.selectionStart } : null;
     const rows = [...this.list].sort((a, b) => b.n - a.n);
     this.box.innerHTML = `<div class="ev-bar"><label title="the run stops when the car collides or breaks a rule; you continue it"><input type="checkbox" id="ev-stop" ${this.stopOn ? 'checked' : ''}> stop on a surprise</label>
       ${this.waiting != null ? `<button type="button" class="chip ev-go" id="ev-go" title="the run waits on event ${this.waiting}: continue it">continue the run</button>` : ''}</div>
@@ -194,8 +206,14 @@ export class Events {
     for (const li of this.box.querySelectorAll('li.ev')) {
       const n = Number(li.dataset.n);
       li.onclick = ev => { if (ev.target.closest('button,input')) return; this.select(n); };
-      li.querySelector('.ev-note').onchange = ev => { const e = this.get(n); if (e) { e.note = ev.target.value.trim(); this.save(); } };
+      const note = li.querySelector('.ev-note');                // the words kept as typed: a redraw (an end mark landing) never drops them
+      note.oninput = ev => { const e = this.get(n); if (e) { e.note = ev.target.value; this.save(); } };
+      note.onchange = ev => { const e = this.get(n); if (e) { e.note = ev.target.value.trim(); this.save(); } };
       for (const b of li.querySelectorAll('[data-act]')) b.onclick = () => this[b.dataset.act](n);
+    }
+    if (keep?.n != null) {
+      const inp = this.box.querySelector(`li.ev[data-n="${keep.n}"] .ev-note`);
+      if (inp?.focus) { inp.focus(); try { inp.setSelectionRange(keep.at, keep.at); } catch { /* not a text input */ } }
     }
     this.onChange();
   }
