@@ -3,7 +3,7 @@ display: the comfort advice
 line: "comfort: a room turning cold, warm or humid, and what would help"
 voice: third
 program: comfort.llp
-host: ../../world/home_host.py:comfort
+host: home_host.py:comfort
 intent: {spec: intent.yaml}
 clock: {beats: 1, period: 1}
 records: records/

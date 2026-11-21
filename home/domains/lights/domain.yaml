@@ -3,7 +3,7 @@ display: the lights
 line: "the lights: on and off at a word or a scene, off in a room left vacant, a light offered on entering a dark room at night"
 voice: own
 program: lights.llp
-host: ../../world/home_host.py:lights
+host: home_host.py:lights
 intent: {spec: intent.yaml}
 clock: {beats: 1, period: 1}
 records: records/

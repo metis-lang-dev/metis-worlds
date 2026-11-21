@@ -35,6 +35,23 @@ def test_compiles_and_lints_clean(pkg):
     assert not errors, errors
 
 
+def test_images_link_to_the_golden(tmp_path):
+    """The home's bundle is five one-member images (no composition: domains/Makefile says why): each package links
+    with no error, from a copy elsewhere, to the hash domains/images.golden pins."""
+    if not Path(METISC).exists():
+        pytest.skip("no metisc (METISC)")
+    copy = tmp_path / "home"
+    shutil.copytree(HOME, copy, ignore=shutil.ignore_patterns(".metis", "__pycache__", "records", "build"))
+    golden = (HOME / "domains" / "images.golden").read_text().splitlines()
+    assert [l.split()[1] for l in golden] == PACKAGES
+    got = []
+    for pkg in PACKAGES:
+        r = run(METISC, "--link", pkg, "-o", str(tmp_path / "build"), cwd=copy / "domains")
+        assert r.returncode == 0 and "result 0 error(s)" in r.stdout, r.stdout + r.stderr
+        got += [l for l in r.stdout.splitlines() if l.startswith("image ")]
+    assert got == golden, "the images moved: `make -C domains golden` writes images.golden again"
+
+
 @pytest.mark.parametrize("pkg", PACKAGES)
 def test_goldens_written_again_byte_for_byte(pkg, tmp_path):
     copy = tmp_path / "home"

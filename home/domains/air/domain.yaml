@@ -3,7 +3,7 @@ display: the ventilation
 line: "the ventilation: the recuperators on, off, night or boost, the heater, winter mode, and advice when it turns cold outside"
 voice: own
 program: air.llp
-host: ../../world/home_host.py:air
+host: home_host.py:air
 intent: {spec: intent.yaml}
 clock: {beats: 1, period: 1}
 records: records/

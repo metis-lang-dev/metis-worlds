@@ -37,6 +37,19 @@ package decides WHAT (its own `mode`), the host fans it out as one wish per devi
 settles its own devices by its own rules. A director is the next step if two packages ever contend
 for one device.
 
+## The bundle: five one-member images, no composition
+
+A metis bundle (`domains/composition.yaml`, `metisc build`, `image.golden`: the road, ALFWorld's `hier`) is a
+hierarchy: specialists over a capacity and the tick protocol, under a director. The home has none of that, and
+metisc refuses a director with specialists on the go runtime (`plan-tick-layer`), which is what `metis-home` runs.
+So the home's packages are built the way metisc builds a package alone (spec/17 §2): `make -C domains` links each
+into its one-member image (`domains/<pkg>/build/`), `make -C domains check` compares the five hashes with
+`domains/images.golden`, and `make -C domains golden` rewrites it after a rule change (a test holds it).
+`metis-home` compiles the packages from their sources and reads no image. In the metis tools the workspace has
+no bundle (`bundle: null`, `bundle_build` has nothing to build), and `package_list` lists the five members. Each
+package's `host:` is a shim beside its manifest (`home_host.py`, the road's pattern) that loads
+`world/home_host.py` ($METIS_HOME_WORLD, else the `world/` above), so the manifest stays inside the catalog root.
+
 ## The patterns the rules follow (metis-loop `skills/metis-loop/patterns`)
 
 - **Complementary readings / Exclusive family, single reason**: every reading is a family the host
