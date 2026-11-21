@@ -5,7 +5,7 @@ After=network-online.target
 [Service]
 Environment=METIS_HOME_HA=http://127.0.0.1:8123
 Environment=METISC=%h/metis/metis-lang/src/metisc
-ExecStart=%h/.local/bin/metis-home -world %h/metis/metis-worlds/home -python %h/metis/metis-agent/py/.venv/bin/python
+ExecStart=%h/.local/bin/metis-home -world %h/metis/metis-worlds/home
 Restart=always
 RestartSec=3
 
