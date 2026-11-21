@@ -1,0 +1,144 @@
+{
+ "_doc": "home.map.json with the lab wired (radar, thermometer, light): the tests and the replay",
+ "rooms": {
+  "r1": {
+   "name": "bedroom",
+   "words": [
+    "bedroom"
+   ]
+  },
+  "r2": {
+   "name": "lab",
+   "words": [
+    "lab",
+    "workshop"
+   ]
+  },
+  "r3": {
+   "name": "living room",
+   "words": [
+    "living room",
+    "lounge"
+   ]
+  },
+  "r4": {
+   "name": "kitchen",
+   "words": [
+    "kitchen"
+   ]
+  }
+ },
+ "lights": {
+  "l1": {
+   "room": "r3",
+   "words": [
+    "living room light",
+    "light",
+    "lights",
+    "lamp"
+   ],
+   "entity": null,
+   "_note": "the Tuya BLE light: not in Home Assistant yet"
+  },
+  "l2": {
+   "room": "r1",
+   "words": [
+    "bedroom light"
+   ],
+   "entity": null
+  },
+  "l3": {
+   "room": "r2",
+   "words": [
+    "lab light"
+   ],
+   "entity": "light.lab"
+  }
+ },
+ "units": {
+  "u1": {
+   "room": "r1",
+   "words": [
+    "bedroom ventilation",
+    "bedroom vent",
+    "bedroom fan",
+    "bedroom recuperator"
+   ],
+   "prefix": "bedroom_badriom"
+  },
+  "u2": {
+   "room": "r2",
+   "words": [
+    "lab ventilation",
+    "lab vent",
+    "lab fan",
+    "lab recuperator"
+   ],
+   "prefix": "lab"
+  }
+ },
+ "tvs": {
+  "t1": {
+   "room": "r3",
+   "words": [
+    "tv",
+    "television",
+    "telly"
+   ],
+   "entity": null,
+   "_note": "LG webOS: discovered as a HomeKit device; the webOS integration needs the TV's pairing prompt"
+  }
+ },
+ "ir": {
+  "ir1": {
+   "room": "r3",
+   "words": [
+    "air conditioner",
+    "ac"
+   ],
+   "remote": null,
+   "_note": "the USB IR remote: not yet wired"
+  }
+ },
+ "radar": {
+  "r1": null,
+  "r2": "binary_sensor.lab_presence",
+  "r3": null,
+  "r4": null,
+  "_note": "mmWave presence radar: not yet wired; entity per room (binary_sensor) when it is"
+ },
+ "thermometers": {
+  "r1": null,
+  "r2": {
+   "temperature": "sensor.lab_temperature",
+   "humidity": "sensor.lab_humidity"
+  },
+  "r3": null,
+  "r4": null,
+  "_note": "Bluetooth thermometers: not yet wired; {temperature, humidity} sensor entities per room"
+ },
+ "sun": "sun.sun",
+ "thresholds": {
+  "_doc": "the host's classes, with hysteresis (Steady reading): enter at the first number, leave at the second",
+  "vacant_after_s": [
+   600,
+   0
+  ],
+  "outside_cold_c": [
+   8.0,
+   10.0
+  ],
+  "room_cold_c": [
+   19.0,
+   20.0
+  ],
+  "room_warm_c": [
+   26.0,
+   25.0
+  ],
+  "humid_pct": [
+   65,
+   60
+  ]
+ }
+}
