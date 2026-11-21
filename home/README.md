@@ -74,6 +74,19 @@ thermometers (`thermometers`: temperature and humidity entities per room; until 
 the USB infrared remote (`ir`: `ir_absent`, every IR command refused with that reason). The lights
 and the TV are not in Home Assistant yet (their entities are null: refused as not answering).
 
+## The service on the NUC (Go, on the C++ runtime)
+
+`metis-home` (metis-agent branch `home-cgo`, `go/cmd/metis-home`) serves these packages in one native
+process: the Go domain agent on libmetis_rt over cgo, the home host in Go
+(`go/internal/host/home.go`, this world's `world/home_host.py` ported and held to these goldens), on a
+1 s beat. Beside FSTTM's conversation it writes every outcome and conclusion to the stream door
+(REASONING, 127.0.0.1:8766) and answers the tool port (127.0.0.1:8768); for Claude Code it is the runtime
+`home` of the Metis surprise interface (`.metis/runtimes/home.json`; `/metis-runtime home` in a Claude
+Code session with the Metis plugin here): kernel surprises written to `.metis/surprises/` then signalled,
+and a package changed on disk (the user merged a rule change) reloaded, a failed load keeping the old rules.
+
+    bash deploy/nuc/install.sh          # build natively, install the systemd user unit (starts nothing)
+
 ## Run and test
 
 ```sh
