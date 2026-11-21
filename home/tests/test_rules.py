@@ -23,6 +23,25 @@ def test_map_files_are_current():
     assert r.returncode == 0, r.stdout + r.stderr
 
 
+def test_a_device_named_without_its_room():
+    """More than one of the kind: its unnamed words bind the unnamed handle, and which.llp refuses each command on
+    it naming the rooms that have one. One of the kind: the words are that device's own, and no rule asks."""
+    sys.path.insert(0, str(HOME / "world"))
+    import gen_map
+    m = gen_map.load()
+    rows = [("cmd_air_on", "unit", "on"), ("cmd_tv_on", "tv", "on")]
+    which = gen_map.which_llp(m, "air", rows)
+    assert "which_air_on [dyn] : cmd_air_on(ua) -o refused(on)." in which
+    assert "there is one in the bedroom and the lab. Which room?" in which
+    assert "cmd_tv_on" not in which                       # one TV: "tv" is t1's own word
+    block = gen_map.handles_block(m, "air")
+    assert '    ua: {description: ["ventilation"' in block and "standing: [ux, ua]" in block
+    one = dict(m, units={"u1": m["units"]["u1"]})
+    assert gen_map.which_llp(one, "air", rows) is None
+    block = gen_map.handles_block(one, "air")
+    assert "ua:" not in block and '"bedroom recuperator", "ventilation"' in block and "standing: [ux]" in block
+
+
 @pytest.mark.parametrize("pkg", PACKAGES)
 def test_compiles_and_lints_clean(pkg):
     if not Path(METISC).exists():

@@ -12,6 +12,7 @@ provenance text "ventilation: the recuperators on, off, night or boost, the heat
 layers (dyn).
 stages (serve).
 include "../shared/home_world.llp".
+include "which.llp".                  % a unit named without its room: which room? (world/gen_map.py)
 
 type act {on off night boost normal heat winter scene}.
 

@@ -14,6 +14,7 @@ provenance text "lighting: a light on or off at a person's word or a scene; off 
 layers (dyn).
 stages (serve).
 include "../shared/home_world.llp".
+include "which.llp".                  % a light named without its room: which room? (world/gen_map.py)
 
 type act {on off scene}.
 

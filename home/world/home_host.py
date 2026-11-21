@@ -38,7 +38,8 @@ HERE = Path(__file__).resolve().parent
 MAP_PATH = Path(os.environ.get("METIS_HOME_MAP") or HERE / "home.map.json")
 GRACE = 3                          # beats a switched device is given before it is read back
 BEAT_S = 1.0                       # the manifests' clock period, for the host's timers
-STANDING = {"lx", "ux", "tx", "irx", "rx"}
+STANDING = {"lx", "ux", "tx", "irx", "rx"} | {    # + the unnamed handles (la, ua): a device named without its room
+    u["handle"] for k, u in json.loads(MAP_PATH.read_text()).get("unnamed", {}).items() if not k.startswith("_")}
 
 OUTCOMES = {                        # per package: the tokens a beat leaves, retracted at the next
     "lights": ("done", "refused", "switched", "kept", "missed", "auto_off", "suggest_light"),

@@ -37,4 +37,10 @@
 {"clock": "beat"}
 {"id": "c11", "domain": "air", "verb": "ON", "args": {"device": "bedroom ventilation"}}
 {"clock": "beat"}
+{"id": "c12", "domain": "air", "verb": "OFF", "args": {"device": "ventilation"}}
+{"clock": "beat"}
+{"id": "c13", "domain": "air", "verb": "HEAT_ON", "args": {"device": "heating"}}
+{"clock": "beat"}
+{"id": "c14", "domain": "air", "verb": "BOOST", "args": {"device": "fan"}}
+{"clock": "beat"}
 {"tool": "state", "args": {}}

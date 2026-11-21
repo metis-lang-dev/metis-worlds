@@ -14,7 +14,7 @@ state as its ENVIRONMENT stream and the rules' outcomes as its REASONING stream.
 | path | what |
 |---|---|
 | `world/home.map.json` | the flat as data: rooms, lights, the ventilation units, the TV, the infrared devices, the sensors to come, each a role (r1, l1, u1, t1, ir1) bound to its words and its Home Assistant entity; the thresholds of the host's classes. A device with entity null is not in Home Assistant yet |
-| `world/gen_map.py` | the map → `domains/shared/home_map.llp` (the role types, `light_in`, `unit_in`, `has_unit` / `no_unit`) and each package's intent handles (`--check` in CI) |
+| `world/gen_map.py` | the map → `domains/shared/home_map.llp` (the role types, `light_in`, `unit_in`, `has_unit` / `no_unit`), each package's intent handles, and `domains/<pkg>/which.llp` where a device can be named without its room (`--check` in CI) |
 | `world/home_host.py` | the host: one World per process (Sim, or Home Assistant's REST API with `METIS_HOME_HA` and the token file `~/.config/fsttm/hass.token`), one view per package; the families kept exactly one, the timers and edges, the scene fan-out, the grace after a command |
 | `domains/shared/home_world.llp` | the readings that cross packages, declarations only (presence, time of day, the units' state, the edges) |
 | `domains/lights/` | lighting: on / off at a word or a scene; off in a room vacant a while; a light offered on entering a dark room at night |
@@ -67,6 +67,11 @@ package's `host:` is a shim beside its manifest (`home_host.py`, the road's patt
   that is the surprise the loop learns from.
 - **A room is data / Bind before ground**: the rules name roles; `light_in(L, R)` and `unit_in(U, R)`
   are `bwd` facts the map generates, binding every variable at grounding.
+- **Which room?**: a device named without its room ("the light", "the heating": the map's `unnamed`)
+  where the home has more than one binds the kind's unnamed handle (`la`, `ua`); the generated
+  `which.llp` refuses every command on it with a reason naming the rooms that have one, so the
+  conversation asks which room. The rules never pick one. Where the home has one of the kind, the
+  words are that device's own.
 - **Interface package**: the readings shared by packages are declared once (`shared/home_world.llp`).
 - Suggestions are said, never done: away, the night's end, a light on entering, winter mode,
   ventilation for a warm or humid room. The person decides.
