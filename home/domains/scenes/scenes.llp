@@ -1,0 +1,52 @@
+% Scenes: the mode the home is in (home | night | away), at the person's word or suggested by what
+% the home sees. The mode is the program's own (it changes only here); the host fans a new mode out
+% to the other packages as one wish per device (sweep_off, sweep_air_off, sweep_air_night,
+% sweep_tv_off), and each package settles its own devices by its own rules ('Commands as
+% constraints': the scene says WHAT, each package knows HOW). A suggestion is said, never done:
+% the person decides.
+catalog scenes 1.
+provenance text "scenes: home, night, away, set at a person's word; away suggested when the home empties, night left at dawn on a word; arriving home ends away" "2026-11-21".
+layers (dyn).
+stages (serve).
+include "../shared/home_world.llp".
+
+type act {scene}.
+
+pred mode(scene) : home.
+pred cmd_scene(scene) : home.
+
+pred done(act) : home.
+pred refused(act) : home.
+pred began(scene) : home.             % the host fans it out to the packages
+pred suggest(scene) : home.
+pred welcomed : home.
+
+stage serve {
+  %% I switch the home to its {S} mode.
+  scene_set [dyn] : cmd_scene(S) * mode(M) * other(M, S) -o mode(S) * began(S) * done(scene).
+  %% The home is already in its {S} mode.
+  scene_already [dyn] : cmd_scene(S) * $mode(S) -o refused(scene).
+
+  %% Nobody seems to be home: shall I set the home to away?
+  suggest_away [dyn] : left_home * $mode(home) -o suggest(away).
+  %% Nobody is home, and the home is already set for it.
+  left_settled [dyn] : left_home * $mode(away) -o welcomed.
+  %% Nobody seems to be home, at night: shall I set the home to away?
+  suggest_away_night [dyn] : left_home * $mode(night) -o suggest(away).
+  %% Welcome home: I set the home back from away.
+  arrive [dyn] : came_home * mode(away) -o mode(home) * began(home) * welcomed.
+  %% Someone came home.
+  arrive_home [dyn] : came_home * $mode(home) -o welcomed.
+  %% Someone came home at night.
+  arrive_night [dyn] : came_home * $mode(night) -o welcomed.
+  %% The sun is up: shall I end the night?
+  morning [dyn] : dawn * $mode(night) -o suggest(home).
+  %% The sun is up.
+  morning_day [dyn] : dawn * $mode(home) -o welcomed.
+  %% The sun is up; the home is away.
+  morning_away [dyn] : dawn * $mode(away) -o welcomed.
+}
+
+#init mode(home) 1
+#query mode(night)
+#steps 4

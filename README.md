@@ -9,6 +9,7 @@ which move to `metis.host` / `metis.repl` in metispy under the metis-packages su
 | [`alfworld/`](alfworld/README.md) | ALFWorld 0.4.2 (TextWorld games; AI2-THOR for frames) | the kernel acts, surprises become rules; the domain hierarchy with a director (`alfworld/docs/HIERARCHY.md`); the exploitation demo (`alfworld/docs/DEMO.md`) |
 | [`minihack/`](minihack/README.md) | MiniHack 1.0.2 on NLE 1.3.0 | the small LLM agent in the loop, the domain extracted after |
 | [`scienceworld/`](scienceworld/README.md) | ScienceWorld 1.2.3 (a text laboratory; Java) | hidden properties: the loop must run the experiment that reveals them (`scienceworld/experiments/REPORT.md`) |
+| [`home/`](home/README.md) | the flat (Home Assistant: the Prana recuperators, lights, the TV; radar, thermometers and an IR remote to come) | a live home: the rules as flat packages over roles (lights, air, media, scenes, comfort), the host reads the home back every beat, surprises from devices that did not obey |
 | [`web/`](web/README.md) | (every world) | the world map: one renderer and schema, a tileset per world (`web/tiles/` is NetHack's art, its own NOTICE) |
 
 Installing the whole stack on a fresh host (repos, system packages, the three venvs, the models, ALFWorld and its demo): [`docs/INSTALL.md`](docs/INSTALL.md).

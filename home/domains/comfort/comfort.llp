@@ -1,0 +1,71 @@
+% Comfort: what the person would want to know about a room's air, from the Bluetooth thermometers
+% (not yet wired: untracked). Advice only: this package switches nothing; it reads the units' state
+% (shared) and says what would help. The host keeps, per room, cold_room | comfy_room | warm_room |
+% untracked, and humid_room | fresh_room | humidity_unknown, with hysteresis ('Steady reading'), and
+% asserts the edges got_cold(R), got_warm(R), got_humid(R) for one beat.
+catalog comfort 1.
+provenance text "comfort: a room turning cold, warm or humid, and what would help, from the thermometers and the ventilation units' state" "2026-11-21".
+layers (dyn).
+stages (serve).
+include "../shared/home_world.llp".
+
+pred cold_room(room) : home.
+pred comfy_room(room) : home.
+pred warm_room(room) : home.
+pred untracked(room) : home.
+pred humid_room(room) : home.
+pred fresh_room(room) : home.
+pred humidity_unknown(room) : home.
+pred got_cold(room) : home.
+pred got_warm(room) : home.
+pred got_humid(room) : home.
+
+type act {comfort}.
+pred cmd_comfort(room) : home.         % a person's question: how is the air in R?
+pred said(act) : home.
+pred refused(act) : home.
+
+pred advise_air(room) : home.
+pred advise_heater(room) : home.
+pred advise_open(room) : home.
+pred noted(room) : home.
+
+stage serve {
+  %% {R} is comfortable.
+  ask_comfy [dyn] : cmd_comfort(R) * $comfy_room(R) -o said(comfort).
+  %% {R} is cold.
+  ask_cold [dyn] : cmd_comfort(R) * $cold_room(R) -o said(comfort).
+  %% {R} is warm.
+  ask_warm [dyn] : cmd_comfort(R) * $warm_room(R) -o said(comfort).
+  %% I can't tell: {R} has no thermometer yet.
+  ask_untracked [dyn] : cmd_comfort(R) * $untracked(R) -o refused(comfort).
+  %% I can't tell: there is no such room in this home.
+  ask_unknown [dyn] : cmd_comfort(rx) -o refused(comfort).
+
+  %% {R} is getting warm and its ventilation is stopped: shall I start it?
+  warm_start [dyn] : got_warm(R) * unit_in(U, R) * $stopped(U) -o advise_air(R).
+  %% {R} is getting warm; its ventilation is already running.
+  warm_running [dyn] : got_warm(R) * unit_in(U, R) * $running(U) -o noted(R).
+  %% {R} is getting warm and has no ventilation unit: opening a window would help.
+  warm_no_unit [dyn] : got_warm(R) * no_unit(R) -o advise_open(R).
+  %% {R} is getting cold and its ventilation runs without the heater: shall I turn the heater on?
+  cold_heat [dyn] : got_cold(R) * unit_in(U, R) * $running(U) * $heater_off(U) -o advise_heater(R).
+  %% {R} is getting cold; the heater is already on.
+  cold_heating [dyn] : got_cold(R) * unit_in(U, R) * $heater_on(U) -o noted(R).
+  %% {R} is getting cold; its ventilation is stopped.
+  cold_stopped [dyn] : got_cold(R) * unit_in(U, R) * $stopped(U) -o noted(R).
+  %% {R} is getting cold and has no ventilation unit.
+  cold_no_unit [dyn] : got_cold(R) * no_unit(R) -o noted(R).
+  %% {R} is getting humid and its ventilation is stopped: shall I start it?
+  humid_start [dyn] : got_humid(R) * unit_in(U, R) * $stopped(U) -o advise_air(R).
+  %% {R} is getting humid; its ventilation is already running.
+  humid_running [dyn] : got_humid(R) * unit_in(U, R) * $running(U) -o noted(R).
+  %% {R} is getting humid and has no ventilation unit: opening a window would help.
+  humid_no_unit [dyn] : got_humid(R) * no_unit(R) -o advise_open(R).
+}
+
+#init stopped(u1) 1
+#init stopped(u2) 1
+#init heater_off(u1) 1
+#init heater_off(u2) 1
+#steps 4

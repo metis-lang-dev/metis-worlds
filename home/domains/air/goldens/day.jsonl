@@ -1,0 +1,40 @@
+{"ports": {}, "id": "p0"}
+{"clock": "beat"}
+{"id": "c1", "domain": "air", "verb": "NIGHT", "args": {"device": "bedroom ventilation"}}
+{"clock": "beat"}
+{"id": "c2", "domain": "air", "verb": "HEAT_ON", "args": {"device": "bedroom ventilation"}}
+{"clock": "beat"}
+{"id": "c3", "domain": "air", "verb": "ON", "args": {"device": "bedroom ventilation"}}
+{"clock": "beat"}
+{"clock": "beat"}
+{"id": "c4", "domain": "air", "verb": "NIGHT", "args": {"device": "bedroom vent"}}
+{"clock": "beat"}
+{"clock": "beat"}
+{"id": "c5", "domain": "air", "verb": "BOOST", "args": {"device": "bedroom fan"}}
+{"clock": "beat"}
+{"clock": "beat"}
+{"id": "c6", "domain": "air", "verb": "HEAT_ON", "args": {"device": "bedroom ventilation"}}
+{"clock": "beat"}
+{"clock": "beat"}
+{"id": "c7", "domain": "air", "verb": "OFF", "args": {"device": "bedroom ventilation"}}
+{"clock": "beat"}
+{"clock": "beat"}
+{"id": "c8", "domain": "air", "verb": "ON", "args": {"device": "lab ventilation"}}
+{"clock": "beat"}
+{"clock": "beat"}
+{"world": ["+outside(u2,12)"], "id": "w1"}
+{"clock": "beat"}
+{"clock": "beat"}
+{"world": ["+outside(u2,5)"], "id": "w2"}
+{"clock": "beat"}
+{"clock": "beat"}
+{"id": "c9", "domain": "air", "verb": "WINTER_ON", "args": {"device": "lab recuperator"}}
+{"clock": "beat"}
+{"clock": "beat"}
+{"id": "c10", "domain": "air", "verb": "ON", "args": {"device": "kitchen fan"}}
+{"clock": "beat"}
+{"world": ["+unit_missing(u1)"], "id": "w3"}
+{"clock": "beat"}
+{"id": "c11", "domain": "air", "verb": "ON", "args": {"device": "bedroom ventilation"}}
+{"clock": "beat"}
+{"tool": "state", "args": {}}

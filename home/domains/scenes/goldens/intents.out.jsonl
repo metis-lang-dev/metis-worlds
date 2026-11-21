@@ -1,0 +1,3 @@
+{"in": {"args": {}, "verb": "NIGHT"}, "out": {"atom": "cmd_scene(night)", "act": "scene", "used": [], "dropped": {}}}
+{"in": {"args": {}, "verb": "AWAY"}, "out": {"atom": "cmd_scene(away)", "act": "scene", "used": [], "dropped": {}}}
+{"in": {"args": {}, "verb": "HOME"}, "out": {"atom": "cmd_scene(home)", "act": "scene", "used": [], "dropped": {}}}

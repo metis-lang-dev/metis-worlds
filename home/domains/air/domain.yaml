@@ -1,0 +1,10 @@
+# The two recuperators over roles u1, u2; world/home.map.json binds them to Home Assistant.
+display: the ventilation
+line: "the ventilation: the recuperators on, off, night or boost, the heater, winter mode, and advice when it turns cold outside"
+voice: own
+program: air.llp
+host: ../../world/home_host.py:air
+intent: {spec: intent.yaml}
+clock: {beats: 1, period: 1}
+records: records/
+commands: [air_on, air_off, air_night, air_boost, normal_from, heater_up, heater_down, winter_up, winter_down, sweep_air_off, sweep_night]

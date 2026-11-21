@@ -1,0 +1,27 @@
+{"ports": {}, "id": "p0"}
+{"clock": "beat"}
+{"id": "c1", "domain": "comfort", "verb": "QUERY", "args": {"room": "bedroom"}}
+{"clock": "beat"}
+{"world": ["+climate(r1,22,50)"], "id": "w1"}
+{"clock": "beat"}
+{"id": "c2", "domain": "comfort", "verb": "QUERY", "args": {"room": "bedroom"}}
+{"clock": "beat"}
+{"world": ["+climate(r1,27,50)"], "id": "w2"}
+{"clock": "beat"}
+{"clock": "beat"}
+{"world": ["+running(u1)"], "id": "w3"}
+{"clock": "beat"}
+{"world": ["+climate(r1,22,50)"], "id": "w4"}
+{"clock": "beat"}
+{"world": ["+climate(r1,27,50)"], "id": "w5"}
+{"clock": "beat"}
+{"clock": "beat"}
+{"world": ["+climate(r3,21,50)"], "id": "w6"}
+{"clock": "beat"}
+{"world": ["+climate(r3,18,70)"], "id": "w7"}
+{"clock": "beat"}
+{"clock": "beat"}
+{"clock": "beat"}
+{"id": "c3", "domain": "comfort", "verb": "QUERY", "args": {"room": "garage"}}
+{"clock": "beat"}
+{"tool": "state", "args": {}}

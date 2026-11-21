@@ -1,0 +1,10 @@
+# Lighting over the home's roles (l1.., r1..); world/home.map.json binds them.
+display: the lights
+line: "the lights: on and off at a word or a scene, off in a room left vacant, a light offered on entering a dark room at night"
+voice: own
+program: lights.llp
+host: ../../world/home_host.py:lights
+intent: {spec: intent.yaml}
+clock: {beats: 1, period: 1}
+records: records/
+commands: [light_on, light_off, sweep_off, vacant_off]

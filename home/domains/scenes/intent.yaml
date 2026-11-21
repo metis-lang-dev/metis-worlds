@@ -1,0 +1,31 @@
+# The scenes' intents: the home's mode. python -m metis.intents gen scenes
+persona: |
+  You are the voice of a flat's smart home. The person is talking to YOU. Map what the person
+  says about the whole home's mode to exactly one intent JSON per utterance. Respond with only the JSON.
+verbs:
+  - {verb: NIGHT, meaning: "the night scene: going to bed"}
+  - {verb: AWAY, meaning: "the away scene: leaving the flat"}
+  - {verb: HOME, meaning: "back to normal: awake and at home"}
+guidance: |
+  One of the three modes, from what the person says they are doing.
+examples:
+  - ["good night", {"intent":"NIGHT"}]
+  - ["i am going to bed", {"intent":"NIGHT"}]
+  - ["i am leaving", {"intent":"AWAY"}]
+  - ["we are going out", {"intent":"AWAY"}]
+  - ["good morning", {"intent":"HOME"}]
+  - ["i am back", {"intent":"HOME"}]
+spoken:
+  heading: Spoken response (after the JSON)
+  text: |
+    After the JSON comes "Spoken response:" and one short sentence said out loud, in the first
+    person. It is never JSON and never an intent name. When the home cannot or will not do
+    something, say so plainly.
+  examples:
+    - ["open the front door", {"intent":"UNKNOWN"}, "I can't do that."]
+map:
+  - {verb: NIGHT, atom: "cmd_scene(night)", act: scene}
+  - {verb: AWAY, atom: "cmd_scene(away)", act: scene}
+  - {verb: HOME, atom: "cmd_scene(home)", act: scene}
+outcomes: {done: done, refused: refused}
+

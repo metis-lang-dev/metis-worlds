@@ -1,0 +1,82 @@
+% Lighting: a light on or off at the person's word, off for a scene, off when its room has been
+% vacant a while, and a light suggested when someone comes into an unlit room at night.
+% The rules name roles (l1, r3); world/home.map.json binds them ('A room is data').
+%
+% Who writes what. A person's words become one command token (cmd_*); the host asserts it. The
+% rules consume it under what the home believes and leave an outcome token (done | refused, each
+% with its %% sentence); a fired rule that switches a light changes the belief at once and the
+% host actuates it (the rule's name is the command: light_on, light_off, sweep_off, vacant_off).
+% Every beat the host reads the lights back and corrects the belief: a light that did not obey,
+% or one switched by hand, is the surprise the loop learns from. The host keeps the pairs
+% light_lit | light_dark, light_ok | light_missing, room_lit | room_unlit and the shared families.
+catalog lights 1.
+provenance text "lighting: a light on or off at a person's word or a scene; off when its room has been vacant a while; a light suggested on entering an unlit room at night" "2026-11-21".
+layers (dyn).
+stages (serve).
+include "../shared/home_world.llp".
+
+type act {on off scene}.
+
+pred light_lit(light) : home.
+pred light_dark(light) : home.
+pred light_ok(light) : home.
+pred light_missing(light) : home.     % not in Home Assistant, or not answering
+pred room_lit(room) : home.           % some light of the room is lit
+pred room_unlit(room) : home.
+
+pred cmd_light_on(light) : home.
+pred cmd_light_off(light) : home.
+pred sweep_off(light) : home.         % a scene's wish, one per light, from the scenes package's host
+
+pred done(act) : home.
+pred refused(act) : home.
+pred switched(light) : home.
+pred kept(light) : home.
+pred missed(light) : home.
+pred auto_off(light) : home.
+pred suggest_light(room) : home.
+
+stage serve {
+  %% I turn {L} on.
+  light_on [dyn] : cmd_light_on(L) * light_dark(L) * $light_ok(L) -o light_lit(L) * done(on).
+  %% {L} is already on.
+  on_already [dyn] : cmd_light_on(L) * $light_lit(L) -o refused(on).
+  %% I can't turn {L} on: it does not answer.
+  on_missing [dyn] : cmd_light_on(L) * $light_dark(L) * $light_missing(L) -o refused(on).
+  %% I turn {L} off.
+  light_off [dyn] : cmd_light_off(L) * light_lit(L) * $light_ok(L) -o light_dark(L) * done(off).
+  %% {L} is already off.
+  off_already [dyn] : cmd_light_off(L) * $light_dark(L) -o refused(off).
+  %% I can't turn {L} off: it does not answer.
+  off_missing [dyn] : cmd_light_off(L) * $light_lit(L) * $light_missing(L) -o refused(off).
+
+  %% I can't: there is no such light in this home.
+  on_unknown [dyn] : cmd_light_on(lx) -o refused(on).
+  %% I can't: there is no such light in this home.
+  off_unknown [dyn] : cmd_light_off(lx) -o refused(off).
+
+  % ── a scene's wish, settled per light ──
+  %% I turn {L} off for the scene.
+  sweep_off [dyn] : sweep_off(L) * light_lit(L) * $light_ok(L) -o light_dark(L) * switched(L).
+  %% {L} was already off.
+  sweep_kept [dyn] : sweep_off(L) * $light_dark(L) -o kept(L).
+  %% I could not turn {L} off: it does not answer.
+  sweep_missed [dyn] : sweep_off(L) * $light_lit(L) * $light_missing(L) -o missed(L).
+
+  % ── what the person would want without asking ──
+  %% Nobody has been in {R} for a while: I turn {L} off.
+  vacant_off [dyn] : $vacant(R) * light_in(L, R) * light_lit(L) * $light_ok(L) -o light_dark(L) * auto_off(L).
+  %% You came into {R} and it is dark: shall I turn the light on?
+  welcome_dark [dyn] : entered(R) * $night * $room_unlit(R) -o suggest_light(R).
+}
+
+% the start: everything dark and answering; the host corrects it on the first beat
+#init light_dark(l1) 1
+#init light_dark(l2) 1
+#init light_dark(l3) 1
+#init light_ok(l1) 1
+#init light_ok(l2) 1
+#init light_ok(l3) 1
+#query done(on)
+#query refused(on)
+#steps 4

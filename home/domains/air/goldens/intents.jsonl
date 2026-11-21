@@ -1,0 +1,10 @@
+{"args": {"device": "bedroom ventilation"}, "verb": "ON"}
+{"args": {"device": "lab fan"}, "verb": "OFF"}
+{"args": {"device": "bedroom vent"}, "verb": "NIGHT"}
+{"args": {"device": "lab recuperator"}, "verb": "BOOST"}
+{"args": {"device": "lab ventilation"}, "verb": "NORMAL"}
+{"args": {"device": "bedroom fan"}, "verb": "HEAT_ON"}
+{"args": {"device": "bedroom fan"}, "verb": "HEAT_OFF"}
+{"args": {"device": "lab ventilation"}, "verb": "WINTER_ON"}
+{"args": {"device": "lab ventilation"}, "verb": "WINTER_OFF"}
+{"args": {"device": "kitchen fan"}, "verb": "ON"}

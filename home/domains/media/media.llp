@@ -1,0 +1,85 @@
+% Media: the TV (LG webOS through Home Assistant) on, off, louder, quieter; the devices only an
+% infrared remote reaches (the USB IR remote on the NUC: not yet wired), each key a command. The
+% host keeps tv_on | tv_off, tv_ok | tv_missing, and ir_ready | ir_absent (the remote itself).
+catalog media 1.
+provenance text "media: the TV on, off, louder, quieter; infrared devices by their remote's keys; refusals naming the blocker" "2026-11-21".
+layers (dyn).
+stages (serve).
+include "../shared/home_world.llp".
+
+type act {on off volume ir scene}.
+type key {power up down}.
+
+pred tv_on(tv) : home.
+pred tv_off(tv) : home.
+pred tv_ok(tv) : home.
+pred tv_missing(tv) : home.
+pred ir_ready : home.
+pred ir_absent : home.                % the USB IR remote is not plugged in, or not wired yet
+
+pred cmd_tv_on(tv) : home.
+pred cmd_tv_off(tv) : home.
+pred cmd_tv_louder(tv) : home.
+pred cmd_tv_quieter(tv) : home.
+pred cmd_ir(irdev, key) : home.
+pred sweep_tv_off(tv) : home.
+
+pred done(act) : home.
+pred refused(act) : home.
+pred switched(tv) : home.
+pred kept(tv) : home.
+pred missed(tv) : home.
+pred sent(irdev, key) : home.
+
+stage serve {
+  %% I turn {T} on.
+  tv_up [dyn] : cmd_tv_on(T) * tv_off(T) * $tv_ok(T) -o tv_on(T) * done(on).
+  %% {T} is already on.
+  tv_on_already [dyn] : cmd_tv_on(T) * $tv_on(T) -o refused(on).
+  %% I can't turn {T} on: it does not answer.
+  tv_on_missing [dyn] : cmd_tv_on(T) * $tv_off(T) * $tv_missing(T) -o refused(on).
+  %% I turn {T} off.
+  tv_down [dyn] : cmd_tv_off(T) * tv_on(T) * $tv_ok(T) -o tv_off(T) * done(off).
+  %% {T} is already off.
+  tv_off_already [dyn] : cmd_tv_off(T) * $tv_off(T) -o refused(off).
+  %% I can't turn {T} off: it does not answer.
+  tv_off_missing [dyn] : cmd_tv_off(T) * $tv_on(T) * $tv_missing(T) -o refused(off).
+  %% I turn {T} up.
+  tv_louder [dyn] : cmd_tv_louder(T) * $tv_on(T) * $tv_ok(T) -o done(volume).
+  %% I turn {T} down.
+  tv_quieter [dyn] : cmd_tv_quieter(T) * $tv_on(T) * $tv_ok(T) -o done(volume).
+  %% {T} is off: there is no sound to change.
+  louder_off [dyn] : cmd_tv_louder(T) * $tv_off(T) -o refused(volume).
+  %% {T} is off: there is no sound to change.
+  quieter_off [dyn] : cmd_tv_quieter(T) * $tv_off(T) -o refused(volume).
+
+  %% I can't: there is no such TV in this home.
+  tv_on_unknown [dyn] : cmd_tv_on(tx) -o refused(on).
+  %% I can't: there is no such TV in this home.
+  tv_off_unknown [dyn] : cmd_tv_off(tx) -o refused(off).
+  %% I can't: no device I know answers to that remote.
+  ir_unknown [dyn] : cmd_ir(irx, K) * $ir_ready -o refused(ir).
+
+  %% I can't: there is no such TV in this home.
+  louder_unknown [dyn] : cmd_tv_louder(tx) -o refused(volume).
+  %% I can't: there is no such TV in this home.
+  quieter_unknown [dyn] : cmd_tv_quieter(tx) -o refused(volume).
+
+  %% I press {K} on the remote of {D}.
+  ir_send [dyn] : cmd_ir(D, K) * $ir_ready -o sent(D, K) * done(ir).
+  %% I can't reach {D}: the infrared remote is not connected yet.
+  ir_none [dyn] : cmd_ir(D, K) * $ir_absent -o refused(ir).
+
+  %% I turn {T} off for the scene.
+  sweep_tv [dyn] : sweep_tv_off(T) * tv_on(T) * $tv_ok(T) -o tv_off(T) * switched(T).
+  %% {T} was already off.
+  sweep_tv_kept [dyn] : sweep_tv_off(T) * $tv_off(T) -o kept(T).
+  %% I could not turn {T} off: it does not answer.
+  sweep_tv_missed [dyn] : sweep_tv_off(T) * $tv_on(T) * $tv_missing(T) -o missed(T).
+}
+
+#init tv_off(t1) 1
+#init tv_ok(t1) 1
+#init ir_absent 1
+#query done(on)
+#steps 4

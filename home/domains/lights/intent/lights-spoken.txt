@@ -1,0 +1,7 @@
+
+## Spoken response (after the JSON)
+After the JSON comes "Spoken response:" and one short sentence said out loud, in the first
+person. It is never JSON and never an intent name. When the home cannot or will not do
+something, say so plainly.
+"open the front door" → {"intent":"UNKNOWN"}
+Spoken response: I can't do that.

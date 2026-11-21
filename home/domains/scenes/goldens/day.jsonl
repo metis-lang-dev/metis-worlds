@@ -1,0 +1,21 @@
+{"ports": {}, "id": "p0"}
+{"clock": "beat"}
+{"id": "c1", "domain": "scenes", "verb": "NIGHT", "args": {}}
+{"clock": "beat"}
+{"id": "c2", "domain": "scenes", "verb": "NIGHT", "args": {}}
+{"clock": "beat"}
+{"world": ["+dawn"], "id": "w1"}
+{"clock": "beat"}
+{"id": "c3", "domain": "scenes", "verb": "HOME", "args": {}}
+{"clock": "beat"}
+{"world": ["+occupied(r1)"], "id": "w2"}
+{"clock": "beat"}
+{"world": ["+empty(r1)"], "id": "w3"}
+{"clock": "beat"}
+{"clock": "beat"}
+{"id": "c4", "domain": "scenes", "verb": "AWAY", "args": {}}
+{"clock": "beat"}
+{"world": ["+occupied(r1)"], "id": "w4"}
+{"clock": "beat"}
+{"clock": "beat"}
+{"tool": "state", "args": {}}
