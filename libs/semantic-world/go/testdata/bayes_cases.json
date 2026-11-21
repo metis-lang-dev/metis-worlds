@@ -1,0 +1,665 @@
+[
+ {
+  "name": "seen-and-in-hand",
+  "places": [
+   "a",
+   "b",
+   "c",
+   "d"
+  ],
+  "steps": [
+   {
+    "doc": {
+     "belief": {
+      "key": {
+       "b": 1.0
+      }
+     },
+     "exists": {
+      "key": 0.85
+     },
+     "gone": null,
+     "looked": {}
+    },
+    "op": {
+     "op": "seen",
+     "place": "b",
+     "thing": "key"
+    },
+    "ret": true
+   },
+   {
+    "doc": {
+     "belief": {
+      "key": {
+       "b": 1.0
+      }
+     },
+     "exists": {
+      "key": 1.7
+     },
+     "gone": null,
+     "looked": {}
+    },
+    "op": {
+     "op": "seen",
+     "place": "b",
+     "thing": "key"
+    },
+    "ret": false
+   },
+   {
+    "doc": {
+     "belief": {},
+     "exists": {
+      "key": 2.55
+     },
+     "gone": null,
+     "looked": {}
+    },
+    "op": {
+     "op": "seen",
+     "place": null,
+     "thing": "key"
+    },
+    "ret": true
+   },
+   {
+    "doc": {
+     "belief": {
+      "key": {
+       "c": 1.0
+      }
+     },
+     "exists": {
+      "key": 3.4
+     },
+     "gone": null,
+     "looked": {}
+    },
+    "op": {
+     "op": "seen",
+     "place": "c",
+     "thing": "key"
+    },
+    "ret": true
+   }
+  ],
+  "things": [
+   "key"
+  ]
+ },
+ {
+  "name": "missed-renormalises",
+  "places": [
+   "a",
+   "b",
+   "c",
+   "d"
+  ],
+  "steps": [
+   {
+    "doc": {
+     "belief": {
+      "cup": {
+       "a": 0.5,
+       "b": 0.3,
+       "c": 0.2
+      }
+     },
+     "exists": {},
+     "gone": null,
+     "looked": {}
+    },
+    "op": {
+     "belief": {
+      "a": 0.5,
+      "b": 0.3,
+      "c": 0.2
+     },
+     "op": "set",
+     "thing": "cup"
+    },
+    "ret": true
+   },
+   {
+    "doc": {
+     "belief": {
+      "cup": {
+       "a": 0.5,
+       "b": 0.3,
+       "c": 0.2
+      },
+      "pen": {
+       "b": 1.0
+      }
+     },
+     "exists": {},
+     "gone": null,
+     "looked": {}
+    },
+    "op": {
+     "belief": {
+      "b": 1.0
+     },
+     "op": "set",
+     "thing": "pen"
+    },
+    "ret": true
+   },
+   {
+    "doc": {
+     "belief": {
+      "cup": {
+       "b": 0.6,
+       "c": 0.4
+      },
+      "pen": {
+       "b": 1.0
+      }
+     },
+     "exists": {
+      "cup": -0.693147
+     },
+     "gone": null,
+     "looked": {
+      "cup": [
+       "a"
+      ]
+     }
+    },
+    "op": {
+     "op": "missed",
+     "place": "a",
+     "seen_at": {}
+    },
+    "ret": [
+     "cup"
+    ]
+   },
+   {
+    "doc": {
+     "belief": {
+      "cup": {
+       "c": 1.0
+      },
+      "pen": {
+       "b": 1.0
+      }
+     },
+     "exists": {
+      "cup": -1.609438
+     },
+     "gone": null,
+     "looked": {
+      "cup": [
+       "a",
+       "b"
+      ]
+     }
+    },
+    "op": {
+     "op": "missed",
+     "place": "b",
+     "seen_at": {
+      "pen": "b"
+     }
+    },
+    "ret": [
+     "cup"
+    ]
+   },
+   {
+    "doc": {
+     "belief": {
+      "cup": {
+       "a": 0.25,
+       "b": 0.25,
+       "c": 0.25,
+       "d": 0.25
+      },
+      "pen": {
+       "b": 1.0
+      }
+     },
+     "exists": {
+      "cup": -4.0
+     },
+     "gone": null,
+     "looked": {
+      "cup": [
+       "a",
+       "b",
+       "c"
+      ]
+     }
+    },
+    "op": {
+     "op": "missed",
+     "place": "c",
+     "seen_at": {}
+    },
+    "ret": [
+     "cup"
+    ]
+   },
+   {
+    "doc": {
+     "belief": {
+      "cup": {
+       "a": 0.3333333333333333,
+       "c": 0.3333333333333333,
+       "d": 0.3333333333333333
+      },
+      "pen": {
+       "a": 0.25,
+       "b": 0.25,
+       "c": 0.25,
+       "d": 0.25
+      }
+     },
+     "exists": {
+      "cup": -4.0,
+      "pen": -4.0
+     },
+     "gone": null,
+     "looked": {
+      "cup": [
+       "a",
+       "b",
+       "c",
+       "b"
+      ],
+      "pen": [
+       "b"
+      ]
+     }
+    },
+    "op": {
+     "op": "missed",
+     "place": "b",
+     "seen_at": {}
+    },
+    "ret": [
+     "cup",
+     "pen"
+    ]
+   }
+  ],
+  "things": [
+   "cup",
+   "pen"
+  ]
+ },
+ {
+  "name": "walk-wander-and-fraction",
+  "places": [
+   "a",
+   "b",
+   "c",
+   "d",
+   "e"
+  ],
+  "steps": [
+   {
+    "doc": {
+     "belief": {
+      "cat": {
+       "b": 1.0
+      }
+     },
+     "exists": {
+      "cat": 0.85
+     },
+     "gone": null,
+     "looked": {}
+    },
+    "op": {
+     "op": "seen",
+     "place": "b",
+     "thing": "cat"
+    },
+    "ret": true
+   },
+   {
+    "doc": {
+     "belief": {
+      "cat": {
+       "a": 0.375,
+       "b": 0.25,
+       "c": 0.375
+      }
+     },
+     "exists": {
+      "cat": 0.85
+     },
+     "gone": null,
+     "looked": {}
+    },
+    "op": {
+     "dt": 1,
+     "models": {
+      "cat": {
+       "walk": {
+        "bias": 1.0,
+        "speed": 1,
+        "stay": 0.25,
+        "target": null
+       }
+      }
+     },
+     "op": "predict"
+    },
+    "ret": true
+   },
+   {
+    "doc": {
+     "belief": {
+      "cat": {
+       "a": 0.31875000000000003,
+       "b": 0.32031250000000006,
+       "c": 0.31875000000000003,
+       "d": 0.0421875
+      }
+     },
+     "exists": {
+      "cat": 0.85
+     },
+     "gone": null,
+     "looked": {}
+    },
+    "op": {
+     "dt": 0.3,
+     "models": {
+      "cat": {
+       "walk": {
+        "bias": 1.0,
+        "speed": 1,
+        "stay": 0.25,
+        "target": null
+       }
+      }
+     },
+     "op": "predict"
+    },
+    "ret": true
+   },
+   {
+    "doc": {
+     "belief": {
+      "cat": {
+       "a": 0.19896697998046875,
+       "b": 0.3568511962890625,
+       "c": 0.30962677001953126,
+       "d": 0.1345550537109375
+      }
+     },
+     "exists": {
+      "cat": 0.85
+     },
+     "gone": null,
+     "looked": {}
+    },
+    "op": {
+     "dt": 2.5,
+     "models": {
+      "cat": {
+       "walk": {
+        "bias": 1.0,
+        "speed": 1,
+        "stay": 0.25,
+        "target": null
+       }
+      }
+     },
+     "op": "predict"
+    },
+    "ret": true
+   },
+   {
+    "doc": {
+     "belief": {
+      "cat": {
+       "a": 0.19896697998046875,
+       "b": 0.3568511962890625,
+       "c": 0.30962677001953126,
+       "d": 0.1345550537109375
+      }
+     },
+     "exists": {
+      "cat": 0.85
+     },
+     "gone": null,
+     "looked": {}
+    },
+    "op": {
+     "dt": 0,
+     "models": {
+      "cat": {
+       "walk": {
+        "bias": 1.0,
+        "speed": 1,
+        "stay": 0.25,
+        "target": null
+       }
+      }
+     },
+     "op": "predict"
+    },
+    "ret": false
+   }
+  ],
+  "things": [
+   "cat"
+  ]
+ },
+ {
+  "name": "walk-toward-and-alive",
+  "places": [
+   "a",
+   "b",
+   "c",
+   "d",
+   "e"
+  ],
+  "steps": [
+   {
+    "doc": {
+     "belief": {
+      "newt": {
+       "a": 1.0
+      }
+     },
+     "exists": {
+      "newt": 0.85
+     },
+     "gone": null,
+     "looked": {}
+    },
+    "op": {
+     "op": "seen",
+     "place": "a",
+     "thing": "newt"
+    },
+    "ret": true
+   },
+   {
+    "doc": {
+     "belief": {
+      "newt": {
+       "a": 1.0
+      },
+      "rock": {
+       "e": 1.0
+      }
+     },
+     "exists": {
+      "newt": 0.85,
+      "rock": 0.85
+     },
+     "gone": null,
+     "looked": {}
+    },
+    "op": {
+     "op": "seen",
+     "place": "e",
+     "thing": "rock"
+    },
+    "ret": true
+   },
+   {
+    "doc": {
+     "belief": {
+      "newt": {
+       "a": 0.07420747863691456,
+       "b": 0.54,
+       "c": 0.3857925213630854
+      },
+      "rock": {
+       "e": 1.0
+      }
+     },
+     "exists": {
+      "newt": 0.35,
+      "rock": 0.35
+     },
+     "gone": null,
+     "looked": {}
+    },
+    "op": {
+     "alive": [
+      0.5,
+      -0.5
+     ],
+     "dt": 1,
+     "models": {
+      "newt": {
+       "walk": {
+        "bias": 1.5,
+        "speed": 1.5,
+        "stay": 0.1,
+        "target": "d"
+       }
+      },
+      "rock": "still"
+     },
+     "op": "predict"
+    },
+    "ret": true
+   },
+   {
+    "doc": {
+     "belief": {
+      "newt": {
+       "a": 0.008370926756084219,
+       "b": 0.05971348659587975,
+       "c": 0.47063707324391574,
+       "d": 0.46127851340412035
+      },
+      "rock": {
+       "e": 1.0
+      }
+     },
+     "exists": {
+      "newt": -0.35,
+      "rock": -0.35
+     },
+     "gone": null,
+     "looked": {}
+    },
+    "op": {
+     "alive": [
+      0.5,
+      -0.5
+     ],
+     "dt": 1.4,
+     "models": {
+      "newt": {
+       "walk": {
+        "bias": 1.5,
+        "speed": 1.5,
+        "stay": 0.1,
+        "target": "d"
+       }
+      },
+      "rock": "still"
+     },
+     "op": "predict"
+    },
+    "ret": true
+   },
+   {
+    "doc": {
+     "belief": {},
+     "exists": {
+      "newt": -0.85,
+      "rock": -0.85
+     },
+     "gone": [
+      "newt",
+      "rock"
+     ],
+     "looked": {}
+    },
+    "op": {
+     "alive": [
+      0.5,
+      -0.5
+     ],
+     "dt": 1,
+     "models": {
+      "newt": {
+       "walk": {
+        "bias": 1.5,
+        "speed": 1.5,
+        "stay": 0.1,
+        "target": "d"
+       }
+      },
+      "rock": "still"
+     },
+     "op": "predict"
+    },
+    "ret": true
+   },
+   {
+    "doc": {
+     "belief": {},
+     "exists": {
+      "newt": -0.85,
+      "rock": -0.85
+     },
+     "gone": [
+      "newt",
+      "rock"
+     ],
+     "looked": {}
+    },
+    "op": {
+     "alive": [
+      0.5,
+      -0.5
+     ],
+     "dt": 1,
+     "models": {
+      "newt": {
+       "walk": {
+        "bias": 1.5,
+        "speed": 1.5,
+        "stay": 0.1,
+        "target": "d"
+       }
+      },
+      "rock": "still"
+     },
+     "op": "predict"
+    },
+    "ret": false
+   }
+  ],
+  "things": [
+   "newt",
+   "rock"
+  ]
+ }
+]

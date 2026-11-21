@@ -131,3 +131,9 @@ hosts run in the agent's process.
 ## Test
 
 `python -m pytest -q tests` in a python that has this library installed (`pip install -e libs/semantic-world`: a branch's own, for a branch; the cases test runs where metispy is importable)
+
+## Go
+
+`go/` is the Go port of the generic core (bayes parity-tested against this package), grown into the semantic
+WORLD: a blackboard of typed entries with beliefs and provenance, served to Metis on spec 16's quantised ports with
+spec 15's change counters, and projected for the LLM. The home is its first adapter. See `go/DESIGN.md`.
