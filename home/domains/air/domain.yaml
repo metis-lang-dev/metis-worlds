@@ -8,6 +8,6 @@ intent: {spec: intent.yaml}
 clock: {beats: 1, period: 1}
 records: records/
 # the semantic world (metis-worlds libs/semantic-world/go, served by metis-home): the beliefs the rules read, as levels (spec 16)
-beliefs: {on_b: {port: "on"}, out_cold_b: {port: out_cold}}
-levels: {power: {from: {belief: "on"}, at: [0.05, 0.95], names: ["off", unconfirmed, "on"]}, outside: {from: {belief: out_cold}, at: [0.5], names: [mild_out, cold_out]}}
+beliefs: {on_b: {port: unit_on}, out_cold_b: {port: out_cold}}
+levels: {power: {from: {belief: unit_on}, at: [0.05, 0.95], names: ["off", unconfirmed, "on"]}, outside: {from: {belief: out_cold}, at: [0.5], names: [mild_out, cold_out]}}
 commands: [air_on, air_off, air_night, air_boost, normal_from, heater_up, heater_down, winter_up, winter_down, sweep_air_off, sweep_night]

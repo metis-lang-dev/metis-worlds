@@ -37,7 +37,7 @@ pred heater_off(unit) : home.
 pred unit_ok(unit) : home.
 pred unit_missing(unit) : home.   % the unit does not answer in Home Assistant
 % a unit's power as the semantic world believes it (metis-lang spec/16 §3-4: the belief on_b on the
-% world's port `on`, quantised by the level `power` a package declares in its domain.yaml's beliefs: and
+% world's port `unit_on` (the units' power; light_on and tv_on are the other kinds'), quantised by the level `power` a package declares in its domain.yaml's beliefs: and
 % levels:). The host asserts exactly one level atom per unit the world knows: on / off when a reading
 % confirms it (p >= 0.95 / p < 0.05); unconfirmed in between, i.e. the host commanded it and no reading
 % has confirmed it yet, or the unit stopped answering and the belief is forgetting. A unit the world does

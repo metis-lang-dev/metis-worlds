@@ -85,10 +85,10 @@ WORDS = {"light_missing": "check that {X} has power and is in Home Assistant",
 # manifest's thresholds (names[#{t in at : t <= p}], no hysteresis). LEVELS is every manifest's levels:
 # (a test holds them equal); PORTS are the ports semantic-world's home adapter offers (a manifest naming
 # another fails metis-home's start, and a test here).
-PORTS = ("present", "someone_home", "on", "reachable", "preset", "cold", "warm", "humid", "out_cold", "day")
+PORTS = ("present", "someone_home", "on", "unit_on", "light_on", "tv_on", "reachable", "preset", "cold", "warm", "humid", "out_cold", "day")
 LEVELS = {                         # level pred -> (port, at, names)
     "presence": ("present", (0.3, 0.7), ("nobody", "maybe_someone", "someone")),
-    "power": ("on", (0.05, 0.95), ("off", "unconfirmed", "on")),
+    "power": ("unit_on", (0.05, 0.95), ("off", "unconfirmed", "on")),
     "chill": ("cold", (0.5, 0.9), ("not_cold", "maybe_cold", "cold")),
     "heat": ("warm", (0.5, 0.9), ("not_warm", "maybe_warm", "warm")),
     "damp": ("humid", (0.5, 0.9), ("dry", "maybe_humid", "humid")),

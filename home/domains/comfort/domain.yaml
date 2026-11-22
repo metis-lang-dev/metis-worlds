@@ -8,5 +8,5 @@ intent: {spec: intent.yaml}
 clock: {beats: 1, period: 1}
 records: records/
 # the semantic world (metis-worlds libs/semantic-world/go, served by metis-home): the beliefs the rules read, as levels (spec 16)
-beliefs: {cold_b: {port: cold}, warm_b: {port: warm}, humid_b: {port: humid}, on_b: {port: "on"}}
-levels: {chill: {from: {belief: cold}, at: [0.5, 0.9], names: [not_cold, maybe_cold, cold]}, heat: {from: {belief: warm}, at: [0.5, 0.9], names: [not_warm, maybe_warm, warm]}, damp: {from: {belief: humid}, at: [0.5, 0.9], names: [dry, maybe_humid, humid]}, power: {from: {belief: "on"}, at: [0.05, 0.95], names: ["off", unconfirmed, "on"]}}
+beliefs: {cold_b: {port: cold}, warm_b: {port: warm}, humid_b: {port: humid}, on_b: {port: unit_on}}
+levels: {chill: {from: {belief: cold}, at: [0.5, 0.9], names: [not_cold, maybe_cold, cold]}, heat: {from: {belief: warm}, at: [0.5, 0.9], names: [not_warm, maybe_warm, warm]}, damp: {from: {belief: humid}, at: [0.5, 0.9], names: [dry, maybe_humid, humid]}, power: {from: {belief: unit_on}, at: [0.05, 0.95], names: ["off", unconfirmed, "on"]}}

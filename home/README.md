@@ -59,7 +59,7 @@ package's `host:` is a shim beside its manifest (`home_host.py`, the road's patt
 - **Levels, not booleans, for what the home believes** (metis-lang spec/16 §4): where a reading is a
   belief that can be doubtful, the package declares it in its `domain.yaml` (`beliefs:` naming a port
   of the semantic world's home adapter, `levels:` its thresholds and names) and the rules read the
-  level atom, never the family: `power(off | unconfirmed | on, U)` (air, comfort; port `on`),
+  level atom, never the family: `power(off | unconfirmed | on, U)` (air, comfort; port `unit_on`: the units only, light_on and tv_on serve the other kinds),
   `presence(nobody | maybe_someone | someone, R)` (lights; `present`), `chill`, `heat`, `damp`
   (comfort; `cold`, `warm`, `humid`), `outside(mild_out | cold_out, U)` (air; `out_cold`, read only
   after the unit's warm-up). Only a sure level acts or advises; a doubtful one is refused with its
