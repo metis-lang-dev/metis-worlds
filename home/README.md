@@ -119,7 +119,7 @@ Assistant on one port, and a light's key would reach the air package's `power(le
 
 ## The service on the NUC (Go, on the C++ runtime)
 
-`metis-home` (metis-agent branch `home-cgo`, `go/cmd/metis-home`) serves these packages in one native
+`metis-home` (metis-agent `main`, `go/cmd/metis-home`; the NUC runs both checkouts on `main`) serves these packages in one native
 process: the Go domain agent on libmetis_rt over cgo, the home host in Go
 (`go/internal/host/home.go`, this world's `world/home_host.py` ported and held to these goldens), on a
 1 s beat. Beside FSTTM's conversation it writes every outcome and conclusion to the stream door

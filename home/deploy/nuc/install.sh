@@ -4,14 +4,14 @@
 #
 #   bash deploy/nuc/install.sh            # from the home world (metis-worlds home/)
 #
-# METIS_AGENT  the metis-agent checkout with cmd/metis-home (default ~/metis/metis-agent-home, branch home-cgo)
+# METIS_AGENT  the metis-agent checkout with cmd/metis-home (default ~/metis/metis-agent-home, branch main)
 # METIS_LANG   metis-lang (default ~/metis/metis-lang): its runtime (libmetis_rt) is built with CMake if missing
 # Needs: go >= 1.24, cmake, g++ (apt install golang-go cmake build-essential).
 set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 AGENT="${METIS_AGENT:-$HOME/metis/metis-agent-home}"
 LANG_DIR="${METIS_LANG:-$HOME/metis/metis-lang}"
-[ -f "$AGENT/go/cmd/metis-home/main.go" ] || { echo "no cmd/metis-home in $AGENT (git -C ~/metis/metis-agent worktree add ../metis-agent-home origin/home-cgo)" >&2; exit 2; }
+[ -f "$AGENT/go/cmd/metis-home/main.go" ] || { echo "no cmd/metis-home in $AGENT (git -C ~/metis/metis-agent worktree add ../metis-agent-home origin/main)" >&2; exit 2; }
 command -v go >/dev/null || { echo "no go: sudo apt install golang-go" >&2; exit 2; }
 # the runtime library, natively
 cmake -S "$LANG_DIR/runtime" -B "$LANG_DIR/runtime/build" -DCMAKE_BUILD_TYPE=Release >/dev/null
