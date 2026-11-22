@@ -1,0 +1,5 @@
+# how a home package declares what it reads from the semantic world (spec 16 §2/§4, flow lines for a member)
+program: comfort.llp
+clock: {beats: 1, period: 60}
+beliefs: {occupied: {port: present}, chill: {port: cold}}
+levels: {presence: {from: {belief: present}, at: [0.3, 0.7], names: [vacant, unsure, occupied]}, chill: {from: {belief: cold}, at: [0.5, 0.9], names: [not_cold, maybe_cold, cold]}, outside: {from: {belief: out_cold}, at: [0.5], names: [mild_out, cold_out]}}

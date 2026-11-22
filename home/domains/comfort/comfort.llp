@@ -30,6 +30,25 @@ pred advise_heater(room) : home.
 pred advise_open(room) : home.
 pred noted(room) : home.
 
+% the semantic world's beliefs (metis-lang spec/16 §3) and their levels (§4, domain.yaml's beliefs: and
+% levels:): the host asserts exactly one level atom per known key each beat; no rule reads them yet (the
+% rules move from the host's boolean families to the levels on a branch the user merges)
+pred present_b(room) : home.
+pred cold_b(room) : home.
+pred warm_b(room) : home.
+pred humid_b(room) : home.
+pred out_cold_b(unit) : home.
+type presence_level {nobody maybe_someone someone}.
+pred presence(presence_level, room) : home.
+type chill_level {not_cold maybe_cold cold}.
+pred chill(chill_level, room) : home.
+type heat_level {not_warm maybe_warm warm}.
+pred heat(heat_level, room) : home.
+type damp_level {dry maybe_humid humid}.
+pred damp(damp_level, room) : home.
+type outside_level {mild_out cold_out}.
+pred outside(outside_level, unit) : home.
+
 stage serve {
   %% {R} is comfortable.
   ask_comfy [dyn] : cmd_comfort(R) * $comfy_room(R) -o said(comfort).

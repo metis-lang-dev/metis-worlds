@@ -1,0 +1,27 @@
+{"t": 0, "ha": {"entity_id": "sun.sun", "state": "below_horizon"}}
+{"t": 0, "ha": {"entity_id": "fan.lab_supply_fan", "state": "off"}}
+{"t": 0, "ha": {"entity_id": "fan.lab_extract_fan", "state": "off"}}
+{"t": 0, "ha": {"entity_id": "sensor.lab_outside_temperature", "state": "27.4"}}
+{"t": 0, "ha": {"entity_id": "fan.bedroom_badriom_supply_fan", "state": "on", "attributes": {"preset_mode": "night"}}}
+{"t": 0, "ha": {"entity_id": "fan.bedroom_badriom_extract_fan", "state": "on"}}
+{"t": 0, "ha": {"entity_id": "sensor.lab_temperature", "state": "18.4"}}
+{"t": 0, "ha": {"entity_id": "binary_sensor.lab_presence", "state": "on"}}
+{"t": 0, "note": "the first get_states: the stopped lab unit's 27 °C is not the weather"}
+{"t": 60, "ha": {"entity_id": "sensor.lab_temperature", "state": "18.3"}}
+{"t": 60, "command": {"id": "u2", "var": "power", "value": "on"}}
+{"t": 60, "note": "Hey Nina, turn on the lab ventilation: predicted at once"}
+{"t": 63, "ha": {"entity_id": "fan.lab_supply_fan", "state": "on"}}
+{"t": 63, "note": "read back: confirmed"}
+{"t": 120, "command": {"id": "u1", "var": "power", "value": "off"}}
+{"t": 140, "note": "the bedroom unit was told off and never answered"}
+{"t": 300, "ha": {"entity_id": "sensor.lab_outside_temperature", "state": "4.6"}}
+{"t": 300, "note": "the lab unit has run four minutes: its outside sensor reads the weather"}
+{"t": 310, "conclude": {"member": "comfort", "fact": "advise_heater(r2)", "on": true, "rule": "cold_heater"}}
+{"t": 310, "note": "comfort concludes: the lab wants the heater"}
+{"t": 320, "report": {"who": "pascal", "id": "u2", "var": "heater", "value": "on", "ref": "utt-7"}}
+{"t": 320, "note": "Pascal: I switched the lab heater on (a person's word: weak evidence)"}
+{"t": 330, "ha": {"entity_id": "binary_sensor.lab_presence", "state": "off"}}
+{"t": 330, "note": "the lab's radar stops seeing anyone"}
+{"t": 1000, "note": "eleven minutes on: vacant"}
+{"t": 1000, "feed": "down"}
+{"t": 2800, "note": "Home Assistant has been away half an hour"}
