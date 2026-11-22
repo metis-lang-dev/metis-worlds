@@ -15,7 +15,7 @@ state as its ENVIRONMENT stream and the rules' outcomes as its REASONING stream.
 |---|---|
 | `world/home.map.json` | the flat as data: rooms, lights, the ventilation units, the TV, the infrared devices, the sensors to come, each a role (r1, l1, u1, t1, ir1) bound to its words and its Home Assistant entity; the thresholds of the host's classes. A device with entity null is not in Home Assistant yet |
 | `world/gen_map.py` | the map → `domains/shared/home_map.llp` (the role types, `light_in`, `unit_in`, `has_unit` / `no_unit`), each package's intent handles, and `domains/<pkg>/which.llp` where a device can be named without its room (`--check` in CI) |
-| `world/home_host.py` | the host: one World per process (Sim, or Home Assistant's REST API with `METIS_HOME_HA` and the token file `~/.config/fsttm/hass.token`), one view per package; the families kept exactly one, the timers and edges, the scene fan-out, the grace after a command |
+| `world/home_host.py` | the host: one World per process (Sim, or Home Assistant's REST API with `METIS_HOME_HA` and the token file `~/.config/fsttm/hass.token`), one view per package; the families kept exactly one, the timers and edges, the scene fan-out, the grace after a command; the level atoms of the packages' `levels:` from its simulated world |
 | `domains/shared/home_world.llp` | the readings that cross packages, declarations only (presence, time of day, the units' state, the edges) |
 | `domains/lights/` | lighting: on / off at a word or a scene; off in a room vacant a while; a light offered on entering a dark room at night |
 | `domains/air/` | the two Prana recuperators: on / off, night / boost / normal, heater (only with the fans), winter mode; advice when it turns cold outside |
@@ -56,15 +56,35 @@ package's `host:` is a shim beside its manifest (`home_host.py`, the road's patt
   keeps exactly one of per role (`light_lit | light_dark`, `occupied | empty | vacant | unsensed`);
   there is no negated premise. A sensor not wired is its own member (`unsensed`, `untracked`,
   `ir_absent`), so a rule needing it does not fire: the safe failure.
-- **Steady reading**: thresholds with hysteresis and the vacant timer are the host's, never a
-  counter in the rules; an edge (`entered`, `chilled`, `got_warm`, `left_home`, `dawn`) is asserted
-  for one beat, and never from an unknown class.
-- **Command → outcome**: a command token is consumed by exactly one rule per state; every outcome
-  is done or refused with its `%%` sentence, and a refusal names its blocker (stopped, does not
-  answer, not connected, no such device: the standing handles lx, ux, tx, irx, rx).
+- **Levels, not booleans, for what the home believes** (metis-lang spec/16 §4): where a reading is a
+  belief that can be doubtful, the package declares it in its `domain.yaml` (`beliefs:` naming a port
+  of the semantic world's home adapter, `levels:` its thresholds and names) and the rules read the
+  level atom, never the family: `power(off | unconfirmed | on, U)` (air, comfort; port `on`),
+  `presence(nobody | maybe_someone | someone, R)` (lights; `present`), `chill`, `heat`, `damp`
+  (comfort; `cold`, `warm`, `humid`), `outside(mild_out | cold_out, U)` (air; `out_cold`, read only
+  after the unit's warm-up). Only a sure level acts or advises; a doubtful one is refused with its
+  reason ("Not yet: the bedroom ventilation has not confirmed its last switch"), hedged ("the
+  kitchen may be cold"), or acts on nothing (a light stays on while presence is `maybe_someone`). A
+  key the world does not know holds no level atom, so the refusal that needs one reads the host's
+  family member for it (`untracked`, `unit_missing`); and since the replier names a blocker by its
+  pred, a "stopped" refusal reads `$stopped(U)` beside `$power(off, U)`. The host keeps every family as
+  before (the Go host still serves them); `world/home_host.py`'s `LEVELS` is the manifests' levels and
+  its simulated world gives the same atoms (a test holds both, and the ports against the adapter's).
+  Scenes and media keep their families: the scenes read only edges and their own mode, and the
+  lights' and TV's `on` belief waits for the request in 'Not yet wired'.
+- **Steady reading**: thresholds with hysteresis are the host's, never a counter in the rules; a
+  level has no hysteresis (spec 16), so the rules act on the host's edges (`entered`, `chilled`,
+  `got_warm`, `left_home`, `dawn`, asserted for one beat, never from an unknown class) and read the
+  level at the edge. The vacant timer is now the world's presence decaying (sure to below 0.3 over
+  `vacant_after_s`).
+- **Command → outcome**: a command token is consumed by exactly one rule per state (per level);
+  every outcome is done or refused with its `%%` sentence, and a refusal names its blocker (stopped,
+  does not answer, not connected, no such device: the standing handles lx, ux, tx, irx, rx); a
+  refusal on an unconfirmed level has none (ask again in a moment).
 - **The name is the command**: the host actuates by the fired rule's name (`light_on`, `air_boost`,
   `sweep_air_night`), and gives the device GRACE beats before reading it back; a difference after
-  that is the surprise the loop learns from.
+  that is the surprise the loop learns from. A unit's power is not written by the rules any more: the
+  command is the world's prediction (`power(unconfirmed, U)`) until a reading confirms it.
 - **A room is data / Bind before ground**: the rules name roles; `light_in(L, R)` and `unit_in(U, R)`
   are `bwd` facts the map generates, binding every variable at grounding.
 - **Which room?**: a device named without its room ("the light", "the heating": the map's `unnamed`)
@@ -76,13 +96,15 @@ package's `host:` is a shim beside its manifest (`home_host.py`, the road's patt
 - Suggestions are said, never done: away, the night's end, a light on entering, winter mode,
   ventilation for a warm or humid room. The person decides.
 
-## semantic-world: not used (yet)
+## semantic-world: the beliefs the levels come from
 
-`libs/semantic-world` is for worlds whose things are uncertain and searched (a belief over places,
-roles bound per goal, the RSS layer). The home's devices are fixed and read directly from Home
-Assistant every beat; its rooms are data in `home.map.json`, which is all 'A room is data' needs.
-Its `bayes.exists` (a log-odds per thing, raised by a sighting, decayed unseen) is the right tool for
-presence once the radar is wired (several noisy zones per room, a person leaving view): revisit then.
+`metis-home` folds Home Assistant into `libs/semantic-world/go` (DESIGN.md there): one world of beliefs
+(a categorical per device state, a log-odds per room's presence, a Kalman estimate per thermometer)
+written by the sensors, the host's commands and later a person's word. A package joins it with its
+manifest's `beliefs:`/`levels:` (a port the adapter does not offer fails the start: the ports are
+`present someone_home on reachable preset cold warm humid out_cold day`), and every beat gets one level
+atom per key the world knows. The host's families are read from the world's likeliest state, so they
+and the levels agree.
 
 ## Not yet wired
 
@@ -90,7 +112,10 @@ The mmWave presence radar (`radar` in the map: a binary_sensor per room; until t
 `unsensed`, so `vacant_off`, `welcome_dark` and the away suggestion do not fire), the Bluetooth
 thermometers (`thermometers`: temperature and humidity entities per room; until then `untracked`),
 the USB infrared remote (`ir`: `ir_absent`, every IR command refused with that reason). The lights
-and the TV are not in Home Assistant yet (their entities are null: refused as not answering).
+and the TV are not in Home Assistant yet (their entities are null: refused as not answering), so
+the world has no `on` belief for them; before lights and media read a `power` level, the adapter's
+`on` port must give a package only keys of its belief's type (today it serves every device in Home
+Assistant on one port, and a light's key would reach the air package's `power(level, unit)`).
 
 ## The service on the NUC (Go, on the C++ runtime)
 

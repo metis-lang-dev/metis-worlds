@@ -3,10 +3,17 @@
 % the outside air turns cold. Roles u1, u2; world/home.map.json binds them to the Home Assistant
 % entities (fan.<prefix>_supply_fan / _extract_fan, switch.<prefix>_heater / _winter / _auto).
 %
-% The host keeps the families: running | stopped (both fans), normal_mode | night_mode | boost_mode
-% (the preset), heater_on | heater_off, winter_on | winter_off, unit_ok | unit_missing, and for the
-% outside air cold_out | mild_out | out_unknown (with hysteresis; a reading inside a stopped unit
-% is not the weather: out_unknown). chilled(U) is the edge into cold_out, for one beat.
+% Whether a unit runs is the semantic world's belief, read as a level (domain.yaml's beliefs:/levels:,
+% the shared power(off | unconfirmed | on, U)): a switch the host commanded and no reading has confirmed
+% yet is unconfirmed, and a command that depends on it is refused with that reason, never done on a
+% guess. The outside air is the level outside(mild_out | cold_out, U), which the world knows only from
+% readings the unit took after its warm-up (a stopped or just-started unit reads itself, not the
+% weather): a unit without one holds no outside atom, so the advice does not fire.
+%
+% The host keeps the families: running | stopped (the likeliest power: a refusal's blocker),
+% normal_mode | night_mode | boost_mode (the preset), heater_on | heater_off, winter_on | winter_off,
+% unit_ok | unit_missing, cold_out | mild_out | out_unknown (with hysteresis; no rule reads them now).
+% chilled(U) is the edge into cold outside air (from trusted readings only), for one beat.
 catalog air 1.
 provenance text "ventilation: the recuperators on, off, night or boost, the heater, winter mode; refusals naming the blocker; advice when the outside turns cold" "2026-11-21".
 layers (dyn).
@@ -25,6 +32,11 @@ pred cold_out(unit) : home.
 pred mild_out(unit) : home.
 pred out_unknown(unit) : home.
 pred chilled(unit) : home.            % event: the outside air became cold
+
+% the outside air as the world believes it (port out_cold): P(outside <= outside_cold_c)
+pred out_cold_b(unit) : home.
+type outside_level {mild_out cold_out}.
+pred outside(outside_level, unit) : home.
 
 pred cmd_air_on(unit) : home.
 pred cmd_air_off(unit) : home.
@@ -47,21 +59,25 @@ pred advise_winter(unit) : home.
 pred noted(unit) : home.
 
 stage serve {
-  % ── on and off: both fans together ──
+  % ── on and off: both fans together; the switch is the world's to confirm ──
   %% I start {U}.
-  air_on [dyn] : cmd_air_on(U) * stopped(U) * $unit_ok(U) -o running(U) * done(on).
+  air_on [dyn] : cmd_air_on(U) * $power(off, U) * $unit_ok(U) -o done(on).
   %% {U} is already running.
-  on_already [dyn] : cmd_air_on(U) * $running(U) -o refused(on).
+  on_already [dyn] : cmd_air_on(U) * $power(on, U) * $unit_ok(U) -o refused(on).
+  %% Not yet: {U} has not confirmed its last switch. Ask me again in a moment.
+  on_unconfirmed [dyn] : cmd_air_on(U) * $power(unconfirmed, U) * $unit_ok(U) -o refused(on).
   %% I can't start {U}: it does not answer.
-  on_missing [dyn] : cmd_air_on(U) * $stopped(U) * $unit_missing(U) -o refused(on).
+  on_missing [dyn] : cmd_air_on(U) * $unit_missing(U) -o refused(on).
   %% I stop {U}; its heater goes off with it.
-  air_off [dyn] : cmd_air_off(U) * running(U) * heater_on(U) * $unit_ok(U) -o stopped(U) * heater_off(U) * done(off).
+  air_off [dyn] : cmd_air_off(U) * $power(on, U) * heater_on(U) * $unit_ok(U) -o heater_off(U) * done(off).
   %% I stop {U}.
-  air_off_cold [dyn] : cmd_air_off(U) * running(U) * $heater_off(U) * $unit_ok(U) -o stopped(U) * done(off).
+  air_off_cold [dyn] : cmd_air_off(U) * $power(on, U) * $heater_off(U) * $unit_ok(U) -o done(off).
   %% {U} is already stopped.
-  off_already [dyn] : cmd_air_off(U) * $stopped(U) -o refused(off).
+  off_already [dyn] : cmd_air_off(U) * $power(off, U) * $unit_ok(U) -o refused(off).
+  %% Not yet: {U} has not confirmed its last switch. Ask me again in a moment.
+  off_unconfirmed [dyn] : cmd_air_off(U) * $power(unconfirmed, U) * $unit_ok(U) -o refused(off).
   %% I can't stop {U}: it does not answer.
-  off_missing [dyn] : cmd_air_off(U) * $running(U) * $unit_missing(U) -o refused(off).
+  off_missing [dyn] : cmd_air_off(U) * $unit_missing(U) -o refused(off).
 
   %% I can't: there is no such ventilation unit in this home.
   on_unknown [dyn] : cmd_air_on(ux) -o refused(on).
@@ -83,17 +99,17 @@ stage serve {
   %% I can't: there is no such ventilation unit in this home.
   winter_unknown_off [dyn] : cmd_winter_off(ux) -o refused(winter).
 
-  % ── the presets: a running unit only ──
+  % ── the presets: a unit the world believes running only ──
   %% I set {U} to night mode: quiet and slow.
-  air_night [dyn] : cmd_air_night(U) * $running(U) * normal_mode(U) * $unit_ok(U) -o night_mode(U) * done(night).
+  air_night [dyn] : cmd_air_night(U) * $power(on, U) * normal_mode(U) * $unit_ok(U) -o night_mode(U) * done(night).
   %% I set {U} from boost to night mode.
-  air_night_from_boost [dyn] : cmd_air_night(U) * $running(U) * boost_mode(U) * $unit_ok(U) -o night_mode(U) * done(night).
+  air_night_from_boost [dyn] : cmd_air_night(U) * $power(on, U) * boost_mode(U) * $unit_ok(U) -o night_mode(U) * done(night).
   %% {U} is already in night mode.
   night_already [dyn] : cmd_air_night(U) * $night_mode(U) -o refused(night).
   %% I boost {U} for a while.
-  air_boost [dyn] : cmd_air_boost(U) * $running(U) * normal_mode(U) * $unit_ok(U) -o boost_mode(U) * done(boost).
+  air_boost [dyn] : cmd_air_boost(U) * $power(on, U) * normal_mode(U) * $unit_ok(U) -o boost_mode(U) * done(boost).
   %% I boost {U} out of night mode.
-  air_boost_from_night [dyn] : cmd_air_boost(U) * $running(U) * night_mode(U) * $unit_ok(U) -o boost_mode(U) * done(boost).
+  air_boost_from_night [dyn] : cmd_air_boost(U) * $power(on, U) * night_mode(U) * $unit_ok(U) -o boost_mode(U) * done(boost).
   %% {U} is already on boost.
   boost_already [dyn] : cmd_air_boost(U) * $boost_mode(U) -o refused(boost).
   %% I take {U} out of night mode.
@@ -103,21 +119,31 @@ stage serve {
   %% {U} is already at its normal speed.
   normal_already [dyn] : cmd_air_normal(U) * $normal_mode(U) -o refused(normal).
   %% I can't set night mode: {U} is stopped. Start it first.
-  night_stopped [dyn] : cmd_air_night(U) * $stopped(U) * $normal_mode(U) -o refused(night).
+  night_stopped [dyn] : cmd_air_night(U) * $power(off, U) * $stopped(U) * $normal_mode(U) -o refused(night).
   %% I can't boost: {U} is stopped. Start it first.
-  boost_stopped [dyn] : cmd_air_boost(U) * $stopped(U) * $normal_mode(U) -o refused(boost).
+  boost_stopped [dyn] : cmd_air_boost(U) * $power(off, U) * $stopped(U) * $normal_mode(U) -o refused(boost).
   %% I can't set night mode: {U} is stopped. Start it first.
-  night_stopped_boost [dyn] : cmd_air_night(U) * $stopped(U) * $boost_mode(U) -o refused(night).
+  night_stopped_boost [dyn] : cmd_air_night(U) * $power(off, U) * $stopped(U) * $boost_mode(U) -o refused(night).
   %% I can't boost: {U} is stopped. Start it first.
-  boost_stopped_night [dyn] : cmd_air_boost(U) * $stopped(U) * $night_mode(U) -o refused(boost).
+  boost_stopped_night [dyn] : cmd_air_boost(U) * $power(off, U) * $stopped(U) * $night_mode(U) -o refused(boost).
+  %% I can't set night mode yet: {U} has not confirmed whether it runs. Ask me again in a moment.
+  night_unconfirmed [dyn] : cmd_air_night(U) * $power(unconfirmed, U) * $normal_mode(U) -o refused(night).
+  %% I can't set night mode yet: {U} has not confirmed whether it runs. Ask me again in a moment.
+  night_unconfirmed_boost [dyn] : cmd_air_night(U) * $power(unconfirmed, U) * $boost_mode(U) -o refused(night).
+  %% I can't boost yet: {U} has not confirmed whether it runs. Ask me again in a moment.
+  boost_unconfirmed [dyn] : cmd_air_boost(U) * $power(unconfirmed, U) * $normal_mode(U) -o refused(boost).
+  %% I can't boost yet: {U} has not confirmed whether it runs. Ask me again in a moment.
+  boost_unconfirmed_night [dyn] : cmd_air_boost(U) * $power(unconfirmed, U) * $night_mode(U) -o refused(boost).
 
   % ── the heater warms the air the unit brings in: it runs only with the fans ──
   %% I turn on the heater of {U}.
-  heater_up [dyn] : cmd_heater_on(U) * $running(U) * heater_off(U) * $unit_ok(U) -o heater_on(U) * done(heat).
+  heater_up [dyn] : cmd_heater_on(U) * $power(on, U) * heater_off(U) * $unit_ok(U) -o heater_on(U) * done(heat).
   %% The heater of {U} is already on.
   heater_already [dyn] : cmd_heater_on(U) * $heater_on(U) -o refused(heat).
   %% I can't heat with {U} stopped: the heater only runs with the fans. Start it first.
-  heater_stopped [dyn] : cmd_heater_on(U) * $stopped(U) * $heater_off(U) -o refused(heat).
+  heater_stopped [dyn] : cmd_heater_on(U) * $power(off, U) * $stopped(U) * $heater_off(U) -o refused(heat).
+  %% I can't turn the heater on yet: {U} has not confirmed whether its fans run. Ask me again in a moment.
+  heater_unconfirmed [dyn] : cmd_heater_on(U) * $power(unconfirmed, U) * $heater_off(U) -o refused(heat).
   %% I turn off the heater of {U}.
   heater_down [dyn] : cmd_heater_off(U) * heater_on(U) * $unit_ok(U) -o heater_off(U) * done(heat).
   %% The heater of {U} is already off.
@@ -134,33 +160,41 @@ stage serve {
 
   % ── the scenes' wishes ──
   %% I stop {U} for the scene.
-  sweep_air_off [dyn] : sweep_air_off(U) * running(U) * $heater_off(U) * $unit_ok(U) -o stopped(U) * switched(U).
+  sweep_air_off [dyn] : sweep_air_off(U) * $power(on, U) * $heater_off(U) * $unit_ok(U) -o switched(U).
   %% I stop {U} and its heater for the scene.
-  sweep_air_off_heat [dyn] : sweep_air_off(U) * running(U) * heater_on(U) * $unit_ok(U) -o stopped(U) * heater_off(U) * switched(U).
+  sweep_air_off_heat [dyn] : sweep_air_off(U) * $power(on, U) * heater_on(U) * $unit_ok(U) -o heater_off(U) * switched(U).
   %% {U} was already stopped.
-  sweep_air_kept [dyn] : sweep_air_off(U) * $stopped(U) -o kept(U).
+  sweep_air_kept [dyn] : sweep_air_off(U) * $power(off, U) -o kept(U).
   %% I could not stop {U}: it does not answer.
-  sweep_air_missed [dyn] : sweep_air_off(U) * $running(U) * $unit_missing(U) -o missed(U).
+  sweep_air_missed [dyn] : sweep_air_off(U) * $power(on, U) * $unit_missing(U) -o missed(U).
+  %% I leave {U} for the scene: it has not confirmed its last switch yet.
+  sweep_air_unconfirmed [dyn] : sweep_air_off(U) * $power(unconfirmed, U) -o missed(U).
   %% I set {U} to night mode for the night.
-  sweep_night [dyn] : sweep_air_night(U) * $running(U) * normal_mode(U) * $unit_ok(U) -o night_mode(U) * switched(U).
+  sweep_night [dyn] : sweep_air_night(U) * $power(on, U) * normal_mode(U) * $unit_ok(U) -o night_mode(U) * switched(U).
   %% I set {U} from boost to night mode for the night.
-  sweep_night_boost [dyn] : sweep_air_night(U) * $running(U) * boost_mode(U) * $unit_ok(U) -o night_mode(U) * switched(U).
+  sweep_night_boost [dyn] : sweep_air_night(U) * $power(on, U) * boost_mode(U) * $unit_ok(U) -o night_mode(U) * switched(U).
   %% {U} is already quiet for the night.
   sweep_night_kept [dyn] : sweep_air_night(U) * $night_mode(U) -o kept(U).
   %% {U} is stopped: nothing to quiet for the night.
-  sweep_night_stopped [dyn] : sweep_air_night(U) * $stopped(U) * $normal_mode(U) -o kept(U).
+  sweep_night_stopped [dyn] : sweep_air_night(U) * $power(off, U) * $normal_mode(U) -o kept(U).
+  %% I leave {U} for the night: it has not confirmed its last switch yet.
+  sweep_night_unconfirmed [dyn] : sweep_air_night(U) * $power(unconfirmed, U) * $normal_mode(U) -o missed(U).
 
-  % ── advice: the outside air turned cold ──
+  % ── advice: the outside air turned cold (a reading the world trusts: taken after the warm-up) ──
   %% It turned cold outside and {U} is bringing it in without winter mode: shall I switch winter mode on?
-  cold_advice [dyn] : chilled(U) * $running(U) * $winter_off(U) -o advise_winter(U).
+  cold_advice [dyn] : chilled(U) * $outside(cold_out, U) * $power(on, U) * $winter_off(U) -o advise_winter(U).
   %% It turned cold outside; {U} is already in winter mode.
-  cold_winter [dyn] : chilled(U) * $running(U) * $winter_on(U) -o noted(U).
+  cold_winter [dyn] : chilled(U) * $outside(cold_out, U) * $power(on, U) * $winter_on(U) -o noted(U).
   %% It turned cold outside; {U} is stopped, so nothing comes in.
-  cold_stopped [dyn] : chilled(U) * $stopped(U) -o noted(U).
+  cold_stopped [dyn] : chilled(U) * $outside(cold_out, U) * $power(off, U) -o noted(U).
+  %% It turned cold outside; {U} has not confirmed whether it runs, so I say no more yet.
+  cold_unconfirmed [dyn] : chilled(U) * $outside(cold_out, U) * $power(unconfirmed, U) -o noted(U).
 }
 
 #init stopped(u1) 1
 #init stopped(u2) 1
+#init power(off, u1) 1
+#init power(off, u2) 1
 #init normal_mode(u1) 1
 #init normal_mode(u2) 1
 #init heater_off(u1) 1

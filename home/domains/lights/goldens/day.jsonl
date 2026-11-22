@@ -19,6 +19,10 @@
 {"world": ["+occupied(r3)"], "id": "w3"}
 {"clock": "beat"}
 {"clock": "beat"}
+{"world": ["+empty(r3,400)"], "id": "d1"}
+{"clock": "beat"}
+{"clock": "beat"}
+{"tool": "state", "args": {}}
 {"world": ["+vacant(r3)"], "id": "w4"}
 {"clock": "beat"}
 {"clock": "beat"}

@@ -22,6 +22,25 @@
 {"clock": "beat"}
 {"clock": "beat"}
 {"clock": "beat"}
+{"world": ["+climate(r4,21,50)"], "id": "d1"}
+{"clock": "beat"}
+{"world": ["+climate(r4,18.9,50)"], "id": "d2"}
+{"clock": "beat"}
+{"clock": "beat"}
+{"id": "d3", "domain": "comfort", "verb": "QUERY", "args": {"room": "kitchen"}}
+{"clock": "beat"}
+{"clock": "beat"}
+{"id": "d4", "domain": "comfort", "verb": "QUERY", "args": {"room": "bedroom"}}
+{"clock": "beat"}
+{"world": ["+stale(r1,3000)"], "id": "d5"}
+{"clock": "beat"}
+{"id": "d6", "domain": "comfort", "verb": "QUERY", "args": {"room": "bedroom"}}
+{"clock": "beat"}
+{"world": ["+stale(r1,5000)"], "id": "d7"}
+{"clock": "beat"}
+{"id": "d8", "domain": "comfort", "verb": "QUERY", "args": {"room": "bedroom"}}
+{"clock": "beat"}
+{"clock": "beat"}
 {"id": "c3", "domain": "comfort", "verb": "QUERY", "args": {"room": "garage"}}
 {"clock": "beat"}
 {"tool": "state", "args": {}}

@@ -7,4 +7,7 @@ host: home_host.py:lights
 intent: {spec: intent.yaml}
 clock: {beats: 1, period: 1}
 records: records/
+# the semantic world (metis-worlds libs/semantic-world/go, served by metis-home): the beliefs the rules read, as levels (spec 16)
+beliefs: {present_b: {port: present}}
+levels: {presence: {from: {belief: present}, at: [0.3, 0.7], names: [nobody, maybe_someone, someone]}}
 commands: [light_on, light_off, sweep_off, vacant_off]

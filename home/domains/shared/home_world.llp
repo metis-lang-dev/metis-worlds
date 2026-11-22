@@ -36,6 +36,16 @@ pred heater_on(unit) : home.
 pred heater_off(unit) : home.
 pred unit_ok(unit) : home.
 pred unit_missing(unit) : home.   % the unit does not answer in Home Assistant
+% a unit's power as the semantic world believes it (metis-lang spec/16 §3-4: the belief on_b on the
+% world's port `on`, quantised by the level `power` a package declares in its domain.yaml's beliefs: and
+% levels:). The host asserts exactly one level atom per unit the world knows: on / off when a reading
+% confirms it (p >= 0.95 / p < 0.05); unconfirmed in between, i.e. the host commanded it and no reading
+% has confirmed it yet, or the unit stopped answering and the belief is forgetting. A unit the world does
+% not know holds no atom. running | stopped stay the likeliest reading: a refusal names stopped(U) as
+% its blocker (the replier matches a blocker by its pred), the level says how sure the home is.
+pred on_b(unit) : home.
+type power_level {off unconfirmed on}.
+pred power(power_level, unit) : home.
 
 % events: the host asserts each for one beat, on the edge it names
 pred entered(room) : home.        % the room became occupied

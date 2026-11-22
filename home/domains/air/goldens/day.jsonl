@@ -6,6 +6,9 @@
 {"clock": "beat"}
 {"id": "c3", "domain": "air", "verb": "ON", "args": {"device": "bedroom ventilation"}}
 {"clock": "beat"}
+{"id": "d1", "domain": "air", "verb": "ON", "args": {"device": "bedroom ventilation"}}
+{"clock": "beat"}
+{"clock": "beat"}
 {"clock": "beat"}
 {"id": "c4", "domain": "air", "verb": "NIGHT", "args": {"device": "bedroom vent"}}
 {"clock": "beat"}
@@ -18,11 +21,17 @@
 {"clock": "beat"}
 {"id": "c7", "domain": "air", "verb": "OFF", "args": {"device": "bedroom ventilation"}}
 {"clock": "beat"}
+{"id": "d2", "domain": "air", "verb": "NIGHT", "args": {"device": "bedroom ventilation"}}
+{"clock": "beat"}
 {"clock": "beat"}
 {"id": "c8", "domain": "air", "verb": "ON", "args": {"device": "lab ventilation"}}
 {"clock": "beat"}
+{"world": ["+outside(u2,5)"], "id": "d3"}
+{"clock": "beat"}
 {"clock": "beat"}
 {"world": ["+outside(u2,12)"], "id": "w1"}
+{"clock": "beat"}
+{"clock": "beat"}
 {"clock": "beat"}
 {"clock": "beat"}
 {"world": ["+outside(u2,5)"], "id": "w2"}

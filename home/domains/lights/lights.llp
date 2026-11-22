@@ -37,6 +37,15 @@ pred missed(light) : home.
 pred auto_off(light) : home.
 pred suggest_light(room) : home.
 
+% presence as the semantic world believes it (metis-lang spec/16 §3-4; domain.yaml's beliefs:/levels:, the
+% world's port `present`): sure on the radar's "someone", then decaying while it says "nobody", to below
+% 0.3 at vacant_after_s. The host asserts one level atom per room with a radar the world has heard, none
+% for a room without one (the rule needing it does not fire: the safe failure). Only a room the world is
+% sure is empty (nobody) has its light switched off; maybe_someone switches nothing.
+pred present_b(room) : home.
+type presence_level {nobody maybe_someone someone}.
+pred presence(presence_level, room) : home.
+
 stage serve {
   %% I turn {L} on.
   light_on [dyn] : cmd_light_on(L) * light_dark(L) * $light_ok(L) -o light_lit(L) * done(on).
@@ -66,7 +75,7 @@ stage serve {
 
   % ── what the person would want without asking ──
   %% Nobody has been in {R} for a while: I turn {L} off.
-  vacant_off [dyn] : $vacant(R) * light_in(L, R) * light_lit(L) * $light_ok(L) -o light_dark(L) * auto_off(L).
+  vacant_off [dyn] : $presence(nobody, R) * light_in(L, R) * light_lit(L) * $light_ok(L) -o light_dark(L) * auto_off(L).
   %% You came into {R} and it is dark: shall I turn the light on?
   welcome_dark [dyn] : entered(R) * $night * $room_unlit(R) -o suggest_light(R).
 }
