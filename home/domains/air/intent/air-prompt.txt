@@ -15,8 +15,12 @@ Intent categories:
 | WINTER_OFF | winter mode off |
 
 `device` is the unit in the person's words with its room ("bedroom ventilation", "lab fan").
+When no room is said, `device` is the bare word ("ventilation", "heating"): never guess a room;
+the home asks which one.
 
 ## Examples (utterance → JSON)
+"turn off the ventilation" → {"intent":"OFF","device":"ventilation"}
+"turn on the heating" → {"intent":"HEAT_ON","device":"heating"}
 "start the ventilation in the bedroom" → {"intent":"ON","device":"bedroom ventilation"}
 "stop the lab fan" → {"intent":"OFF","device":"lab fan"}
 "put the bedroom vent on night mode" → {"intent":"NIGHT","device":"bedroom ventilation"}

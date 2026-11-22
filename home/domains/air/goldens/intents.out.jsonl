@@ -8,3 +8,7 @@
 {"in": {"args": {"device": "lab ventilation"}, "verb": "WINTER_ON"}, "out": {"atom": "cmd_winter_on(u2)", "act": "winter", "used": ["device"], "dropped": {}}}
 {"in": {"args": {"device": "lab ventilation"}, "verb": "WINTER_OFF"}, "out": {"atom": "cmd_winter_off(u2)", "act": "winter", "used": ["device"], "dropped": {}}}
 {"in": {"args": {"device": "kitchen fan"}, "verb": "ON"}, "out": {"atom": "cmd_air_on(ux)", "act": "on", "used": ["device"], "dropped": {}}}
+{"in": {"args": {"device": "ventilation"}, "verb": "OFF"}, "out": {"atom": "cmd_air_off(ua)", "act": "off", "used": ["device"], "dropped": {}}}
+{"in": {"args": {"device": "heating"}, "verb": "HEAT_ON"}, "out": {"atom": "cmd_heater_on(ua)", "act": "heat", "used": ["device"], "dropped": {}}}
+{"in": {"args": {"device": "the ventilation"}, "verb": "ON"}, "out": {"atom": "cmd_air_on(ua)", "act": "on", "used": ["device"], "dropped": {}}}
+{"in": {"args": {"device": "fan"}, "verb": "NIGHT"}, "out": {"atom": "cmd_air_night(ua)", "act": "night", "used": ["device"], "dropped": {}}}

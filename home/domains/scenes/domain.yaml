@@ -3,7 +3,7 @@ display: the home
 line: "scenes: the home's mode (home, night, away) at a word; away suggested when the home empties, the night's end at dawn"
 voice: own
 program: scenes.llp
-host: ../../world/home_host.py:scenes
+host: home_host.py:scenes
 intent: {spec: intent.yaml}
 clock: {beats: 1, period: 1}
 records: records/

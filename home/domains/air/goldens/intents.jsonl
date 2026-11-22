@@ -8,3 +8,7 @@
 {"args": {"device": "lab ventilation"}, "verb": "WINTER_ON"}
 {"args": {"device": "lab ventilation"}, "verb": "WINTER_OFF"}
 {"args": {"device": "kitchen fan"}, "verb": "ON"}
+{"args": {"device": "ventilation"}, "verb": "OFF"}
+{"args": {"device": "heating"}, "verb": "HEAT_ON"}
+{"args": {"device": "the ventilation"}, "verb": "ON"}
+{"args": {"device": "fan"}, "verb": "NIGHT"}

@@ -3,7 +3,7 @@ display: the media
 line: "media: the TV on, off, louder, quieter; infrared devices by their remote's keys (the IR remote is not wired yet)"
 voice: own
 program: media.llp
-host: ../../world/home_host.py:media
+host: home_host.py:media
 intent: {spec: intent.yaml}
 clock: {beats: 1, period: 1}
 records: records/

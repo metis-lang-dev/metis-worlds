@@ -7,7 +7,7 @@
     "r4": {"name": "kitchen", "words": ["kitchen"]}
   },
   "lights": {
-    "l1": {"room": "r3", "words": ["living room light", "light", "lights", "lamp"], "entity": null, "_note": "the Tuya BLE light: not in Home Assistant yet"},
+    "l1": {"room": "r3", "words": ["living room light", "living room lamp"], "entity": null, "_note": "the Tuya BLE light: not in Home Assistant yet"},
     "l2": {"room": "r1", "words": ["bedroom light"], "entity": null},
     "l3": {"room": "r2", "words": ["lab light"], "entity": null}
   },
@@ -20,6 +20,11 @@
   },
   "ir": {
     "ir1": {"room": "r3", "words": ["air conditioner", "ac"], "remote": null, "_note": "the USB IR remote: not yet wired"}
+  },
+  "unnamed": {
+    "_doc": "the words that name a device without its room. Where the home has more than one of the kind, they bind the kind's unnamed handle (la, ua): the rules refuse it with a reason naming the rooms that have one, and the conversation asks which room. Where it has one, they are that device's own words. gen_map.py writes the handle and each package's which.llp",
+    "lights": {"handle": "la", "noun": "light", "words": ["light", "lights", "lamp", "the light", "the lights"]},
+    "units": {"handle": "ua", "noun": "ventilation unit", "words": ["ventilation", "vent", "fan", "fans", "recuperator", "heating", "heater", "the ventilation", "the heating"]}
   },
   "radar": {"r1": null, "r2": null, "r3": null, "r4": null, "_note": "mmWave presence radar: not yet wired; entity per room (binary_sensor) when it is"},
   "thermometers": {"r1": null, "r2": null, "r3": null, "r4": null, "_note": "Bluetooth thermometers: not yet wired; {temperature, humidity} sensor entities per room"},
