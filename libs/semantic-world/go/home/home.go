@@ -531,6 +531,20 @@ func (h *Home) ports() {
 		v := w.Var(a[0], "power")
 		return v.P("on"), v.Src.Kind != "prior"
 	}})
+	// a device's power per kind (unit_on, light_on, tv_on): a package's level over one kind reads only
+	// that kind's keys, so a light's power never reaches a package whose level pred takes units
+	for _, kind := range []string{"unit", "light", "tv"} {
+		var ks []string
+		for _, id := range devs {
+			if w.Entries[id].Attrs["class"] == kind {
+				ks = append(ks, id)
+			}
+		}
+		h.B.Offer(&sw.Port{Name: kind + "_on", Keys: one(ks), Src: srcOf("power"), P: func(a []string) (float64, bool) {
+			v := w.Var(a[0], "power")
+			return v.P("on"), v.Src.Kind != "prior"
+		}})
+	}
 	h.B.Offer(&sw.Port{Name: "reachable", Keys: one(devs), Src: srcOf("reach"), P: func(a []string) (float64, bool) {
 		v := w.Var(a[0], "reach")
 		return sw.P(v.Odds), v.Src.Kind != "prior"

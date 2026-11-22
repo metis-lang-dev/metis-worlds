@@ -42,7 +42,7 @@ func TestTheRealMapLoads(t *testing.T) {
 	if got := line(h, 0, "l1.power"); got != "living room light: not in Home Assistant yet" {
 		t.Fatalf("%q", got)
 	}
-	if ks := h.B.Ports(); !reflect.DeepEqual(ks, []string{"cold", "day", "humid", "on", "out_cold", "present", "preset", "reachable", "someone_home", "warm"}) {
+	if ks := h.B.Ports(); !reflect.DeepEqual(ks, []string{"cold", "day", "humid", "light_on", "on", "out_cold", "present", "preset", "reachable", "someone_home", "tv_on", "unit_on", "warm"}) {
 		t.Fatal(ks)
 	}
 }
@@ -190,5 +190,34 @@ func TestPranaOutsideOnlyWhileRunning(t *testing.T) {
 	}
 	if p := h.B.Weight("out_cold")([]string{"u2"}, nil); p < 0.99 {
 		t.Fatal(p)
+	}
+}
+
+// TestPowerPortsPerKind: a level over unit_on gets the units' atoms only (a light in Home Assistant never
+// leaks power(…, l3) into a package whose level pred takes units), in the runtime's spelling, one true
+// per known key and every name false for a key the world has no reading of.
+func TestPowerPortsPerKind(t *testing.T) {
+	h := wired(t)
+	h.B.Join(&sw.Manifest{Name: "air", Levels: map[string]sw.LevelSpec{"power": {
+		From: map[string]string{"belief": "unit_on"}, At: []float64{0.05, 0.95}, Names: []string{"off", "unconfirmed", "on"}}}})
+	h.Ingest(st("fan.lab_supply_fan", "on"), 1)
+	h.Ingest(st("fan.lab_extract_fan", "on"), 1)
+	h.Ingest(st("light.lab", "on"), 1)
+	h.Settle(1)
+	got := h.B.LevelAtoms("air")
+	for a := range got {
+		if !strings.HasSuffix(a, ",u1)") && !strings.HasSuffix(a, ",u2)") {
+			t.Fatalf("a non-unit key in a unit level: %s", a)
+		}
+	}
+	if !got["power(on,u2)"] || got["power(off,u2)"] || got["power(unconfirmed,u2)"] {
+		t.Fatalf("u2: %v", got)
+	}
+	h.Command("u2", "power", "off", 2)
+	if got := h.B.LevelAtoms("air"); !got["power(unconfirmed,u2)"] || got["power(on,u2)"] {
+		t.Fatalf("a commanded switch is unconfirmed until read back: %v", got)
+	}
+	if v, ok := got["power(on,u1)"]; ok && v {
+		t.Fatalf("u1 has no reading: %v", got)
 	}
 }

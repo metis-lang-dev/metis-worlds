@@ -279,6 +279,37 @@ func (b *Board) Lines(member string) []string {
 	return append(del, add...)
 }
 
+// LevelAtoms are MEMBER's level atoms now as a host's readings: for each key a port knows, every level
+// name's atom, true for the one the belief quantises to; for a key whose belief is unknown, every one
+// false (spec 16 §4: an unknown key holds no atom). Atoms are in the runtime's canonical spelling
+// (pred(level,arg), no spaces), so a host corrects them against the program's counts like any reading
+// — which also takes the program's own #init of a level into account (Lines does not see it).
+func (b *Board) LevelAtoms(member string) map[string]bool {
+	m := b.members[member]
+	out := map[string]bool{}
+	if m == nil {
+		return out
+	}
+	for _, pred := range sortedKeys(m.Levels) {
+		l := m.Levels[pred]
+		p := b.ports[l.From["belief"]]
+		if p == nil {
+			continue
+		}
+		for _, args := range p.Keys() {
+			pr, ok := p.P(args)
+			q := ""
+			if ok {
+				q = Quantise(pr, l.At, l.Names)
+			}
+			for _, n := range l.Names {
+				out[pred+"("+strings.Join(append([]string{n}, args...), ",")+")"] = ok && n == q
+			}
+		}
+	}
+	return out
+}
+
 // Counts is the runtime's counts during a weight call (rt.Counts has the same method).
 type Counts interface{ Count(atom string) int }
 
