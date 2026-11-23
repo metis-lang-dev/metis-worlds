@@ -129,16 +129,16 @@ class TerrainMemory:
         self.alpha[~mov] = a0 + (self.alpha[~mov] - a0) * lam
         self.alpha[mov] = a0 + (self.alpha[mov] - a0) * lam_m
         self.w *= lam
-        # old evidence: its precision decays, and the odometry drift since adds variance
+        # old evidence: its precision decays (the mean kept: pm decays with it), and the odometry drift since adds
+        # variance
         self.prec *= lam
+        self.pm *= lam
         q = (p.drift_frac * dd) ** 2
         if q > 0:
             known = self.prec > 0
             newp = np.where(known, 1.0 / (1.0 / np.where(known, self.prec, 1) + q), 0.0)
             self.pm = np.where(known, self.pm / np.where(known, self.prec, 1) * newp, 0.0)
             self.prec = newp
-        else:
-            self.pm *= lam
 
     # ---- the update -------------------------------------------------------------------------------------------
     def update(self, f: dict, pose, t: float, source: str = "mono"):

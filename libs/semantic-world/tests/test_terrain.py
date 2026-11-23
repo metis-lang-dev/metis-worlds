@@ -85,6 +85,19 @@ def test_forgetting_by_distance():
     assert not old.any() or F["weight"][old].max() < 0.05 * w0
 
 
+def test_a_remembered_elevation_keeps_its_mean_while_driving():
+    m = TerrainMemory()
+    f = frame(lambda x, y: 0.12 + 0 * x)
+    for i in range(5):
+        m.update(f, (0.0, 0.0, 0.0), 0.2 * i)
+    empty = {**f, "observed": np.full_like(f["observed"], 255)}
+    for k in range(1, 9):                     # 2 m driven without seeing: the mean stays, the sigma grows
+        m.update(empty, (0.25 * k, 0.0, 0.0), 1.0 + 0.2 * k)
+    F = m.fused()
+    e = F["elevation"][np.isfinite(F["elevation"])]
+    assert len(e) and np.allclose(e, 0.12, atol=1e-9)
+
+
 def test_a_walker_leaves_no_trail():
     m = TerrainMemory()
     for i in range(10):
