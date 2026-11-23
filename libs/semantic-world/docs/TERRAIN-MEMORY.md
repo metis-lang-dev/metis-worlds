@@ -1,6 +1,7 @@
 # Terrain memory: the semantic world's short-term map of ground and seen objects
 
-Status: design, decided by the user 2026-11-23 ("go with B on A"). Not built yet.
+Status: design v2, decided by the user 2026-11-23 ("go with B on A"); reviewed by percept and chariot the same day
+(their findings are folded in, §13). Implementation started 2026-11-23.
 Owner of the design: pascal (architect). Producer side: percept. Consumers: chariot (planner, wc / road domain, viz).
 
 ## 1. Why
@@ -37,6 +38,10 @@ window and recent; then they are forgotten. A thing seen again later is a new th
 - **Pose source**: the 50 Hz odometry feed the controller uses (contracts `Odometry`: `base_link` pose and
   twist in the odom frame, own stamp; on the real chair filled by MavCtrl from ArduRover). Each perception
   frame is placed with the odometry pose AT ITS CAPTURE STAMP, not at arrival.
+- **One clock.** Odometry and perception frames are stamped by different clocks today (the plant's / the
+  autopilot's boot time vs the simulator's / the camera's capture time). The node needs both on one: in the SIL
+  the odometry is stamped in simulator time; on the chair a time-sync offset is applied. The node keeps an
+  odometry history of at least 0.5 s and interpolates the pose at the capture stamp.
 - **Drift is bounded by forgetting, not corrected.** Wheel odometry drifts by 1-2 % of the distance driven.
   Evidence therefore ages by DISTANCE TRAVELLED as well as by time (§6), so nothing older than about 10 m of
   travel carries weight: at that point the drift is still within one or two cells. Older evidence is also
@@ -65,13 +70,23 @@ A measurement is one lifted point of a frame: position, class probabilities, a r
 footprint (pixel angle x range). It updates not one cell but every cell within a support radius, weighted by a
 sparse kernel k(d) that is 1 at the point and 0 at the support radius.
 
+- **Input without the producer's splat.** The producer can already spread a point over its footprint for
+  single-frame consumers (the "splat"). The memory takes the grid with the splat OFF: the kernel does that job,
+  and doing it twice would count every footprint twice.
 - **Support radius** = max(footprint radius, 1.5 cells), enlarged by the odometry drift bound of old evidence.
   A dense near measurement stays sharp; a sparse far one honestly covers the ground its pixel covers.
 - **Class**: alpha_c += k * w * p_c. The expected class and its variance come out in closed form
   (Dirichlet), so "kerb, but on thin evidence" is a number a consumer can read.
 - **Elevation**: a Kalman update with measurement variance sigma_z^2 / (k * w). A single far point moves a
   well-observed cell very little.
+- **A bias floor.** A monocular range error is SYSTEMATIC for a viewpoint and a scene (measured: the teacher
+  reads open paving 11-21 % long from one camera, every frame). Fusing such frames would shrink the variance
+  around the wrong height. So every measurement carries a bias term that fusion cannot average away: at least
+  5 % of its range for a monocular source, the stereo sigma for stereo. The fused variance never falls below
+  it. Evidence at the edge of the own-body mask gets no weight.
 - **Occupancy**: + k * w * l_hit in the band of the point.
+- **Carve limit**: a monocular ray carves only up to its range minus (0.3 m + 2 sigma): a floor ray read too
+  long must not clear a real low obstacle in front of where it truly ends. A stereo ray carves fully.
 - **Free space**: the ray from the camera to the point lowers the occupancy of the bands it passes THROUGH
   (seen through) and marks the floor cells it ends on as observed. A cell believed occupied that rays keep
   passing through is cleared: geometric consistency, the rule taken from SuperMap in PERCEPTION.md §3a.
@@ -99,20 +114,35 @@ frame, next to the movers' tracks the range tracker already keeps: position, ext
 - Updated by the range channel (stereo / mono observations) and by the patch.
 - Dropped when existence decays or when they leave the window. They are not reused: no re-identification, no
   association with something seen earlier and forgotten.
+- **One source of static obstacles.** With the memory on, static things reach the planner from the memory
+  only. The range tracker keeps the movers and feeds its stereo / mono observations of statics INTO the
+  memory; it no longer adds static obstacles itself.
 
 ## 8. What comes out
 
 - **The fused grid**, in the SPR grid layout plus variance and age layers, published in `base_link` at the
   perception rate (5 Hz). The planner reads it instead of the single frame (a parameter; the car's default
   unchanged). The terrain layers stay metric; the domain still reads only levels and zones.
+- **One memory.** When the planner reads the fused grid, its own k-of-n persistence, its observed-free memory
+  and its shadow box are switched OFF: two memories would disagree.
 - **Edges**: kerb edges and walls extracted from the fused grid as polylines with a height class
-  (`SprBoundaryLine` already exists). A kerb is a step that holds along an edge with floor on both sides at
-  consistent elevations AND exceeds max(0.10 m, 2 sigma of the fused elevation). A floor that sinks smoothly
-  with range is a depth-scale error, not a kerb.
+  (`SprBoundaryLine` already exists). A kerb is a step that holds along an edge with FLOOR ON BOTH SIDES AT
+  CONSISTENT ELEVATIONS (the real gate) and exceeds max(0.10 m, 2 sigma of the fused elevation, bias floor
+  included). A floor that sinks smoothly with range is a depth-scale error, not a kerb. The same rule gates
+  the KERB / DROP stop classes of the fused grid: a phantom that moves with the chair (a persistent bias at a
+  fixed place in the view) must not fuse into a wall.
 - **Static objects** (§7) into the object list the planner, the EGG and the domain already read.
-- **Viz**: the fused map and the single frame as two named streams; the page says which one is shown.
+- **Viz**: BOTH are kept, as separately named streams: the fused map (`/spr/fused/*`: what the planner reads)
+  and the single-frame detections (`/spr/*`: for debugging perception). The page says which is which and
+  which the planner is on.
 
 The producer stays memoryless. Two components that both accumulate would disagree (SPR.md §1.3).
+
+What the producer adds to a frame for this (percept): per cell the number of points, a height sigma (the
+points' spread and the model's range sigma), and a bit set of the cameras that fed it (the rig poses are fixed
+in `base_link`, so the ray carve needs no per-cell origin); optionally the second class with its confidence.
+Full class probabilities are not sent (330 KB a frame): the arg-max with its confidence is the Dirichlet
+update.
 
 ## 9. Where it lives
 
@@ -147,7 +177,23 @@ On the chair cards with the teacher, fused vs single frame:
   modes. A research note, not a plan.
 - **E. Things only** (what the library had): right for movers, wrong for ground.
 
-## 12. Sources
+## 12. What it does not fix
+
+A persistent perception bias. The memory removes flicker, fills the sparse grid, remembers the legs' shadow and
+gives stable objects. It cannot correct a network that reads open ground too long in every frame: that is
+training data (frames with the chair on open paving and on the road), and until then a hybrid source in the
+SIL (ground from simulator truth, obstacles from the network) keeps the drive progressing.
+
+## 13. Review record (2026-11-23)
+
+- percept: splat + kernel double count (§5 input); a systematic bias is not averaged (§5 bias floor, §8 kerb
+  gate); the carve limit for monocular rays (§5); the producer's added layers (§8). Effort: producer 0.5 d,
+  numpy reference + the six checks 1 d, the C++ node 2-3 d.
+- chariot: one clock for odometry and frames (§3); one memory in the planner (§8); one source of static
+  obstacles (§7); a persistent bias would fuse into a wall (§8 kerb gate, §5 own-body edges); viz as a second
+  reader with its own stream names (§8). Effort: about 2-2.5 d.
+
+## 14. Sources
 
 - Gan et al., Bayesian Spatial Kernel Smoothing for Scalable Dense Semantic Mapping: https://arxiv.org/pdf/1909.04631
 - Wilson et al., Convolutional Bayesian Kernel Inference for 3D Semantic Mapping: https://arxiv.org/pdf/2209.10663
