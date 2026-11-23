@@ -121,6 +121,12 @@ occ.tracks[t]                                 # one track's: cls, seen, mass, sp
 r = occupancy.rasterise(m, 20)                # the zones and kinds at cell / 20: r.zone[iy][ix], r.kind, r.mask(zones), r.cell_at(ix, iy)
 ```
 
+## The terrain memory (design, 2026-11-23)
+
+The map of THINGS above gets its missing half: a short-term, chair-centred rolling map of ground geometry and of
+static things seen on it (a layered grid fused over time with a kernel update; not SLAM: nothing is kept beyond a
+few seconds and metres, nothing is reused). The design is [docs/TERRAIN-MEMORY.md](docs/TERRAIN-MEMORY.md). Not built yet.
+
 ## Install
 
 It lives in metis-worlds (`libs/semantic-world`) until the road returns, and is then cut out to its own repo.
