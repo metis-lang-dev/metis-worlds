@@ -29,6 +29,7 @@ type Item struct {
 	ID   string   `json:"id"`
 	Kind string   `json:"kind"` // station, colour, scene, ...
 	Name string   `json:"name"`
+	Ref  string   `json:"ref,omitempty"` // the domain's own reference (a station's URL, a light's colour command)
 	Tags []string `json:"tags,omitempty"`
 }
 
@@ -100,6 +101,9 @@ func (t *Taste) Register(it Item) {
 	}
 	if it.Kind != "" {
 		old.Kind = it.Kind
+	}
+	if it.Ref != "" {
+		old.Ref = it.Ref
 	}
 	t.Tag(it.ID, it.Tags...)
 }
@@ -300,7 +304,7 @@ func (t *Taste) hashText() string {
 	var b strings.Builder
 	for _, id := range sortedMapKeys(t.Items) {
 		it := t.Items[id]
-		fmt.Fprintf(&b, "I %s %s %s %v\n", id, it.Kind, it.Name, it.Tags)
+		fmt.Fprintf(&b, "I %s %s %s %s %v\n", id, it.Kind, it.Name, it.Ref, it.Tags)
 	}
 	for _, k := range sortedMapKeys(t.Prefs) {
 		fmt.Fprintf(&b, "P %s %v\n", k, *t.Prefs[k])
