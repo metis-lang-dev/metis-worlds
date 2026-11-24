@@ -19,6 +19,7 @@ type snapshot struct {
 	Where     *sw.Doc
 	Surprises []sw.Surprise
 	Now       float64
+	Taste     *sw.Taste
 	Board     sw.BoardSnap
 	Pend      map[string]pendSnap
 	Radar     map[string]radarSnap
@@ -47,7 +48,7 @@ func (h *Home) Snapshot() ([]byte, error) {
 	hash := h.Hash()
 	h.W.Lock()
 	defer h.W.Unlock()
-	s := snapshot{Entries: h.W.Entries, Where: h.W.Where, Surprises: h.W.Surprises, Now: h.W.Now, Board: h.B.Snap(),
+	s := snapshot{Entries: h.W.Entries, Where: h.W.Where, Surprises: h.W.Surprises, Now: h.W.Now, Taste: h.W.Taste, Board: h.B.Snap(),
 		Pend: map[string]pendSnap{}, Radar: map[string]radarSnap{}, Out: map[string][2]float64{},
 		RunFrom: h.runFrom, FeedUp: h.feedUp, Last: h.last, Started: h.started, Fans: h.fans, Hash: hash}
 	for k, p := range h.pend {
@@ -113,9 +114,22 @@ func (h *Home) Restore(b []byte) error {
 	if d.Binding == nil {
 		d.Binding = map[string]string{}
 	}
+	if s.Taste == nil {
+		s.Taste = sw.NewTaste()
+	}
+	t := s.Taste // gob drops empty maps
+	if t.Items == nil {
+		t.Items = map[string]*sw.Item{}
+	}
+	if t.Prefs == nil {
+		t.Prefs = map[string]*sw.Pref{}
+	}
+	if t.Priors == nil {
+		t.Priors = map[string]float64{}
+	}
 	h.W.Lock()
-	oldE, oldW, oldS, oldN := h.W.Entries, h.W.Where, h.W.Surprises, h.W.Now
-	h.W.Entries, h.W.Where, h.W.Surprises, h.W.Now = s.Entries, d, s.Surprises, s.Now
+	oldE, oldW, oldS, oldN, oldT := h.W.Entries, h.W.Where, h.W.Surprises, h.W.Now, h.W.Taste
+	h.W.Entries, h.W.Where, h.W.Surprises, h.W.Now, h.W.Taste = s.Entries, d, s.Surprises, s.Now, t
 	h.W.Unlock()
 	oldB := h.B.Snap()
 	h.B.SetSnap(s.Board)
@@ -141,7 +155,7 @@ func (h *Home) Restore(b []byte) error {
 	}
 	if got := h.Hash(); got != s.Hash {
 		h.W.Lock()
-		h.W.Entries, h.W.Where, h.W.Surprises, h.W.Now = oldE, oldW, oldS, oldN
+		h.W.Entries, h.W.Where, h.W.Surprises, h.W.Now, h.W.Taste = oldE, oldW, oldS, oldN, oldT
 		h.W.Unlock()
 		h.B.SetSnap(oldB)
 		h.pend, h.radar, h.out, h.runFrom, h.fans = oldP, oldR, oldO, oldRF, oldF

@@ -20,6 +20,9 @@ import (
 //	report     Person ID Var Value Ref   World.Report (a person's word)
 //	conclude   Member Fact On Rule       World.Conclude (a Metis member's fact)
 //	settle                    Settle, then every member's beat: Wake and Lines, in sorted order
+//	item       Item           Taste.Register (an item a domain offers, with its tags; again: more tags)
+//	prefer     ID Pref Delta  Taste.Prefer (evidence: kept +1, skipped -1, in a context)
+//	prior      Value Pref Delta  Taste.Prior (the character's lean for a tag, Value, in a context)
 //
 // Reading the board changes it (Lines retracts the previous level atoms, Wake records what a
 // member has seen), so a beat's reads are part of applying the settle and come back in Out: a
@@ -37,6 +40,10 @@ type Event struct {
 	Fact   string   `json:"fact,omitempty"`
 	On     bool     `json:"on,omitempty"`
 	Rule   string   `json:"rule,omitempty"`
+	// taste
+	Item  *sw.Item    `json:"item,omitempty"`
+	Pref  *sw.Context `json:"pref,omitempty"`
+	Delta float64     `json:"delta,omitempty"`
 }
 
 // Out is what applying an event produced: outputs, recomputed by a replay, never read back.
@@ -57,6 +64,25 @@ func (h *Home) Apply(ev Event) (Out, error) {
 			return out, fmt.Errorf("home: ha_state without a state")
 		}
 		h.Ingest(*ev.HA, ev.At)
+	case "item":
+		if ev.Item == nil {
+			return out, fmt.Errorf("home: item without an item")
+		}
+		h.W.Lock()
+		h.W.Taste.Register(*ev.Item)
+		h.W.Unlock()
+	case "prefer", "prior":
+		c := sw.Context{}
+		if ev.Pref != nil {
+			c = *ev.Pref
+		}
+		h.W.Lock()
+		if ev.Kind == "prefer" {
+			h.W.Taste.Prefer(ev.ID, c, ev.Delta, ev.At)
+		} else {
+			h.W.Taste.Prior(ev.Value, c, ev.Delta)
+		}
+		h.W.Unlock()
 	case "feed_down":
 		h.FeedDown(ev.At)
 	case "command":
@@ -115,6 +141,7 @@ func (h *Home) Hash() string {
 		}
 	}
 	p("S %v\nN %v\n", w.Surprises, w.Now)
+	p("%s", w.Taste.HashText())
 	b := h.B.State()
 	p("B %v %v %v %v %v %v\n", b.Levels, b.C, b.Last, b.PV, b.Seen, b.Beat)
 	for _, k := range allKeys(h.pend) {
