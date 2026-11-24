@@ -416,7 +416,8 @@ func (h *Home) tick(dt, now float64) {
 			}
 		}
 	}
-	for k, pd := range h.pend { // past grace: what was held is read now
+	for _, k := range keys(h.pend) { // past grace: what was held is read now (sorted: surprises replay in order)
+		pd := h.pend[k]
 		if now < pd.deadline {
 			continue
 		}

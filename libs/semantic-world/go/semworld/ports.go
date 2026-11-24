@@ -355,3 +355,28 @@ func (b *Board) Check() []string {
 	sort.Strings(out)
 	return out
 }
+
+// BoardState is the board's own state, exported for a checkpoint's hash: what a replay must
+// reproduce besides the world (the levels asserted, the counters, the seen sets, the beats).
+type BoardState struct {
+	Levels map[string]map[string]string `json:"levels"`
+	C      map[string]uint64            `json:"c"`
+	Last   map[string][][2]any          `json:"last"`
+	PV     map[string]string            `json:"pv"`
+	Seen   map[string]map[string]uint64 `json:"seen"`
+	Beat   map[string]float64           `json:"beat"`
+}
+
+// State is a copy of the board's state (encoding/json sorts its maps' keys).
+func (b *Board) State() BoardState {
+	last := map[string][][2]any{}
+	for p, chs := range b.last {
+		for _, ch := range chs {
+			last[p] = append(last[p], [2]any{ch.c, ch.tag})
+		}
+	}
+	return BoardState{Levels: b.levels, C: b.c, Last: last, PV: b.pv, Seen: b.seen, Beat: b.beat}
+}
+
+// Members are the joined members' names, sorted.
+func (b *Board) Members() []string { return sortedKeys(b.members) }

@@ -251,3 +251,43 @@ Not ported yet: `reachable`, `travel`, `interval`, `mass_within` (the road's RSS
 10. **Surprises**
     - Drain `world.W.Surprises` into the workspace drop that metis-home already writes, as kind
       `probabilistic` / `evidential` with the key and the reason. Claude refines rules from them on its branch.
+
+## 8. The world as a fold over events (`home/events.go`)
+
+Nina's event log (nina-live) keeps the world's inputs, and the world is rebuilt by applying
+them again. `Event` is the whole input alphabet:
+
+- `ha_state`
+- `feed_down`
+- `command` (the host's prediction, written before the device call)
+- `report`
+- `conclude`
+- `settle`
+
+Each event carries its world time `At`: the world never reads a clock.
+
+- **`Home.Apply(ev) (Out, error)`** folds one event in. Its `Out` holds the outputs, which a replay
+  recomputes and never reads back:
+  - the surprises it raised;
+  - and, for a `settle`, every joined member's beat (`Wake`), its do-lines (`Lines`) and the
+    projected lines.
+
+  Reading the board changes it: `Lines` retracts the previous atoms, and `Wake` records what a
+  member has seen. So a beat's reads belong to the settle. **A host takes its members' lines
+  from `Out` and never calls `Board.Lines` or `Board.Wake` itself.**
+- **`Home.Hash()`** is a checkpoint: a digest of the world, the board (`Board.State()`) and the
+  adapter's own state (the pending commands, the radars, the outside readings). It is a sorted
+  text walk over values, never over pointers, so NaN hashes too.
+- **Determinism:**
+  - The past-grace loop over pending commands now walks sorted keys. In map order, two
+    commands expiring in one beat raised their surprises in a random order.
+  - The remaining map loops write per key and append nothing.
+- **Tests (`home/events_test.go`):**
+  - `TestReplayIsDeterministic`: the test day, applied 30 times, gives the same checkpoint and
+    the same outputs after every event.
+  - `TestSurprisesInOrder`: four commands that expire together give the same surprises in the
+    same order; it fails on the old map loop.
+  - `TestHashFollowsTheWorld`.
+
+Snapshots (a cached world at a seq) come later. Until then a start replays from genesis: a
+day's events are small.
