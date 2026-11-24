@@ -46,3 +46,19 @@ func TestTasteIsAFoldOverEvents(t *testing.T) {
 		t.Fatalf("restored: %s / %s, chose %s", r.Hash(), a.Hash(), pick(r))
 	}
 }
+
+// TestTheTasteOutlivesAnotherWorld: a world built otherwise refuses the snapshot, but keeps the taste.
+func TestTheTasteOutlivesAnotherWorld(t *testing.T) {
+	a := dayHome(t)
+	a.Apply(Event{At: 1, Kind: "item", Item: &sw.Item{ID: "vinyl", Kind: "station", Tags: []string{"jazz"}}})
+	a.Apply(Event{At: 2, Kind: "prefer", ID: "vinyl", Pref: &sw.Context{Part: "evening"}, Delta: 1})
+	snap, _ := a.Snapshot()
+	m, _ := LoadMap("../testdata/home.wired.map.json")
+	other := New(m, DefaultParams) // no members joined: another world
+	if err := other.RestoreTaste(snap); err != nil {
+		t.Fatal(err)
+	}
+	if other.W.Taste.HashText() != a.W.Taste.HashText() {
+		t.Fatal("the taste was not carried over")
+	}
+}

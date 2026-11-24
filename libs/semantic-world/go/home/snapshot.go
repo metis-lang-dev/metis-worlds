@@ -164,3 +164,30 @@ func (h *Home) Restore(b []byte) error {
 	}
 	return nil
 }
+
+// RestoreTaste takes only the taste from a snapshot: the person's preferences and the character's
+// priors depend on no map and no member, so a world built otherwise (another map, other members)
+// keeps them when the rest of the snapshot cannot be restored.
+func (h *Home) RestoreTaste(b []byte) error {
+	var s snapshot
+	if err := gob.NewDecoder(bytes.NewReader(b)).Decode(&s); err != nil {
+		return err
+	}
+	if s.Taste == nil {
+		return nil
+	}
+	t := s.Taste
+	if t.Items == nil {
+		t.Items = map[string]*sw.Item{}
+	}
+	if t.Prefs == nil {
+		t.Prefs = map[string]*sw.Pref{}
+	}
+	if t.Priors == nil {
+		t.Priors = map[string]float64{}
+	}
+	h.W.Lock()
+	h.W.Taste = t
+	h.W.Unlock()
+	return nil
+}
