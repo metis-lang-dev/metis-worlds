@@ -1,6 +1,0 @@
-{"args": {"device": "tv"}, "verb": "ON"}
-{"args": {"device": "television"}, "verb": "OFF"}
-{"args": {"device": "telly"}, "verb": "LOUDER"}
-{"args": {"device": "tv"}, "verb": "QUIETER"}
-{"args": {"device": "air conditioner", "key": "POWER"}, "verb": "IR"}
-{"args": {"device": "radio"}, "verb": "ON"}
