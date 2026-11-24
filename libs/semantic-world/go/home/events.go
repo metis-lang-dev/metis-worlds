@@ -23,6 +23,7 @@ import (
 //	item       Item           Taste.Register (an item a domain offers, with its tags; again: more tags)
 //	prefer     ID Pref Delta  Taste.Prefer (evidence: kept +1, skipped -1, in a context)
 //	prior      Value Pref Delta  Taste.Prior (the character's lean for a tag, Value, in a context)
+//	curious    Delta          Taste.Curious (how often the home tries something new on purpose)
 //
 // Reading the board changes it (Lines retracts the previous level atoms, Wake records what a
 // member has seen), so a beat's reads are part of applying the settle and come back in Out: a
@@ -70,6 +71,10 @@ func (h *Home) Apply(ev Event) (Out, error) {
 		}
 		h.W.Lock()
 		h.W.Taste.Register(*ev.Item)
+		h.W.Unlock()
+	case "curious":
+		h.W.Lock()
+		h.W.Taste.Curious = ev.Delta
 		h.W.Unlock()
 	case "prefer", "prior":
 		c := sw.Context{}

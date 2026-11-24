@@ -321,5 +321,16 @@ func sortedMapKeys[V any](m map[string]V) []string {
 	return out
 }
 
+// Get is an item (a copy).
+func (t *Taste) Get(id string) (Item, bool) {
+	it, ok := t.Items[id]
+	if !ok {
+		return Item{}, false
+	}
+	c := *it
+	c.Tags = append([]string(nil), it.Tags...)
+	return c, true
+}
+
 // HashText is the taste's part of a world's checkpoint.
 func (t *Taste) HashText() string { return t.hashText() }
