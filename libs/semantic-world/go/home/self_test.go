@@ -38,7 +38,7 @@ func TestStrain(t *testing.T) {
 	if _, err := h.Apply(Event{At: 4, Kind: "strain", ID: "mind", Value: "well"}); err != nil {
 		t.Fatal(err)
 	}
-	if p() >= 0.9 {
+	if p() >= 0.85 {
 		t.Fatalf("a success left busy sure: %v", p())
 	}
 	h.Apply(Event{At: 5, Kind: "strain", ID: "mind", Value: "busy"})

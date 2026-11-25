@@ -30,6 +30,9 @@ var strainHalf = map[string]float64{"busy": 300, "offline": 300, "tired": 3 * 36
 // three sure (the quantized port passes each level once).
 const strainR = 0.8
 
+// wellR is a success's reliability as evidence of well: stronger (a sure strain is likely after one).
+const wellR = 0.95
+
 var strainWords = map[string]string{
 	"well":    "well",
 	"busy":    "busy: the service is in high demand",
@@ -56,7 +59,11 @@ func (h *Home) Strain(source, kind, ref string, now float64) error {
 	if w.Var(Self, source) == nil {
 		w.Declare(Self, source, sw.VCat, Strains, strainRest)
 	}
-	w.ObserveCat(Self, source, kind, strainR, 0, sw.Source{Kind: "self", Who: source, Ref: ref}, now)
+	r := strainR
+	if kind == "well" { // an answer proves the service works now; an error may be a fluke
+		r = wellR
+	}
+	w.ObserveCat(Self, source, kind, r, 0, sw.Source{Kind: "self", Who: source, Ref: ref}, now)
 	return nil
 }
 
