@@ -30,6 +30,11 @@ var strainHalf = map[string]float64{"busy": 300, "offline": 300, "tired": 3 * 36
 // three sure (the quantized port passes each level once).
 const strainR = 0.8
 
+// strainMix loosens the belief before each observation (as a switchable device's): errors in a
+// row never harden it past ~0.99, so one success brings well back on top (0.30, 0.83, 0.98 over
+// three errors; 0.36 after a success).
+const strainMix = 0.1
+
 // wellR is a success's reliability as evidence of well: stronger (a sure strain is likely after one).
 const wellR = 0.95
 
@@ -63,7 +68,7 @@ func (h *Home) Strain(source, kind, ref string, now float64) error {
 	if kind == "well" { // an answer proves the service works now; an error may be a fluke
 		r = wellR
 	}
-	w.ObserveCat(Self, source, kind, r, 0, sw.Source{Kind: "self", Who: source, Ref: ref}, now)
+	w.ObserveCat(Self, source, kind, r, strainMix, sw.Source{Kind: "self", Who: source, Ref: ref}, now)
 	return nil
 }
 
