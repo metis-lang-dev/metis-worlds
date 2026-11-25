@@ -19,6 +19,8 @@ import (
 //	command    ID Var Value   Command (the host's prediction, written before the device call)
 //	report     Person ID Var Value Ref   World.Report (a person's word)
 //	conclude   Member Fact On Rule       World.Conclude (a Metis member's fact)
+//	strain     ID Value Ref              Strain (the assistant's own service, ID, is VALUE: well | busy |
+//	                                     tired | offline; an API error's kind, Ref its gist)
 //	settle                    Settle, then every member's beat: Wake and Lines, in sorted order
 //	item       Item           Taste.Register (an item a domain offers, with its tags; again: more tags)
 //	prefer     ID Pref Delta  Taste.Prefer (evidence: kept +1, skipped -1, in a context)
@@ -99,6 +101,10 @@ func (h *Home) Apply(ev Event) (Out, error) {
 		_, err := h.W.Report(ev.Person, ev.ID, ev.Var, ev.Value, 0, ev.Ref, ev.At)
 		h.W.Unlock()
 		if err != nil {
+			return out, err
+		}
+	case "strain":
+		if err := h.Strain(ev.ID, ev.Value, ev.Ref, ev.At); err != nil {
 			return out, err
 		}
 	case "conclude":
