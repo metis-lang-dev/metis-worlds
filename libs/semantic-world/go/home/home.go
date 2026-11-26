@@ -386,6 +386,7 @@ func (h *Home) Settle(now float64) {
 
 func (h *Home) tick(dt, now float64) {
 	w := h.W
+	h.selfTick(dt)
 	vac := h.M.th("vacant_after_s", h.P.Vacate)
 	rate := (h.P.OnLogit - sw.LogOdds(0.3)) / vac // sure → 0.3 over vacant_after
 	for _, r := range keys(h.M.Rooms) {
@@ -593,6 +594,7 @@ func (h *Home) ports() {
 		}
 		return v.G.PBelow(m.th("outside_cold_c", 8)), true
 	}})
+	h.selfPort()
 	h.B.Offer(&sw.Port{Name: "day", Keys: func() [][]string { return [][]string{{}} }, Src: func([]string) sw.Source {
 		return w.Var("home", "sun").Src
 	}, P: func([]string) (float64, bool) {
@@ -616,6 +618,8 @@ var powerWords = map[string]map[string]string{
 
 func (h *Home) phrase(e *sw.Entry, name string, v *sw.Var) (sw.Phrase, bool) {
 	switch {
+	case e.ID == Self:
+		return h.selfPhrase(e, name)
 	case e.ID == "home" && name == "sun":
 		return sw.Phrase{Subject: "the sun", Words: map[string]string{"up": "up (day)", "down": "down (night)"}}, true
 	case e.Kind == sw.KPlace && name == "presence":

@@ -380,3 +380,66 @@ func (b *Board) State() BoardState {
 
 // Members are the joined members' names, sorted.
 func (b *Board) Members() []string { return sortedKeys(b.members) }
+
+// BoardSnap is the board's dynamic state as data (a snapshot's; the ports and the members are
+// the genesis's, joined again before a restore).
+type BoardSnap struct {
+	Levels map[string]map[string]string
+	C      map[string]uint64
+	Last   map[string][]ChangeSnap
+	PV     map[string]string
+	Seen   map[string]map[string]uint64
+	Beat   map[string]float64
+}
+
+// ChangeSnap is one recent change of a port.
+type ChangeSnap struct {
+	C   uint64
+	Tag string
+}
+
+// Snap is the board's dynamic state.
+func (b *Board) Snap() BoardSnap {
+	last := map[string][]ChangeSnap{}
+	for p, chs := range b.last {
+		for _, ch := range chs {
+			last[p] = append(last[p], ChangeSnap{ch.c, ch.tag})
+		}
+	}
+	return BoardSnap{Levels: b.levels, C: b.c, Last: last, PV: b.pv, Seen: b.seen, Beat: b.beat}
+}
+
+// SetSnap puts a snapshot's dynamic state back (after the members have joined).
+func (b *Board) SetSnap(s BoardSnap) {
+	b.levels, b.c, b.pv, b.beat = s.Levels, s.C, s.PV, s.Beat
+	if b.levels == nil {
+		b.levels = map[string]map[string]string{}
+	}
+	for m := range b.members {
+		if b.levels[m] == nil {
+			b.levels[m] = map[string]string{}
+		}
+	}
+	if b.c == nil {
+		b.c = map[string]uint64{}
+	}
+	if b.pv == nil {
+		b.pv = map[string]string{}
+	}
+	if b.beat == nil {
+		b.beat = map[string]float64{}
+	}
+	b.seen = map[string]map[string]uint64{}
+	for k, v := range s.Seen {
+		if v == nil {
+			v = map[string]uint64{}
+		}
+		b.seen[k] = v
+	}
+	b.last = map[string][]change{}
+	for p, chs := range s.Last {
+		for _, ch := range chs {
+			b.last[p] = append(b.last[p], change{ch.C, ch.Tag})
+		}
+	}
+}

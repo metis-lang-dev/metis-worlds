@@ -117,11 +117,12 @@ type World struct {
 	Where     *Doc              `json:"where"` // things over places: the shared bayes core (road, room, grid)
 	Surprises []Surprise        `json:"surprises,omitempty"`
 	Now       float64           `json:"now"`
+	Taste     *Taste            `json:"taste"` // what the person likes (taste.go)
 	listeners []func(key string, v *Var)
 }
 
 // New is an empty world.
-func New() *World { return &World{Entries: map[string]*Entry{}, Where: NewDoc()} }
+func New() *World { return &World{Entries: map[string]*Entry{}, Where: NewDoc(), Taste: NewTaste()} }
 
 // Lock and Unlock guard a sequence of reads (the projection, a port evaluation) against writers.
 func (w *World) Lock()   { w.mu.Lock() }

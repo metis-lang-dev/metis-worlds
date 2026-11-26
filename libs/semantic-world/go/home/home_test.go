@@ -42,7 +42,7 @@ func TestTheRealMapLoads(t *testing.T) {
 	if got := line(h, 0, "l1.power"); got != "living room light: not in Home Assistant yet" {
 		t.Fatalf("%q", got)
 	}
-	if ks := h.B.Ports(); !reflect.DeepEqual(ks, []string{"cold", "day", "humid", "light_on", "on", "out_cold", "present", "preset", "reachable", "someone_home", "tv_on", "unit_on", "warm"}) {
+	if ks := h.B.Ports(); !reflect.DeepEqual(ks, []string{"cold", "day", "humid", "light_on", "on", "out_cold", "present", "preset", "reachable", "someone_home", "strain", "tv_on", "unit_on", "warm"}) {
 		t.Fatal(ks)
 	}
 }
