@@ -187,10 +187,11 @@ func TestTheHomesModeIsAPort(t *testing.T) {
 		From: map[string]string{"belief": "mode"}, At: []float64{0.5}, Names: []string{"no", "yes"}}}}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := h.Apply(Event{At: 1, Kind: "settle"}); err != nil {
+	out0, err := h.Apply(Event{At: 1, Kind: "settle"})
+	if err != nil {
 		t.Fatal(err)
 	}
-	if got := strings.Join(h.B.Lines("lights"), " "); !strings.Contains(got, "+home_mode(yes, home) 1") { // the start: at home
+	if got := strings.Join(out0.Lines["lights"], " "); !strings.Contains(got, "+home_mode(yes, home) 1") { // the start: at home
 		t.Fatalf("the start: %q", got)
 	}
 	if _, err := h.Apply(Event{At: 2, Kind: "set", ID: "home", Var: "mode", Value: "night", Member: "scenes", Rule: "scene_set"}); err != nil {
@@ -198,7 +199,7 @@ func TestTheHomesModeIsAPort(t *testing.T) {
 	}
 	out, _ := h.Apply(Event{At: 3, Kind: "settle"})
 	got := strings.Join(out.Lines["lights"], " ")
-	if !strings.Contains(got, "+home_mode(yes, night) 1") || !strings.Contains(got, "+home_mode(no, away) 1") {
+	if !strings.Contains(got, "+home_mode(yes, night) 1") || !strings.Contains(got, "-home_mode(yes, home) 1") {
 		t.Fatalf("after the set: %q", got)
 	}
 	out, _ = h.Apply(Event{At: 4, Kind: "settle"})
