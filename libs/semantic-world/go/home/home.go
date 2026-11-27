@@ -144,7 +144,10 @@ func New(m *Map, p Params) *Home {
 	w.Declare("home", "sun", sw.VCat, []string{"up", "down"}, nil)
 	// the home's mode and mood: no sensor's, a Metis member's conclusion (the scenes package: event set), offered
 	// as ports every package reads (nina-live's redesign, step 3: the scenes coordinate through the world, not a planner)
-	w.Declare("home", "mode", sw.VCat, Modes, nil)
+	// the mode starts at home, known (the scenes package's own start: #init mode(home)), so a reader's latch has a
+	// mode to differ from before the first scene; the mood starts unknown (none chosen)
+	mv := w.Declare("home", "mode", sw.VCat, Modes, sw.Belief{"home": 1, "night": 0, "away": 0})
+	mv.Src, mv.Unsure = sw.Source{Kind: "metis", Who: "scenes", Ref: "init"}, false
 	w.Declare("home", "mood", sw.VCat, Moods, nil)
 	if m.Sun != "" {
 		h.on(m.Sun, func(st *HAState, now float64) {

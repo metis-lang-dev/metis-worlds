@@ -190,7 +190,9 @@ func TestTheHomesModeIsAPort(t *testing.T) {
 	if _, err := h.Apply(Event{At: 1, Kind: "settle"}); err != nil {
 		t.Fatal(err)
 	}
-	h.B.Lines("lights") // the start: nothing known yet
+	if got := strings.Join(h.B.Lines("lights"), " "); !strings.Contains(got, "+home_mode(yes, home) 1") { // the start: at home
+		t.Fatalf("the start: %q", got)
+	}
 	if _, err := h.Apply(Event{At: 2, Kind: "set", ID: "home", Var: "mode", Value: "night", Member: "scenes", Rule: "scene_set"}); err != nil {
 		t.Fatal(err)
 	}
