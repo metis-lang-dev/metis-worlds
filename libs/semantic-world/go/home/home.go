@@ -125,6 +125,15 @@ type Home struct {
 var onoff = []string{"on", "off"}
 
 // New builds the world for M.
+// Modes and Moods are the home's mode and mood values (the scenes package's: scenes.llp).
+var (
+	Modes = []string{"home", "night", "away"}
+	Moods = []string{"calm", "cozy", "focus", "lively", "sleep", "wake"}
+)
+
+// Settable are the variables an event set may write: Metis's conclusions, never a sensed variable.
+var Settable = map[string]bool{"home.mode": true, "home.mood": true}
+
 func New(m *Map, p Params) *Home {
 	h := &Home{M: m, W: sw.New(), P: p, by: map[string][]func(*HAState, float64){},
 		pend: map[string]*pending{}, fans: map[string][2]string{}, radar: map[string]*radar{},
@@ -133,6 +142,10 @@ func New(m *Map, p Params) *Home {
 	w := h.W
 	w.Add(&sw.Entry{ID: "home", Kind: sw.KPlace, Name: "the home"})
 	w.Declare("home", "sun", sw.VCat, []string{"up", "down"}, nil)
+	// the home's mode and mood: no sensor's, a Metis member's conclusion (the scenes package: event set), offered
+	// as ports every package reads (nina-live's redesign, step 3: the scenes coordinate through the world, not a planner)
+	w.Declare("home", "mode", sw.VCat, Modes, nil)
+	w.Declare("home", "mood", sw.VCat, Moods, nil)
 	if m.Sun != "" {
 		h.on(m.Sun, func(st *HAState, now float64) {
 			v := "up"
@@ -564,6 +577,23 @@ func (h *Home) ports() {
 		v := w.Var(a[0], "preset")
 		return v.P(a[1]), v.Src.Kind != "prior"
 	}})
+	for _, c := range []struct {
+		name string
+		vals []string
+	}{{"mode", Modes}, {"mood", Moods}} { // the home's mode and mood, one key per value (a categorical: one M)
+		c := c
+		h.B.Offer(&sw.Port{Name: c.name, One: "M", Src: func([]string) sw.Source { return w.Var("home", c.name).Src },
+			Keys: func() [][]string {
+				out := make([][]string, len(c.vals))
+				for i, v := range c.vals {
+					out[i] = []string{v}
+				}
+				return out
+			}, P: func(a []string) (float64, bool) {
+				v := w.Var("home", c.name)
+				return v.P(a[0]), v.Src.Kind != "prior"
+			}})
+	}
 	rooms := keys(m.Rooms)
 	below := func(name, th string, def float64, below bool) func([]string) (float64, bool) {
 		return func(a []string) (float64, bool) {

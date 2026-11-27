@@ -107,6 +107,22 @@ func (h *Home) Apply(ev Event) (Out, error) {
 		if err := h.Strain(ev.ID, ev.Value, ev.Ref, ev.At); err != nil {
 			return out, err
 		}
+	case "set": // a Metis member's conclusion about the home (its mode, its mood): outright, never on a sensed variable
+		if !Settable[ev.ID+"."+ev.Var] {
+			return out, fmt.Errorf("home: %s.%s is not a variable a set writes", ev.ID, ev.Var)
+		}
+		h.W.Lock()
+		v := h.W.Var(ev.ID, ev.Var)
+		known := false
+		for _, x := range v.Values {
+			known = known || x == ev.Value
+		}
+		if !known {
+			h.W.Unlock()
+			return out, fmt.Errorf("home: %s.%s has no value %q", ev.ID, ev.Var, ev.Value)
+		}
+		h.W.SetCat(ev.ID, ev.Var, sw.Belief{ev.Value: 1}, sw.Source{Kind: "metis", Who: ev.Member, Ref: ev.Rule}, ev.At)
+		h.W.Unlock()
 	case "conclude":
 		h.W.Lock()
 		h.W.Conclude(ev.Member, ev.Fact, ev.On, ev.Rule, ev.At)

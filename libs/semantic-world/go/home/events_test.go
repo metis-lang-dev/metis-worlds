@@ -174,3 +174,45 @@ func TestSurprisesInOrder(t *testing.T) {
 		}
 	}
 }
+
+// TestTheHomesModeIsAPort: a set writes the home's mode (a Metis conclusion); a member reading the mode port
+// gets its level once at the settle after (a change, not every beat); a set on a sensed variable is refused.
+func TestTheHomesModeIsAPort(t *testing.T) {
+	m, err := LoadMap("../testdata/home.wired.map.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	h := New(m, DefaultParams)
+	if err := h.B.Join(&sw.Manifest{Name: "lights", Levels: map[string]sw.LevelSpec{"home_mode": {
+		From: map[string]string{"belief": "mode"}, At: []float64{0.5}, Names: []string{"no", "yes"}}}}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := h.Apply(Event{At: 1, Kind: "settle"}); err != nil {
+		t.Fatal(err)
+	}
+	h.B.Lines("lights") // the start: nothing known yet
+	if _, err := h.Apply(Event{At: 2, Kind: "set", ID: "home", Var: "mode", Value: "night", Member: "scenes", Rule: "scene_set"}); err != nil {
+		t.Fatal(err)
+	}
+	out, _ := h.Apply(Event{At: 3, Kind: "settle"})
+	got := strings.Join(out.Lines["lights"], " ")
+	if !strings.Contains(got, "+home_mode(yes, night) 1") || !strings.Contains(got, "+home_mode(no, away) 1") {
+		t.Fatalf("after the set: %q", got)
+	}
+	out, _ = h.Apply(Event{At: 4, Kind: "settle"})
+	if len(out.Lines["lights"]) != 0 {
+		t.Fatalf("the same mode again: %v", out.Lines["lights"])
+	}
+	h.Apply(Event{At: 5, Kind: "set", ID: "home", Var: "mode", Value: "home", Member: "scenes"})
+	out, _ = h.Apply(Event{At: 6, Kind: "settle"})
+	got = strings.Join(out.Lines["lights"], " ")
+	if !strings.Contains(got, "-home_mode(yes, night) 1") || !strings.Contains(got, "+home_mode(yes, home) 1") {
+		t.Fatalf("back home: %q", got)
+	}
+	if _, err := h.Apply(Event{At: 7, Kind: "set", ID: "home", Var: "sun", Value: "down"}); err == nil {
+		t.Fatal("a set on the sun (a sensed variable)")
+	}
+	if _, err := h.Apply(Event{At: 8, Kind: "set", ID: "home", Var: "mode", Value: "party"}); err == nil {
+		t.Fatal("a mode there is not")
+	}
+}
