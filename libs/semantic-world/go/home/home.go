@@ -120,6 +120,7 @@ type Home struct {
 	last    float64
 	started bool
 	therm   map[string][2]string // room → temperature, humidity entities
+	due     []sw.Sched           // the schedule's firings since the last settle event's Out
 }
 
 var onoff = []string{"on", "off"}
@@ -397,6 +398,7 @@ func (h *Home) Settle(now float64) {
 	if dt > 0 {
 		h.tick(dt, now)
 	}
+	h.due = append(h.due, h.W.Sched.Settle(now)...) // the settle event hands them out (Out.Due)
 	h.B.Settle()
 }
 

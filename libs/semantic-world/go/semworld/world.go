@@ -118,11 +118,14 @@ type World struct {
 	Surprises []Surprise        `json:"surprises,omitempty"`
 	Now       float64           `json:"now"`
 	Taste     *Taste            `json:"taste"` // what the person likes (taste.go)
+	Sched     *Schedule         `json:"sched"` // what is due when (schedule.go)
 	listeners []func(key string, v *Var)
 }
 
 // New is an empty world.
-func New() *World { return &World{Entries: map[string]*Entry{}, Where: NewDoc(), Taste: NewTaste()} }
+func New() *World {
+	return &World{Entries: map[string]*Entry{}, Where: NewDoc(), Taste: NewTaste(), Sched: NewSchedule()}
+}
 
 // Lock and Unlock guard a sequence of reads (the projection, a port evaluation) against writers.
 func (w *World) Lock()   { w.mu.Lock() }

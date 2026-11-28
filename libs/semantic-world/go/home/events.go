@@ -26,6 +26,8 @@ import (
 //	prefer     ID Pref Delta  Taste.Prefer (evidence: kept +1, skipped -1, in a context)
 //	prior      Value Pref Delta  Taste.Prior (the character's lean for a tag, Value, in a context)
 //	curious    Delta          Taste.Curious (how often the home tries something new on purpose)
+//	schedule   Sched          Schedule.Set (a member's entry: one-shot, or periodic by a cron spec or a period)
+//	unschedule Member ID      Schedule.Cancel (the member's entry for its slot ID)
 //
 // Reading the board changes it (Lines retracts the previous level atoms, Wake records what a
 // member has seen), so a beat's reads are part of applying the settle and come back in Out: a
@@ -47,6 +49,8 @@ type Event struct {
 	Item  *sw.Item    `json:"item,omitempty"`
 	Pref  *sw.Context `json:"pref,omitempty"`
 	Delta float64     `json:"delta,omitempty"`
+	// the schedule
+	Sched *sw.Sched `json:"sched,omitempty"`
 }
 
 // Out is what applying an event produced: outputs, recomputed by a replay, never read back.
@@ -55,6 +59,7 @@ type Out struct {
 	Wake      map[string]bool     // settle: the members that beat
 	Lines     map[string][]string // settle: each member's do-lines (one level atom per known key)
 	Projected []sw.Line           // settle: the world's lines for the LLMs
+	Due       []sw.Sched          // settle: the schedule's entries that fell due, each to its owner once
 }
 
 // Apply folds one event into the world.
@@ -89,6 +94,20 @@ func (h *Home) Apply(ev Event) (Out, error) {
 		} else {
 			h.W.Taste.Prior(ev.Value, c, ev.Delta)
 		}
+		h.W.Unlock()
+	case "schedule":
+		if ev.Sched == nil {
+			return out, fmt.Errorf("home: schedule without an entry")
+		}
+		h.W.Lock()
+		err := h.W.Sched.Set(*ev.Sched, ev.At)
+		h.W.Unlock()
+		if err != nil {
+			return out, err
+		}
+	case "unschedule":
+		h.W.Lock()
+		h.W.Sched.Cancel(ev.Member, ev.ID)
 		h.W.Unlock()
 	case "feed_down":
 		h.FeedDown(ev.At)
@@ -130,6 +149,8 @@ func (h *Home) Apply(ev Event) (Out, error) {
 	case "settle":
 		h.Settle(ev.At)
 		h.W.Lock()
+		out.Due = h.due
+		h.due = nil
 		out.Wake, out.Lines = map[string]bool{}, map[string][]string{}
 		for _, m := range h.B.Members() {
 			out.Lines[m] = h.B.Lines(m)
@@ -169,6 +190,7 @@ func (h *Home) Hash() string {
 	}
 	p("S %v\nN %v\n", w.Surprises, w.Now)
 	p("%s", w.Taste.HashText())
+	p("%s", w.Sched.HashText())
 	b := h.B.State()
 	p("B %v %v %v %v %v %v\n", b.Levels, b.C, b.Last, b.PV, b.Seen, b.Beat)
 	for _, k := range allKeys(h.pend) {

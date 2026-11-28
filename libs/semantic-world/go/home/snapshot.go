@@ -20,6 +20,7 @@ type snapshot struct {
 	Surprises []sw.Surprise
 	Now       float64
 	Taste     *sw.Taste
+	Sched     *sw.Schedule
 	Board     sw.BoardSnap
 	Pend      map[string]pendSnap
 	Radar     map[string]radarSnap
@@ -48,7 +49,7 @@ func (h *Home) Snapshot() ([]byte, error) {
 	hash := h.Hash()
 	h.W.Lock()
 	defer h.W.Unlock()
-	s := snapshot{Entries: h.W.Entries, Where: h.W.Where, Surprises: h.W.Surprises, Now: h.W.Now, Taste: h.W.Taste, Board: h.B.Snap(),
+	s := snapshot{Entries: h.W.Entries, Where: h.W.Where, Surprises: h.W.Surprises, Now: h.W.Now, Taste: h.W.Taste, Sched: h.W.Sched, Board: h.B.Snap(),
 		Pend: map[string]pendSnap{}, Radar: map[string]radarSnap{}, Out: map[string][2]float64{},
 		RunFrom: h.runFrom, FeedUp: h.feedUp, Last: h.last, Started: h.started, Fans: h.fans, Hash: hash}
 	for k, p := range h.pend {
@@ -127,9 +128,10 @@ func (h *Home) Restore(b []byte) error {
 	if t.Priors == nil {
 		t.Priors = map[string]float64{}
 	}
+	q := schedOf(s.Sched)
 	h.W.Lock()
-	oldE, oldW, oldS, oldN, oldT := h.W.Entries, h.W.Where, h.W.Surprises, h.W.Now, h.W.Taste
-	h.W.Entries, h.W.Where, h.W.Surprises, h.W.Now, h.W.Taste = s.Entries, d, s.Surprises, s.Now, t
+	oldE, oldW, oldS, oldN, oldT, oldQ := h.W.Entries, h.W.Where, h.W.Surprises, h.W.Now, h.W.Taste, h.W.Sched
+	h.W.Entries, h.W.Where, h.W.Surprises, h.W.Now, h.W.Taste, h.W.Sched = s.Entries, d, s.Surprises, s.Now, t, q
 	h.W.Unlock()
 	oldB := h.B.Snap()
 	h.B.SetSnap(s.Board)
@@ -155,7 +157,7 @@ func (h *Home) Restore(b []byte) error {
 	}
 	if got := h.Hash(); got != s.Hash {
 		h.W.Lock()
-		h.W.Entries, h.W.Where, h.W.Surprises, h.W.Now, h.W.Taste = oldE, oldW, oldS, oldN, oldT
+		h.W.Entries, h.W.Where, h.W.Surprises, h.W.Now, h.W.Taste, h.W.Sched = oldE, oldW, oldS, oldN, oldT, oldQ
 		h.W.Unlock()
 		h.B.SetSnap(oldB)
 		h.pend, h.radar, h.out, h.runFrom, h.fans = oldP, oldR, oldO, oldRF, oldF
@@ -165,13 +167,18 @@ func (h *Home) Restore(b []byte) error {
 	return nil
 }
 
-// RestoreTaste takes only the taste from a snapshot: the person's preferences and the character's
-// priors depend on no map and no member, so a world built otherwise (another map, other members)
-// keeps them when the rest of the snapshot cannot be restored.
+// RestoreTaste takes only the taste and the schedule from a snapshot: the person's preferences, the
+// character's priors and what is due when depend on no map and no member, so a world built otherwise
+// (another map, other members) keeps them when the rest of the snapshot cannot be restored.
 func (h *Home) RestoreTaste(b []byte) error {
 	var s snapshot
 	if err := gob.NewDecoder(bytes.NewReader(b)).Decode(&s); err != nil {
 		return err
+	}
+	if s.Sched != nil {
+		h.W.Lock()
+		h.W.Sched = schedOf(s.Sched)
+		h.W.Unlock()
 	}
 	if s.Taste == nil {
 		return nil
@@ -190,4 +197,15 @@ func (h *Home) RestoreTaste(b []byte) error {
 	h.W.Taste = t
 	h.W.Unlock()
 	return nil
+}
+
+// schedOf: a snapshot's schedule, made whole (gob drops an empty map; an older snapshot has none).
+func schedOf(q *sw.Schedule) *sw.Schedule {
+	if q == nil {
+		return sw.NewSchedule()
+	}
+	if q.Entries == nil {
+		q.Entries = map[string]*sw.Sched{}
+	}
+	return q
 }

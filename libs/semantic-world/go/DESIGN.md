@@ -291,3 +291,33 @@ Each event carries its world time `At`: the world never reads a clock.
 
 Snapshots (a cached world at a seq) come later. Until then a start replays from genesis: a
 day's events are small.
+
+## 9. The schedule (`semworld/schedule.go`)
+
+The world keeps what is due when (nina-live's redesign, W5). A member sets an entry for one of its own handles
+(`schedule`: owner, slot, subject), and cancels it (`unschedule`). An entry is one of three kinds:
+
+- one-shot at a time;
+- periodic at the clock times of a five-field cron spec (local time);
+- periodic every so many seconds.
+
+The world fires entries at its settle, on its own clock (W1), whatever the rules are doing: an alarm never waits
+for an LLM.
+
+**A due time is a moment, not a level.** Each firing is handed to its owner exactly once, in the settle event's
+`Out.Due`, and the owner's host turns it into an edge its rules consume. It is not a port: a periodic entry
+that fell due and moved on before its reader beat would be lost as a level.
+
+**After it fires:**
+
+- A one-shot entry goes.
+- A periodic entry moves to its next time after now. If the home was down across several of its times, it fires
+  once.
+
+**What it is part of:**
+
+- The world's fold: the events, the hash and the snapshot.
+- `RestoreTaste`: a world built on another map keeps the schedule and the taste.
+
+The world never reads a clock. A replay recomputes the firings but never delivers them again (an `Out` is never
+read back).
