@@ -1,8 +1,0 @@
-{"args": {"device": "living room light"}, "verb": "ON"}
-{"args": {"device": "lamp"}, "verb": "OFF"}
-{"args": {"device": "bedroom light"}, "verb": "ON"}
-{"args": {"device": "lab light"}, "verb": "OFF"}
-{"args": {"device": "oven"}, "verb": "ON"}
-{"args": {"device": "living room lamp"}, "verb": "OFF"}
-{"args": {"device": "light"}, "verb": "ON"}
-{"args": {"device": "the lights"}, "verb": "OFF"}

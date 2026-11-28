@@ -1,3 +1,0 @@
-{"in": {"args": {"room": "bedroom"}, "verb": "QUERY"}, "out": {"atom": "cmd_comfort(r1)", "act": "comfort", "used": ["room"], "dropped": {}}}
-{"in": {"args": {"room": "lounge"}, "verb": "QUERY"}, "out": {"atom": "cmd_comfort(r3)", "act": "comfort", "used": ["room"], "dropped": {}}}
-{"in": {"args": {"room": "garage"}, "verb": "QUERY"}, "out": {"atom": "cmd_comfort(rx)", "act": "comfort", "used": ["room"], "dropped": {}}}

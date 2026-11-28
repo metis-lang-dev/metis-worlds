@@ -1,8 +1,0 @@
-{"in": {"args": {"device": "living room light"}, "verb": "ON"}, "out": {"atom": "cmd_light_on(l1)", "act": "on", "used": ["device"], "dropped": {}}}
-{"in": {"args": {"device": "lamp"}, "verb": "OFF"}, "out": {"atom": "cmd_light_off(la)", "act": "off", "used": ["device"], "dropped": {}}}
-{"in": {"args": {"device": "bedroom light"}, "verb": "ON"}, "out": {"atom": "cmd_light_on(l2)", "act": "on", "used": ["device"], "dropped": {}}}
-{"in": {"args": {"device": "lab light"}, "verb": "OFF"}, "out": {"atom": "cmd_light_off(l3)", "act": "off", "used": ["device"], "dropped": {}}}
-{"in": {"args": {"device": "oven"}, "verb": "ON"}, "out": {"atom": "cmd_light_on(lx)", "act": "on", "used": ["device"], "dropped": {}}}
-{"in": {"args": {"device": "living room lamp"}, "verb": "OFF"}, "out": {"atom": "cmd_light_off(l1)", "act": "off", "used": ["device"], "dropped": {}}}
-{"in": {"args": {"device": "light"}, "verb": "ON"}, "out": {"atom": "cmd_light_on(la)", "act": "on", "used": ["device"], "dropped": {}}}
-{"in": {"args": {"device": "the lights"}, "verb": "OFF"}, "out": {"atom": "cmd_light_off(la)", "act": "off", "used": ["device"], "dropped": {}}}

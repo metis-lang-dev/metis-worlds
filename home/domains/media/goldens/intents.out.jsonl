@@ -1,6 +1,0 @@
-{"in": {"args": {"device": "tv"}, "verb": "ON"}, "out": {"atom": "cmd_tv_on(t1)", "act": "on", "used": ["device"], "dropped": {}}}
-{"in": {"args": {"device": "television"}, "verb": "OFF"}, "out": {"atom": "cmd_tv_off(t1)", "act": "off", "used": ["device"], "dropped": {}}}
-{"in": {"args": {"device": "telly"}, "verb": "LOUDER"}, "out": {"atom": "cmd_tv_louder(t1)", "act": "volume", "used": ["device"], "dropped": {}}}
-{"in": {"args": {"device": "tv"}, "verb": "QUIETER"}, "out": {"atom": "cmd_tv_quieter(t1)", "act": "volume", "used": ["device"], "dropped": {}}}
-{"in": {"args": {"device": "air conditioner", "key": "POWER"}, "verb": "IR"}, "out": {"atom": "cmd_ir(ir1,power)", "act": "ir", "used": ["device", "key"], "dropped": {}}}
-{"in": {"args": {"device": "radio"}, "verb": "ON"}, "out": {"atom": "cmd_tv_on(tx)", "act": "on", "used": ["device"], "dropped": {}}}

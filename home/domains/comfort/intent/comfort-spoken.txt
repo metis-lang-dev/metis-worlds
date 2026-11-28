@@ -1,5 +1,0 @@
-
-## Spoken response (after the JSON)
-After the JSON comes "Spoken response:" and one short sentence said out loud.
-"how warm is the bedroom" → {"intent":"QUERY","room":"bedroom"}
-Spoken response: Let me check the bedroom.
